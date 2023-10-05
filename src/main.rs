@@ -96,9 +96,25 @@ fn main() {
     }];
 
     // this could be done in the database later
-    let rooms_in_timeslot: HashMap<&Timeslot, Vec<RoomInTimeSlot>> = rooms_in_timeslot
+    let rooms_in_timeslot: BTreeMap<&Timeslot, Vec<&RoomInTimeSlot>> = rooms_in_timeslot
+        .iter()
+        .into_group_map_by(|room_in_timeslot| room_in_timeslot.timeslot)
         .into_iter()
-        .into_group_map_by(|room_in_timeslot| room_in_timeslot.timeslot);
+        .collect();
+
+    let workshop_in_timeslot: BTreeMap<&Timeslot, Vec<&Workshop>> = workshops
+        .iter()
+        .into_group_map_by(|workshop| workshop.timeslot)
+        .into_iter()
+        .collect();
+
+    let result: Vec<_> = rooms_in_timeslot
+        .into_iter()
+        .merge_join_by(workshop_in_timeslot.into_iter(), |l, r| l.0.cmp(r.0))
+        .map(|value| value.both().unwrap())
+        .collect();
+
+    println!("{:?}", result);
 
     // RoomInTimeSlot <-> Workshop (grouping by timeslot)
     // Participant <-> Workshop (per timeslot)
