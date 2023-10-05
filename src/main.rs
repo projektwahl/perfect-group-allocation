@@ -124,7 +124,18 @@ fn main() {
         let combinations = rooms_in_timeslot
             .into_iter()
             .cartesian_product(workshops_in_timeslot);
-        combinations.for_each(|(room_in_timeslot, workshop_in_timeslot)| {});
+        combinations.for_each(|(room_in_timeslot, workshop_in_timeslot)| {
+            variables.add(
+                variable()
+                    .name(
+                        timeslot.identifier.clone()
+                            + "_"
+                            + &room_in_timeslot.room.identifier
+                            + &workshop_in_timeslot.topic.identifier,
+                    )
+                    .binary(),
+            );
+        });
     });
 
     // RoomInTimeSlot <-> Workshop (grouping by timeslot)
@@ -133,7 +144,7 @@ fn main() {
     // maximizing WorkshopTopic fullfilled times rank
 
     let test = variables.add(variable().name("test").binary());
-    let objective: Expression = vars.iter().sum();
+    let objective: Expression = test + 1;
 
     println!("{}", variables.display(&objective));
 
@@ -145,6 +156,5 @@ fn main() {
         .solve()
         .unwrap();
 
-    println!("{}", solution.value(vars[0]));
-    println!("{}", solution.value(vars[1]));
+    println!("{}", solution.value(test));
 }
