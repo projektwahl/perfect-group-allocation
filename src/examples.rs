@@ -1,2 +1,2 @@
-mod projects;
-mod workshops;
+pub mod projects;
+pub mod workshops;

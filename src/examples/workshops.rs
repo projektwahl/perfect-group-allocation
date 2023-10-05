@@ -1,41 +1,37 @@
-pub type TimeslotId = u8;
+// these will come from the database later
+// it needs to be ensured that the names are *globally* unique, so it makes sense to append an id there
+
+pub struct Requirement {
+    pub identifier: String,
+}
+
+pub struct Room<'a> {
+    pub identifier: String,
+    pub requirements: Vec<&'a Requirement>,
+}
 
 pub struct Timeslot {
-    id: TimeslotId,
+    pub identifier: String,
 }
 
-pub type WorkshopTopicId = u8;
-
-pub struct WorkshopTopic {
-    id: WorkshopTopicId,
+pub struct WorkshopTopic<'a> {
+    pub identifier: String,
+    pub requirements: Vec<&'a Requirement>,
 }
 
-pub type WorkshopId = u8;
-
-pub struct Workshop {
-    id: WorkshopId,
-    timeslot: TimeslotId,
+pub struct Workshop<'a> {
+    pub topic: &'a WorkshopTopic<'a>,
+    pub timeslot: &'a Timeslot,
 }
-
-pub type ParticipantId = u8;
 
 pub struct Participant {
-    id: ParticipantId,
+    pub identifier: String,
 }
 
-pub type Rank = u8;
+pub struct Rank(u8);
 
-pub struct Preference {
-    participant: ParticipantId,
-    topic: WorkshopTopicId,
-    rank: Rank,
+pub struct Preference<'a> {
+    pub participant: &'a Participant,
+    pub topic: &'a WorkshopTopic<'a>,
+    pub rank: Rank,
 }
-
-pub type RoomID = u8;
-
-pub struct Room {
-    id: RoomID,
-}
-
-// manche workshops haben festgeschriebene räume (roomrequirements)
-// alle workshops präferenzenmod workshop;
