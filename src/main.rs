@@ -102,24 +102,30 @@ fn main() {
         .into_iter()
         .collect();
 
-    let workshop_in_timeslot: BTreeMap<&Timeslot, Vec<&Workshop>> = workshops
+    let workshops_in_timeslot: BTreeMap<&Timeslot, Vec<&Workshop>> = workshops
         .iter()
         .into_group_map_by(|workshop| workshop.timeslot)
         .into_iter()
         .collect();
 
-    let result: Vec<_> = rooms_in_timeslot
+    let grouped_by_timeslot = rooms_in_timeslot
         .into_iter()
-        .merge_join_by(workshop_in_timeslot.into_iter(), |l, r| l.0.cmp(r.0))
+        .merge_join_by(workshops_in_timeslot.into_iter(), |l, r| l.0.cmp(r.0))
         .map(|value| {
             (
                 value.clone().map_any(|v| v.0, |v| v.0).reduce(|l, _r| l),
                 value.map_any(|v| v.1, |v| v.1).or_default(),
             )
-        })
-        .collect();
+        });
 
-    println!("{:#?}", result);
+    println!("{:#?}", grouped_by_timeslot);
+
+    grouped_by_timeslot.for_each(|(timeslot, (rooms_in_timeslot, workshops_in_timeslot))| {
+        let combinations = rooms_in_timeslot
+            .into_iter()
+            .cartesian_product(workshops_in_timeslot);
+        combinations.for_each(|(room_in_timeslot, workshop_in_timeslot)| {});
+    });
 
     // RoomInTimeSlot <-> Workshop (grouping by timeslot)
     // Participant <-> Workshop (per timeslot)
@@ -127,7 +133,6 @@ fn main() {
     // maximizing WorkshopTopic fullfilled times rank
 
     let test = variables.add(variable().name("test").binary());
-    let vars = variables.add_vector(variable().name("awesome").binary(), 100);
     let objective: Expression = vars.iter().sum();
 
     println!("{}", variables.display(&objective));
