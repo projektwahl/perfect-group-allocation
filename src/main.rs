@@ -1,14 +1,27 @@
-use good_lp::{
-    default_solver, solvers::ObjectiveDirection::Maximisation, variable, Expression, ModelWithSOS1,
-    ProblemVariables, Solution, SolverModel,
-};
+use std::collections::{BTreeMap, HashMap};
 
 use crate::examples::workshops::{
     Participant, Preference, Rank, Requirement, Room, RoomInTimeSlot, RoomSize, Timeslot, Workshop,
     WorkshopTopic, WorkshopTopicSize,
 };
+use good_lp::{
+    default_solver, solvers::ObjectiveDirection::Maximisation, variable, Expression,
+    ProblemVariables, Solution, SolverModel,
+};
+use itertools::Itertools;
 
 pub mod examples;
+
+fn group_pairs<A, B, I>(v: I) -> BTreeMap<A, Vec<B>>
+where
+    A: Ord,
+    I: IntoIterator<Item = (A, B)>,
+{
+    v.into_iter().fold(BTreeMap::new(), |mut acc, (a, b)| {
+        acc.entry(a).or_default().push(b);
+        acc
+    })
+}
 
 fn main() {
     println!("Hello, world!");
@@ -82,7 +95,15 @@ fn main() {
         rank: Rank(0),
     }];
 
-    //
+    // this could be done in the database later
+    let rooms_in_timeslot: HashMap<&Timeslot, Vec<RoomInTimeSlot>> = rooms_in_timeslot
+        .into_iter()
+        .into_group_map_by(|room_in_timeslot| room_in_timeslot.timeslot);
+
+    // RoomInTimeSlot <-> Workshop (grouping by timeslot)
+    // Participant <-> Workshop (per timeslot)
+    // restricting WorkshopTopic only once
+    // maximizing WorkshopTopic fullfilled times rank
 
     let test = variables.add(variable().name("test").binary());
     let vars = variables.add_vector(variable().name("awesome").binary(), 100);
@@ -98,5 +119,6 @@ fn main() {
         .solve()
         .unwrap();
 
-    println!("{}", solution.value(test));
+    println!("{}", solution.value(vars[0]));
+    println!("{}", solution.value(vars[1]));
 }

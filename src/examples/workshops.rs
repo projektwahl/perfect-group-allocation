@@ -4,6 +4,7 @@ pub struct Requirement {
     pub identifier: String,
 }
 
+#[derive(Hash, Eq, PartialEq)]
 pub struct Timeslot {
     pub identifier: String,
 }
