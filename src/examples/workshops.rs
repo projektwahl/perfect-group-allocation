@@ -38,4 +38,4 @@ pub struct Room {
 }
 
 // manche workshops haben festgeschriebene räume (roomrequirements)
-// alle workshops präferenzen
+// alle workshops präferenzenmod workshop;

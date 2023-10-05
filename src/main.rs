@@ -3,7 +3,7 @@ use good_lp::{
     ProblemVariables, Solution, SolverModel,
 };
 
-mod api;
+mod examples;
 
 fn main() {
     println!("Hello, world!");
