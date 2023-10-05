@@ -111,10 +111,15 @@ fn main() {
     let result: Vec<_> = rooms_in_timeslot
         .into_iter()
         .merge_join_by(workshop_in_timeslot.into_iter(), |l, r| l.0.cmp(r.0))
-        .map(|value| value.both().unwrap())
+        .map(|value| {
+            (
+                value.clone().map_any(|v| v.0, |v| v.0).reduce(|l, _r| l),
+                value.map_any(|v| v.1, |v| v.1).or_default(),
+            )
+        })
         .collect();
 
-    println!("{:?}", result);
+    println!("{:#?}", result);
 
     // RoomInTimeSlot <-> Workshop (grouping by timeslot)
     // Participant <-> Workshop (per timeslot)
