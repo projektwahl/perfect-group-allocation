@@ -9,8 +9,8 @@ async fn main() {
 
     warp::serve(routes)
         .tls()
-        .cert_path("example.com.crt")
-        .key_path("example.com.key")
+        .cert_path("example.com.cert.pem")
+        .key_path("example.com.key.pem")
         .run(([127, 0, 0, 1], 3030))
         .await;
 }
