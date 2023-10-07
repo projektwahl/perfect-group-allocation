@@ -3,6 +3,11 @@
 https://docs.rs/hyper/1.0.0-rc.4/hyper/index.html
 https://hyper.rs/guides/1/
 https://github.com/hyperium/hyper/blob/master/examples/README.md
+https://blog.cloudflare.com/speeding-up-https-and-http-3-negotiation-with-dns/
+
+ gh repo clone quinn-rs/quinn
+ cargo run --example client https://localhost:4433/Cargo.toml
+
 
 ```bash
 
