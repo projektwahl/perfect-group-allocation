@@ -9,7 +9,7 @@ async fn main() {
     // Match any request and return hello world!
     let routes = warp::any().map(|| {
         Response::builder()
-            .header("Alt-Svc", r#"h3=":4433"; ma=2592000; persist=1"#)
+            .header("Alt-Svc", r#"h3=":443"; ma=2592000"#) // needs to be < 1024
             .body("and a custom body")
     });
 
@@ -17,6 +17,6 @@ async fn main() {
         .tls()
         .cert_path("example.com.cert.pem")
         .key_path("example.com.key.pem")
-        .run(([127, 0, 0, 1], 4433))
+        .run(([127, 0, 0, 1], 443))
         .await;
 }

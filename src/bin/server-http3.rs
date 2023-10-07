@@ -25,7 +25,7 @@ struct Opt {
     #[structopt(
         short,
         long,
-        default_value = "[::1]:4433",
+        default_value = "[::1]:443", // needs to be < 1024
         help = "What address:port to listen for new connections"
     )]
     pub listen: SocketAddr,
