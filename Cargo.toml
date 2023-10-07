@@ -6,6 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytes = "1.5.0"
 good_lp = { default-features = false, version = "1", features = [ "coin_cbc" ] }
+h3 = "0.0.2"
+h3-quinn = "0.0.3"
+http = "0.2.9"
 itertools = { default-features = false, version = "0.11", features = [ "use_alloc", "use_std" ] }
 nanoserde = { default-features = false, version = "0.1" }
+quinn = "0.10.2"
+rustls = "0.21.7"
+structopt = "0.3.26"
+tokio = { version = "1.32.0", features = ["full"] }
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
