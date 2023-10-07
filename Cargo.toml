@@ -11,6 +11,7 @@ good_lp = { default-features = false, version = "1", features = [ "coin_cbc" ] }
 h3 = "0.0.2"
 h3-quinn = "0.0.3"
 http = "0.2.9"
+hyper = "1.0.0-rc.4"
 itertools = { default-features = false, version = "0.11", features = [ "use_alloc", "use_std" ] }
 nanoserde = { default-features = false, version = "0.1" }
 quinn = "0.10.2"
@@ -19,3 +20,4 @@ structopt = "0.3.26"
 tokio = { version = "1.32.0", features = ["full"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+warp = { version = "0.3", features = ["tls"] }
