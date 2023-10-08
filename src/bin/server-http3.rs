@@ -39,7 +39,7 @@ pub struct Certs {
     #[structopt(
         long,
         short,
-        default_value = "example.com.cert.der",
+        default_value = ".lego/certificates/h3.selfmade4u.de.crt",
         help = "Certificate for TLS. If present, `--key` is mandatory."
     )]
     pub cert: PathBuf,
@@ -47,7 +47,7 @@ pub struct Certs {
     #[structopt(
         long,
         short,
-        default_value = "example.com.key.der",
+        default_value = ".lego/certificates/h3.selfmade4u.de.key",
         help = "Private key for the certificate."
     )]
     pub key: PathBuf,

@@ -1,5 +1,13 @@
 # perfect-group-allocation
 
+```
+# TODO we should get a valid tls certificate from our domain as otherwise the browsers don't like you
+lego --cert.timeout 180 --email Moritz.Hedtke@t-online.de --dns hetzner --domains h3.
+selfmade4u.de run
+```
+
+https://github.com/tokio-rs/axum/tree/main/examples
+
 https://docs.rs/hyper/1.0.0-rc.4/hyper/index.html
 https://hyper.rs/guides/1/
 https://github.com/hyperium/hyper/blob/master/examples/README.md
@@ -12,12 +20,11 @@ localhost;h3=":443"
  gh repo clone quinn-rs/quinn
  cargo run --example client https://localhost:4433/Cargo.toml
 
-cargo build --bin server
-cargo build --bin server-http3
-sudo setcap CAP_NET_BIND_SERVICE+eip ./target/debug/server
-sudo setcap CAP_NET_BIND_SERVICE+eip ./target/debug/server-http3
-./target/debug/server
-./target/debug/server-http3
+
+cargo build --bin server && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/debug/server && ./target/debug/server
+cargo build --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/debug/server-http3 && ./target/debug/server-http3
+
+
 
 chromium-browser --enable-quic --origin-to-force-quic-on=localhost:443
 ```bash
