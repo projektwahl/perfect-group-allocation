@@ -7,7 +7,7 @@ use std::{
 
 use bytes::{Bytes, BytesMut};
 use http::{Request, StatusCode};
-use rustls::{Certificate, PrivateKey, ServerConfig};
+use rustls::{version::TLS13, Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, ec_private_keys};
 use structopt::StructOpt;
 use tokio::{fs::File, io::AsyncReadExt};
@@ -31,7 +31,7 @@ struct Opt {
     #[structopt(
         short,
         long,
-        default_value = "[::1]:443", // needs to be < 1024
+        default_value = "0.0.0.0:443", // needs to be < 1024
         help = "What address:port to listen for new connections"
     )]
     pub listen: SocketAddr,
@@ -51,7 +51,10 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Server
         .collect();
 
     let config = ServerConfig::builder()
-        .with_safe_defaults()
+        .with_safe_default_cipher_suites()
+        .with_safe_default_kx_groups()
+        .with_protocol_versions(&[&TLS13])
+        .unwrap()
         .with_no_client_auth()
         .with_single_cert(certs, key)
         .expect("bad certificate/key");
@@ -65,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
         .with_writer(std::io::stderr)
-        .with_max_level(tracing::Level::INFO)
+        .with_max_level(tracing::Level::DEBUG)
         .init();
 
     // process cli arguments

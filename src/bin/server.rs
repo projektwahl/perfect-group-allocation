@@ -46,7 +46,7 @@ async fn main() {
 
     let acceptor = TlsAcceptor::from(rustls_config);
 
-    let listener = TcpListener::bind("127.0.0.1:443").await.unwrap();
+    let listener = TcpListener::bind("0.0.0.0:443").await.unwrap();
     let mut listener = AddrIncoming::from_listener(listener).unwrap();
 
     let protocol = Arc::new(Http::new());
