@@ -5,13 +5,14 @@
 //! cargo run -p example-low-level-rustls
 //! ```
 
-use axum::{extract::ConnectInfo, routing::get, Router};
+use axum::{extract::ConnectInfo, response::IntoResponse, routing::get, Router};
 use futures_util::future::poll_fn;
+use http::header;
 use hyper::server::{
     accept::Accept,
     conn::{AddrIncoming, Http},
 };
-use rustls_pemfile::{certs, pkcs8_private_keys};
+use rustls_pemfile::{certs, ec_private_keys};
 use std::{
     fs::File,
     io::BufReader,
@@ -39,12 +40,8 @@ async fn main() {
         .init();
 
     let rustls_config = rustls_server_config(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("self_signed_certs")
-            .join("key.pem"),
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("self_signed_certs")
-            .join("cert.pem"),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".lego/certificates/h3.selfmade4u.de.key"),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".lego/certificates/h3.selfmade4u.de.crt"),
     );
 
     let acceptor = TlsAcceptor::from(rustls_config);
@@ -78,15 +75,18 @@ async fn main() {
     }
 }
 
-async fn handler(ConnectInfo(addr): ConnectInfo<SocketAddr>) -> String {
-    addr.to_string()
+async fn handler(ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
+    (
+        [(header::ALT_SVC, r#"h3=":443"; ma=86400"#)],
+        addr.to_string(),
+    )
 }
 
 fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<ServerConfig> {
     let mut key_reader = BufReader::new(File::open(key).unwrap());
     let mut cert_reader = BufReader::new(File::open(cert).unwrap());
 
-    let key = PrivateKey(pkcs8_private_keys(&mut key_reader).unwrap().remove(0));
+    let key = PrivateKey(ec_private_keys(&mut key_reader).unwrap().remove(0));
     let certs = certs(&mut cert_reader)
         .unwrap()
         .into_iter()

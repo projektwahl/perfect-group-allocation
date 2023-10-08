@@ -6,6 +6,8 @@ lego --cert.timeout 180 --email Moritz.Hedtke@t-online.de --dns hetzner --domain
 selfmade4u.de run
 ```
 
+https://h3.selfmade4u.de/
+
 https://github.com/tokio-rs/axum/tree/main/examples
 
 https://docs.rs/hyper/1.0.0-rc.4/hyper/index.html
@@ -20,6 +22,8 @@ localhost;h3=":443"
  gh repo clone quinn-rs/quinn
  cargo run --example client https://localhost:4433/Cargo.toml
 
+cargo build --release --bin server && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server && ./target/release/server
+cargo build --release --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server-http3 && ./target/release/server-http3
 
 cargo build --bin server && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/debug/server && ./target/debug/server
 cargo build --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/debug/server-http3 && ./target/debug/server-http3

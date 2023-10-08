@@ -9,7 +9,7 @@ async fn main() {
     // Match any request and return hello world!
     let routes = warp::any().map(|| {
         Response::builder()
-            .header("Alt-Svc", r#"h3=":443"; ma=2592000"#) // needs to be < 1024
+            .header("alt-svc", r#"h3=":443"; ma=86400"#) // needs to be < 1024
             .body("and a custom body")
     });
 

@@ -1,8 +1,14 @@
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{
+    io::BufReader,
+    net::SocketAddr,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use bytes::{Bytes, BytesMut};
 use http::{Request, StatusCode};
-use rustls::{Certificate, PrivateKey};
+use rustls::{Certificate, PrivateKey, ServerConfig};
+use rustls_pemfile::{certs, ec_private_keys};
 use structopt::StructOpt;
 use tokio::{fs::File, io::AsyncReadExt};
 use tracing::{error, info, trace_span};
@@ -29,31 +35,29 @@ struct Opt {
         help = "What address:port to listen for new connections"
     )]
     pub listen: SocketAddr,
-
-    #[structopt(flatten)]
-    pub certs: Certs,
-}
-
-#[derive(StructOpt, Debug)]
-pub struct Certs {
-    #[structopt(
-        long,
-        short,
-        default_value = ".lego/certificates/h3.selfmade4u.de.crt",
-        help = "Certificate for TLS. If present, `--key` is mandatory."
-    )]
-    pub cert: PathBuf,
-
-    #[structopt(
-        long,
-        short,
-        default_value = ".lego/certificates/h3.selfmade4u.de.key",
-        help = "Private key for the certificate."
-    )]
-    pub key: PathBuf,
 }
 
 static ALPN: &[u8] = b"h3";
+
+fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> ServerConfig {
+    let mut key_reader = BufReader::new(std::fs::File::open(key).unwrap());
+    let mut cert_reader = BufReader::new(std::fs::File::open(cert).unwrap());
+
+    let key = PrivateKey(ec_private_keys(&mut key_reader).unwrap().remove(0));
+    let certs = certs(&mut cert_reader)
+        .unwrap()
+        .into_iter()
+        .map(Certificate)
+        .collect();
+
+    let config = ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(certs, key)
+        .expect("bad certificate/key");
+
+    config
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -61,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
         .with_writer(std::io::stderr)
-        .with_max_level(tracing::Level::TRACE)
+        .with_max_level(tracing::Level::INFO)
         .init();
 
     // process cli arguments
@@ -79,21 +83,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Arc::new(None)
     };
 
-    let Certs { cert, key } = opt.certs;
-
     // create quinn server endpoint and bind UDP socket
 
-    // both cert and key must be DER-encoded
-    let cert = Certificate(std::fs::read(cert)?);
-    let key = PrivateKey(std::fs::read(key)?);
-
-    let mut tls_config = rustls::ServerConfig::builder()
-        .with_safe_default_cipher_suites()
-        .with_safe_default_kx_groups()
-        .with_protocol_versions(&[&rustls::version::TLS13])
-        .unwrap()
-        .with_no_client_auth()
-        .with_single_cert(vec![cert], key)?;
+    let mut tls_config = rustls_server_config(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".lego/certificates/h3.selfmade4u.de.key"),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".lego/certificates/h3.selfmade4u.de.crt"),
+    );
 
     tls_config.max_early_data_size = u32::MAX;
     tls_config.alpn_protocols = vec![ALPN.into()];
@@ -185,7 +180,11 @@ where
         }
     };
 
-    let resp = http::Response::builder().status(status).body(()).unwrap();
+    let resp = http::Response::builder()
+        .status(status)
+        .header("alt-svc", r#"h3=":443"; ma=86400"#)
+        .body(())
+        .unwrap();
 
     match stream.send_response(resp).await {
         Ok(_) => {
