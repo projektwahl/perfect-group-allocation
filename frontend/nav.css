@@ -22,6 +22,11 @@ nav ul {
     grid-row: 2;
 }
 
+nav ul li {
+    background-color: orange;
+    
+}
+
 /* Show navigation menu entries when checkbox is clicked */
 nav input:checked+ul {
     display: block;
