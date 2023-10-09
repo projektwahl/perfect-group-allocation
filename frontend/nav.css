@@ -15,6 +15,11 @@ nav span {
 
 /* Checkbox for expanding the navigation menu */
 nav input {
+    display: none;
+}
+
+/* Label for expanding the navigation menu */
+nav label {
     background-color: blue;
     grid-column: 2;
     grid-row: 1;
@@ -31,14 +36,14 @@ nav ul li {
 }
 
 nav ul li a {
-    text-decoration: none;
     /* Don't underline links */
+    text-decoration: none;
     padding: 0rem 1rem;
     font-size: 1.5em;
 }
 
 /* Show navigation menu entries when checkbox is clicked */
-nav input:checked+ul {
+nav input:checked~ul {
     display: block;
 }
 
