@@ -1,12 +1,16 @@
 nav {
     display: grid;
+    grid-template-columns: 1fr 2em;
+    grid-template-rows: 3em 1fr;
 }
 
-/* Logo on the left */
+/* Logo/Name on the left */
 nav span {
     background-color: red;
     grid-column: 1;
     grid-row: 1;
+    font-size: 2em;
+    padding: 0em 1em;
 }
 
 /* Checkbox for expanding the navigation menu */
@@ -24,7 +28,12 @@ nav ul {
 
 nav ul li {
     background-color: orange;
-    
+}
+
+nav ul li a {
+    text-decoration: none; /* Don't underline links */
+    padding: 0em 1em;
+    font-size: 1.5em;
 }
 
 /* Show navigation menu entries when checkbox is clicked */
