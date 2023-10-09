@@ -2,5 +2,7 @@
 @import "./nav.css";
 
 :root {
-    --white: white;
+    --navbar-background: #292929;
+    --navbar-background-dark: black;
+    --navbar-foreground: white;
 }
