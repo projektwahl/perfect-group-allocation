@@ -26,6 +26,10 @@ gh repo clone quinn-rs/quinn
 cd quinn
 cargo run --release --example client -- --url https://localhost:443/
 
+gh repo clone cloudflare/quiche
+cd quiche
+cargo run --bin quiche-client -- --dump-json https://h3.selfmade4u.de/
+
 cargo build --release --bin server && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server && ./target/release/server
 cargo build --release --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server-http3 && ./target/release/server-http3
 

@@ -27,16 +27,16 @@ use tokio_rustls::{
     TlsAcceptor,
 };
 use tower::MakeService;
+use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "example_tls_rustls=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
+        .with_writer(std::io::stderr)
+        .with_max_level(tracing::Level::TRACE)
         .init();
 
     let rustls_config = rustls_server_config(
@@ -46,8 +46,10 @@ async fn main() {
 
     let acceptor = TlsAcceptor::from(rustls_config);
 
-    let listener = TcpListener::bind("0.0.0.0:443").await.unwrap();
+    let listener = TcpListener::bind("[::1]:443").await.unwrap();
     let mut listener = AddrIncoming::from_listener(listener).unwrap();
+
+    println!("listening on {}", listener.local_addr().to_string());
 
     let protocol = Arc::new(Http::new());
 
