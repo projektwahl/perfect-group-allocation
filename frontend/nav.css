@@ -5,7 +5,7 @@ nav {
 }
 
 /* Logo/Name on the left */
-nav span {
+nav>span {
     background-color: red;
     grid-column: 1;
     grid-row: 1;
@@ -14,28 +14,66 @@ nav span {
 }
 
 /* Checkbox for expanding the navigation menu */
-nav input {
+nav>input {
     display: none;
 }
 
 /* Label for expanding the navigation menu */
-nav label {
+nav>label {
     background-color: blue;
     grid-column: 2;
     grid-row: 1;
 }
 
-nav ul {
+.hamb {
+    cursor: pointer;
+    float: right;
+}
+
+/* Style label tag */
+
+.hamb-line {
+    background: var(--white);
+    display: block;
+    height: 2px;
+    position: relative;
+    width: 24px;
+
+}
+
+/* Style span tag */
+
+.hamb-line::before,
+.hamb-line::after {
+    background: var(--white);
+    content: '';
+    display: block;
+    height: 100%;
+    position: absolute;
+    transition: all .2s ease-out;
+    width: 100%;
+}
+
+.hamb-line::before {
+    top: 5px;
+}
+
+.hamb-line::after {
+    top: -5px;
+}
+
+
+nav>ul {
     background-color: yellow;
     grid-column: 1 / 3;
     grid-row: 2;
 }
 
-nav ul li {
+nav>ul>li {
     background-color: orange;
 }
 
-nav ul li a {
+nav>ul>li>a {
     /* Don't underline links */
     text-decoration: none;
     padding: 0rem 1rem;
@@ -43,11 +81,11 @@ nav ul li a {
 }
 
 /* Show navigation menu entries when checkbox is clicked */
-nav input:checked~ul {
+nav>input:checked~ul {
     display: block;
 }
 
 /* Hide the navigation menu entries otherwise */
-nav ul {
+nav>ul {
     display: none;
 }

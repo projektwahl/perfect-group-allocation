@@ -1,2 +1,6 @@
 @import "./normalize.css";
 @import "./nav.css";
+
+:root {
+    --white: white;
+}
