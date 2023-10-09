@@ -1,0 +1,33 @@
+nav {
+    display: grid;
+}
+
+/* Logo on the left */
+nav span {
+    background-color: red;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+/* Checkbox for expanding the navigation menu */
+nav input {
+    background-color: blue;
+    grid-column: 2;
+    grid-row: 1;
+}
+
+nav ul {
+    background-color: yellow;
+    grid-column: 1 / 3;
+    grid-row: 2;
+}
+
+/* Show navigation menu entries when checkbox is clicked */
+nav input:checked+ul {
+    display: block;
+}
+
+/* Hide the navigation menu entries otherwise */
+nav ul {
+    display: none;
+}
