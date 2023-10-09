@@ -1,6 +1,6 @@
 nav {
     display: grid;
-    grid-template-columns: 1fr 2em;
+    grid-template-columns: 1fr 3em;
     grid-template-rows: 3em 1fr;
 }
 
@@ -23,43 +23,7 @@ nav>label {
     background-color: blue;
     grid-column: 2;
     grid-row: 1;
-}
-
-.hamb {
-    cursor: pointer;
-    float: right;
-}
-
-/* Style label tag */
-
-.hamb-line {
-    background: var(--white);
-    display: block;
-    height: 2px;
-    position: relative;
-    width: 24px;
-
-}
-
-/* Style span tag */
-
-.hamb-line::before,
-.hamb-line::after {
-    background: var(--white);
-    content: '';
-    display: block;
-    height: 100%;
-    position: absolute;
-    transition: all .2s ease-out;
-    width: 100%;
-}
-
-.hamb-line::before {
-    top: 5px;
-}
-
-.hamb-line::after {
-    top: -5px;
+    padding: 0.5rem 0.5rem;
 }
 
 

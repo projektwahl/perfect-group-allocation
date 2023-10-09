@@ -15,3 +15,7 @@ https://mattbrictson.com/blog/css-normalize-and-reset
 https://blog.logrocket.com/create-responsive-mobile-menu-with-css-no-javascript/
 
 https://www.mediaevent.de/tutorial/css-transform.html
+
+https://css-tricks.com/snippets/svg/svg-hamburger-menu/
+
+https://css-tricks.com/scale-svg/
