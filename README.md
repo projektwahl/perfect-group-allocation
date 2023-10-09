@@ -29,6 +29,12 @@ cargo run --release --example client -- --url https://localhost:443/
 gh repo clone cloudflare/quiche
 cd quiche
 cargo run --bin quiche-client -- --dump-json https://h3.selfmade4u.de/
+cargo run --bin quiche-client -- --dump-json https://127.0.0.1/
+cargo run --bin quiche-client -- --dump-json https://[::1]/
+
+cargo run --bin quiche-client -- --dump-json https://192.168.2.126/
+cargo run --bin quiche-client -- --dump-json https://[fe80::acab:ec2e:86c3:1517]/
+
 
 cargo build --release --bin server && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server && ./target/release/server
 cargo build --release --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server-http3 && ./target/release/server-http3

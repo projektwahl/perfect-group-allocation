@@ -36,7 +36,7 @@ async fn main() {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
         .with_writer(std::io::stderr)
-        .with_max_level(tracing::Level::TRACE)
+        .with_max_level(tracing::Level::DEBUG)
         .init();
 
     let rustls_config = rustls_server_config(
@@ -46,7 +46,7 @@ async fn main() {
 
     let acceptor = TlsAcceptor::from(rustls_config);
 
-    let listener = TcpListener::bind("[::1]:443").await.unwrap();
+    let listener = TcpListener::bind("[::]:443").await.unwrap();
     let mut listener = AddrIncoming::from_listener(listener).unwrap();
 
     println!("listening on {}", listener.local_addr().to_string());
