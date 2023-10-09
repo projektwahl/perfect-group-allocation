@@ -17,9 +17,15 @@ https://hyper.rs/guides/1/
 https://github.com/hyperium/hyper/blob/master/examples/README.md
 https://blog.cloudflare.com/speeding-up-https-and-http-3-negotiation-with-dns/
 
+https://docs.quic.tech/quiche/h3/index.html
+
+
+https://interop.seemann.io/
+ngtcp2 and picoquic best impls
+https://interop.seemann.io/?client=ngtcp2,picoquic
 
 network.http.http3.alt-svc-mapping-for-testing
-localhost;h3=":443"
+h3.selfmade4u.de;h3=":443"
 
 // quinn doesnt to http3 but only quic
 gh repo clone quinn-rs/quinn
@@ -32,12 +38,17 @@ cargo run --bin quiche-client -- --dump-json https://h3.selfmade4u.de/
 cargo run --bin quiche-client -- --dump-json https://127.0.0.1/
 cargo run --bin quiche-client -- --dump-json https://[::1]/
 
+# dns only 127.0.0.1 as chrome won't resolve link local addresses
 cargo run --bin quiche-client -- --dump-json https://192.168.2.126/
 cargo run --bin quiche-client -- --dump-json https://[fe80::acab:ec2e:86c3:1517]/
 
+https://github.com/aws/s2n-quic/blob/main/quic/s2n-quic-qns/src/server/h3.rs
 
 cargo build --release --bin server && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server && ./target/release/server
 cargo build --release --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server-http3 && ./target/release/server-http3
+
+cargo build --release --bin server-http3-s2n && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server-http3-s2n && ./target/release/server-http3-s2n
+
 
 cargo build --bin server && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/debug/server && ./target/debug/server
 cargo build --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/debug/server-http3 && ./target/debug/server-http3
