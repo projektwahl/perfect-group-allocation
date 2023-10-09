@@ -2,9 +2,11 @@
 
 ```
 # TODO we should get a valid tls certificate from our domain as otherwise the browsers don't like you
-lego --cert.timeout 180 --email Moritz.Hedtke@t-online.de --dns hetzner --domains h3.
-selfmade4u.de run
+sudo apt install lego
+HETZNER_API_KEY=xxx lego --cert.timeout 180 --email Moritz.Hedtke@t-online.de --dns hetzner --domains h3.selfmade4u.de --accept-tos run
 ```
+
+if using wsl in vscode, add port forward in vscode
 
 https://h3.selfmade4u.de/
 
@@ -19,8 +21,10 @@ https://blog.cloudflare.com/speeding-up-https-and-http-3-negotiation-with-dns/
 network.http.http3.alt-svc-mapping-for-testing
 localhost;h3=":443"
 
- gh repo clone quinn-rs/quinn
- cargo run --example client https://localhost:4433/Cargo.toml
+// quinn doesnt to http3 but only quic
+gh repo clone quinn-rs/quinn
+cd quinn
+cargo run --release --example client -- --url https://localhost:443/
 
 cargo build --release --bin server && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server && ./target/release/server
 cargo build --release --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server-http3 && ./target/release/server-http3

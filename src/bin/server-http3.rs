@@ -28,10 +28,11 @@ struct Opt {
     )]
     pub root: Option<PathBuf>,
 
+    // TODO FIXME 0.0.0.0 doesnt dual stack bind
     #[structopt(
         short,
         long,
-        default_value = "0.0.0.0:443", // needs to be < 1024
+        default_value = "[::1]:443", // needs to be < 1024
         help = "What address:port to listen for new connections"
     )]
     pub listen: SocketAddr,
@@ -68,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
         .with_writer(std::io::stderr)
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::TRACE)
         .init();
 
     // process cli arguments
