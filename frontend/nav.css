@@ -46,6 +46,9 @@ nav>ul>li>a {
     padding: 0rem 1rem;
     font-size: 1.5em;
     color: var(--navbar-foreground);
+    width: 100%;
+    height: 100%;
+    display: inline-block;
 }
 
 /* Show navigation menu entries when checkbox is clicked */
