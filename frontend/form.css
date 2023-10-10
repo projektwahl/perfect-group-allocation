@@ -1,0 +1,17 @@
+form {
+    display: grid;
+    max-width: 50em;
+    margin: auto;
+}
+
+label {
+    grid-column: 1;
+}
+
+input {
+    grid-column: 2;
+}
+
+button {
+    grid-column: 1 / 3;
+}

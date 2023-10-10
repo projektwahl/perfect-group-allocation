@@ -1,8 +1,17 @@
 @import "./normalize.css";
 @import "./nav.css";
+@import "./form.css";
 
 :root {
     --navbar-background: #292929;
     --navbar-background-dark: black;
     --navbar-foreground: white;
+}
+
+.center {
+    text-align: center;
+}
+
+main {
+    margin: 1em;
 }
