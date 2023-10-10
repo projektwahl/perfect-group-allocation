@@ -22,6 +22,7 @@ async fn main() {
         .and(warp::get())
         .map(|| warp::reply::html(html.to_string()));
 
+    // we could rely on the order?
     let route2 = warp::path::end()
         .and(warp::post())
         .and(warp::filters::multipart::form())
