@@ -25,6 +25,6 @@ tokio-rustls = "0.24.1"
 tower = "0.4.13"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
-warp = { git = "https://github.com/seanmonstar/warp.git", features = ["tls"] }
+warp = { git = "https://github.com/seanmonstar/warp.git", features = ["tls", "compression-brotli"] }
 s2n-quic = "1"
 futures = "0.3.28"
