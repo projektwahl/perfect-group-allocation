@@ -3,19 +3,26 @@
 use bytes::BufMut;
 use futures_util::TryFutureExt;
 use futures_util::TryStreamExt;
+use sea_orm::Database;
+use sea_orm::DbErr;
 use warp::{
     filters::{compression::brotli, multipart::FormData},
     Filter,
 };
 
+const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
+const DB_NAME: &str = "bakeries_db";
+
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), DbErr> {
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
         .with_writer(std::io::stderr)
         .with_max_level(tracing::Level::INFO)
         .init();
+
+    let db = Database::connect(DATABASE_URL).await?;
 
     let html = include_str!("../../frontend/form.html");
 
@@ -55,4 +62,6 @@ async fn main() {
         .key_path(".lego/certificates/h3.selfmade4u.de.key")
         .run(([0, 0, 0, 0], 443))
         .await;
+
+    Ok(())
 }

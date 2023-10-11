@@ -76,3 +76,7 @@ https://www.sea-ql.org/SeaORM/
 https://www.sea-ql.org/sea-orm-tutorial/
 
 https://www.sea-ql.org/sea-orm-cookbook/
+
+```
+cargo install sea-orm-cli
+```

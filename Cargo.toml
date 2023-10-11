@@ -14,3 +14,5 @@ tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 warp = { git = "https://github.com/seanmonstar/warp.git", features = ["tls", "compression-brotli"] }
+sea-orm = { version = "0.12", features = [ "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "runtime-tokio-native-tls", "macros" ] }
+futures = "0.3"
