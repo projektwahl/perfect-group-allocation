@@ -1,14 +1,21 @@
-#![deny(warnings)]
+mod migrator;
 
 use bytes::BufMut;
 use futures_util::TryFutureExt;
 use futures_util::TryStreamExt;
+use sea_orm::ConnectionTrait;
 use sea_orm::Database;
+use sea_orm::DbBackend;
 use sea_orm::DbErr;
+use sea_orm::Statement;
+use sea_orm_migration::MigratorTrait;
+use sea_orm_migration::SchemaManager;
 use warp::{
     filters::{compression::brotli, multipart::FormData},
     Filter,
 };
+
+use crate::migrator::Migrator;
 
 const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 const DB_NAME: &str = "bakeries_db";
@@ -24,7 +31,42 @@ async fn main() -> Result<(), DbErr> {
 
     let db = Database::connect(DATABASE_URL).await?;
 
-    let html = include_str!("../../frontend/form.html");
+    let db = &match db.get_database_backend() {
+        DbBackend::MySql => {
+            db.execute(Statement::from_string(
+                db.get_database_backend(),
+                format!("CREATE DATABASE IF NOT EXISTS `{}`;", DB_NAME),
+            ))
+            .await?;
+
+            let url = format!("{}/{}", DATABASE_URL, DB_NAME);
+            Database::connect(&url).await?
+        }
+        DbBackend::Postgres => {
+            let err_already_exists = db
+                .execute(Statement::from_string(
+                    db.get_database_backend(),
+                    format!("CREATE DATABASE \"{}\";", DB_NAME),
+                ))
+                .await;
+
+            if let Err(err) = err_already_exists {
+                println!("{err:?}");
+            }
+
+            let url = format!("{}/{}", DATABASE_URL, DB_NAME);
+            Database::connect(&url).await?
+        }
+        DbBackend::Sqlite => db,
+    };
+
+    let schema_manager = SchemaManager::new(db); // To investigate the schema
+
+    Migrator::refresh(db).await?;
+    assert!(schema_manager.has_table("bakery").await?);
+
+    // handlebars?
+    let html = include_str!("../../../frontend/form.html");
 
     let route1 = warp::path::end()
         .and(warp::get())
@@ -60,7 +102,7 @@ async fn main() -> Result<(), DbErr> {
         .tls()
         .cert_path(".lego/certificates/h3.selfmade4u.de.crt")
         .key_path(".lego/certificates/h3.selfmade4u.de.key")
-        .run(([0, 0, 0, 0], 443))
+        .run(([0, 0, 0, 0], 8443)) // for http3 a port < 1024 is needed
         .await;
 
     Ok(())
