@@ -67,3 +67,11 @@ openssl x509 -outform der -in example.com.cert.pem -out example.com.cert.der
 
 cargo run --bin server -- --cert example.com.crt --key example.com.key.der
 ```
+
+https://github.com/SeaQL/sea-orm
+
+https://www.sea-ql.org/SeaORM/
+
+https://www.sea-ql.org/sea-orm-tutorial/
+
+https://www.sea-ql.org/sea-orm-cookbook/
