@@ -45,6 +45,7 @@ cargo run --bin quiche-client -- --dump-json https://[fe80::acab:ec2e:86c3:1517]
 https://github.com/aws/s2n-quic/blob/main/quic/s2n-quic-qns/src/server/h3.rs
 
 cargo build --release --bin server && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server && ./target/release/server
+
 cargo build --release --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server-http3 && ./target/release/server-http3
 
 cargo build --release --bin server-warp && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/release/server-warp && ./target/release/server-warp

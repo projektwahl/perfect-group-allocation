@@ -6,15 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bytes = "1.5.0"
-futures-util = "0.3.28"
+bytes = "1"
+futures-util = "0.3"
 good_lp = { default-features = false, version = "1", features = [ "coin_cbc" ] }
-http = "0.2.9"
 itertools = { default-features = false, version = "0.11", features = [ "use_alloc", "use_std" ] }
-rustls = "0.21.7"
-rustls-pemfile = "1.0.3"
-tokio = { version = "1.32.0", features = ["full"] }
-tokio-rustls = "0.24.1"
-tracing = "0.1.37"
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 warp = { git = "https://github.com/seanmonstar/warp.git", features = ["tls", "compression-brotli"] }
