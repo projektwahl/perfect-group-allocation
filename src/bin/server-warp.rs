@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 use bytes::BufMut;
+use futures_util::TryFutureExt;
 use futures_util::TryStreamExt;
 use warp::{
     filters::{compression::brotli, multipart::FormData},
@@ -26,20 +27,16 @@ async fn main() {
     let route2 = warp::path::end()
         .and(warp::post())
         .and(warp::filters::multipart::form())
-        .and_then(|form: FormData| async move {
+        .and_then(|form: FormData| async {
             let field_names: Vec<_> = form
-                .and_then(|mut field| async move {
-                    let mut bytes: Vec<u8> = Vec::new();
+                .and_then(|field| {
+                    let name = field.name().to_string();
 
-                    // field.data() only returns a piece of the content, you should call over it until it replies None
-                    while let Some(content) = field.data().await {
-                        let content = content.unwrap();
-                        bytes.put(content);
-                    }
-                    Ok((
-                        field.name().to_string(),
-                        String::from_utf8_lossy(&*bytes).to_string(),
-                    ))
+                    let value = field.stream().try_fold(Vec::new(), |mut vec, data| {
+                        vec.put(data);
+                        async move { Ok(vec) }
+                    });
+                    value.map_ok(move |vec| (name, vec))
                 })
                 .try_collect()
                 .await
