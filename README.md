@@ -80,3 +80,13 @@ https://www.sea-ql.org/sea-orm-cookbook/
 ```
 cargo install sea-orm-cli
 ```
+
+```bash
+podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password docker.io/postgres
+# --expose, --publish
+
+podman run --rm --detach --name mariadb --volume pga-mariadb:/var/lib/mysql --env MARIADB_ROOT_PASSWORD=password docker.io/mariadb
+```
+
+
+https://vitess.io/docs/15.0/get-started/local-docker/
