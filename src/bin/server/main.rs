@@ -9,13 +9,16 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::migrator::Migrator;
+use axum::extract::BodyStream;
 use axum::routing::get;
+use axum::routing::post;
 use axum::Router;
+use futures_util::StreamExt;
+use futures_util::TryStreamExt;
 use http_body::Limited;
 use hyper::server::accept::Accept;
 use hyper::server::conn::AddrIncoming;
 use hyper::server::conn::Http;
-use hyper::Body;
 use hyper::Request;
 use rustls_pemfile::certs;
 use rustls_pemfile::ec_private_keys;
@@ -35,22 +38,29 @@ use tower::make::MakeService;
 use tower::ServiceBuilder;
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
-use tower_http::decompression::RequestDecompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::request_id::MakeRequestUuid;
 use tower_http::timeout::RequestBodyTimeoutLayer;
 use tower_http::timeout::ResponseBodyTimeoutLayer;
 use tower_http::timeout::TimeoutBody;
 use tower_http::timeout::TimeoutLayer;
+use tower_http::trace::DefaultMakeSpan;
+use tower_http::trace::DefaultOnResponse;
 use tower_http::trace::TraceLayer;
 use tower_http::ServiceBuilderExt;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 const DB_NAME: &str = "pga";
 
-async fn handler() -> &'static str {
-    tokio::time::sleep(Duration::from_secs(3)).await;
-    "Hello, World!"
+type MyBody = TimeoutBody<Limited<hyper::Body>>;
+
+#[axum::debug_handler(body=MyBody)]
+async fn handler(mut stream: BodyStream) -> Result<&'static str, axum::Error> {
+    while let Some(chunk) = stream.try_next().await? {
+        println!("{chunk:?}");
+    }
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    Ok("Hello, World!")
 }
 
 // TODO rtt0
@@ -133,16 +143,22 @@ async fn main() -> Result<(), DbErr> {
     let protocol = Arc::new(Http::new());
 
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let mut app = Router::<(), TimeoutBody<Limited<Body>>>::new()
-        .route("/", get(handler))
+    let mut app = Router::<(), MyBody>::new()
+        .route("/", post(handler))
         .layer(
             ServiceBuilder::new()
-                .layer(TraceLayer::new_for_http())
-                .layer(TimeoutLayer::new(Duration::from_secs(1)))
+                .set_x_request_id(MakeRequestUuid::default())
+                .layer(
+                    TraceLayer::new_for_http()
+                        .make_span_with(DefaultMakeSpan::new().include_headers(true))
+                        .on_response(DefaultOnResponse::new().include_headers(true)),
+                )
+                .propagate_x_request_id()
+                .layer(TimeoutLayer::new(Duration::from_secs(3)))
                 .layer(CatchPanicLayer::new())
-                .layer(RequestBodyLimitLayer::new(4096))
-                .layer(RequestBodyTimeoutLayer::new(Duration::from_secs(1)))
-                .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(1)))
+                .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
+                .layer(RequestBodyTimeoutLayer::new(Duration::from_nanos(1)))
+                .layer(ResponseBodyTimeoutLayer::new(Duration::from_millis(1)))
                 .layer(CompressionLayer::new().quality(tower_http::CompressionLevel::Best)),
         )
         .into_make_service();
