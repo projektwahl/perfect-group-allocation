@@ -1,4 +1,6 @@
+mod entities;
 mod migrator;
+use entities::{prelude::*, *};
 
 use bytes::BufMut;
 use futures_util::TryFutureExt;
@@ -79,21 +81,36 @@ async fn main() -> Result<(), DbErr> {
         .and(warp::post())
         .and(warp::filters::multipart::form())
         .and_then(|form: FormData| async {
-            let field_names: Vec<_> = form
+            /*let field_names: Vec<_> = form
                 .and_then(|field| {
                     let name = field.name().to_string();
 
-                    let value = field.stream().try_fold(Vec::new(), |mut vec, data| {
-                        vec.put(data);
-                        async move { Ok(vec) }
-                    });
+                    match name.as_ref() {
+                        "title" => field.stream().try_fold(Vec::new(), |mut vec, data| {
+                            vec.put(data);
+                            async move { Ok(vec) }
+                        }),
+                        "description" => field.stream().try_fold(Vec::new(), |mut vec, data| {
+                            vec.put(data);
+                            async move { Ok(vec) }
+                        }),
+                        _ => {
+                            panic!();
+                        }
+                    }
+
                     value.map_ok(move |vec| (name, vec))
                 })
                 .try_collect()
                 .await
                 .unwrap();
 
-            Ok::<_, warp::Rejection>(format!("{:?}", field_names))
+            let project = project_history::ActiveModel {
+                ..Default::default()
+            };
+
+            Ok::<_, warp::Rejection>(format!("{:?}", field_names))*/
+            Ok::<_, warp::Rejection>("")
         });
 
     let route3 = warp::fs::dir("./frontend");
