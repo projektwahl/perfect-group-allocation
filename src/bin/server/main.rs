@@ -87,7 +87,7 @@ async fn main() -> Result<(), DbErr> {
         .and(warp::post())
         .and(warp::filters::multipart::form())
         .then(|mut form: FormData| async move {
-            while let Some(item) = form.try_next().await.map_err(|err| err.into_response())? {}
+            while let Some(item) = form.try_next().await.map_err(|err| )? {}
             /*let field_names: Vec<_> = form
                 .and_then(|field| {
                     let name = field.name().to_string();
