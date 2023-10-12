@@ -10,7 +10,9 @@ use std::time::Duration;
 
 use crate::migrator::Migrator;
 use axum::body::StreamBody;
+use axum::extract::multipart::MultipartError;
 use axum::extract::BodyStream;
+use axum::extract::Multipart;
 use axum::response::Html;
 use axum::response::IntoResponse;
 use axum::routing::get;
@@ -62,7 +64,7 @@ const DB_NAME: &str = "pga";
 type MyBody = TimeoutBody<Limited<hyper::Body>>;
 
 // Make our own error that wraps `anyhow::Error`.
-struct AppError(axum::Error);
+struct AppError(anyhow::Error);
 
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for AppError {
@@ -78,11 +80,13 @@ impl IntoResponse for AppError {
 
 // This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
 // `Result<_, AppError>`. That way you don't need to do that manually.
-impl<E> From<E> for AppError
-where
-    E: Into<axum::Error>,
-{
-    fn from(err: E) -> Self {
+impl From<MultipartError> for AppError {
+    fn from(err: MultipartError) -> Self {
+        Self(err.into())
+    }
+}
+impl From<axum::Error> for AppError {
+    fn from(err: axum::Error) -> Self {
         Self(err.into())
     }
 }
@@ -90,6 +94,23 @@ where
 #[axum::debug_handler(body=MyBody)]
 async fn index() -> impl IntoResponse {
     Html(include_str!("../../../frontend/form.html"))
+}
+
+#[axum::debug_handler(body=MyBody)]
+async fn create(mut multipart: Multipart) -> Result<impl IntoResponse, AppError> {
+    let mut title = None;
+    let mut description = None;
+    while let Some(mut field) = multipart.next_field().await? {
+        match field.name().unwrap() {
+            "title" => assert!(title.replace(field.text().await?).is_none()),
+            "description" => assert!(description.replace(field.text().await?).is_none()),
+            _ => panic!(),
+        }
+    }
+    let title = title.unwrap();
+    let description = description.unwrap();
+
+    Ok(())
 }
 
 #[axum::debug_handler(body=MyBody)]
@@ -202,6 +223,7 @@ async fn main() -> Result<(), DbErr> {
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
     let mut app = Router::<(), MyBody>::new()
         .route("/", get(index))
+        .route("/", post(create))
         .fallback_service(service)
         .layer(
             ServiceBuilder::new()
