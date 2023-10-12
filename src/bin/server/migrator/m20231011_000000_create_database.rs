@@ -17,7 +17,7 @@ impl MigrationTrait for Migration {
     CREATE TABLE project_history (
         id INTEGER NOT NULL,
         changed TIMESTAMP NOT NULL,
-        latest BOOL NOT NULL DEFAULT TRUE, -- maybe update this using trigger
+        -- latest BOOL NOT NULL DEFAULT TRUE, -- maybe update this using trigger
         deleted BOOL NOT NULL DEFAULT FALSE,
         author INTEGER NOT NULL,
         visibility INTEGER NOT NULL, -- 0 lowest, 1 no voters, 2 no helpers, 3 no admins
@@ -26,6 +26,7 @@ impl MigrationTrait for Migration {
     ) WITHOUT ROWID; -- https://www.sqlite.org/withoutrowid.html
 
     -- https://github.com/SeaQL/sea-query/pull/478
+    -- as long as we support mariadb and don't get performance issues we should keep this simple. but later that may be a nice way to optimize
     CREATE UNIQUE INDEX project_history_index ON project_history(id) WHERE latest;
     */
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
@@ -35,12 +36,6 @@ impl MigrationTrait for Migration {
                     .table(ProjectHistory::Table)
                     .col(ColumnDef::new(ProjectHistory::Id).integer().not_null())
                     .col(ColumnDef::new(ProjectHistory::Changed).integer().not_null())
-                    .col(
-                        ColumnDef::new(ProjectHistory::Latest)
-                            .boolean()
-                            .not_null()
-                            .default(true),
-                    )
                     .col(
                         ColumnDef::new(ProjectHistory::Deleted)
                             .boolean()
@@ -69,6 +64,7 @@ impl MigrationTrait for Migration {
                     .name("project_history_index")
                     .table(ProjectHistory::Table)
                     .col(ProjectHistory::Id)
+                    .col(ProjectHistory::Changed)
                     .to_owned(),
             )
             .await?;
@@ -87,7 +83,6 @@ pub enum ProjectHistory {
     Table,
     Id,
     Changed,
-    Latest,
     Deleted,
     Author,
     Visibility,
