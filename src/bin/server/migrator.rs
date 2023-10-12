@@ -1,4 +1,4 @@
-mod m20231011_000000_create_database;
+pub mod m20231011_000000_create_database;
 
 use sea_orm_migration::prelude::*;
 
