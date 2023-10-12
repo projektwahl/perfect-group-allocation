@@ -6,13 +6,16 @@ use std::io::BufReader;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::migrator::Migrator;
 use axum::routing::get;
 use axum::Router;
+use http_body::Limited;
 use hyper::server::accept::Accept;
 use hyper::server::conn::AddrIncoming;
 use hyper::server::conn::Http;
+use hyper::Body;
 use hyper::Request;
 use rustls_pemfile::certs;
 use rustls_pemfile::ec_private_keys;
@@ -29,15 +32,28 @@ use tokio_rustls::rustls::PrivateKey;
 use tokio_rustls::rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
 use tower::make::MakeService;
+use tower::ServiceBuilder;
+use tower_http::catch_panic::CatchPanicLayer;
+use tower_http::compression::CompressionLayer;
+use tower_http::decompression::RequestDecompressionLayer;
+use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::timeout::RequestBodyTimeoutLayer;
+use tower_http::timeout::ResponseBodyTimeoutLayer;
+use tower_http::timeout::TimeoutBody;
+use tower_http::timeout::TimeoutLayer;
+use tower_http::trace::TraceLayer;
+use tower_http::ServiceBuilderExt;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 const DB_NAME: &str = "pga";
 
 async fn handler() -> &'static str {
+    tokio::time::sleep(Duration::from_secs(3)).await;
     "Hello, World!"
 }
 
+// TODO rtt0
 fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<ServerConfig> {
     let mut key_reader = BufReader::new(File::open(key).unwrap());
     let mut cert_reader = BufReader::new(File::open(cert).unwrap());
@@ -62,13 +78,7 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
 
 #[tokio::main]
 async fn main() -> Result<(), DbErr> {
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "example_tls_rustls=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    tracing_subscriber::fmt::init();
 
     let db = Database::connect(DATABASE_URL).await?;
 
@@ -101,12 +111,12 @@ async fn main() -> Result<(), DbErr> {
         DbBackend::Sqlite => db,
     };
 
-    // sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
-
     let schema_manager = SchemaManager::new(db); // To investigate the schema
 
     Migrator::up(db, None).await?;
     assert!(schema_manager.has_table("project_history").await?);
+
+    // https://github.com/tokio-rs/axum/blob/main/examples/low-level-rustls/src/main.rs
 
     let rustls_config = rustls_server_config(
         ".lego/certificates/h3.selfmade4u.de.key",
@@ -122,8 +132,19 @@ async fn main() -> Result<(), DbErr> {
 
     let protocol = Arc::new(Http::new());
 
-    let mut app = Router::<()>::new()
+    //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
+    let mut app = Router::<(), TimeoutBody<Limited<Body>>>::new()
         .route("/", get(handler))
+        .layer(
+            ServiceBuilder::new()
+                .layer(TraceLayer::new_for_http())
+                .layer(TimeoutLayer::new(Duration::from_secs(1)))
+                .layer(CatchPanicLayer::new())
+                .layer(RequestBodyLimitLayer::new(4096))
+                .layer(RequestBodyTimeoutLayer::new(Duration::from_secs(1)))
+                .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(1)))
+                .layer(CompressionLayer::new().quality(tower_http::CompressionLevel::Best)),
+        )
         .into_make_service();
 
     loop {

@@ -19,5 +19,7 @@ sea-orm-migration = "0.12"
 axum = { version = "0.6", features = [ "http2", "macros", "multipart", "tracing" ] }
 rustls-pemfile = "1.0.3"
 tokio-rustls = "0.24.1"
-hyper = "0.14.27"
-tower = "0.4.13"
+hyper = { version = "0.14", features = ["full"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.4", features = ["full"] }
+http-body = "0.4.5"

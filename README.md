@@ -1,6 +1,10 @@
 # perfect-group-allocation
 
 ```
+sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
+```
+
+```
 # TODO we should get a valid tls certificate from our domain as otherwise the browsers don't like you
 sudo apt install lego
 HETZNER_API_KEY=xxx lego --cert.timeout 180 --email Moritz.Hedtke@t-online.de --dns hetzner --domains h3.selfmade4u.de --accept-tos run
@@ -26,11 +30,6 @@ https://interop.seemann.io/?client=ngtcp2,picoquic
 
 network.http.http3.alt-svc-mapping-for-testing
 h3.selfmade4u.de;h3=":443"
-
-// quinn doesnt to http3 but only quic
-gh repo clone quinn-rs/quinn
-cd quinn
-cargo run --release --example client -- --url https://localhost:443/
 
 gh repo clone cloudflare/quiche
 cd quiche
