@@ -3,6 +3,7 @@ mod migrator;
 use entities::{prelude::*, *};
 
 use bytes::BufMut;
+use futures_util::StreamExt;
 use futures_util::TryFutureExt;
 use futures_util::TryStreamExt;
 use sea_orm::ConnectionTrait;
@@ -21,6 +22,11 @@ use crate::migrator::Migrator;
 
 const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 const DB_NAME: &str = "pga";
+
+#[derive(Debug)]
+struct InvalidParameter;
+
+impl warp::reject::Reject for InvalidParameter {}
 
 #[tokio::main]
 async fn main() -> Result<(), DbErr> {
@@ -80,7 +86,8 @@ async fn main() -> Result<(), DbErr> {
     let route2 = warp::path::end()
         .and(warp::post())
         .and(warp::filters::multipart::form())
-        .and_then(|form: FormData| async {
+        .then(|mut form: FormData| async move {
+            while let Some(item) = form.try_next().await.map_err(|err| err.into_response())? {}
             /*let field_names: Vec<_> = form
                 .and_then(|field| {
                     let name = field.name().to_string();
@@ -110,7 +117,7 @@ async fn main() -> Result<(), DbErr> {
             };
 
             Ok::<_, warp::Rejection>(format!("{:?}", field_names))*/
-            Ok::<_, warp::Rejection>("")
+            Ok::<_, warp::Error>("")
         });
 
     let route3 = warp::fs::dir("./frontend");
