@@ -134,6 +134,14 @@ async fn create(
 
     Ok(())
 }
+#[axum::debug_handler(body=MyBody, state=MyState)]
+async fn list(State(db): State<MyState>) -> Result<impl IntoResponse, AppError> {
+    let stream = ProjectHistory::find().stream(&db.clone()).await?;
+
+    let stream = stream.map_ok(|value| format!("project: {}", value.title));
+
+    Ok(StreamBody::new(stream))
+}
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> {
@@ -241,6 +249,7 @@ async fn main() -> Result<(), DbErr> {
     let mut app = Router::<MyState, MyBody>::new()
         .route("/", get(index))
         .route("/", post(create))
+        .route("/list", get(list))
         .fallback_service(service)
         .with_state(db)
         .layer(
