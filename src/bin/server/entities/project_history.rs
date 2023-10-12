@@ -8,7 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: i32,
     #[sea_orm(primary_key, auto_increment = false)]
-    pub changed: i32,
+    pub changed: String,
     pub deleted: bool,
     pub author: i32,
     pub visibility: i32,

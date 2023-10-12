@@ -46,7 +46,12 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .default(false),
                     )
-                    .col(ColumnDef::new(ProjectHistory::Author).integer().not_null())
+                    .col(
+                        ColumnDef::new(ProjectHistory::Author)
+                            .integer()
+                            .default(0)
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(ProjectHistory::Visibility)
                             .integer()
@@ -67,11 +72,6 @@ impl MigrationTrait for Migration {
                             .col(ProjectHistory::Id)
                             .col(ProjectHistory::Changed),
                     )
-                    .extra(match manager.get_database_backend() {
-                        sea_orm::DatabaseBackend::MySql => "",
-                        sea_orm::DatabaseBackend::Postgres => "",
-                        sea_orm::DatabaseBackend::Sqlite => "WITHOUT ROWID",
-                    })
                     .to_owned(),
             )
             .await?;

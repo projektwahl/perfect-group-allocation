@@ -1,6 +1,7 @@
 # perfect-group-allocation
 
 ```
+DATABASE_URL="sqlite:./sqlite.db?mode=rwc" sea-orm-cli migrate refresh
 sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
 ```
 
