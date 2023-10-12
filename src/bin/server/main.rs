@@ -1,21 +1,21 @@
 mod entities;
 mod migrator;
 use std::fs::File;
+use std::future::poll_fn;
 use std::io::BufReader;
-use std::net::SocketAddr;
 use std::path::Path;
-use std::path::PathBuf;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::migrator::Migrator;
 use axum::routing::get;
-use axum::routing::post;
 use axum::Router;
-use axum::ServiceExt;
+use hyper::server::accept::Accept;
 use hyper::server::conn::AddrIncoming;
 use hyper::server::conn::Http;
+use hyper::Request;
 use rustls_pemfile::certs;
-use rustls_pemfile::pkcs8_private_keys;
+use rustls_pemfile::ec_private_keys;
 use sea_orm::ConnectionTrait;
 use sea_orm::Database;
 use sea_orm::DbBackend;
@@ -28,6 +28,7 @@ use tokio_rustls::rustls::Certificate;
 use tokio_rustls::rustls::PrivateKey;
 use tokio_rustls::rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
+use tower::make::MakeService;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
@@ -41,7 +42,7 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
     let mut key_reader = BufReader::new(File::open(key).unwrap());
     let mut cert_reader = BufReader::new(File::open(cert).unwrap());
 
-    let key = PrivateKey(pkcs8_private_keys(&mut key_reader).unwrap().remove(0));
+    let key = PrivateKey(ec_private_keys(&mut key_reader).unwrap().remove(0));
     let certs = certs(&mut cert_reader)
         .unwrap()
         .into_iter()
@@ -108,22 +109,15 @@ async fn main() -> Result<(), DbErr> {
     assert!(schema_manager.has_table("project_history").await?);
 
     let rustls_config = rustls_server_config(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("self_signed_certs")
-            .join("key.pem"),
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("self_signed_certs")
-            .join("cert.pem"),
+        ".lego/certificates/h3.selfmade4u.de.key",
+        ".lego/certificates/h3.selfmade4u.de.crt",
     );
 
     let html = include_str!("../../../frontend/form.html");
 
-    //  .cert_path(".lego/certificates/h3.selfmade4u.de.crt")
-    //  .key_path(".lego/certificates/h3.selfmade4u.de.key")
-
     let acceptor = TlsAcceptor::from(rustls_config);
 
-    let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
+    let listener = TcpListener::bind("127.0.0.1:8443").await.unwrap();
     let mut listener = AddrIncoming::from_listener(listener).unwrap();
 
     let protocol = Arc::new(Http::new());
@@ -132,14 +126,22 @@ async fn main() -> Result<(), DbErr> {
         .route("/", get(handler))
         .into_make_service();
 
-    // run our app with hyper
-    // `axum::Server` is a re-export of `hyper::Server`
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8443));
-    tracing::debug!("listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    loop {
+        let stream = poll_fn(|cx| Pin::new(&mut listener).poll_accept(cx))
+            .await
+            .unwrap()
+            .unwrap();
 
-    Ok(())
+        let acceptor = acceptor.clone();
+
+        let protocol = protocol.clone();
+
+        let svc = MakeService::<_, Request<hyper::Body>>::make_service(&mut app, &stream);
+
+        tokio::spawn(async move {
+            if let Ok(stream) = acceptor.accept(stream).await {
+                let _ = protocol.serve_connection(stream, svc.await.unwrap()).await;
+            }
+        });
+    }
 }
