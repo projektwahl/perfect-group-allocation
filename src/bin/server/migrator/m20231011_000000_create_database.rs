@@ -1,4 +1,3 @@
-use sea_orm::sea_query::extension::postgres::TypeCreateStatement;
 use sea_orm_migration::prelude::*;
 
 pub struct Migration;
@@ -60,7 +59,7 @@ impl MigrationTrait for Migration {
         manager
             .create_index(
                 Index::create()
-                    .unique()
+                    .primary()
                     .name("project_history_index")
                     .table(ProjectHistory::Table)
                     .col(ProjectHistory::Id)
@@ -73,8 +72,12 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
+            .drop_index(Index::drop().name("project_history_index").to_owned())
+            .await?;
+        manager
             .drop_table(Table::drop().table(ProjectHistory::Table).to_owned())
-            .await
+            .await?;
+        Ok(())
     }
 }
 
