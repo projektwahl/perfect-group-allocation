@@ -103,7 +103,7 @@ async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> 
     let body = StreamBody::new(stream);
 
     let headers = [
-        (header::CONTENT_TYPE, "application/zstd"),
+        (header::CONTENT_TYPE, "application/octet-stream"),
         (
             header::CONTENT_DISPOSITION,
             "attachment; filename=\"firefox-118.0.2-1-x86_64.pkg.tar.zst\"",
@@ -131,7 +131,7 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
         .with_single_cert(certs, key)
         .expect("bad certificate/key");
 
-    config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+    config.alpn_protocols = vec![b"h2".to_vec()];
 
     Arc::new(config)
 }
