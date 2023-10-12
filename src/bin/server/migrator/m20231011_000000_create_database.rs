@@ -12,18 +12,20 @@ impl MigrationName for Migration {
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     /*
-    triggers have the advantage that the user does semantically more meaningful instructions like create update delete
+    triggers have the advantage that the user does semantically more meaningful instructions like create update delete, but then the code cannot directly get e.g. the new row id etc
 
     CREATE TABLE project_history (
         id INTEGER NOT NULL,
         changed TIMESTAMP NOT NULL,
-        latest BOOL NOT NULL DEFAULT TRUE,
+        latest BOOL NOT NULL DEFAULT TRUE, -- maybe update this using trigger
         deleted BOOL NOT NULL DEFAULT FALSE,
         author INTEGER NOT NULL,
         visibility INTEGER NOT NULL, -- 0 lowest, 1 no voters, 2 no helpers, 3 no admins
         title TEXT NOT NULL,
         PRIMARY KEY (id, changed)
     ) WITHOUT ROWID; -- https://www.sqlite.org/withoutrowid.html
+
+    -- https://github.com/SeaQL/sea-query/pull/478
     CREATE UNIQUE INDEX project_history_index ON project_history(id) WHERE latest;
     */
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
@@ -59,7 +61,18 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
-            .await
+            .await?;
+        manager
+            .create_index(
+                Index::create()
+                    .unique()
+                    .name("project_history_index")
+                    .table(ProjectHistory::Table)
+                    .col(ProjectHistory::Id)
+                    .to_owned(),
+            )
+            .await?;
+        Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
