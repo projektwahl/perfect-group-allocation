@@ -17,3 +17,6 @@ futures = "0.3"
 sea-orm = { version = "0.12", features = [ "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "runtime-tokio-native-tls", "macros" ] }
 sea-orm-migration = "0.12"
 axum = { version = "0.6", features = [ "http2", "macros", "multipart", "tracing" ] }
+rustls-pemfile = "1.0.3"
+tokio-rustls = "0.24.1"
+hyper = "0.14.27"
