@@ -18,7 +18,7 @@ use warp::{
 use crate::migrator::Migrator;
 
 const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
-const DB_NAME: &str = "bakeries_db";
+const DB_NAME: &str = "pga";
 
 #[tokio::main]
 async fn main() -> Result<(), DbErr> {
@@ -63,7 +63,7 @@ async fn main() -> Result<(), DbErr> {
     let schema_manager = SchemaManager::new(db); // To investigate the schema
 
     Migrator::up(db, None).await?;
-    assert!(schema_manager.has_table("bakery").await?);
+    assert!(schema_manager.has_table("project_history").await?);
 
     // handlebars?
     let html = include_str!("../../../frontend/form.html");

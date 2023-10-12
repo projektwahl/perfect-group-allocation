@@ -16,20 +16,17 @@ pub struct Migrator;
 
 // https://www.timescale.com/blog/select-the-most-recent-record-of-many-items-with-postgresql/
 
-// view or materialized view?
-
-// where timestamp=MAX(timestamp)
-
 /*
 
-CREATE TABLE projects_history (
+CREATE TABLE project_history (
     id INTEGER NOT NULL,
     history_id INTEGER NOT NULL, -- autoincrement?
     latest BOOL NOT NULL DEFAULT TRUE,
+    deleted BOOL NOT NULL DEFAULT FALSE,
     title TEXT NOT NULL,
     PRIMARY KEY (id, history_id)
 );
-CREATE UNIQUE INDEX projects_history_index ON projects_history(id) WHERE latest;
+CREATE UNIQUE INDEX project_history_index ON project_history(id) WHERE latest;
 
 
 */
