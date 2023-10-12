@@ -62,7 +62,7 @@ async fn main() -> Result<(), DbErr> {
 
     let schema_manager = SchemaManager::new(db); // To investigate the schema
 
-    Migrator::refresh(db).await?;
+    Migrator::up(db, None).await?;
     assert!(schema_manager.has_table("bakery").await?);
 
     // handlebars?
