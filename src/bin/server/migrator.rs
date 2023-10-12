@@ -16,21 +16,6 @@ pub struct Migrator;
 
 // https://www.timescale.com/blog/select-the-most-recent-record-of-many-items-with-postgresql/
 
-/*
-
-CREATE TABLE project_history (
-    id INTEGER NOT NULL,
-    history_id INTEGER NOT NULL, -- autoincrement?
-    latest BOOL NOT NULL DEFAULT TRUE,
-    deleted BOOL NOT NULL DEFAULT FALSE,
-    title TEXT NOT NULL,
-    PRIMARY KEY (id, history_id)
-);
-CREATE UNIQUE INDEX project_history_index ON project_history(id) WHERE latest;
-
-
-*/
-
 #[async_trait::async_trait]
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {

@@ -12,16 +12,18 @@ impl MigrationName for Migration {
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     /*
+    triggers have the advantage that the user does semantically more meaningful instructions like create update delete
+
     CREATE TABLE project_history (
         id INTEGER NOT NULL,
-        history_id INTEGER NOT NULL, -- could be the same for multiple ids if the action is atomic?
+        changed TIMESTAMP NOT NULL,
         latest BOOL NOT NULL DEFAULT TRUE,
-        author INTEGER NOT NULL,
         deleted BOOL NOT NULL DEFAULT FALSE,
+        author INTEGER NOT NULL,
         visibility INTEGER NOT NULL, -- 0 lowest, 1 no voters, 2 no helpers, 3 no admins
         title TEXT NOT NULL,
-        PRIMARY KEY (id, history_id)
-    );
+        PRIMARY KEY (id, changed)
+    ) WITHOUT ROWID; -- https://www.sqlite.org/withoutrowid.html
     CREATE UNIQUE INDEX project_history_index ON project_history(id) WHERE latest;
     */
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
@@ -30,11 +32,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(ProjectHistory::Table)
                     .col(ColumnDef::new(ProjectHistory::Id).integer().not_null())
-                    .col(
-                        ColumnDef::new(ProjectHistory::HistoryId)
-                            .integer()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(ProjectHistory::Changed).integer().not_null())
                     .col(
                         ColumnDef::new(ProjectHistory::Latest)
                             .boolean()
@@ -47,10 +45,16 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .default(false),
                     )
-                    .col(ColumnDef::new(ProjectHistory::Name).string().not_null())
+                    .col(ColumnDef::new(ProjectHistory::Author).integer().not_null())
                     .col(
-                        ColumnDef::new(ProjectHistory::ProfitMargin)
-                            .double()
+                        ColumnDef::new(ProjectHistory::Visibility)
+                            .integer()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(ProjectHistory::Title).string().not_null())
+                    .col(
+                        ColumnDef::new(ProjectHistory::Description)
+                            .string()
                             .not_null(),
                     )
                     .to_owned(),
@@ -69,8 +73,11 @@ impl MigrationTrait for Migration {
 pub enum ProjectHistory {
     Table,
     Id,
-    HistoryId,
+    Changed,
     Latest,
     Deleted,
+    Author,
+    Visibility,
     Title,
+    Description,
 }
