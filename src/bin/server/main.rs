@@ -13,11 +13,14 @@ use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
 use axum::extract::BodyStream;
 use axum::extract::Multipart;
+use axum::extract::State;
 use axum::response::Html;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::routing::post;
 use axum::Router;
+use entities::project_history;
+use entities::{prelude::*, *};
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use http_body::Limited;
@@ -29,11 +32,14 @@ use hyper::Request;
 use hyper::StatusCode;
 use rustls_pemfile::certs;
 use rustls_pemfile::ec_private_keys;
+use sea_orm::ActiveValue;
 use sea_orm::ConnectionTrait;
 use sea_orm::Database;
+use sea_orm::DatabaseConnection;
 use sea_orm::DbBackend;
 use sea_orm::DbErr;
 use sea_orm::Statement;
+use sea_orm::*;
 use sea_orm_migration::MigratorTrait;
 use sea_orm_migration::SchemaManager;
 use tokio::net::TcpListener;
@@ -63,6 +69,8 @@ const DB_NAME: &str = "pga";
 
 type MyBody = TimeoutBody<Limited<hyper::Body>>;
 
+type MyState = DatabaseConnection;
+
 // Make our own error that wraps `anyhow::Error`.
 struct AppError(anyhow::Error);
 
@@ -90,14 +98,22 @@ impl From<axum::Error> for AppError {
         Self(err.into())
     }
 }
+impl From<sea_orm::DbErr> for AppError {
+    fn from(err: sea_orm::DbErr) -> Self {
+        Self(err.into())
+    }
+}
 
-#[axum::debug_handler(body=MyBody)]
+#[axum::debug_handler(body=MyBody, state=MyState)]
 async fn index() -> impl IntoResponse {
     Html(include_str!("../../../frontend/form.html"))
 }
 
-#[axum::debug_handler(body=MyBody)]
-async fn create(mut multipart: Multipart) -> Result<impl IntoResponse, AppError> {
+#[axum::debug_handler(body=MyBody, state=MyState)]
+async fn create(
+    State(db): State<MyState>,
+    mut multipart: Multipart,
+) -> Result<impl IntoResponse, AppError> {
     let mut title = None;
     let mut description = None;
     while let Some(mut field) = multipart.next_field().await? {
@@ -110,10 +126,18 @@ async fn create(mut multipart: Multipart) -> Result<impl IntoResponse, AppError>
     let title = title.unwrap();
     let description = description.unwrap();
 
+    let project = project_history::ActiveModel {
+        id: ActiveValue::Set(1),
+        title: ActiveValue::Set(title),
+        description: ActiveValue::Set(description),
+        ..Default::default()
+    };
+    let res = ProjectHistory::insert(project).exec(&db).await?;
+
     Ok(())
 }
 
-#[axum::debug_handler(body=MyBody)]
+#[axum::debug_handler(body=MyBody, state=MyState)]
 async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> {
     while let Some(chunk) = stream.try_next().await? {
         println!("{chunk:?}");
@@ -170,7 +194,7 @@ async fn main() -> Result<(), DbErr> {
 
     let db = Database::connect(DATABASE_URL).await?;
 
-    let db = &match db.get_database_backend() {
+    let db = match db.get_database_backend() {
         DbBackend::MySql => {
             db.execute(Statement::from_string(
                 db.get_database_backend(),
@@ -199,9 +223,9 @@ async fn main() -> Result<(), DbErr> {
         DbBackend::Sqlite => db,
     };
 
-    let schema_manager = SchemaManager::new(db); // To investigate the schema
+    let schema_manager = SchemaManager::new(&db); // To investigate the schema
 
-    Migrator::up(db, None).await?;
+    Migrator::up(&db, None).await?;
     assert!(schema_manager.has_table("project_history").await?);
 
     // https://github.com/tokio-rs/axum/blob/main/examples/low-level-rustls/src/main.rs
@@ -221,10 +245,11 @@ async fn main() -> Result<(), DbErr> {
     let service = ServeDir::new("frontend");
 
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let mut app = Router::<(), MyBody>::new()
+    let mut app = Router::<MyState, MyBody>::new()
         .route("/", get(index))
         .route("/", post(create))
         .fallback_service(service)
+        .with_state(db)
         .layer(
             ServiceBuilder::new()
                 .set_x_request_id(MakeRequestUuid::default())

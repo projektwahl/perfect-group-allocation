@@ -34,7 +34,12 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(ProjectHistory::Table)
                     .col(ColumnDef::new(ProjectHistory::Id).integer().not_null())
-                    .col(ColumnDef::new(ProjectHistory::Changed).integer().not_null())
+                    .col(
+                        ColumnDef::new(ProjectHistory::Changed)
+                            .timestamp()
+                            .default(Expr::current_timestamp())
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(ProjectHistory::Deleted)
                             .boolean()
@@ -45,6 +50,7 @@ impl MigrationTrait for Migration {
                     .col(
                         ColumnDef::new(ProjectHistory::Visibility)
                             .integer()
+                            .default(0)
                             .not_null(),
                     )
                     .col(ColumnDef::new(ProjectHistory::Title).string().not_null())
