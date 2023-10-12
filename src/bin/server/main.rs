@@ -1,5 +1,4 @@
 mod entities;
-mod migrator;
 use std::fs::File;
 use std::future::poll_fn;
 use std::io::BufReader;
@@ -221,11 +220,6 @@ async fn main() -> Result<(), DbErr> {
         }
         DbBackend::Sqlite => db,
     };
-
-    let schema_manager = SchemaManager::new(&db); // To investigate the schema
-
-    Migrator::up(&db, None).await?;
-    assert!(schema_manager.has_table("project_history").await?);
 
     // https://github.com/tokio-rs/axum/blob/main/examples/low-level-rustls/src/main.rs
 

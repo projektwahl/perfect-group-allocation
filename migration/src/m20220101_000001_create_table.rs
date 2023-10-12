@@ -38,6 +38,13 @@ impl MigrationTrait for Migration {
             .create_table(
                 Table::create()
                     .table(ProjectHistory::Table)
+                    .col(
+                        ColumnDef::new(ProjectHistory::RowId)
+                            .integer()
+                            .primary_key()
+                            .auto_increment()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(ProjectHistory::Id).integer().not_null())
                     .col(
                         ColumnDef::new(ProjectHistory::Changed)
@@ -69,17 +76,22 @@ impl MigrationTrait for Migration {
                             .string()
                             .not_null(),
                     )
-                    .primary_key(
-                        Index::create()
-                            .primary()
-                            .name("project_history_index")
-                            .table(ProjectHistory::Table)
-                            .col(ProjectHistory::Id)
-                            .col(ProjectHistory::Changed),
-                    )
                     .to_owned(),
             )
             .await?;
+
+        manager
+            .create_index(
+                Index::create()
+                    .unique()
+                    .name("project_history_index")
+                    .table(ProjectHistory::Table)
+                    .col(ProjectHistory::Id)
+                    .col(ProjectHistory::Changed)
+                    .to_owned(),
+            )
+            .await?;
+
         Ok(())
     }
 
@@ -94,6 +106,7 @@ impl MigrationTrait for Migration {
 #[derive(DeriveIden)]
 pub enum ProjectHistory {
     Table,
+    RowId,
     Id,
     Changed,
     Deleted,

@@ -5,9 +5,9 @@ use sea_orm::entity::prelude::*;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "project_history")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = false)]
+    #[sea_orm(primary_key)]
+    pub row_id: i32,
     pub id: i32,
-    #[sea_orm(primary_key, auto_increment = false)]
     pub changed: String,
     pub deleted: bool,
     pub author: i32,
