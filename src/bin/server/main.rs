@@ -9,17 +9,21 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::migrator::Migrator;
+use axum::body::StreamBody;
 use axum::extract::BodyStream;
+use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::routing::post;
 use axum::Router;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use http_body::Limited;
+use hyper::header;
 use hyper::server::accept::Accept;
 use hyper::server::conn::AddrIncoming;
 use hyper::server::conn::Http;
 use hyper::Request;
+use hyper::StatusCode;
 use rustls_pemfile::certs;
 use rustls_pemfile::ec_private_keys;
 use sea_orm::ConnectionTrait;
@@ -34,6 +38,7 @@ use tokio_rustls::rustls::Certificate;
 use tokio_rustls::rustls::PrivateKey;
 use tokio_rustls::rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
+use tokio_util::io::ReaderStream;
 use tower::make::MakeService;
 use tower::ServiceBuilder;
 use tower_http::catch_panic::CatchPanicLayer;
@@ -54,13 +59,58 @@ const DB_NAME: &str = "pga";
 
 type MyBody = TimeoutBody<Limited<hyper::Body>>;
 
+// Make our own error that wraps `anyhow::Error`.
+struct AppError(axum::Error);
+
+// Tell axum how to convert `AppError` into a response.
+impl IntoResponse for AppError {
+    fn into_response(self) -> axum::response::Response {
+        println!("{}", self.0);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Something went wrong: {}", self.0),
+        )
+            .into_response()
+    }
+}
+
+// This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
+// `Result<_, AppError>`. That way you don't need to do that manually.
+impl<E> From<E> for AppError
+where
+    E: Into<axum::Error>,
+{
+    fn from(err: E) -> Self {
+        Self(err.into())
+    }
+}
+
 #[axum::debug_handler(body=MyBody)]
-async fn handler(mut stream: BodyStream) -> Result<&'static str, axum::Error> {
+async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> {
     while let Some(chunk) = stream.try_next().await? {
         println!("{chunk:?}");
     }
-    tokio::time::sleep(Duration::from_secs(2)).await;
-    Ok("Hello, World!")
+    let file =
+        match tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
+            .await
+        {
+            Ok(file) => file,
+            Err(err) => panic!(),
+        };
+    // convert the `AsyncRead` into a `Stream`
+    let stream = ReaderStream::new(file);
+    // convert the `Stream` into an `axum::body::HttpBody`
+    let body = StreamBody::new(stream);
+
+    let headers = [
+        (header::CONTENT_TYPE, "application/zstd"),
+        (
+            header::CONTENT_DISPOSITION,
+            "attachment; filename=\"firefox-118.0.2-1-x86_64.pkg.tar.zst\"",
+        ),
+    ];
+
+    Ok((headers, body))
 }
 
 // TODO rtt0
@@ -145,6 +195,7 @@ async fn main() -> Result<(), DbErr> {
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
     let mut app = Router::<(), MyBody>::new()
         .route("/", post(handler))
+        .route("/", get(handler))
         .layer(
             ServiceBuilder::new()
                 .set_x_request_id(MakeRequestUuid::default())
@@ -154,11 +205,11 @@ async fn main() -> Result<(), DbErr> {
                         .on_response(DefaultOnResponse::new().include_headers(true)),
                 )
                 .propagate_x_request_id()
-                .layer(TimeoutLayer::new(Duration::from_secs(3)))
+                .layer(TimeoutLayer::new(Duration::from_secs(5)))
                 .layer(CatchPanicLayer::new())
                 .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
-                .layer(RequestBodyTimeoutLayer::new(Duration::from_nanos(1)))
-                .layer(ResponseBodyTimeoutLayer::new(Duration::from_millis(1)))
+                .layer(RequestBodyTimeoutLayer::new(Duration::from_millis(100))) // this timeout is between sends, so not the total timeout
+                .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(100)))
                 .layer(CompressionLayer::new().quality(tower_http::CompressionLevel::Best)),
         )
         .into_make_service();
