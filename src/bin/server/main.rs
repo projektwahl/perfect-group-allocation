@@ -60,6 +60,8 @@ async fn main() -> Result<(), DbErr> {
         DbBackend::Sqlite => db,
     };
 
+    // sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
+
     let schema_manager = SchemaManager::new(db); // To investigate the schema
 
     Migrator::up(db, None).await?;
