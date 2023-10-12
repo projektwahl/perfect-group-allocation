@@ -57,7 +57,7 @@ use tower_http::ServiceBuilderExt;
 const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 const DB_NAME: &str = "pga";
 
-type MyBody = TimeoutBody<Limited<hyper::Body>>;
+type MyBody = hyper::Body; //TimeoutBody<Limited<hyper::Body>>;
 
 // Make our own error that wraps `anyhow::Error`.
 struct AppError(axum::Error);
@@ -205,12 +205,11 @@ async fn main() -> Result<(), DbErr> {
                         .on_response(DefaultOnResponse::new().include_headers(true)),
                 )
                 .propagate_x_request_id()
-                .layer(TimeoutLayer::new(Duration::from_secs(5)))
-                .layer(CatchPanicLayer::new())
-                .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
-                .layer(RequestBodyTimeoutLayer::new(Duration::from_millis(100))) // this timeout is between sends, so not the total timeout
-                .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(100)))
-                .layer(CompressionLayer::new().quality(tower_http::CompressionLevel::Best)),
+                //.layer(TimeoutLayer::new(Duration::from_secs(5)))
+                .layer(CatchPanicLayer::new()), //.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
+                                                //.layer(RequestBodyTimeoutLayer::new(Duration::from_millis(100))) // this timeout is between sends, so not the total timeout
+                                                //.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(100)))
+                                                //.layer(CompressionLayer::new().quality(tower_http::CompressionLevel::Best)),
         )
         .into_make_service();
 
