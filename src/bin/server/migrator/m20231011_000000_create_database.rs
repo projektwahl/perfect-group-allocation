@@ -53,17 +53,19 @@ impl MigrationTrait for Migration {
                             .string()
                             .not_null(),
                     )
-                    .to_owned(),
-            )
-            .await?;
-        manager
-            .create_index(
-                Index::create()
-                    .primary()
-                    .name("project_history_index")
-                    .table(ProjectHistory::Table)
-                    .col(ProjectHistory::Id)
-                    .col(ProjectHistory::Changed)
+                    .primary_key(
+                        Index::create()
+                            .primary()
+                            .name("project_history_index")
+                            .table(ProjectHistory::Table)
+                            .col(ProjectHistory::Id)
+                            .col(ProjectHistory::Changed),
+                    )
+                    .extra(match manager.get_database_backend() {
+                        sea_orm::DatabaseBackend::MySql => "",
+                        sea_orm::DatabaseBackend::Postgres => "",
+                        sea_orm::DatabaseBackend::Sqlite => "WITHOUT ROWID",
+                    })
                     .to_owned(),
             )
             .await?;
@@ -71,9 +73,6 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .drop_index(Index::drop().name("project_history_index").to_owned())
-            .await?;
         manager
             .drop_table(Table::drop().table(ProjectHistory::Table).to_owned())
             .await?;
