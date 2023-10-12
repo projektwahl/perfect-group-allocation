@@ -11,6 +11,7 @@ use std::time::Duration;
 use crate::migrator::Migrator;
 use axum::body::StreamBody;
 use axum::extract::BodyStream;
+use axum::response::Html;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::routing::post;
@@ -45,6 +46,7 @@ use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::MakeRequestUuid;
+use tower_http::services::ServeDir;
 use tower_http::timeout::RequestBodyTimeoutLayer;
 use tower_http::timeout::ResponseBodyTimeoutLayer;
 use tower_http::timeout::TimeoutBody;
@@ -57,7 +59,7 @@ use tower_http::ServiceBuilderExt;
 const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
 const DB_NAME: &str = "pga";
 
-type MyBody = hyper::Body; //TimeoutBody<Limited<hyper::Body>>;
+type MyBody = TimeoutBody<Limited<hyper::Body>>;
 
 // Make our own error that wraps `anyhow::Error`.
 struct AppError(axum::Error);
@@ -83,6 +85,11 @@ where
     fn from(err: E) -> Self {
         Self(err.into())
     }
+}
+
+#[axum::debug_handler(body=MyBody)]
+async fn index() -> impl IntoResponse {
+    Html(include_str!("../../../frontend/form.html"))
 }
 
 #[axum::debug_handler(body=MyBody)]
@@ -183,8 +190,6 @@ async fn main() -> Result<(), DbErr> {
         ".lego/certificates/h3.selfmade4u.de.crt",
     );
 
-    let html = include_str!("../../../frontend/form.html");
-
     let acceptor = TlsAcceptor::from(rustls_config);
 
     let listener = TcpListener::bind("127.0.0.1:8443").await.unwrap();
@@ -192,10 +197,12 @@ async fn main() -> Result<(), DbErr> {
 
     let protocol = Arc::new(Http::new());
 
+    let service = ServeDir::new("frontend");
+
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
     let mut app = Router::<(), MyBody>::new()
-        .route("/", post(handler))
-        .route("/", get(handler))
+        .route("/", get(index))
+        .fallback_service(service)
         .layer(
             ServiceBuilder::new()
                 .set_x_request_id(MakeRequestUuid::default())
@@ -205,11 +212,12 @@ async fn main() -> Result<(), DbErr> {
                         .on_response(DefaultOnResponse::new().include_headers(true)),
                 )
                 .propagate_x_request_id()
-                //.layer(TimeoutLayer::new(Duration::from_secs(5)))
-                .layer(CatchPanicLayer::new()), //.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
-                                                //.layer(RequestBodyTimeoutLayer::new(Duration::from_millis(100))) // this timeout is between sends, so not the total timeout
-                                                //.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(100)))
-                                                //.layer(CompressionLayer::new().quality(tower_http::CompressionLevel::Best)),
+                .layer(TimeoutLayer::new(Duration::from_secs(5)))
+                .layer(CatchPanicLayer::new())
+                .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
+                .layer(RequestBodyTimeoutLayer::new(Duration::from_millis(100))) // this timeout is between sends, so not the total timeout
+                .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(100)))
+                .layer(CompressionLayer::new().quality(tower_http::CompressionLevel::Best)),
         )
         .into_make_service();
 
