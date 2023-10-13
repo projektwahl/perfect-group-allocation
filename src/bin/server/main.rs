@@ -19,6 +19,7 @@ use axum::routing::post;
 use axum::Router;
 use entities::project_history;
 use entities::{prelude::*, *};
+use futures_util::Stream;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
 use http_body::Limited;
@@ -135,8 +136,10 @@ async fn create(
     Ok(())
 }
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn list(State(db): State<MyState>) -> Result<impl IntoResponse, AppError> {
-    let stream = ProjectHistory::find().stream(&db.clone()).await?;
+async fn list(
+    State(db): State<MyState>,
+) -> Result<StreamBody<impl Stream<Item = Result<String, DbErr>>>, AppError> {
+    let stream = ProjectHistory::find().stream(&db).await?;
 
     let stream = stream.map_ok(|value| format!("project: {}", value.title));
 
