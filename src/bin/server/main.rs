@@ -1,3 +1,5 @@
+#![feature(generators)]
+
 mod entities;
 use std::fs::File;
 use std::future::poll_fn;
@@ -19,6 +21,7 @@ use axum::routing::post;
 use axum::Router;
 use entities::project_history;
 use entities::{prelude::*, *};
+use futures_async_stream::stream;
 use futures_util::stream;
 use futures_util::FutureExt;
 use futures_util::Stream;
@@ -153,6 +156,15 @@ fn list3<'a>(
     stream: impl Stream<Item = Result<project_history::Model, DbErr>> + Send + 'a,
 ) -> impl Stream<Item = Result<String, DbErr>> + Send + 'a {
     stream.map_ok(|value| format!("project: {}", value.title))
+}
+
+#[stream(item = Result<project_history::Model, DbErr>)]
+async fn list5(db: DatabaseConnection) {
+    let stream = ProjectHistory::find().stream(&db).await.unwrap();
+    #[for_await]
+    for x in stream {
+        yield x;
+    }
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
