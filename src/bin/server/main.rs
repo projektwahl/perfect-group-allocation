@@ -145,18 +145,25 @@ async fn create(
 #[try_stream(ok = String, error = DbErr)]
 async fn list_internal(db: DatabaseConnection) {
     let stream = ProjectHistory::find().stream(&db).await.unwrap();
+    yield "THIS IS A TEST".to_string();
     #[for_await]
     for x in stream {
-        yield format!("project: {}", x?.title);
+        let x = x?;
+        yield format!(
+            "title: {}<br />description: {}<br /><br />",
+            x.title, x.description
+        );
     }
+    yield "THIS IS THE END".to_string();
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn list(
-    State(db): State<MyState>,
-) -> StreamBody<impl Stream<Item = Result<String, DbErr>> + Send> {
+async fn list(State(db): State<MyState>) -> impl IntoResponse {
     let stream = list_internal(db);
-    StreamBody::new(stream)
+    (
+        [(header::CONTENT_TYPE, "text/html")],
+        StreamBody::new(stream),
+    )
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
