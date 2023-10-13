@@ -22,6 +22,7 @@ use axum::Router;
 use entities::project_history;
 use entities::{prelude::*, *};
 use futures_async_stream::stream;
+use futures_async_stream::try_stream;
 use futures_util::stream;
 use futures_util::FutureExt;
 use futures_util::Stream;
@@ -136,49 +137,25 @@ async fn create(
         description: ActiveValue::Set(description),
         ..Default::default()
     };
-    let res = ProjectHistory::insert(project).exec(&db).await?;
+    let _ = ProjectHistory::insert(project).exec(&db).await?;
 
     Ok(())
 }
-fn list1(db: DatabaseConnection) -> impl Stream<Item = DatabaseConnection> {
-    stream::once(async { db })
-}
 
-fn list2(
-    db: &'_ DatabaseConnection,
-) -> impl Stream<Item = Result<project_history::Model, DbErr>> + Send + '_ {
-    async { ProjectHistory::find().stream(db).await.unwrap() }
-        .into_stream()
-        .flatten()
-}
-
-fn list3<'a>(
-    stream: impl Stream<Item = Result<project_history::Model, DbErr>> + Send + 'a,
-) -> impl Stream<Item = Result<String, DbErr>> + Send + 'a {
-    stream.map_ok(|value| format!("project: {}", value.title))
-}
-
-#[stream(item = Result<project_history::Model, DbErr>)]
-async fn list5(db: DatabaseConnection) {
+#[try_stream(ok = String, error = DbErr)]
+async fn list_internal(db: DatabaseConnection) {
     let stream = ProjectHistory::find().stream(&db).await.unwrap();
     #[for_await]
     for x in stream {
-        yield x;
+        yield format!("project: {}", x?.title);
     }
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn list(
     State(db): State<MyState>,
-) -> StreamBody<impl Stream<Item = Result<String, DbErr>> + Send + '_> {
-    let db = db.clone();
-
-    //let stream = list1(db);
-    let stream = list2(&db);
-    let stream = list3(stream);
-
-    // https://docs.rs/futures-async-stream/latest/futures_async_stream/
-
+) -> StreamBody<impl Stream<Item = Result<String, DbErr>> + Send> {
+    let stream = list_internal(db);
     StreamBody::new(stream)
 }
 
