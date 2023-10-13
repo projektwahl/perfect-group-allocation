@@ -28,6 +28,7 @@ use futures_util::FutureExt;
 use futures_util::Stream;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
+use html_escape::encode_safe;
 use http_body::Limited;
 use hyper::header;
 use hyper::server::accept::Accept;
@@ -152,7 +153,8 @@ async fn list_internal(db: DatabaseConnection) {
         yield format!(
             // TODO FIXME XSS
             "title: {}<br />description: {}<br /><br />",
-            x.title, x.description
+            encode_safe(&x.title),
+            encode_safe(&x.description)
         );
     }
     yield "THIS IS THE END".to_string();
