@@ -17,6 +17,7 @@ use axum::extract::State;
 use axum::http::HeaderValue;
 use axum::response::Html;
 use axum::response::IntoResponse;
+use axum::response::Redirect;
 use axum::routing::get;
 use axum::routing::post;
 use axum::Router;
@@ -73,8 +74,7 @@ use tower_http::trace::DefaultOnResponse;
 use tower_http::trace::TraceLayer;
 use tower_http::ServiceBuilderExt;
 
-const DATABASE_URL: &str = "sqlite:./sqlite.db?mode=rwc";
-const DB_NAME: &str = "pga";
+const DB_NAME: &str = "postgres";
 
 type MyBody = TimeoutBody<Limited<hyper::Body>>;
 
@@ -215,17 +215,20 @@ async fn create(
         description_error = Some("description must not be empty".to_string());
     }
 
-    let stream = index_template(
-        Some(title),
-        Some(description),
-        title_error,
-        description_error,
-    );
+    if title_error.is_some() || description_error.is_some() {
+        let stream = index_template(
+            Some(title),
+            Some(description),
+            title_error,
+            description_error,
+        );
 
-    return Ok((
-        [(header::CONTENT_TYPE, "text/html")],
-        StreamBody::new(stream),
-    ));
+        return Ok((
+            [(header::CONTENT_TYPE, "text/html")],
+            StreamBody::new(stream),
+        )
+            .into_response());
+    }
 
     let project = project_history::ActiveModel {
         id: ActiveValue::Set(1),
@@ -234,6 +237,8 @@ async fn create(
         ..Default::default()
     };
     let _ = ProjectHistory::insert(project).exec(&db).await?;
+
+    return Ok(Redirect::to("/list").into_response());
 }
 
 #[try_stream(ok = String, error = DbErr)]
@@ -317,7 +322,9 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
 async fn main() -> Result<(), DbErr> {
     tracing_subscriber::fmt::init();
 
-    let db = Database::connect(DATABASE_URL).await?;
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL env must be set");
+
+    let db = Database::connect(&database_url).await?;
 
     let db = match db.get_database_backend() {
         DbBackend::MySql => {
@@ -327,7 +334,7 @@ async fn main() -> Result<(), DbErr> {
             ))
             .await?;
 
-            let url = format!("{}/{}", DATABASE_URL, DB_NAME);
+            let url = format!("{}/{}", database_url, DB_NAME);
             Database::connect(&url).await?
         }
         DbBackend::Postgres => {
@@ -342,7 +349,7 @@ async fn main() -> Result<(), DbErr> {
                 println!("{err:?}");
             }
 
-            let url = format!("{}/{}", DATABASE_URL, DB_NAME);
+            let url = format!("{}/{}", database_url, DB_NAME);
             Database::connect(&url).await?
         }
         DbBackend::Sqlite => db,
