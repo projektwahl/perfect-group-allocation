@@ -20,6 +20,7 @@ use axum::Router;
 use entities::project_history;
 use entities::{prelude::*, *};
 use futures_util::stream;
+use futures_util::FutureExt;
 use futures_util::Stream;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
@@ -140,23 +141,33 @@ fn list1(db: DatabaseConnection) -> impl Stream<Item = DatabaseConnection> {
     stream::once(async { db })
 }
 
-fn list2<'a>(
-    stream: impl Stream<Item = DatabaseConnection> + 'a,
-) -> impl Stream<Item = impl Stream<Item = Result<project_history::Model, DbErr>> + Send + 'a> {
-    stream.then(|db| async move { ProjectHistory::find().stream(&db).await.unwrap() })
+fn list2(
+    db: &'_ DatabaseConnection,
+) -> impl Stream<Item = Result<project_history::Model, DbErr>> + Send + '_ {
+    async { ProjectHistory::find().stream(db).await.unwrap() }
+        .into_stream()
+        .flatten()
+}
+
+fn list3<'a>(
+    stream: impl Stream<Item = Result<project_history::Model, DbErr>> + Send + 'a,
+) -> impl Stream<Item = Result<String, DbErr>> + Send + 'a {
+    stream.map_ok(|value| format!("project: {}", value.title))
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn list(State(db): State<MyState>) -> StreamBody<impl Stream<Item = Result<String, DbErr>>> {
+async fn list(
+    State(db): State<MyState>,
+) -> StreamBody<impl Stream<Item = Result<String, DbErr>> + Send + '_> {
     let db = db.clone();
 
-    let stream = list1(db);
+    //let stream = list1(db);
+    let stream = list2(&db);
+    let stream = list3(stream);
 
     // https://docs.rs/futures-async-stream/latest/futures_async_stream/
 
-    let stream = stream.map_ok(|value| format!("project: {}", value.title));
-
-    todo!()
+    StreamBody::new(stream)
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
