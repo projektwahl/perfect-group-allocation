@@ -14,6 +14,7 @@ use axum::extract::multipart::MultipartError;
 use axum::extract::BodyStream;
 use axum::extract::Multipart;
 use axum::extract::State;
+use axum::http::HeaderValue;
 use axum::response::Html;
 use axum::response::IntoResponse;
 use axum::routing::get;
@@ -62,6 +63,7 @@ use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::MakeRequestUuid;
 use tower_http::services::ServeDir;
+use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::timeout::RequestBodyTimeoutLayer;
 use tower_http::timeout::ResponseBodyTimeoutLayer;
 use tower_http::timeout::TimeoutBody;
@@ -134,11 +136,11 @@ async fn index_template(
             <h1 class="center">Create project</h1>
             <form method="post" enctype="multipart/form-data">
                 <label for="title">Title:</label>
-                <input id="title" name="title" type="text"{} />
+                <input{} id="title" name="title" type="text"{} />
                 {}
 
                 <label for="description">Description:</label>
-                <input id="description" name="description" type="text"{} />
+                <input{} id="description" name="description" type="text"{} />
                 {}
 
                 <button type="submit">Create</button>
@@ -147,12 +149,22 @@ async fn index_template(
     </body>
     
     </html>"#,
+        if title_error.is_some() {
+            r#" class="error""#
+        } else {
+            ""
+        },
         title
             .map(|title| format!(r#" value="{}""#, encode_safe(&title)))
             .unwrap_or_default(),
         title_error
             .map(|title_error| format!(r#"<div class="error">{}</div>"#, encode_safe(&title_error)))
             .unwrap_or_default(),
+        if description_error.is_some() {
+            r#" class="error""#
+        } else {
+            ""
+        },
         description
             .map(|description| format!(r#" value="{}""#, encode_safe(&description)))
             .unwrap_or_default(),
@@ -368,6 +380,10 @@ async fn main() -> Result<(), DbErr> {
                         .on_response(DefaultOnResponse::new().include_headers(true)),
                 )
                 .propagate_x_request_id()
+                .layer(SetResponseHeaderLayer::overriding(
+                    header::CACHE_CONTROL,
+                    HeaderValue::from_static("private, max-age=604800, must-revalidate"),
+                ))
                 .layer(TimeoutLayer::new(Duration::from_secs(5)))
                 .layer(CatchPanicLayer::new())
                 .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))

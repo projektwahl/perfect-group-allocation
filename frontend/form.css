@@ -12,6 +12,10 @@ input {
     grid-column: 2;
 }
 
+.error {
+    border-color: red;
+}
+
 button {
     grid-column: 1 / 3;
 }
