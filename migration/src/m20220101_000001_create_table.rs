@@ -34,51 +34,49 @@ CREATE UNIQUE INDEX project_history_index ON project_history(id) WHERE latest;
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .create_table(
-                Table::create()
-                    .table(ProjectHistory::Table)
-                    .col(
-                        ColumnDef::new(ProjectHistory::RowId)
-                            .integer()
-                            .primary_key()
-                            .auto_increment()
-                            .not_null(),
-                    )
-                    .col(ColumnDef::new(ProjectHistory::Id).integer().not_null())
-                    .col(
-                        ColumnDef::new(ProjectHistory::Changed)
-                            .timestamp()
-                            .default(Expr::current_timestamp())
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(ProjectHistory::Deleted)
-                            .boolean()
-                            .not_null()
-                            .default(false),
-                    )
-                    .col(
-                        ColumnDef::new(ProjectHistory::Author)
-                            .integer()
-                            .default(0)
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(ProjectHistory::Visibility)
-                            .integer()
-                            .default(0)
-                            .not_null(),
-                    )
-                    .col(ColumnDef::new(ProjectHistory::Title).string().not_null())
-                    .col(
-                        ColumnDef::new(ProjectHistory::Description)
-                            .string()
-                            .not_null(),
-                    )
-                    .to_owned(),
+        let table = Table::create()
+            .table(ProjectHistory::Table)
+            .col(
+                ColumnDef::new(ProjectHistory::RowId)
+                    .integer()
+                    .primary_key()
+                    .auto_increment()
+                    .not_null(),
             )
-            .await?;
+            .col(ColumnDef::new(ProjectHistory::Id).integer().not_null())
+            .col(
+                ColumnDef::new(ProjectHistory::Changed)
+                    .timestamp()
+                    .default(Expr::current_timestamp())
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(ProjectHistory::Deleted)
+                    .boolean()
+                    .not_null()
+                    .default(false),
+            )
+            .col(
+                ColumnDef::new(ProjectHistory::Author)
+                    .integer()
+                    .default(0)
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(ProjectHistory::Visibility)
+                    .integer()
+                    .default(0)
+                    .not_null(),
+            )
+            .col(ColumnDef::new(ProjectHistory::Title).string().not_null())
+            .col(
+                ColumnDef::new(ProjectHistory::Description)
+                    .string()
+                    .not_null(),
+            )
+            .to_owned();
+
+        manager.create_table(table).await?;
 
         manager
             .create_index(

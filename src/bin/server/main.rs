@@ -150,6 +150,7 @@ async fn list_internal(db: DatabaseConnection) {
     for x in stream {
         let x = x?;
         yield format!(
+            // TODO FIXME XSS
             "title: {}<br />description: {}<br /><br />",
             x.title, x.description
         );
