@@ -135,8 +135,12 @@ async fn index_template(
             <form method="post" enctype="multipart/form-data">
                 <label for="title">Title:</label>
                 <input id="title" name="title" type="text"{} />
+                {}
+
                 <label for="description">Description:</label>
                 <input id="description" name="description" type="text"{} />
+                {}
+
                 <button type="submit">Create</button>
             </form>
         </main>
@@ -144,14 +148,20 @@ async fn index_template(
     
     </html>"#,
         title
-            .map(|title| format!(r#" value="{}""#, encode_double_quoted_attribute(&title)))
-            .unwrap_or("".to_string()),
+            .map(|title| format!(r#" value="{}""#, encode_safe(&title)))
+            .unwrap_or_default(),
+        title_error
+            .map(|title_error| format!(r#"<div class="error">{}</div>"#, encode_safe(&title_error)))
+            .unwrap_or_default(),
         description
-            .map(|description| format!(
-                r#" value="{}""#,
-                encode_double_quoted_attribute(&description)
+            .map(|description| format!(r#" value="{}""#, encode_safe(&description)))
+            .unwrap_or_default(),
+        description_error
+            .map(|description_error| format!(
+                r#"<div class="error">{}</div>"#,
+                encode_safe(&description_error)
             ))
-            .unwrap_or("".to_string())
+            .unwrap_or_default(),
     );
 }
 
