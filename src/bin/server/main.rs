@@ -28,6 +28,7 @@ use futures_util::FutureExt;
 use futures_util::Stream;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
+use html_escape::encode_double_quoted_attribute;
 use html_escape::encode_safe;
 use http_body::Limited;
 use hyper::header;
@@ -110,9 +111,58 @@ impl From<sea_orm::DbErr> for AppError {
     }
 }
 
+#[try_stream(ok = String, error = DbErr)]
+async fn index_template(
+    title: Option<String>,
+    description: Option<String>,
+    title_error: Option<String>,
+    description_error: Option<String>,
+) {
+    yield format!(
+        r#"<!doctype html>
+    <html lang="en">
+    
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Empty page</title>
+        <link rel="stylesheet" href="index.css" />
+    </head>
+    
+    <body>
+        <main>
+            <h1 class="center">Create project</h1>
+            <form method="post" enctype="multipart/form-data">
+                <label for="title">Title:</label>
+                <input id="title" name="title" type="text"{} />
+                <label for="description">Description:</label>
+                <input id="description" name="description" type="text"{} />
+                <button type="submit">Create</button>
+            </form>
+        </main>
+    </body>
+    
+    </html>"#,
+        title
+            .map(|title| format!(r#" value="{}""#, encode_double_quoted_attribute(&title)))
+            .unwrap_or("".to_string()),
+        description
+            .map(|description| format!(
+                r#" value="{}""#,
+                encode_double_quoted_attribute(&description)
+            ))
+            .unwrap_or("".to_string())
+    );
+}
+
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn index() -> impl IntoResponse {
-    Html(include_str!("../../../frontend/form.html"))
+    let stream = index_template(None, None, None, None);
+
+    (
+        [(header::CONTENT_TYPE, "text/html")],
+        StreamBody::new(stream),
+    )
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
@@ -132,6 +182,29 @@ async fn create(
     let title = title.unwrap();
     let description = description.unwrap();
 
+    let mut title_error = None;
+    let mut description_error = None;
+
+    if title.is_empty() {
+        title_error = Some("title must not be empty".to_string());
+    }
+
+    if description.is_empty() {
+        description_error = Some("description must not be empty".to_string());
+    }
+
+    let stream = index_template(
+        Some(title),
+        Some(description),
+        title_error,
+        description_error,
+    );
+
+    return Ok((
+        [(header::CONTENT_TYPE, "text/html")],
+        StreamBody::new(stream),
+    ));
+
     let project = project_history::ActiveModel {
         id: ActiveValue::Set(1),
         title: ActiveValue::Set(title),
@@ -139,8 +212,6 @@ async fn create(
         ..Default::default()
     };
     let _ = ProjectHistory::insert(project).exec(&db).await?;
-
-    Ok(())
 }
 
 #[try_stream(ok = String, error = DbErr)]
