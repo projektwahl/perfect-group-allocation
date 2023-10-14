@@ -2,6 +2,11 @@
 name = "perfect-group-allocation"
 version = "0.1.0"
 edition = "2021"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/projektwahl/perfect-group-allocation"
+description = "Allocate people to groups according to their preferences while honoring specified restrictions."
+keywords = ["web", "management", "service"]
+categories = ["web-programming"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

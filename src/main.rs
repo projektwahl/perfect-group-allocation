@@ -11,6 +11,7 @@ use crate::examples::workshops::{
 
 pub mod examples;
 
+#[allow(unused)]
 fn group_pairs<A, B, I>(v: I) -> BTreeMap<A, Vec<B>>
 where
     A: Ord,

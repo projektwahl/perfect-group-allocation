@@ -1,3 +1,4 @@
+#![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![feature(generators)]
 
 mod entities;
@@ -249,13 +250,9 @@ async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> 
     while let Some(chunk) = stream.try_next().await? {
         println!("{chunk:?}");
     }
-    let file =
-        match tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
-            .await
-        {
-            Ok(file) => file,
-            Err(_err) => panic!(),
-        };
+    let file = tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
+        .await
+        .unwrap();
     let stream = ReaderStream::new(file);
     let body = StreamBody::new(stream);
 
@@ -357,6 +354,7 @@ async fn main() -> Result<(), DbErr> {
         .route("/", get(index))
         .route("/", post(create))
         .route("/list", get(list))
+        .route("/download", get(handler))
         .fallback_service(service)
         .with_state(db)
         .layer(
