@@ -23,6 +23,9 @@ https://owasp.org/www-project-benchmark/
 
 ## OWASP Dependency-Track
 
+issues:
+https://github.com/DependencyTrack/dependency-track/issues/170
+
 https://owasp.org/www-project-dependency-track/
 https://docs.dependencytrack.org/
 
