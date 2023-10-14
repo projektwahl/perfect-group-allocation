@@ -29,7 +29,9 @@ use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Request, StatusCode};
 use rustls_pemfile::{certs, ec_private_keys};
 use sea_orm::{
-    ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, Statement, *,
+    ActiveEnum, ActiveModelBehavior, ActiveModelTrait, ActiveValue, ConnectionTrait, Database,
+    DatabaseConnection, DbBackend, DbErr, EntityTrait, Iden, QueryTrait, Related, RuntimeErr,
+    Statement, StatementBuilder, StreamTrait,
 };
 use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
@@ -302,18 +304,18 @@ async fn main() -> Result<(), DbErr> {
         DbBackend::MySql => {
             db.execute(Statement::from_string(
                 db.get_database_backend(),
-                format!("CREATE DATABASE IF NOT EXISTS `{}`;", DB_NAME),
+                format!("CREATE DATABASE IF NOT EXISTS `{DB_NAME}`;"),
             ))
             .await?;
 
-            let url = format!("{}/{}", database_url, DB_NAME);
+            let url = format!("{database_url}/{DB_NAME}");
             Database::connect(&url).await?
         }
         DbBackend::Postgres => {
             let err_already_exists = db
                 .execute(Statement::from_string(
                     db.get_database_backend(),
-                    format!("CREATE DATABASE \"{}\";", DB_NAME),
+                    format!("CREATE DATABASE \"{DB_NAME}\";"),
                 ))
                 .await;
 
@@ -327,7 +329,7 @@ async fn main() -> Result<(), DbErr> {
                 Ok(_) => {}
             }
 
-            let url = format!("{}/{}", database_url, DB_NAME);
+            let url = format!("{database_url}/{DB_NAME}");
             Database::connect(&url).await?
         }
         DbBackend::Sqlite => db,
