@@ -7,6 +7,7 @@ sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/ent
 podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
 psql postgres://postgres:password@localhost
 DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
+sea-orm-cli generate entity -u postgres://postgres:password@localhost/postgres -o src/bin/server/entities
 DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
 ```
 
