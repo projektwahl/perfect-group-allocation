@@ -58,20 +58,34 @@ https://sqlmap.org/
 
 probably no https support
 https://github.com/shekyan/slowhttptest/wiki/InstallationAndUsage
-podman run docker.io/shekyan/slowhttptest:latest https://h3.selfmade4u.de:8443/
+podman run --network=host docker.io/shekyan/slowhttptest:latest -u https://h3.selfmade4u.de:8443/ -c 10000 -r 1000 -i 3 -v 1 -x 1000
 
 ## metasploit
 
 (isn't there also an automatic mode?)
 
+ulimit -S -n 65536
 RUST_LOG=trace DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo run --release --bin server
 
 https://github.com/rapid7/metasploit-framework/blob/master//modules/auxiliary/dos/http/slowloris.py
 
+ulimit -S -n 110000
+msfconsole
 use auxiliary/dos/http/slowloris
 show options
 set rhost h3.selfmade4u.de
 set rport 8443
 set ssl true
-set sockets 15000
+set sockets 100000
 run
+
+we now get to other limits namely local port range
+https://stackoverflow.com/questions/410616/increasing-the-maximum-number-of-tcp-ip-connections-in-linux
+sysctl net.ipv4.ip_local_port_range="15000 61000"
+
+ip_local_port_range
+ip_local_reserved_ports
+sudo sysctl -w net.ipv4.ip_local_port_range="1024 65535"
+
+https://blackarch.org/tools.html
+https://blackarch.org/dos.html
