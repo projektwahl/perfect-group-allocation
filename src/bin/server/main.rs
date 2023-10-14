@@ -376,7 +376,7 @@ async fn main() -> Result<(), DbErr> {
                 .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
                 .layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))) // this timeout is between sends, so not the total timeout
                 .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)))
-                .layer(CompressionLayer::new()), // firefox is just stupid and downloads compressed really slow
+                .layer(CompressionLayer::new()),
         )
         .into_make_service();
 
