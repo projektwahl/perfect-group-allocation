@@ -3,12 +3,21 @@
 ```
 DATABASE_URL="sqlite:./sqlite.db?mode=rwc" sea-orm-cli migrate refresh
 sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
+DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo run --release --bin server
+
 
 podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
 psql postgres://postgres:password@localhost
 DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
 sea-orm-cli generate entity -u postgres://postgres:password@localhost/postgres -o src/bin/server/entities
 DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
+
+
+curl --header "Accept-Encoding: deflate" -O https://h3.selfmade4u.de:8443/download
+curl --header "Accept-Encoding: gzip" -O https://h3.selfmade4u.de:8443/download
+curl --header "Accept-Encoding: br" -O https://h3.selfmade4u.de:8443/download
+curl --header "Accept-Encoding: zstd" -O https://h3.selfmade4u.de:8443/download
+
 ```
 
 All streams need explicit error handling as the browser otherwise doesn't show anything

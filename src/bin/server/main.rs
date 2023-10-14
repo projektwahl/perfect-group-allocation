@@ -5,7 +5,7 @@ mod entities;
 use std::borrow::Cow;
 use std::fs::File;
 use std::future::poll_fn;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -48,7 +48,7 @@ use tower_http::timeout::{
     RequestBodyTimeoutLayer, ResponseBodyTimeoutLayer, TimeoutBody, TimeoutLayer,
 };
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tower_http::ServiceBuilderExt;
+use tower_http::{CompressionLevel, ServiceBuilderExt};
 
 const DB_NAME: &str = "postgres";
 
@@ -255,7 +255,7 @@ async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> 
         .await
         .unwrap();
     let stream = ReaderStream::new(file);
-    let body = StreamBody::new(stream);
+    let body = hyper::Body::wrap_stream(stream);
 
     let headers = [
         (header::CONTENT_TYPE, "application/octet-stream"),
@@ -265,7 +265,7 @@ async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> 
         ),
     ];
 
-    Ok((headers, body))
+    Ok((headers, hyper::Response::new(body)))
 }
 
 // TODO rtt0
@@ -374,9 +374,9 @@ async fn main() -> Result<(), DbErr> {
                 .layer(TimeoutLayer::new(Duration::from_secs(5)))
                 .layer(CatchPanicLayer::new())
                 .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
-                .layer(RequestBodyTimeoutLayer::new(Duration::from_millis(100))) // this timeout is between sends, so not the total timeout
-                .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(100)))
-                .layer(CompressionLayer::new().quality(tower_http::CompressionLevel::Best)),
+                .layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))) // this timeout is between sends, so not the total timeout
+                .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)))
+                .layer(CompressionLayer::new()), // firefox is just stupid and downloads compressed really slow
         )
         .into_make_service();
 
