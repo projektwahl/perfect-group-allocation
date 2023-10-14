@@ -346,7 +346,9 @@ async fn main() -> Result<(), DbErr> {
     let listener = TcpListener::bind("127.0.0.1:8443").await.unwrap();
     let mut listener = AddrIncoming::from_listener(listener).unwrap();
 
-    let protocol = Arc::new(Http::new());
+    let mut http = Http::new();
+
+    let protocol = Arc::new(http);
 
     let service = ServeDir::new("frontend");
 
