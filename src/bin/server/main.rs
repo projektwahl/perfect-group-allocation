@@ -1,6 +1,7 @@
 #![feature(generators)]
 
 mod entities;
+use std::borrow::Cow;
 use std::fs::File;
 use std::future::poll_fn;
 use std::io::BufReader;
@@ -348,8 +349,14 @@ async fn main() -> Result<(), DbErr> {
                 ))
                 .await;
 
-            if let Err(err) = err_already_exists {
-                println!("{err:?}");
+            match err_already_exists {
+                Err(DbErr::Exec(RuntimeErr::SqlxError(sqlx::Error::Database(err))))
+                    if err.code() == Some(Cow::Borrowed("42P04")) =>
+                {
+                    // database already exists error
+                }
+                Err(err) => panic!("{}", err),
+                Ok(_) => {}
             }
 
             let url = format!("{}/{}", database_url, DB_NAME);
