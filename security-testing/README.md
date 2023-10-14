@@ -53,3 +53,25 @@ https://www.zaproxy.org/
 ## sqlmap
 
 https://sqlmap.org/
+
+## slowloris
+
+probably no https support
+https://github.com/shekyan/slowhttptest/wiki/InstallationAndUsage
+podman run docker.io/shekyan/slowhttptest:latest https://h3.selfmade4u.de:8443/
+
+## metasploit
+
+(isn't there also an automatic mode?)
+
+RUST_LOG=trace DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo run --release --bin server
+
+https://github.com/rapid7/metasploit-framework/blob/master//modules/auxiliary/dos/http/slowloris.py
+
+use auxiliary/dos/http/slowloris
+show options
+set rhost h3.selfmade4u.de
+set rport 8443
+set ssl true
+set sockets 15000
+run
