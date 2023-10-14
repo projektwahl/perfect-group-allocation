@@ -317,7 +317,7 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
         .with_single_cert(certs, key)
         .expect("bad certificate/key");
 
-    config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+    config.alpn_protocols = vec![b"h2".to_vec()];
 
     Arc::new(config)
 }
