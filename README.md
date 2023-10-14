@@ -1,6 +1,17 @@
 # perfect-group-allocation
 
 ```
+caddy run --config caddy.json
+caddy reload --config caddy.json
+https://caddyserver.com/docs/json/
+https://caddy.community/t/how-to-use-dns-provider-modules-in-caddy-2/8148
+
+caddy validate caddy.json
+
+https://github.com/abiosoft/caddy-json-schema
+
+xcaddy build --with github.com/caddy-dns/hetzner --with github.com/abiosoft/caddy-json-schema
+
 DATABASE_URL="sqlite:./sqlite.db?mode=rwc" sea-orm-cli migrate refresh
 sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
 DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo run --release --bin server

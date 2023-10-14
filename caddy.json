@@ -1,0 +1,42 @@
+{
+    "apps": {
+        "tls": {
+            "automation": {
+                "policies": {
+                    "issues": {
+                        "acme": {
+                            "module": "acme",
+                            "challenges": {
+                                "dns": {
+                                    "provider": {
+                                        "name": "hetzner",
+                                        "api_token": "YOUR_HETZNER_API_TOKEN"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "http": {
+            "servers": {
+                "example": {
+                    "listen": [
+                        ":2015"
+                    ],
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "handler": "static_response",
+                                    "body": "Hello, worldfffff!"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
