@@ -34,7 +34,7 @@ fn main() {
     let requirement_computer_pool = Requirement {
         identifier: "Computer-Pool".to_string(),
     };
-    let requirements: Vec<&Requirement> = vec![&requirement_outside, &requirement_computer_pool];
+    let _requirements: Vec<&Requirement> = vec![&requirement_outside, &requirement_computer_pool];
 
     let timeslot_morgens = Timeslot {
         identifier: "morgens".to_string(),
@@ -87,9 +87,9 @@ fn main() {
     let participant_moritz = Participant {
         identifier: "moritz".to_string(),
     };
-    let participants: Vec<&Participant> = vec![&participant_moritz];
+    let _participants: Vec<&Participant> = vec![&participant_moritz];
 
-    let preferences: Vec<&Preference> = vec![&Preference {
+    let _preferences: Vec<&Preference> = vec![&Preference {
         participant: &participant_moritz,
         topic: &workshop_topic_linux,
         rank: Rank(0),
@@ -110,7 +110,7 @@ fn main() {
 
     let grouped_by_timeslot = rooms_in_timeslot
         .into_iter()
-        .merge_join_by(workshops_in_timeslot.into_iter(), |l, r| l.0.cmp(r.0))
+        .merge_join_by(workshops_in_timeslot, |l, r| l.0.cmp(r.0))
         .map(|value| {
             (
                 value.clone().map_any(|v| v.0, |v| v.0).reduce(|l, _r| l),

@@ -16,24 +16,23 @@ use axum::extract::BodyStream;
 use axum::extract::Multipart;
 use axum::extract::State;
 use axum::http::HeaderValue;
-use axum::response::Html;
 use axum::response::IntoResponse;
 use axum::response::Redirect;
 use axum::routing::get;
 use axum::routing::post;
 use axum::Router;
+
+use entities::prelude::*;
 use entities::project_history;
-use entities::{prelude::*, *};
-use futures_async_stream::stream;
+
 use futures_async_stream::try_stream;
-use futures_util::stream;
-use futures_util::FutureExt;
-use futures_util::Stream;
 use futures_util::StreamExt;
 use futures_util::TryStreamExt;
-use html_escape::encode_double_quoted_attribute;
+
 use html_escape::encode_safe;
+
 use http_body::Limited;
+
 use hyper::header;
 use hyper::server::accept::Accept;
 use hyper::server::conn::AddrIncoming;
@@ -50,8 +49,7 @@ use sea_orm::DbBackend;
 use sea_orm::DbErr;
 use sea_orm::Statement;
 use sea_orm::*;
-use sea_orm_migration::MigratorTrait;
-use sea_orm_migration::SchemaManager;
+
 use tokio::net::TcpListener;
 use tokio_rustls::rustls::Certificate;
 use tokio_rustls::rustls::PrivateKey;
@@ -195,7 +193,7 @@ async fn create(
 ) -> Result<impl IntoResponse, AppError> {
     let mut title = None;
     let mut description = None;
-    while let Some(mut field) = multipart.next_field().await? {
+    while let Some(field) = multipart.next_field().await? {
         match field.name().unwrap() {
             "title" => assert!(title.replace(field.text().await?).is_none()),
             "description" => assert!(description.replace(field.text().await?).is_none()),
@@ -239,7 +237,7 @@ async fn create(
     };
     let _ = ProjectHistory::insert(project).exec(&db).await?;
 
-    return Ok(Redirect::to("/list").into_response());
+    Ok(Redirect::to("/list").into_response())
 }
 
 #[try_stream(ok = String, error = DbErr)]
@@ -281,11 +279,9 @@ async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> 
             .await
         {
             Ok(file) => file,
-            Err(err) => panic!(),
+            Err(_err) => panic!(),
         };
-    // convert the `AsyncRead` into a `Stream`
     let stream = ReaderStream::new(file);
-    // convert the `Stream` into an `axum::body::HttpBody`
     let body = StreamBody::new(stream);
 
     let headers = [
@@ -390,7 +386,7 @@ async fn main() -> Result<(), DbErr> {
         .with_state(db)
         .layer(
             ServiceBuilder::new()
-                .set_x_request_id(MakeRequestUuid::default())
+                .set_x_request_id(MakeRequestUuid)
                 .layer(
                     TraceLayer::new_for_http()
                         .make_span_with(DefaultMakeSpan::new().include_headers(true))
