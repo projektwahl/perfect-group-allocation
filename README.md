@@ -8,8 +8,9 @@ podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgres
 psql postgres://postgres:password@localhost
 DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
 DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
-
 ```
+
+All streams need explicit error handling as the browser otherwise doesn't show anything
 
 ```
 # TODO we should get a valid tls certificate from our domain as otherwise the browsers don't like you

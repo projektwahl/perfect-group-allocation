@@ -260,7 +260,10 @@ async fn list_internal(db: DatabaseConnection) {
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn list(State(db): State<MyState>) -> impl IntoResponse {
-    let stream = list_internal(db);
+    let stream = list_internal(db).map(|elem| match elem {
+        Err(v) => Ok(format!("<h1>Error {}</h1>", encode_safe(&v.to_string()))),
+        o => o,
+    });
     (
         [(header::CONTENT_TYPE, "text/html")],
         StreamBody::new(stream),
