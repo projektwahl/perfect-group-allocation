@@ -1,14 +1,13 @@
 use std::collections::BTreeMap;
 
+use good_lp::solvers::ObjectiveDirection::Maximisation;
+use good_lp::{default_solver, variable, Expression, ProblemVariables, Solution, SolverModel};
+use itertools::Itertools;
+
 use crate::examples::workshops::{
     Participant, Preference, Rank, Requirement, Room, RoomInTimeSlot, RoomSize, Timeslot, Workshop,
     WorkshopTopic, WorkshopTopicSize,
 };
-use good_lp::{
-    default_solver, solvers::ObjectiveDirection::Maximisation, variable, Expression,
-    ProblemVariables, Solution, SolverModel,
-};
-use itertools::Itertools;
 
 pub mod examples;
 

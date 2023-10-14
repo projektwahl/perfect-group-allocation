@@ -12,48 +12,26 @@ use std::time::Duration;
 
 use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
-use axum::extract::BodyStream;
-use axum::extract::Multipart;
-use axum::extract::State;
+use axum::extract::{BodyStream, Multipart, State};
 use axum::http::HeaderValue;
-use axum::response::IntoResponse;
-use axum::response::Redirect;
-use axum::routing::get;
-use axum::routing::post;
+use axum::response::{IntoResponse, Redirect};
+use axum::routing::{get, post};
 use axum::Router;
-
 use entities::prelude::*;
 use entities::project_history;
-
 use futures_async_stream::try_stream;
-use futures_util::StreamExt;
-use futures_util::TryStreamExt;
-
+use futures_util::{StreamExt, TryStreamExt};
 use html_escape::encode_safe;
-
 use http_body::Limited;
-
-use hyper::header;
 use hyper::server::accept::Accept;
-use hyper::server::conn::AddrIncoming;
-use hyper::server::conn::Http;
-use hyper::Request;
-use hyper::StatusCode;
-use rustls_pemfile::certs;
-use rustls_pemfile::ec_private_keys;
-use sea_orm::ActiveValue;
-use sea_orm::ConnectionTrait;
-use sea_orm::Database;
-use sea_orm::DatabaseConnection;
-use sea_orm::DbBackend;
-use sea_orm::DbErr;
-use sea_orm::Statement;
-use sea_orm::*;
-
+use hyper::server::conn::{AddrIncoming, Http};
+use hyper::{header, Request, StatusCode};
+use rustls_pemfile::{certs, ec_private_keys};
+use sea_orm::{
+    ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, Statement, *,
+};
 use tokio::net::TcpListener;
-use tokio_rustls::rustls::Certificate;
-use tokio_rustls::rustls::PrivateKey;
-use tokio_rustls::rustls::ServerConfig;
+use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
 use tower::make::MakeService;
@@ -64,13 +42,10 @@ use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::MakeRequestUuid;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
-use tower_http::timeout::RequestBodyTimeoutLayer;
-use tower_http::timeout::ResponseBodyTimeoutLayer;
-use tower_http::timeout::TimeoutBody;
-use tower_http::timeout::TimeoutLayer;
-use tower_http::trace::DefaultMakeSpan;
-use tower_http::trace::DefaultOnResponse;
-use tower_http::trace::TraceLayer;
+use tower_http::timeout::{
+    RequestBodyTimeoutLayer, ResponseBodyTimeoutLayer, TimeoutBody, TimeoutLayer,
+};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tower_http::ServiceBuilderExt;
 
 const DB_NAME: &str = "postgres";
