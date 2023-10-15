@@ -50,6 +50,12 @@ podman run --rm -v $(pwd):/app:rw docker.io/cyclonedx/cyclonedx-cli validate --i
 
 https://www.zaproxy.org/
 
+This should be a big focus
+
+## https://www.zaproxy.org/docs/automate/
+
+
+
 ## sqlmap
 
 https://sqlmap.org/
@@ -89,3 +95,21 @@ sudo sysctl -w net.ipv4.ip_local_port_range="1024 65535"
 
 https://blackarch.org/tools.html
 https://blackarch.org/dos.html
+
+# https://owasp.org/projects/
+
+
+
+# https://github.com/owtf/owtf
+
+https://owtf.github.io/
+
+https://owtf.readthedocs.io/en/develop/
+
+# https://github.com/OWASP/Nettacker
+
+https://github.com/OWASP/Nettacker/wiki/Usage
+
+# https://github.com/owasp-amass/amass
+
+# https://www.securecodebox.io/

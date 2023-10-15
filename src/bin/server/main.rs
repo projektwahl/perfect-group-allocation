@@ -220,7 +220,19 @@ async fn create(
 #[try_stream(ok = String, error = DbErr)]
 async fn list_internal(db: DatabaseConnection) {
     let stream = ProjectHistory::find().stream(&db).await.unwrap();
-    yield "THIS IS A TEST".to_string();
+    yield r#"<!doctype html>
+    <html lang="en">
+    
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Empty page</title>
+        <link rel="stylesheet" href="index.css" />
+    </head>
+    
+    <body>
+        <main>"#
+        .to_string();
     #[for_await]
     for x in stream {
         let x = x?;
@@ -231,7 +243,11 @@ async fn list_internal(db: DatabaseConnection) {
             encode_safe(&x.description)
         );
     }
-    yield "THIS IS THE END".to_string();
+    yield "</main>
+    </body>
+    
+    </html>"
+        .to_string();
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
@@ -371,7 +387,30 @@ async fn main() -> Result<(), DbErr> {
                 .propagate_x_request_id()
                 .layer(SetResponseHeaderLayer::overriding(
                     header::CACHE_CONTROL,
-                    HeaderValue::from_static("private, max-age=604800, must-revalidate"),
+                    HeaderValue::from_static("no-store"),
+                ))
+                .layer(SetResponseHeaderLayer::overriding(
+                    header::X_CONTENT_TYPE_OPTIONS,
+                    HeaderValue::from_static("nosniff"),
+                ))
+                .layer(SetResponseHeaderLayer::overriding(
+                    header::STRICT_TRANSPORT_SECURITY,
+                    HeaderValue::from_static("max-age=63072000; preload"),
+                ))
+                // https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
+                // TODO FIXME sandbox is way too strict
+                // https://csp-evaluator.withgoogle.com/
+                // https://web.dev/articles/strict-csp
+                // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+                // cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
+                .layer(SetResponseHeaderLayer::overriding(
+                    header::CONTENT_SECURITY_POLICY,
+                    HeaderValue::from_static(
+                        "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; \
+                         form-action 'self'; frame-ancestors 'none'; sandbox allow-forms; \
+                         upgrade-insecure-requests; require-trusted-types-for 'script'; \
+                         trusted-types a",
+                    ),
                 ))
                 .layer(TimeoutLayer::new(Duration::from_secs(5)))
                 .layer(CatchPanicLayer::new())
