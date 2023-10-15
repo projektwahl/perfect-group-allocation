@@ -6,6 +6,9 @@
 
 localhost
 
+# https://datatracker.ietf.org/doc/html/rfc8446#section-8
+# https://datatracker.ietf.org/doc/html/rfc8446#appendix-E.5
+
 # wireshark it (you need the git version for http3)
 # In Wireshark, go to Edit -> Preferences -> Protocols -> TLS, and change the (Pre)-Master-Secret log filename preference to the path from step 2.
 # we probably can't see the early data as its before version negotiation:
