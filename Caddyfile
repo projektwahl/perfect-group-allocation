@@ -1,6 +1,18 @@
+{
+	log {
+		level DEBUG
+	}
+}
+
 localhost
 
-# curl3 -vvv -IXGET --http3 https://localhost
+# wireshark it (you need the git version for http3)
+# In Wireshark, go to Edit -> Preferences -> Protocols -> TLS, and change the (Pre)-Master-Secret log filename preference to the path from step 2.
+# we probably can't see the early data as its before version negotiation:
+# https://github.com/wireshark/wireshark/commit/43a01a871691d16fb7d3d77706eb9a08900ac93f
+# https://github.com/cloudflare/quiche/blob/83d9168ab6f76302ae846cb068cc8991f2b06479/nginx/README.md?plain=1#L189
+# SSLKEYLOGFILE=sslkeylogfile.txt cargo run --release --bin quiche-client -- --early-data --session-file sessions.txt https://localhost
+# curl3 -vvv -i --http3 https://localhost
 # browser probably keep using http2 if they have a connection open
 #respond "Hello, world!"
 reverse_proxy https://h3.selfmade4u.de:8443
