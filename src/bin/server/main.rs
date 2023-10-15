@@ -5,7 +5,7 @@ mod entities;
 use std::borrow::Cow;
 use std::fs::File;
 use std::future::poll_fn;
-use std::io::{BufRead, BufReader};
+use std::io::BufReader;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -34,7 +34,6 @@ use sea_orm::{
     RuntimeErr, Statement,
 };
 use serde::Serialize;
-use serde_json::json;
 use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
@@ -51,7 +50,7 @@ use tower_http::timeout::{
     RequestBodyTimeoutLayer, ResponseBodyTimeoutLayer, TimeoutBody, TimeoutLayer,
 };
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tower_http::{CompressionLevel, ServiceBuilderExt};
+use tower_http::ServiceBuilderExt;
 
 const DB_NAME: &str = "postgres";
 
@@ -132,7 +131,7 @@ async fn create(
             "title" => assert!(title.replace(field.text().await?).is_none()),
             "description" => assert!(description.replace(field.text().await?).is_none()),
             "CSRFToken" => {}
-            v => panic!("unexpected field {}", v),
+            v => panic!("unexpected field {v}"),
         }
     }
     let title = title.unwrap();
@@ -155,9 +154,9 @@ async fn create(
                 "create-project",
                 &CreateProject {
                     title: Some(title),
-                    title_error: title_error,
+                    title_error,
                     description: Some(description),
-                    description_error: description_error,
+                    description_error,
                 },
             )
             .unwrap_or_else(|e| e.to_string());
