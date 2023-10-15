@@ -33,6 +33,7 @@ use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
     RuntimeErr, Statement,
 };
+use serde::Serialize;
 use serde_json::json;
 use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
@@ -94,12 +95,25 @@ impl From<sea_orm::DbErr> for AppError {
     }
 }
 
+#[derive(Serialize)]
+pub struct CreateProject {
+    title: Option<String>,
+    title_error: Option<String>,
+    description: Option<String>,
+    description_error: Option<String>,
+}
+
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
     let result = handlebars
         .render(
             "create-project",
-            &json!({"model": "t14s", "brand": "Thinkpad"}),
+            &CreateProject {
+                title: None,
+                title_error: None,
+                description: None,
+                description_error: None,
+            },
         )
         .unwrap_or_else(|e| e.to_string());
     Html(result)
@@ -108,6 +122,7 @@ async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn create(
     State(db): State<DatabaseConnection>,
+    State(handlebars): State<Handlebars<'static>>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
     let mut title = None;
@@ -132,21 +147,21 @@ async fn create(
     if description.is_empty() {
         description_error = Some("description must not be empty".to_string());
     }
-    /*
-    if title_error.is_some() || description_error.is_some() {
-        let stream = index_template(
-            Some(title),
-            Some(description),
-            title_error,
-            description_error,
-        );
 
-        return Ok((
-            [(header::CONTENT_TYPE, "text/html")],
-            StreamBody::new(stream),
-        )
-            .into_response());
-    }*/
+    if title_error.is_some() || description_error.is_some() {
+        let result = handlebars
+            .render(
+                "create-project",
+                &CreateProject {
+                    title: Some(title),
+                    title_error: title_error,
+                    description: Some(description),
+                    description_error: description_error,
+                },
+            )
+            .unwrap_or_else(|e| e.to_string());
+        return Ok(Html(result).into_response());
+    }
 
     let project = project_history::ActiveModel {
         id: ActiveValue::Set(1),
