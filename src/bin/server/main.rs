@@ -93,42 +93,6 @@ impl From<sea_orm::DbErr> for AppError {
         Self(err.into())
     }
 }
-/*
-#[try_stream(ok = String, error = DbErr)]
-async fn index_template(
-    title: Option<String>,
-    description: Option<String>,
-    title_error: Option<String>,
-    description_error: Option<String>,
-) {
-    yield format!(
-        if title_error.is_some() {
-            r#" class="error""#
-        } else {
-            ""
-        },
-        title
-            .map(|title| format!(r#" value="{}""#, encode_safe(&title)))
-            .unwrap_or_default(),
-        title_error
-            .map(|title_error| format!(r#"<div class="error">{}</div>"#, encode_safe(&title_error)))
-            .unwrap_or_default(),
-        if description_error.is_some() {
-            r#" class="error""#
-        } else {
-            ""
-        },
-        description
-            .map(|description| format!(r#" value="{}""#, encode_safe(&description)))
-            .unwrap_or_default(),
-        description_error
-            .map(|description_error| format!(
-                r#"<div class="error">{}</div>"#,
-                encode_safe(&description_error)
-            ))
-            .unwrap_or_default(),
-    );
-}*/
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
