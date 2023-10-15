@@ -33,5 +33,5 @@ anyhow = "1.0.75"
 futures-async-stream = "0.2"
 html-escape = "0.2.13"
 sqlx = "0.7.2"
-handlebars = "4"
+handlebars = { version = "4", features = ["dir_source"] }
 serde_json = "1.0.107"

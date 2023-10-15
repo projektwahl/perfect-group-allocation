@@ -15,7 +15,7 @@ use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
 use axum::extract::{BodyStream, FromRef, Multipart, State};
 use axum::http::HeaderValue;
-use axum::response::{IntoResponse, Redirect};
+use axum::response::{Html, IntoResponse, Redirect};
 use axum::routing::{get, post};
 use axum::Router;
 use entities::prelude::*;
@@ -93,7 +93,7 @@ impl From<sea_orm::DbErr> for AppError {
         Self(err.into())
     }
 }
-
+/*
 #[try_stream(ok = String, error = DbErr)]
 async fn index_template(
     title: Option<String>,
@@ -102,38 +102,6 @@ async fn index_template(
     description_error: Option<String>,
 ) {
     yield format!(
-        r#"<!doctype html>
-    <html lang="en">
-    
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Empty page</title>
-        <link rel="stylesheet" href="index.css" />
-    </head>
-    
-    <body>
-        <main>
-            <h1 class="center">Create project</h1>
-            <form method="post" enctype="multipart/form-data">
-                <input type="hidden" name="CSRFToken" value="OWY4NmQwODE4ODRjN2Q2NTlhMmZlYWEwYzU1YWQwMTVhM2JmNGYxYjJiMGI4MjJjZDE1ZDZMGYwMGEwOA==">
-
-                <label for="title">Title:</label>
-                <input{} id="title" name="title" type="text"{} />
-                {}
-
-                <label for="description">Description:</label>
-                <input{} id="description" name="description" type="text"{} />
-                {}
-
-                <button type="submit">Create</button>
-
-                <a href="https://h3.selfmade4u.de:8443/list">Show all projects</a>
-            </form>
-        </main>
-    </body>
-    
-    </html>"#,
         if title_error.is_some() {
             r#" class="error""#
         } else {
@@ -160,17 +128,17 @@ async fn index_template(
             ))
             .unwrap_or_default(),
     );
-}
+}*/
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
     let result = handlebars
-        .render("main", &json!({"model": "t14s", "brand": "Thinkpad"}))
+        .render(
+            "create-project",
+            &json!({"model": "t14s", "brand": "Thinkpad"}),
+        )
         .unwrap_or_else(|e| e.to_string());
-
-    //let stream = index_template(None, None, None, None);
-
-    ([(header::CONTENT_TYPE, "text/html")], result)
+    Html(result)
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
@@ -200,7 +168,7 @@ async fn create(
     if description.is_empty() {
         description_error = Some("description must not be empty".to_string());
     }
-
+    /*
     if title_error.is_some() || description_error.is_some() {
         let stream = index_template(
             Some(title),
@@ -214,7 +182,7 @@ async fn create(
             StreamBody::new(stream),
         )
             .into_response());
-    }
+    }*/
 
     let project = project_history::ActiveModel {
         id: ActiveValue::Set(1),
@@ -382,7 +350,7 @@ async fn main() -> Result<(), DbErr> {
     handlebars.set_dev_mode(true);
     handlebars.set_strict_mode(true);
     handlebars
-        .register_template_file("main", "./templates/main.hbs")
+        .register_templates_directory(".hbs", "./templates/")
         .unwrap();
 
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server

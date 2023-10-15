@@ -1,0 +1,19 @@
+{{#> main title="Create Project" }}
+<h1 class="center">Create project</h1>
+<form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="CSRFToken"
+        value="OWY4NmQwODE4ODRjN2Q2NTlhMmZlYWEwYzU1YWQwMTVhM2JmNGYxYjJiMGI4MjJjZDE1ZDZMGYwMGEwOA==">
+
+    <label for="title">Title:</label>
+    <input{} id="title" name="title" type="text" {} />
+    {}
+
+    <label for="description">Description:</label>
+    <input{} id="description" name="description" type="text" {} />
+    {}
+
+    <button type="submit">Create</button>
+
+    <a href="https://h3.selfmade4u.de:8443/list">Show all projects</a>
+</form>
+{{/main}}

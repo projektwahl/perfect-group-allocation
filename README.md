@@ -17,9 +17,9 @@ https://github.com/rosetta-rs/template-benchmarks-rs
 (all excluded libraries don't do runtime templates)
 https://github.com/cobalt-org/liquid-rust (not xss safe https://github.com/cobalt-org/liquid-rust/issues/68)
 https://github.com/Keats/tera (not secure by default, wouldn't use)
-https://github.com/maciejhirsz/ramhorns (has some benchmarks, seems to escape html, but easy to accidentially use opt-out)
+https://github.com/maciejhirsz/ramhorns (has some benchmarks, seems to escape html, {{{ seems to not escape)
 
-https://github.com/sunng87/handlebars-rust (slow?, seems to escape html)
+https://github.com/sunng87/handlebars-rust (slow?, really popular, seems to escape html, {{{ seems to not escape)
 
 
 https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#synchronizer-token-pattern
