@@ -1,8 +1,12 @@
 # perfect-group-allocation
 
 ```
+podman run --rm docker.io/envoyproxy/envoy:v1.27-latest --version
+
+
+
 # I think http3 needs the low ports anyways
-sudo caddy run --watch
+sudo caddy run --watch # does it send the Early-Data header?
 https://caddyserver.com/docs/json/
 https://caddy.community/t/how-to-use-dns-provider-modules-in-caddy-2/8148
 
