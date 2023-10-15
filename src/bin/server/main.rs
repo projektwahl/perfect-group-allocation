@@ -111,6 +111,8 @@ async fn index_template(
         <main>
             <h1 class="center">Create project</h1>
             <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="CSRFToken" value="OWY4NmQwODE4ODRjN2Q2NTlhMmZlYWEwYzU1YWQwMTVhM2JmNGYxYjJiMGI4MjJjZDE1ZDZMGYwMGEwOA==">
+
                 <label for="title">Title:</label>
                 <input{} id="title" name="title" type="text"{} />
                 {}

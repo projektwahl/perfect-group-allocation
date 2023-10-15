@@ -4,10 +4,27 @@
 # maybe create a local k3s in docker setup?
 podman run --rm docker.io/envoyproxy/envoy:v1.27-latest --version # only use using k3s and cilium
 
+https://docs.rs/axum-extra/latest/axum_extra/index.html
+https://github.com/maxcountryman/tower-sessions
+
+https://github.com/djc/askama
+https://github.com/rosetta-rs/template-benchmarks-rs
 
 
+https://www.arewewebyet.org/topics/templating/
+https://github.com/rosetta-rs/template-benchmarks-rs
+
+(all excluded libraries don't do runtime templates)
+https://github.com/cobalt-org/liquid-rust (not xss safe https://github.com/cobalt-org/liquid-rust/issues/68)
+https://github.com/Keats/tera (not secure by default, wouldn't use)
+https://github.com/maciejhirsz/ramhorns (has some benchmarks, seems to escape html, but easy to accidentially use opt-out)
+
+https://github.com/sunng87/handlebars-rust (slow?, seems to escape html)
 
 
+https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#synchronizer-token-pattern
+
+DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -x 'run --bin server'
 
 
 # I think http3 needs the low ports anyways
