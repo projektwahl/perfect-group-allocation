@@ -6,11 +6,10 @@ caddy reload --config caddy.json
 https://caddyserver.com/docs/json/
 https://caddy.community/t/how-to-use-dns-provider-modules-in-caddy-2/8148
 
-caddy validate caddy.json
-
 https://github.com/abiosoft/caddy-json-schema
 
 xcaddy build --with github.com/caddy-dns/hetzner --with github.com/abiosoft/caddy-json-schema
+~/Documents/xcaddy/caddy validate --config caddy.json
 
 DATABASE_URL="sqlite:./sqlite.db?mode=rwc" sea-orm-cli migrate refresh
 sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
