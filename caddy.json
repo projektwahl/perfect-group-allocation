@@ -1,34 +1,20 @@
 {
     "apps": {
-        "tls": {
-            "automation": {
-                "policies": [
-                    {
-                        "issuers": [
-                            {
-                                "module": "acme",
-                                "challenges": {
-                                    "dns": {
-                                        "provider": {
-                                            "name": "hetzner",
-                                            "auth_api_token": ""
-                                        }
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                ]
-            }
-        },
         "http": {
             "servers": {
                 "example": {
                     "listen": [
-                        ":2015"
+                        ":8443"
                     ],
                     "routes": [
                         {
+                            "match": [
+                                {
+                                    "host": [
+                                        "pga.localhost"
+                                    ]
+                                }
+                            ],
                             "handle": [
                                 {
                                     "handler": "static_response",
