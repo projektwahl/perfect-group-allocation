@@ -131,7 +131,8 @@ async fn create(
         match field.name().unwrap() {
             "title" => assert!(title.replace(field.text().await?).is_none()),
             "description" => assert!(description.replace(field.text().await?).is_none()),
-            _ => panic!(),
+            "CSRFToken" => {}
+            v => panic!("unexpected field {}", v),
         }
     }
     let title = title.unwrap();

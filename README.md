@@ -24,7 +24,7 @@ https://github.com/sunng87/handlebars-rust (slow?, really popular, seems to esca
 
 https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#synchronizer-token-pattern
 
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -x 'run --bin server'
+DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -w src -x 'run --bin server'
 
 
 # I think http3 needs the low ports anyways
