@@ -34,6 +34,7 @@ use sea_orm::{
     RuntimeErr, Statement,
 };
 use serde::Serialize;
+use serde_json::json;
 use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
@@ -100,6 +101,12 @@ pub struct CreateProject {
     title_error: Option<String>,
     description: Option<String>,
     description_error: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct TemplateProject {
+    title: String,
+    description: String,
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
@@ -175,41 +182,36 @@ async fn create(
 }
 
 #[try_stream(ok = String, error = DbErr)]
-async fn list_internal(db: DatabaseConnection) {
+async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'static>) {
     let stream = ProjectHistory::find().stream(&db).await.unwrap();
-    yield r#"<!doctype html>
-    <html lang="en">
-    
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Empty page</title>
-        <link rel="stylesheet" href="index.css" />
-    </head>
-    
-    <body>
-        <main>"#
-        .to_string();
+    yield handlebars
+        .render("main_pre", &json!({"page_title": "Projects"}))
+        .unwrap_or_else(|e| e.to_string());
     #[for_await]
     for x in stream {
         let x = x?;
-        yield format!(
-            // TODO FIXME XSS
-            "title: {}<br />description: {}<br /><br />",
-            encode_safe(&x.title),
-            encode_safe(&x.description)
-        );
+        let result = handlebars
+            .render(
+                "project",
+                &TemplateProject {
+                    title: x.title,
+                    description: x.description,
+                },
+            )
+            .unwrap_or_else(|e| e.to_string());
+        yield result;
     }
-    yield "</main>
-    </body>
-    
-    </html>"
-        .to_string();
+    yield handlebars
+        .render("main_post", &json!({}))
+        .unwrap_or_else(|e| e.to_string());
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn list(State(db): State<DatabaseConnection>) -> impl IntoResponse {
-    let stream = list_internal(db).map(|elem| match elem {
+async fn list(
+    State(db): State<DatabaseConnection>,
+    State(handlebars): State<Handlebars<'static>>,
+) -> impl IntoResponse {
+    let stream = list_internal(db, handlebars).map(|elem| match elem {
         Err(v) => Ok(format!("<h1>Error {}</h1>", encode_safe(&v.to_string()))),
         o => o,
     });
