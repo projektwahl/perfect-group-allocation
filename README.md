@@ -1,8 +1,8 @@
 # perfect-group-allocation
 
 ```
-caddy run --config caddy.json
-caddy reload --config caddy.json
+# I think http3 needs the low ports anyways
+sudo caddy run --watch
 https://caddyserver.com/docs/json/
 https://caddy.community/t/how-to-use-dns-provider-modules-in-caddy-2/8148
 

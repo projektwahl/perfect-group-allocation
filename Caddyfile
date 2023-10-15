@@ -1,0 +1,6 @@
+localhost
+
+# curl3 -vvv -IXGET --http3 https://localhost
+# browser probably keep using http2 if they have a connection open
+#respond "Hello, world!"
+reverse_proxy https://h3.selfmade4u.de:8443
