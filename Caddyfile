@@ -17,3 +17,7 @@ localhost
 # browser probably keep using http2 if they have a connection open
 respond "Hello, world!"
 #reverse_proxy https://h3.selfmade4u.de:8443
+# makepkg --syncdeps --install --noextract
+# nano src/wireshark/epan/dissectors/packet-quic.c
+# git diff > ../../forced-version-negotiation.patch
+# SSLKEYLOGFILE=/tmp/sslkeylogfile.txt cargo run --release --bin quiche-client -- --early-data --session-file sessions.txt --wire-version 1 https://localhost
