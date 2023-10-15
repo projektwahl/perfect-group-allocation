@@ -120,6 +120,8 @@ async fn index_template(
                 {}
 
                 <button type="submit">Create</button>
+
+                <a href="https://h3.selfmade4u.de:8443/list">Show all projects</a>
             </form>
         </main>
     </body>
@@ -387,7 +389,7 @@ async fn main() -> Result<(), DbErr> {
                 .propagate_x_request_id()
                 .layer(SetResponseHeaderLayer::overriding(
                     header::CACHE_CONTROL,
-                    HeaderValue::from_static("no-store"),
+                    HeaderValue::from_static("no-cache, no-store, must-revalidate"),
                 ))
                 .layer(SetResponseHeaderLayer::overriding(
                     header::X_CONTENT_TYPE_OPTIONS,
