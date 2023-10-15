@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
-use axum::extract::{BodyStream, Multipart, State};
+use axum::extract::{BodyStream, FromRef, Multipart, State};
 use axum::http::HeaderValue;
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, post};
@@ -22,6 +22,7 @@ use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
 use futures_util::{StreamExt, TryStreamExt};
+use handlebars::Handlebars;
 use html_escape::encode_safe;
 use http_body::Limited;
 use hyper::server::accept::Accept;
@@ -32,6 +33,7 @@ use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
     RuntimeErr, Statement,
 };
+use serde_json::json;
 use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
@@ -54,8 +56,11 @@ const DB_NAME: &str = "postgres";
 
 type MyBody = TimeoutBody<Limited<hyper::Body>>;
 
-type MyState = DatabaseConnection;
-
+#[derive(Clone, FromRef)]
+struct MyState {
+    database: DatabaseConnection,
+    handlebars: Handlebars<'static>,
+}
 // Make our own error that wraps `anyhow::Error`.
 struct AppError(anyhow::Error);
 
@@ -158,18 +163,19 @@ async fn index_template(
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn index() -> impl IntoResponse {
-    let stream = index_template(None, None, None, None);
+async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
+    let result = handlebars
+        .render("main", &json!({"model": "t14s", "brand": "Thinkpad"}))
+        .unwrap_or_else(|e| e.to_string());
 
-    (
-        [(header::CONTENT_TYPE, "text/html")],
-        StreamBody::new(stream),
-    )
+    //let stream = index_template(None, None, None, None);
+
+    ([(header::CONTENT_TYPE, "text/html")], result)
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn create(
-    State(db): State<MyState>,
+    State(db): State<DatabaseConnection>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
     let mut title = None;
@@ -255,7 +261,7 @@ async fn list_internal(db: DatabaseConnection) {
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn list(State(db): State<MyState>) -> impl IntoResponse {
+async fn list(State(db): State<DatabaseConnection>) -> impl IntoResponse {
     let stream = list_internal(db).map(|elem| match elem {
         Err(v) => Ok(format!("<h1>Error {}</h1>", encode_safe(&v.to_string()))),
         o => o,
@@ -366,11 +372,18 @@ async fn main() -> Result<(), DbErr> {
     let listener = TcpListener::bind("127.0.0.1:8443").await.unwrap();
     let mut listener = AddrIncoming::from_listener(listener).unwrap();
 
-    let mut http = Http::new();
+    let http = Http::new();
 
     let protocol = Arc::new(http);
 
     let service = ServeDir::new("frontend");
+
+    let mut handlebars = Handlebars::new();
+    handlebars.set_dev_mode(true);
+    handlebars.set_strict_mode(true);
+    handlebars
+        .register_template_file("main", "./templates/main.hbs")
+        .unwrap();
 
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
     let mut app = Router::<MyState, MyBody>::new()
@@ -379,7 +392,10 @@ async fn main() -> Result<(), DbErr> {
         .route("/list", get(list))
         .route("/download", get(handler))
         .fallback_service(service)
-        .with_state(db)
+        .with_state(MyState {
+            database: db,
+            handlebars,
+        })
         .layer(
             ServiceBuilder::new()
                 .set_x_request_id(MakeRequestUuid)
