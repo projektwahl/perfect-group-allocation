@@ -22,7 +22,9 @@ use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
 use futures_util::{StreamExt, TryStreamExt};
-use handlebars::Handlebars;
+use handlebars::{
+    handlebars_helper, Context, Handlebars, Helper, HelperResult, Output, RenderContext,
+};
 use html_escape::encode_safe;
 use http_body::Limited;
 use hyper::server::accept::Accept;
@@ -95,8 +97,12 @@ impl From<sea_orm::DbErr> for AppError {
     }
 }
 
+// https://handlebarsjs.com/api-reference/
+// https://handlebarsjs.com/api-reference/data-variables.html
+
 #[derive(Serialize)]
 pub struct CreateProject {
+    csrf_token: String,
     title: Option<String>,
     title_error: Option<String>,
     description: Option<String>,
@@ -115,6 +121,7 @@ async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
         .render(
             "create-project",
             &CreateProject {
+                csrf_token: "token".to_string(),
                 title: None,
                 title_error: None,
                 description: None,
@@ -160,6 +167,7 @@ async fn create(
             .render(
                 "create-project",
                 &CreateProject {
+                    csrf_token: "test".to_string(),
                     title: Some(title),
                     title_error,
                     description: Some(description),
@@ -266,6 +274,32 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
     Arc::new(config)
 }
 
+// maybe not per request csrf but per form a different csrf token that is only valid for the form as defense in depth.
+
+fn csrf_helper(
+    h: &Helper<'_, '_>,
+    hb: &Handlebars<'_>,
+    c: &Context,
+    rc: &mut RenderContext<'_, '_>,
+    out: &mut dyn Output,
+) -> HelperResult {
+    // get parameter from helper or throw an error
+    let param = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
+    //c.data()
+    //rc.context()
+
+    // is one of the always the top level context from which we could get the csrf token? Also we can create
+    // helpers as a struct and then store data in them so maybe register the helper per http handler and configure
+    // the user there?
+
+    out.write(param.to_uppercase().as_ref())?;
+    Ok(())
+}
+
+// https://github.com/sunng87/handlebars-rust/tree/master/src/helpers
+// https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
+// https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
+
 #[tokio::main]
 async fn main() -> Result<(), DbErr> {
     tracing_subscriber::fmt::init();
@@ -330,6 +364,7 @@ async fn main() -> Result<(), DbErr> {
     let mut handlebars = Handlebars::new();
     handlebars.set_dev_mode(true);
     handlebars.set_strict_mode(true);
+
     handlebars
         .register_templates_directory(".hbs", "./templates/")
         .unwrap();

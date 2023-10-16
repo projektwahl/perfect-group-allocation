@@ -1,8 +1,7 @@
 {{#> main page_title="Create Project" }}
 <h1 class="center">Create project</h1>
 <form method="post" enctype="multipart/form-data">
-    <input type="hidden" name="CSRFToken"
-        value="OWY4NmQwODE4ODRjN2Q2NTlhMmZlYWEwYzU1YWQwMTVhM2JmNGYxYjJiMGI4MjJjZDE1ZDZMGYwMGEwOA==">
+    <input type="hidden" name="CSRFToken" value="{{@root.csrf_token}}">
 
     <label for="title">Title:</label>
     <input {{#if title_error}} class="error" {{/if}} id="title" name="title" type="text" {{#if title}} value="{{title}}"
