@@ -36,4 +36,4 @@ sqlx = "0.7.2"
 handlebars = { version = "4", features = ["dir_source"] }
 serde_json = "1.0.107"
 serde = { version = "1", features = ["derive"] }
-axum-extra = { version = "0.8", features = ["cookie"] }
+axum-extra = { version = "0.8", features = ["cookie", "cookie-private"] }

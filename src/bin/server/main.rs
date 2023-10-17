@@ -13,11 +13,15 @@ use std::time::Duration;
 
 use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
-use axum::extract::{BodyStream, FromRef, Multipart, State};
+use axum::extract::{BodyStream, FromRef, FromRequestParts, Multipart, State};
+use axum::http::request::Parts;
 use axum::http::HeaderValue;
-use axum::response::{Html, IntoResponse, Redirect};
+use axum::middleware::Next;
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
-use axum::Router;
+use axum::{async_trait, RequestPartsExt, Router};
+use axum_extra::extract::cookie::{Cookie, Key};
+use axum_extra::extract::PrivateCookieJar;
 use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
@@ -294,6 +298,39 @@ fn csrf_helper(
 
     out.write(param.to_uppercase().as_ref())?;
     Ok(())
+}
+
+struct Session(PrivateCookieJar);
+
+impl Session {
+    pub fn new(mut cookies: PrivateCookieJar) -> Self {
+        if cookies.get("session-id").is_none() {
+            let session_id = "the-session-id";
+            cookies = cookies.add(Cookie::new("session-id", session_id));
+        }
+        Self(cookies)
+    }
+
+    pub fn session_id(&self) -> Option<String> {
+        self.0.get("session_id").map(|c| c.value().to_string())
+    }
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for Session
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, &'static str);
+
+    //
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        if let Ok(cookies) = PrivateCookieJar::from_request_parts(parts, &Key::generate()).await {
+            Ok(Session(cookies))
+        } else {
+            Err((StatusCode::BAD_REQUEST, "You cookie eater!"))
+        }
+    }
 }
 
 // https://github.com/sunng87/handlebars-rust/tree/master/src/helpers
