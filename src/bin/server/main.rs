@@ -3,6 +3,7 @@
 
 mod entities;
 use std::borrow::Cow;
+use std::convert::Infallible;
 use std::fs::File;
 use std::future::poll_fn;
 use std::io::BufReader;
@@ -17,7 +18,7 @@ use axum::extract::{BodyStream, FromRef, FromRequestParts, Multipart, State};
 use axum::http::request::Parts;
 use axum::http::HeaderValue;
 use axum::middleware::Next;
-use axum::response::{Html, IntoResponse, Redirect, Response};
+use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{async_trait, RequestPartsExt, Router};
 use axum_extra::extract::cookie::{Cookie, Key};
@@ -140,6 +141,7 @@ async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
 async fn create(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
+    session: Session,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
     let mut title = None;
@@ -190,7 +192,7 @@ async fn create(
     };
     let _ = ProjectHistory::insert(project).exec(&db).await?;
 
-    Ok(Redirect::to("/list").into_response())
+    Ok((session, Redirect::to("/list")).into_response())
 }
 
 #[try_stream(ok = String, error = DbErr)]
@@ -313,6 +315,17 @@ impl Session {
 
     pub fn session_id(&self) -> Option<String> {
         self.0.get("session_id").map(|c| c.value().to_string())
+    }
+}
+
+impl IntoResponseParts for Session {
+    type Error = Infallible;
+
+    fn into_response_parts(
+        self,
+        res: axum::response::ResponseParts,
+    ) -> Result<axum::response::ResponseParts, Self::Error> {
+        self.0.into_response_parts(res)
     }
 }
 
