@@ -47,12 +47,13 @@ use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
+use tower::layer::util::{Identity, Stack};
 use tower::make::MakeService;
 use tower::{ServiceBuilder, ServiceExt};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use tower_http::request_id::MakeRequestUuid;
+use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::timeout::{
@@ -460,9 +461,14 @@ async fn main() -> Result<(), DbErr> {
         .register_templates_directory(".hbs", "./templates/")
         .unwrap();
 
-    let service_builder = ServiceBuilder::new()
-        .layer(axum::middleware::from_fn(third_attempt_body))
-        .set_x_request_id(MakeRequestUuid)
+    let service_builder: ServiceBuilder<Identity> = ServiceBuilder::new();
+
+    let service_builder: ServiceBuilder<Stack<SetRequestIdLayer<MakeRequestUuid>, Identity>> =
+        service_builder
+            //.layer(axum::middleware::from_fn(third_attempt_body))
+            .set_x_request_id(MakeRequestUuid);
+
+    service_builder
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::new().include_headers(true))
