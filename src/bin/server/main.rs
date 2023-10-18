@@ -503,13 +503,10 @@ async fn main() -> Result<(), DbErr> {
         ))
         .layer(TimeoutLayer::new(Duration::from_secs(5)))
         .layer(CatchPanicLayer::new())
-        .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
-        .layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))) // this timeout is between sends, so not the total timeout
-        .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)))
-        .layer(CompressionLayer::new());
+        .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
 
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let mut app = Router::new()
+    let app: Router<(), TimeoutBody<hyper::Body>> = Router::new()
         .route("/", get(index))
         .route("/", post(create))
         .route("/list", get(list))
@@ -518,9 +515,16 @@ async fn main() -> Result<(), DbErr> {
         .with_state(MyState {
             database: db,
             handlebars,
-        })
-        .layer(service_builder)
-        .into_make_service();
+        });
+
+    // layers are in reverse order
+    let app: Router<(), TimeoutBody<hyper::Body>> = app.layer(CompressionLayer::new());
+    let app: Router<(), TimeoutBody<hyper::Body>> =
+        app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
+    let app: Router<(), hyper::Body> =
+        app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
+
+    let app = app.into_make_service();
 
     loop {
         let stream = poll_fn(|cx| Pin::new(&mut listener).poll_accept(cx))
