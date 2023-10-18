@@ -20,9 +20,9 @@ use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
-use axum::{async_trait, RequestPartsExt, Router};
+use axum::{async_trait, Extension, RequestPartsExt, Router};
 use axum_extra::extract::cookie::{Cookie, Key};
-use axum_extra::extract::PrivateCookieJar;
+use axum_extra::extract::{CookieJar, PrivateCookieJar};
 use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
@@ -141,7 +141,7 @@ async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
 async fn create(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
-    session: Session,
+    session: Extension<Session>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
     let mut title = None;
@@ -302,6 +302,7 @@ fn csrf_helper(
     Ok(())
 }
 
+#[derive(Clone)]
 struct Session(PrivateCookieJar);
 
 impl Session {
@@ -329,21 +330,20 @@ impl IntoResponseParts for Session {
     }
 }
 
-#[async_trait]
-impl<S> FromRequestParts<S> for Session
-where
-    S: Send + Sync,
-{
-    type Rejection = (StatusCode, &'static str);
+async fn second_attempt_session<B>(
+    cookies: PrivateCookieJar,
+    mut request: Request<B>,
+    next: Next<B>,
+) -> Result<Response, StatusCode> {
+    request.extensions_mut().insert(Session::new(cookies));
 
-    //
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        if let Ok(cookies) = PrivateCookieJar::from_request_parts(parts, &Key::generate()).await {
-            Ok(Session(cookies))
-        } else {
-            Err((StatusCode::BAD_REQUEST, "You cookie eater!"))
-        }
-    }
+    let response = next.run(request).await;
+
+    Ok((
+        response.extensions().get::<Session>().unwrap().clone(),
+        response,
+    )
+        .into_response())
 }
 
 // https://github.com/sunng87/handlebars-rust/tree/master/src/helpers
