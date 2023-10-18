@@ -386,8 +386,8 @@ async fn second_attempt_session<B>(
         .into_response())
 }
 
-async fn third_attempt_body<B>(request: Request<B>, next: Next<B>) -> Response {
-    //let request = request.map(|b| WithSession { body: b });
+async fn third_attempt_body<B>(request: Request<B>, next: Next<WithSession<B>>) -> Response {
+    let request = request.map(|b| WithSession { body: b });
     let response = next.run(request).await;
     response
 }
@@ -519,10 +519,9 @@ async fn main() -> Result<(), DbErr> {
             handlebars,
         });
 
-    let from_fn: FromFnLayer<_, _, ()> =
-        axum::middleware::from_fn(third_attempt_body::<hyper::Body>);
+    let from_fn: FromFnLayer<_, _, _> = axum::middleware::from_fn(third_attempt_body);
     // layers are in reverse order
-    let app: Router<(), MyBody2> = app.layer(from_fn);
+    let app: Router<(), MyBody3> = app.layer(from_fn);
     let app: Router<(), MyBody3> = app.layer(CompressionLayer::new());
     let app: Router<(), MyBody3> =
         app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
