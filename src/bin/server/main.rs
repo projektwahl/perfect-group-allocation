@@ -98,7 +98,11 @@ where
     }
 }
 
-type MyBody = WithSession<TimeoutBody<Limited<hyper::Body>>>;
+type MyBody0 = hyper::Body;
+type MyBody1 = Limited<hyper::Body>;
+type MyBody2 = TimeoutBody<Limited<hyper::Body>>;
+type MyBody3 = WithSession<TimeoutBody<Limited<hyper::Body>>>;
+type MyBody = MyBody3;
 
 #[derive(Clone, FromRef)]
 struct MyState {
@@ -464,9 +468,7 @@ async fn main() -> Result<(), DbErr> {
     let service_builder: ServiceBuilder<Identity> = ServiceBuilder::new();
 
     let service_builder: ServiceBuilder<Stack<SetRequestIdLayer<MakeRequestUuid>, Identity>> =
-        service_builder
-            //.layer(axum::middleware::from_fn(third_attempt_body))
-            .set_x_request_id(MakeRequestUuid);
+        service_builder.set_x_request_id(MakeRequestUuid);
 
     service_builder
         .layer(
@@ -506,7 +508,7 @@ async fn main() -> Result<(), DbErr> {
         .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
 
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let app: Router<(), TimeoutBody<hyper::Body>> = Router::new()
+    let app: Router<(), MyBody> = Router::new()
         .route("/", get(index))
         .route("/", post(create))
         .route("/list", get(list))
@@ -518,11 +520,11 @@ async fn main() -> Result<(), DbErr> {
         });
 
     // layers are in reverse order
-    let app: Router<(), TimeoutBody<hyper::Body>> = app.layer(CompressionLayer::new());
-    let app: Router<(), TimeoutBody<hyper::Body>> =
+    let app: Router<(), MyBody2> = app.layer(axum::middleware::from_fn(third_attempt_body));
+    let app: Router<(), MyBody3> = app.layer(CompressionLayer::new());
+    let app: Router<(), MyBody3> =
         app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
-    let app: Router<(), hyper::Body> =
-        app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
+    let app: Router<(), MyBody2> = app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
 
     let app = app.into_make_service();
 
