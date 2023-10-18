@@ -20,7 +20,7 @@ use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
-use axum::{async_trait, Extension, RequestPartsExt, Router};
+use axum::{async_trait, BoxError, Extension, RequestPartsExt, Router};
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::{CookieJar, PrivateCookieJar};
 use entities::prelude::*;
@@ -31,10 +31,11 @@ use handlebars::{
     handlebars_helper, Context, Handlebars, Helper, HelperResult, Output, RenderContext,
 };
 use html_escape::encode_safe;
-use http_body::Limited;
+use http_body::{Body, Limited};
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Request, StatusCode};
+use pin_project_lite::pin_project;
 use rustls_pemfile::{certs, ec_private_keys};
 use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
@@ -47,7 +48,7 @@ use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
 use tower::make::MakeService;
-use tower::ServiceBuilder;
+use tower::{ServiceBuilder, ServiceExt};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
@@ -62,7 +63,41 @@ use tower_http::ServiceBuilderExt;
 
 const DB_NAME: &str = "postgres";
 
-type MyBody = TimeoutBody<Limited<hyper::Body>>;
+pin_project! {
+    pub struct WithSession<B> {
+        #[pin]
+        body: B
+    }
+}
+
+impl<B> Body for WithSession<B>
+where
+    B: Body,
+    B::Error: Into<BoxError>,
+{
+    type Data = B::Data;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+
+    fn poll_data(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Result<Self::Data, Self::Error>>> {
+        let mut this = self.project();
+
+        this.body.poll_data(cx).map_err(Into::into)
+    }
+
+    fn poll_trailers(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<Option<hyper::HeaderMap>, Self::Error>> {
+        let mut this = self.project();
+
+        this.body.poll_trailers(cx).map_err(Into::into)
+    }
+}
+
+type MyBody = WithSession<TimeoutBody<Limited<hyper::Body>>>;
 
 #[derive(Clone, FromRef)]
 struct MyState {
@@ -346,6 +381,12 @@ async fn second_attempt_session<B>(
         .into_response())
 }
 
+async fn third_attempt_body<B>(request: Request<B>, next: Next<WithSession<B>>) -> Response {
+    let request = request.map(|b| WithSession { body: b });
+    let response = next.run(request).await;
+    response
+}
+
 // https://github.com/sunng87/handlebars-rust/tree/master/src/helpers
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
@@ -419,8 +460,50 @@ async fn main() -> Result<(), DbErr> {
         .register_templates_directory(".hbs", "./templates/")
         .unwrap();
 
+    let service_builder = ServiceBuilder::new()
+        .layer(axum::middleware::from_fn(third_attempt_body))
+        .set_x_request_id(MakeRequestUuid)
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().include_headers(true))
+                .on_response(DefaultOnResponse::new().include_headers(true)),
+        )
+        .propagate_x_request_id()
+        .layer(SetResponseHeaderLayer::overriding(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("no-cache, no-store, must-revalidate"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::STRICT_TRANSPORT_SECURITY,
+            HeaderValue::from_static("max-age=63072000; preload"),
+        ))
+        // https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
+        // TODO FIXME sandbox is way too strict
+        // https://csp-evaluator.withgoogle.com/
+        // https://web.dev/articles/strict-csp
+        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+        // cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
+        .layer(SetResponseHeaderLayer::overriding(
+            header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static(
+                "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; \
+                 form-action 'self'; frame-ancestors 'none'; sandbox allow-forms; \
+                 upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types a",
+            ),
+        ))
+        .layer(TimeoutLayer::new(Duration::from_secs(5)))
+        .layer(CatchPanicLayer::new())
+        .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
+        .layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))) // this timeout is between sends, so not the total timeout
+        .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)))
+        .layer(CompressionLayer::new());
+
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let mut app = Router::<MyState, MyBody>::new()
+    let mut app = Router::new()
         .route("/", get(index))
         .route("/", post(create))
         .route("/list", get(list))
@@ -430,49 +513,7 @@ async fn main() -> Result<(), DbErr> {
             database: db,
             handlebars,
         })
-        .layer(
-            ServiceBuilder::new()
-                .set_x_request_id(MakeRequestUuid)
-                .layer(
-                    TraceLayer::new_for_http()
-                        .make_span_with(DefaultMakeSpan::new().include_headers(true))
-                        .on_response(DefaultOnResponse::new().include_headers(true)),
-                )
-                .propagate_x_request_id()
-                .layer(SetResponseHeaderLayer::overriding(
-                    header::CACHE_CONTROL,
-                    HeaderValue::from_static("no-cache, no-store, must-revalidate"),
-                ))
-                .layer(SetResponseHeaderLayer::overriding(
-                    header::X_CONTENT_TYPE_OPTIONS,
-                    HeaderValue::from_static("nosniff"),
-                ))
-                .layer(SetResponseHeaderLayer::overriding(
-                    header::STRICT_TRANSPORT_SECURITY,
-                    HeaderValue::from_static("max-age=63072000; preload"),
-                ))
-                // https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
-                // TODO FIXME sandbox is way too strict
-                // https://csp-evaluator.withgoogle.com/
-                // https://web.dev/articles/strict-csp
-                // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
-                // cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
-                .layer(SetResponseHeaderLayer::overriding(
-                    header::CONTENT_SECURITY_POLICY,
-                    HeaderValue::from_static(
-                        "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; \
-                         form-action 'self'; frame-ancestors 'none'; sandbox allow-forms; \
-                         upgrade-insecure-requests; require-trusted-types-for 'script'; \
-                         trusted-types a",
-                    ),
-                ))
-                .layer(TimeoutLayer::new(Duration::from_secs(5)))
-                .layer(CatchPanicLayer::new())
-                .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024))
-                .layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))) // this timeout is between sends, so not the total timeout
-                .layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)))
-                .layer(CompressionLayer::new()),
-        )
+        .layer(service_builder)
         .into_make_service();
 
     loop {
