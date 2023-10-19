@@ -18,7 +18,7 @@ use axum::extract::{BodyStream, FromRef, Multipart, State};
 use axum::http::HeaderValue;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect};
 use axum::routing::{get, post};
-use axum::{BoxError, Extension, Router};
+use axum::{BoxError, Extension, Router, ServiceExt};
 use axum_extra::extract::cookie::Cookie;
 use axum_extra::extract::PrivateCookieJar;
 use entities::prelude::*;
@@ -93,9 +93,10 @@ where
 }
 
 type MyBody0 = hyper::Body;
-type MyBody1 = Limited<MyBody0>;
-type MyBody2 = TimeoutBody<MyBody1>;
-type MyBody = MyBody2;
+type MyBody1 = WithSession<MyBody0>;
+type MyBody2 = Limited<MyBody1>;
+type MyBody3 = TimeoutBody<MyBody2>;
+type MyBody = MyBody3;
 
 #[derive(Clone, FromRef)]
 struct MyState {
@@ -437,7 +438,7 @@ async fn main() -> Result<(), DbErr> {
         .unwrap();
 
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let app: Router<MyState, MyBody2> = Router::new()
+    let app: Router<MyState, MyBody3> = Router::new()
         .route("/", get(index))
         .route("/", post(create))
         .route("/list", get(list))
@@ -445,15 +446,15 @@ async fn main() -> Result<(), DbErr> {
         .fallback_service(service);
 
     // layers are in reverse order
-    let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new());
-    let app: Router<MyState, MyBody2> =
+    let app: Router<MyState, MyBody3> = app.layer(CompressionLayer::new());
+    let app: Router<MyState, MyBody3> =
         app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
-    let app: Router<MyState, MyBody1> =
+    let app: Router<MyState, MyBody2> =
         app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
-    let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
-    let app: Router<MyState, MyBody0> = app.layer(CatchPanicLayer::new());
-    let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    let app: Router<MyState, MyBody1> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
+    let app: Router<MyState, MyBody1> = app.layer(CatchPanicLayer::new());
+    let app: Router<MyState, MyBody1> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
+    let app: Router<MyState, MyBody1> = app.layer(SetResponseHeaderLayer::overriding(
         header::CONTENT_SECURITY_POLICY,
         HeaderValue::from_static(
             "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
@@ -461,7 +462,7 @@ async fn main() -> Result<(), DbErr> {
              require-trusted-types-for 'script'; trusted-types a",
         ),
     ));
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    let app: Router<MyState, MyBody1> = app.layer(SetResponseHeaderLayer::overriding(
         header::STRICT_TRANSPORT_SECURITY,
         HeaderValue::from_static("max-age=63072000; preload"),
     ));
@@ -471,27 +472,28 @@ async fn main() -> Result<(), DbErr> {
     // https://web.dev/articles/strict-csp
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
     // cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    let app: Router<MyState, MyBody1> = app.layer(SetResponseHeaderLayer::overriding(
         header::X_CONTENT_TYPE_OPTIONS,
         HeaderValue::from_static("nosniff"),
     ));
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    let app: Router<MyState, MyBody1> = app.layer(SetResponseHeaderLayer::overriding(
         header::CACHE_CONTROL,
         HeaderValue::from_static("no-cache, no-store, must-revalidate"),
     ));
-    let app: Router<(), MyBody0> = app.with_state(MyState {
+    let app: Router<(), MyBody1> = app.with_state(MyState {
         database: db,
         handlebars,
     });
-    let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
-    let app: Router<(), MyBody0> = app.layer(
+    let app: Router<(), MyBody1> = app.layer(PropagateRequestIdLayer::x_request_id());
+    let app: Router<(), MyBody1> = app.layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().include_headers(true))
             .on_response(DefaultOnResponse::new().include_headers(true)),
     );
-    let app: Router<(), MyBody0> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
+    let app: Router<(), MyBody1> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
     let app = app.map_request(|request: Request<MyBody0>| request.map(|b| WithSession { body: b }));
+
     let mut app = app.into_make_service();
 
     loop {
