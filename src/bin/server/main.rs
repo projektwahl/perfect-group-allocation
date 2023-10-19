@@ -98,15 +98,13 @@ where
 
     fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
         let (parts, body) = request.into_parts();
+        let session = Session::new(PrivateCookieJar::from_headers(
+            &parts.headers,
+            Key::generate(),
+        ));
         let future = self.inner.call(Request::from_parts(
             parts,
-            BodyWithSession {
-                session: Session::new(PrivateCookieJar::from_headers(
-                    &parts.headers,
-                    Key::generate(),
-                )),
-                body,
-            },
+            BodyWithSession { session, body },
         ));
         Box::pin(async move {
             let response: Response = future.await?;
@@ -575,6 +573,7 @@ async fn main() -> Result<(), DbErr> {
     let app: Router<(), MyBody0> = app.with_state(MyState {
         database: db,
         handlebars,
+        key: Key::generate(),
     });
     let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
     let app: Router<(), MyBody0> = app.layer(
