@@ -24,7 +24,7 @@ use axum::{
     async_trait, BoxError, Extension, RequestExt, RequestPartsExt, Router,
     ServiceExt as AxumServiceExt,
 };
-use axum_extra::extract::cookie::Cookie;
+use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::PrivateCookieJar;
 use entities::prelude::*;
 use entities::project_history;
@@ -97,15 +97,18 @@ where
     }
 
     fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
+        let (parts, body) = request.into_parts();
+        let future = self.inner.call(Request::from_parts(
+            parts,
+            BodyWithSession {
+                session: Session::new(PrivateCookieJar::from_headers(
+                    &parts.headers,
+                    Key::generate(),
+                )),
+                body,
+            },
+        ));
         Box::pin(async move {
-            let (parts, body) = request.into_parts();
-            let future = self.inner.call(Request::from_parts(
-                parts,
-                BodyWithSession {
-                    session: Session::new(parts.extract().await.unwrap()),
-                    body,
-                },
-            ));
             let response: Response = future.await?;
             Ok(response)
         })
@@ -216,6 +219,7 @@ type MyBody = MyBody3;
 struct MyState {
     database: DatabaseConnection,
     handlebars: Handlebars<'static>,
+    key: Key,
 }
 // Make our own error that wraps `anyhow::Error`.
 struct AppError(anyhow::Error);
