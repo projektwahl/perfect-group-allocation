@@ -14,11 +14,12 @@ use std::time::Duration;
 
 use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
-use axum::extract::{BodyStream, FromRef, Multipart, State};
+use axum::extract::{BodyStream, FromRef, FromRequest, FromRequestParts, Multipart, State};
+use axum::http::request::Parts;
 use axum::http::HeaderValue;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect};
 use axum::routing::{get, post};
-use axum::{BoxError, Extension, Router, ServiceExt as AxumServiceExt};
+use axum::{async_trait, BoxError, Extension, Router, ServiceExt as AxumServiceExt};
 use axum_extra::extract::cookie::Cookie;
 use axum_extra::extract::PrivateCookieJar;
 use entities::prelude::*;
@@ -58,20 +59,76 @@ use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 
 const DB_NAME: &str = "postgres";
 
+#[derive(Clone)]
+struct Session(PrivateCookieJar);
+
+impl Session {
+    pub fn new(mut cookies: PrivateCookieJar) -> Self {
+        if cookies.get("session-id").is_none() {
+            let session_id = "the-session-id";
+            cookies = cookies.add(Cookie::new("session-id", session_id));
+        }
+        Self(cookies)
+    }
+
+    pub fn session_id(&self) -> Option<String> {
+        self.0.get("session_id").map(|c| c.value().to_string())
+    }
+}
+
+// fromrequestparts: TODO we could extract it from parts.extensions but then its not 100% type safe
+
+struct ExtractSession<E> {
+    extractor: E,
+    session: Session,
+}
+
+#[async_trait]
+impl<S, B, T> FromRequest<S, BodyWithSession<B>> for ExtractSession<T>
+where
+    B: Send + 'static,
+    S: Send + Sync,
+    T: FromRequest<S, BodyWithSession<B>>,
+{
+    type Rejection = T::Rejection;
+
+    async fn from_request(
+        req: Request<BodyWithSession<B>>,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let extractor = T::from_request(req, state).await?;
+        Ok(ExtractSession {
+            extractor,
+            session: req.body().session,
+        })
+    }
+}
+
+impl IntoResponseParts for Session {
+    type Error = Infallible;
+
+    fn into_response_parts(
+        self,
+        res: axum::response::ResponseParts,
+    ) -> Result<axum::response::ResponseParts, Self::Error> {
+        self.0.into_response_parts(res)
+    }
+}
+
 pin_project! {
-    pub struct WithSession<B> {
+    pub struct BodyWithSession<B> {
+        session: Session,
         #[pin]
         body: B
     }
 }
 
-impl<B> Body for WithSession<B>
+impl<B> http_body::Body for BodyWithSession<B>
 where
-    B: Body,
-    B::Error: Into<BoxError>,
+    B: http_body::Body,
 {
     type Data = B::Data;
-    type Error = Box<dyn std::error::Error + Send + Sync>;
+    type Error = B::Error;
 
     fn poll_data(
         self: Pin<&mut Self>,
@@ -79,7 +136,7 @@ where
     ) -> std::task::Poll<Option<Result<Self::Data, Self::Error>>> {
         let this = self.project();
 
-        this.body.poll_data(cx).map_err(Into::into)
+        this.body.poll_data(cx)
     }
 
     fn poll_trailers(
@@ -88,12 +145,12 @@ where
     ) -> std::task::Poll<Result<Option<hyper::HeaderMap>, Self::Error>> {
         let this = self.project();
 
-        this.body.poll_trailers(cx).map_err(Into::into)
+        this.body.poll_trailers(cx)
     }
 }
 
 type MyBody0 = hyper::Body;
-type MyBody1 = WithSession<MyBody0>;
+type MyBody1 = BodyWithSession<MyBody0>;
 type MyBody2 = Limited<MyBody1>;
 type MyBody3 = TimeoutBody<MyBody2>;
 type MyBody = MyBody3;
@@ -175,7 +232,7 @@ async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
 async fn create(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
-    session: Extension<Session>,
+    session: Session,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
     let mut title = None;
@@ -336,34 +393,6 @@ fn csrf_helper(
     Ok(())
 }
 
-#[derive(Clone)]
-struct Session(PrivateCookieJar);
-
-impl Session {
-    pub fn new(mut cookies: PrivateCookieJar) -> Self {
-        if cookies.get("session-id").is_none() {
-            let session_id = "the-session-id";
-            cookies = cookies.add(Cookie::new("session-id", session_id));
-        }
-        Self(cookies)
-    }
-
-    pub fn session_id(&self) -> Option<String> {
-        self.0.get("session_id").map(|c| c.value().to_string())
-    }
-}
-
-impl IntoResponseParts for Session {
-    type Error = Infallible;
-
-    fn into_response_parts(
-        self,
-        res: axum::response::ResponseParts,
-    ) -> Result<axum::response::ResponseParts, Self::Error> {
-        self.0.into_response_parts(res)
-    }
-}
-
 // https://github.com/sunng87/handlebars-rust/tree/master/src/helpers
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
@@ -492,7 +521,8 @@ async fn main() -> Result<(), DbErr> {
     );
     let app: Router<(), MyBody1> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
-    let app = app.map_request(|request: Request<MyBody0>| request.map(|b| WithSession { body: b }));
+    let app =
+        app.map_request(|request: Request<MyBody0>| request.map(|b| BodyWithSession { body: b }));
 
     let mut app = app.into_make_service();
 
