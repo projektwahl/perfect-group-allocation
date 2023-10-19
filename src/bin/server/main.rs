@@ -15,21 +15,17 @@ use std::time::Duration;
 use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
 use axum::extract::{BodyStream, FromRef, Multipart, State};
-
 use axum::http::HeaderValue;
-
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect};
 use axum::routing::{get, post};
 use axum::{BoxError, Extension, Router};
-use axum_extra::extract::cookie::{Cookie};
-use axum_extra::extract::{PrivateCookieJar};
+use axum_extra::extract::cookie::Cookie;
+use axum_extra::extract::PrivateCookieJar;
 use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
 use futures_util::{StreamExt, TryStreamExt};
-use handlebars::{
-    Context, Handlebars, Helper, HelperResult, Output, RenderContext,
-};
+use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
 use html_escape::encode_safe;
 use http_body::{Body, Limited};
 use hyper::server::accept::Accept;
@@ -47,9 +43,8 @@ use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
-
 use tower::make::MakeService;
-use tower::{ServiceExt};
+use tower::ServiceExt;
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
@@ -60,7 +55,6 @@ use tower_http::timeout::{
     RequestBodyTimeoutLayer, ResponseBodyTimeoutLayer, TimeoutBody, TimeoutLayer,
 };
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-
 
 const DB_NAME: &str = "postgres";
 
@@ -99,8 +93,8 @@ where
 }
 
 type MyBody0 = hyper::Body;
-type MyBody1 = Limited<hyper::Body>;
-type MyBody2 = TimeoutBody<Limited<hyper::Body>>;
+type MyBody1 = Limited<MyBody0>;
+type MyBody2 = TimeoutBody<MyBody1>;
 type MyBody = MyBody2;
 
 #[derive(Clone, FromRef)]
@@ -489,15 +483,16 @@ async fn main() -> Result<(), DbErr> {
         database: db,
         handlebars,
     });
-    let app = app.layer(PropagateRequestIdLayer::x_request_id());
-    let app = app.layer(
+    let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
+    let app: Router<(), MyBody0> = app.layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().include_headers(true))
             .on_response(DefaultOnResponse::new().include_headers(true)),
     );
-    let app = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
+    let app: Router<(), MyBody0> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
-    //let app = app.map_request(|request: Request<MyBody2>| request.map(|b| WithSession { body: b }));
+    //let app: Router<(), MyBody3> =
+    //    app.map_request(|request: Request<MyBody2>| request.map(|b| WithSession { body: b }));
     let mut app = app.into_make_service();
 
     loop {
