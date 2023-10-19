@@ -491,8 +491,7 @@ async fn main() -> Result<(), DbErr> {
     );
     let app: Router<(), MyBody0> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
-    //let app: Router<(), MyBody3> =
-    //    app.map_request(|request: Request<MyBody2>| request.map(|b| WithSession { body: b }));
+    let app = app.map_request(|request: Request<MyBody0>| request.map(|b| WithSession { body: b }));
     let mut app = app.into_make_service();
 
     loop {
