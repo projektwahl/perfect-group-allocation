@@ -19,7 +19,7 @@ use axum::http::request::Parts;
 use axum::http::HeaderValue;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Extension, Router, ServiceExt as AxumServiceExt};
+use axum::{async_trait, BoxError, Extension, RequestExt, Router, ServiceExt as AxumServiceExt};
 use axum_extra::extract::cookie::Cookie;
 use axum_extra::extract::PrivateCookieJar;
 use entities::prelude::*;
@@ -80,7 +80,7 @@ impl Session {
 
 struct ExtractSession<E> {
     extractor: E,
-    session: Session,
+    session: Option<Session>,
 }
 
 #[async_trait]
@@ -88,7 +88,7 @@ impl<S, B, T> FromRequest<S, BodyWithSession<B>> for ExtractSession<T>
 where
     B: Send + 'static,
     S: Send + Sync,
-    T: FromRequest<S, BodyWithSession<B>>,
+    T: FromRequest<S, B>,
 {
     type Rejection = T::Rejection;
 
@@ -96,10 +96,10 @@ where
         req: Request<BodyWithSession<B>>,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
-        let extractor = T::from_request(req, state).await?;
+        let extractor = T::from_request(req.map(|body| body.body), state).await?;
         Ok(ExtractSession {
             extractor,
-            session: req.body().session,
+            session: Some(req.body().session),
         })
     }
 }
@@ -228,12 +228,11 @@ async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
     Html(result)
 }
 
-#[axum::debug_handler(body=MyBody, state=MyState)]
+//#[axum::debug_handler(body=MyBody, state=MyState)]
 async fn create(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
-    session: Session,
-    mut multipart: Multipart,
+    mut multipart: ExtractSession<Multipart>,
 ) -> Result<impl IntoResponse, AppError> {
     let mut title = None;
     let mut description = None;
@@ -283,7 +282,7 @@ async fn create(
     };
     let _ = ProjectHistory::insert(project).exec(&db).await?;
 
-    Ok((session, Redirect::to("/list")).into_response())
+    Ok(Redirect::to("/list").into_response())
 }
 
 #[try_stream(ok = String, error = DbErr)]
@@ -521,8 +520,13 @@ async fn main() -> Result<(), DbErr> {
     );
     let app: Router<(), MyBody1> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
-    let app =
-        app.map_request(|request: Request<MyBody0>| request.map(|b| BodyWithSession { body: b }));
+    // TODO FIXME replace by layer?
+    let app = app.map_request(|request: Request<MyBody0>| {
+        request.map(|b| BodyWithSession {
+            body: b,
+            session: todo!(),
+        })
+    });
 
     let mut app = app.into_make_service();
 
