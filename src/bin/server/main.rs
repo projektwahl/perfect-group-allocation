@@ -126,7 +126,7 @@ impl Session {
 
 struct ExtractSession<E> {
     extractor: E,
-    session: Option<Session>,
+    session: Session,
 }
 
 #[async_trait]
@@ -142,10 +142,11 @@ where
         req: Request<BodyWithSession<B>>,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
-        let extractor = T::from_request(req.map(|body| body.body), state).await?;
+        let (parts, body) = req.into_parts();
+        let extractor = T::from_request(Request::from_parts(parts, body.body), state).await?;
         Ok(ExtractSession {
             extractor,
-            session: Some(req.body().session),
+            session: body.session,
         })
     }
 }
@@ -282,7 +283,7 @@ async fn create(
 ) -> Result<impl IntoResponse, AppError> {
     let mut title = None;
     let mut description = None;
-    while let Some(field) = multipart.next_field().await? {
+    while let Some(field) = multipart.extractor.next_field().await? {
         match field.name().unwrap() {
             "title" => assert!(title.replace(field.text().await?).is_none()),
             "description" => assert!(description.replace(field.text().await?).is_none()),
