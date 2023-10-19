@@ -20,7 +20,10 @@ use axum::http::request::Parts;
 use axum::http::HeaderValue;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Extension, RequestExt, Router, ServiceExt as AxumServiceExt};
+use axum::{
+    async_trait, BoxError, Extension, RequestExt, RequestPartsExt, Router,
+    ServiceExt as AxumServiceExt,
+};
 use axum_extra::extract::cookie::Cookie;
 use axum_extra::extract::PrivateCookieJar;
 use entities::prelude::*;
@@ -94,11 +97,15 @@ where
     }
 
     fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
-        let future = self.inner.call(request.map(|b| BodyWithSession {
-            session: Session::new(todo!()),
-            body: b,
-        }));
         Box::pin(async move {
+            let (parts, body) = request.into_parts();
+            let future = self.inner.call(Request::from_parts(
+                parts,
+                BodyWithSession {
+                    session: Session::new(parts.extract().await.unwrap()),
+                    body,
+                },
+            ));
             let response: Response = future.await?;
             Ok(response)
         })
@@ -117,8 +124,11 @@ impl Session {
         Self(cookies)
     }
 
-    pub fn session_id(&self) -> Option<String> {
-        self.0.get("session_id").map(|c| c.value().to_string())
+    pub fn session_id(&self) -> String {
+        self.0
+            .get("session_id")
+            .map(|c| c.value().to_string())
+            .unwrap()
     }
 }
 
@@ -281,6 +291,8 @@ async fn create(
     State(handlebars): State<Handlebars<'static>>,
     mut multipart: ExtractSession<Multipart>,
 ) -> Result<impl IntoResponse, AppError> {
+    println!("{}", multipart.session.session_id());
+
     let mut title = None;
     let mut description = None;
     while let Some(field) = multipart.extractor.next_field().await? {
