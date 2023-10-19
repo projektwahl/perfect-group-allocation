@@ -521,12 +521,12 @@ async fn main() -> Result<(), DbErr> {
 
     let from_fn: FromFnLayer<_, _, _> = axum::middleware::from_fn(third_attempt_body);
     // layers are in reverse order
-    let app: Router<(), MyBody3> = app.layer(from_fn);
     let app: Router<(), MyBody3> = app.layer(CompressionLayer::new());
     let app: Router<(), MyBody3> =
         app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
     let app: Router<(), MyBody2> = app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
 
+    //let app = app.map_request(|request: Request<MyBody2>| request.map(|b| WithSession { body: b }));
     let app = app.into_make_service();
 
     loop {
