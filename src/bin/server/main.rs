@@ -14,21 +14,21 @@ use std::time::Duration;
 
 use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
-use axum::extract::{BodyStream, FromRef, FromRequestParts, Multipart, State};
-use axum::http::request::Parts;
+use axum::extract::{BodyStream, FromRef, Multipart, State};
+
 use axum::http::HeaderValue;
-use axum::middleware::{FromFn, FromFnLayer, Next};
-use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
+
+use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Extension, RequestPartsExt, Router};
-use axum_extra::extract::cookie::{Cookie, Key};
-use axum_extra::extract::{CookieJar, PrivateCookieJar};
+use axum::{BoxError, Extension, Router};
+use axum_extra::extract::cookie::{Cookie};
+use axum_extra::extract::{PrivateCookieJar};
 use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
 use futures_util::{StreamExt, TryStreamExt};
 use handlebars::{
-    handlebars_helper, Context, Handlebars, Helper, HelperResult, Output, RenderContext,
+    Context, Handlebars, Helper, HelperResult, Output, RenderContext,
 };
 use html_escape::encode_safe;
 use http_body::{Body, Limited};
@@ -47,9 +47,9 @@ use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
-use tower::layer::util::{Identity, Stack};
+
 use tower::make::MakeService;
-use tower::{ServiceBuilder, ServiceExt};
+use tower::{ServiceExt};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
@@ -60,7 +60,7 @@ use tower_http::timeout::{
     RequestBodyTimeoutLayer, ResponseBodyTimeoutLayer, TimeoutBody, TimeoutLayer,
 };
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tower_http::ServiceBuilderExt;
+
 
 const DB_NAME: &str = "postgres";
 
@@ -83,7 +83,7 @@ where
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Result<Self::Data, Self::Error>>> {
-        let mut this = self.project();
+        let this = self.project();
 
         this.body.poll_data(cx).map_err(Into::into)
     }
@@ -92,7 +92,7 @@ where
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Result<Option<hyper::HeaderMap>, Self::Error>> {
-        let mut this = self.project();
+        let this = self.project();
 
         this.body.poll_trailers(cx).map_err(Into::into)
     }
@@ -323,9 +323,9 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
 
 fn csrf_helper(
     h: &Helper<'_, '_>,
-    hb: &Handlebars<'_>,
-    c: &Context,
-    rc: &mut RenderContext<'_, '_>,
+    _hb: &Handlebars<'_>,
+    _c: &Context,
+    _rc: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> HelperResult {
     // get parameter from helper or throw an error
