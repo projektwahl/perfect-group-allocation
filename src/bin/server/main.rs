@@ -498,7 +498,7 @@ async fn main() -> Result<(), DbErr> {
     let app = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
     //let app = app.map_request(|request: Request<MyBody2>| request.map(|b| WithSession { body: b }));
-    let app = app.into_make_service();
+    let mut app = app.into_make_service();
 
     loop {
         let stream = poll_fn(|cx| Pin::new(&mut listener).poll_accept(cx))
