@@ -10,6 +10,7 @@ use std::io::BufReader;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 use axum::body::StreamBody;
@@ -17,7 +18,7 @@ use axum::extract::multipart::MultipartError;
 use axum::extract::{BodyStream, FromRef, FromRequest, FromRequestParts, Multipart, State};
 use axum::http::request::Parts;
 use axum::http::HeaderValue;
-use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect};
+use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Extension, RequestExt, Router, ServiceExt as AxumServiceExt};
 use axum_extra::extract::cookie::Cookie;
@@ -25,8 +26,11 @@ use axum_extra::extract::PrivateCookieJar;
 use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
+use futures_util::future::BoxFuture;
 use futures_util::{StreamExt, TryStreamExt};
-use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
+use handlebars::{
+    Context as HandlebarsContext, Handlebars, Helper, HelperResult, Output, RenderContext,
+};
 use html_escape::encode_safe;
 use http_body::{Body, Limited};
 use hyper::server::accept::Accept;
@@ -45,7 +49,7 @@ use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
 use tower::make::MakeService;
-use tower::ServiceExt as TowerServiceExt;
+use tower::{Layer, Service, ServiceExt as TowerServiceExt};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
@@ -58,6 +62,45 @@ use tower_http::timeout::{
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 
 const DB_NAME: &str = "postgres";
+
+#[derive(Clone)]
+struct MyLayer;
+
+impl<S> Layer<S> for MyLayer {
+    type Service = MyMiddleware<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        MyMiddleware { inner }
+    }
+}
+
+#[derive(Clone)]
+struct MyMiddleware<S> {
+    inner: S,
+}
+
+impl<S> Service<Request<axum::body::Body>> for MyMiddleware<S>
+where
+    S: Service<Request<axum::body::Body>, Response = Response> + Send + 'static,
+    S::Future: Send + 'static,
+{
+    type Error = S::Error;
+    // `BoxFuture` is a type alias for `Pin<Box<dyn Future + Send + 'a>>`
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Response = S::Response;
+
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, request: Request<axum::body::Body>) -> Self::Future {
+        let future = self.inner.call(request);
+        Box::pin(async move {
+            let response: Response = future.await?;
+            Ok(response)
+        })
+    }
+}
 
 #[derive(Clone)]
 struct Session(PrivateCookieJar);
@@ -375,7 +418,7 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
 fn csrf_helper(
     h: &Helper<'_, '_>,
     _hb: &Handlebars<'_>,
-    _c: &Context,
+    _c: &HandlebarsContext,
     _rc: &mut RenderContext<'_, '_>,
     out: &mut dyn Output,
 ) -> HelperResult {
