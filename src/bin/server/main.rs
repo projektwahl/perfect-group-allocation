@@ -53,7 +53,7 @@ use tower::{ServiceBuilder, ServiceExt};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
+use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::timeout::{
@@ -101,8 +101,7 @@ where
 type MyBody0 = hyper::Body;
 type MyBody1 = Limited<hyper::Body>;
 type MyBody2 = TimeoutBody<Limited<hyper::Body>>;
-type MyBody3 = WithSession<TimeoutBody<Limited<hyper::Body>>>;
-type MyBody = MyBody3;
+type MyBody = MyBody2;
 
 #[derive(Clone, FromRef)]
 struct MyState {
@@ -370,28 +369,6 @@ impl IntoResponseParts for Session {
     }
 }
 
-async fn second_attempt_session<B>(
-    cookies: PrivateCookieJar,
-    mut request: Request<B>,
-    next: Next<B>,
-) -> Result<Response, StatusCode> {
-    request.extensions_mut().insert(Session::new(cookies));
-
-    let response = next.run(request).await;
-
-    Ok((
-        response.extensions().get::<Session>().unwrap().clone(),
-        response,
-    )
-        .into_response())
-}
-
-async fn third_attempt_body<B>(request: Request<B>, next: Next<WithSession<B>>) -> Response {
-    let request = request.map(|b| WithSession { body: b });
-    let response = next.run(request).await;
-    response
-}
-
 // https://github.com/sunng87/handlebars-rust/tree/master/src/helpers
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
@@ -465,66 +442,60 @@ async fn main() -> Result<(), DbErr> {
         .register_templates_directory(".hbs", "./templates/")
         .unwrap();
 
-    let service_builder: ServiceBuilder<Identity> = ServiceBuilder::new();
-
-    let service_builder: ServiceBuilder<Stack<SetRequestIdLayer<MakeRequestUuid>, Identity>> =
-        service_builder.set_x_request_id(MakeRequestUuid);
-
-    service_builder
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::new().include_headers(true))
-                .on_response(DefaultOnResponse::new().include_headers(true)),
-        )
-        .propagate_x_request_id()
-        .layer(SetResponseHeaderLayer::overriding(
-            header::CACHE_CONTROL,
-            HeaderValue::from_static("no-cache, no-store, must-revalidate"),
-        ))
-        .layer(SetResponseHeaderLayer::overriding(
-            header::X_CONTENT_TYPE_OPTIONS,
-            HeaderValue::from_static("nosniff"),
-        ))
-        .layer(SetResponseHeaderLayer::overriding(
-            header::STRICT_TRANSPORT_SECURITY,
-            HeaderValue::from_static("max-age=63072000; preload"),
-        ))
-        // https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
-        // TODO FIXME sandbox is way too strict
-        // https://csp-evaluator.withgoogle.com/
-        // https://web.dev/articles/strict-csp
-        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
-        // cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
-        .layer(SetResponseHeaderLayer::overriding(
-            header::CONTENT_SECURITY_POLICY,
-            HeaderValue::from_static(
-                "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; \
-                 form-action 'self'; frame-ancestors 'none'; sandbox allow-forms; \
-                 upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types a",
-            ),
-        ))
-        .layer(TimeoutLayer::new(Duration::from_secs(5)))
-        .layer(CatchPanicLayer::new())
-        .layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
-
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let app: Router<(), MyBody3> = Router::new()
+    let app: Router<MyState, MyBody2> = Router::new()
         .route("/", get(index))
         .route("/", post(create))
         .route("/list", get(list))
         .route("/download", get(handler))
-        .fallback_service(service)
-        .with_state(MyState {
-            database: db,
-            handlebars,
-        });
+        .fallback_service(service);
 
-    let from_fn: FromFnLayer<_, _, _> = axum::middleware::from_fn(third_attempt_body);
     // layers are in reverse order
-    let app: Router<(), MyBody3> = app.layer(CompressionLayer::new());
-    let app: Router<(), MyBody3> =
+    let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new());
+    let app: Router<MyState, MyBody2> =
         app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
-    let app: Router<(), MyBody2> = app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
+    let app: Router<MyState, MyBody1> =
+        app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
+    let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
+    let app: Router<MyState, MyBody0> = app.layer(CatchPanicLayer::new());
+    let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
+    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static(
+            "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
+             'self'; frame-ancestors 'none'; sandbox allow-forms; upgrade-insecure-requests; \
+             require-trusted-types-for 'script'; trusted-types a",
+        ),
+    ));
+    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+        header::STRICT_TRANSPORT_SECURITY,
+        HeaderValue::from_static("max-age=63072000; preload"),
+    ));
+    // https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
+    // TODO FIXME sandbox is way too strict
+    // https://csp-evaluator.withgoogle.com/
+    // https://web.dev/articles/strict-csp
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+    // cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
+    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    ));
+    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("no-cache, no-store, must-revalidate"),
+    ));
+    let app: Router<(), MyBody0> = app.with_state(MyState {
+        database: db,
+        handlebars,
+    });
+    let app = app.layer(PropagateRequestIdLayer::x_request_id());
+    let app = app.layer(
+        TraceLayer::new_for_http()
+            .make_span_with(DefaultMakeSpan::new().include_headers(true))
+            .on_response(DefaultOnResponse::new().include_headers(true)),
+    );
+    let app = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
     //let app = app.map_request(|request: Request<MyBody2>| request.map(|b| WithSession { body: b }));
     let app = app.into_make_service();
