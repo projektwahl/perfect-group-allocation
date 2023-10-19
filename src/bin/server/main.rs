@@ -40,6 +40,7 @@ use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Request, StatusCode};
 use pin_project_lite::pin_project;
+use rand::{thread_rng, Rng};
 use rustls_pemfile::{certs, ec_private_keys};
 use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
@@ -134,7 +135,13 @@ impl Session {
 
     pub fn session_id(&mut self) -> String {
         if self.0.get("session-id").is_none() {
-            let session_id = "the-session-id";
+            let rand_string: String = thread_rng()
+                .sample_iter(&rand::distributions::Alphanumeric)
+                .take(30)
+                .map(char::from)
+                .collect();
+
+            let session_id = rand_string;
             // this looks not efficient
             self.0 = self.0.clone().add(Cookie::new("session-id", session_id));
         }
