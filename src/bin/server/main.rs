@@ -79,9 +79,9 @@ struct SessionMiddleware<S> {
     inner: S,
 }
 
-impl<S> Service<Request<axum::body::Body>> for SessionMiddleware<S>
+impl<S, ReqBody> Service<Request<ReqBody>> for SessionMiddleware<S>
 where
-    S: Service<Request<axum::body::Body>, Response = Response> + Send + 'static,
+    S: Service<Request<BodyWithSession<ReqBody>>, Response = Response> + Send + 'static,
     S::Future: Send + 'static,
 {
     type Error = S::Error;
@@ -93,8 +93,11 @@ where
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, request: Request<axum::body::Body>) -> Self::Future {
-        let future = self.inner.call(request);
+    fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
+        let future = self.inner.call(request.map(|b| BodyWithSession {
+            session: Session::new(todo!()),
+            body: b,
+        }));
         Box::pin(async move {
             let response: Response = future.await?;
             Ok(response)
@@ -193,9 +196,9 @@ where
 }
 
 type MyBody0 = hyper::Body;
-type MyBody1 = BodyWithSession<MyBody0>;
-type MyBody2 = Limited<MyBody1>;
-type MyBody3 = TimeoutBody<MyBody2>;
+type MyBody1 = Limited<MyBody0>;
+type MyBody2 = TimeoutBody<MyBody1>;
+type MyBody3 = BodyWithSession<MyBody2>;
 type MyBody = MyBody3;
 
 #[derive(Clone, FromRef)]
@@ -509,7 +512,7 @@ async fn main() -> Result<(), DbErr> {
         .unwrap();
 
     //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let app: Router<MyState, MyBody3> = Router::new()
+    let app: Router<MyState, MyBody> = Router::new()
         .route("/", get(index))
         .route("/", post(create))
         .route("/list", get(list))
@@ -517,15 +520,16 @@ async fn main() -> Result<(), DbErr> {
         .fallback_service(service);
 
     // layers are in reverse order
-    let app: Router<MyState, MyBody3> = app.layer(CompressionLayer::new());
-    let app: Router<MyState, MyBody3> =
-        app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
+    let app: Router<MyState, MyBody2> = app.layer(SessionLayer);
+    let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new());
     let app: Router<MyState, MyBody2> =
+        app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
+    let app: Router<MyState, MyBody1> =
         app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
-    let app: Router<MyState, MyBody1> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
-    let app: Router<MyState, MyBody1> = app.layer(CatchPanicLayer::new());
-    let app: Router<MyState, MyBody1> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
-    let app: Router<MyState, MyBody1> = app.layer(SetResponseHeaderLayer::overriding(
+    let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
+    let app: Router<MyState, MyBody0> = app.layer(CatchPanicLayer::new());
+    let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
+    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
         header::CONTENT_SECURITY_POLICY,
         HeaderValue::from_static(
             "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
@@ -533,7 +537,7 @@ async fn main() -> Result<(), DbErr> {
              require-trusted-types-for 'script'; trusted-types a",
         ),
     ));
-    let app: Router<MyState, MyBody1> = app.layer(SetResponseHeaderLayer::overriding(
+    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
         header::STRICT_TRANSPORT_SECURITY,
         HeaderValue::from_static("max-age=63072000; preload"),
     ));
@@ -543,26 +547,25 @@ async fn main() -> Result<(), DbErr> {
     // https://web.dev/articles/strict-csp
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
     // cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
-    let app: Router<MyState, MyBody1> = app.layer(SetResponseHeaderLayer::overriding(
+    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
         header::X_CONTENT_TYPE_OPTIONS,
         HeaderValue::from_static("nosniff"),
     ));
-    let app: Router<MyState, MyBody1> = app.layer(SetResponseHeaderLayer::overriding(
+    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
         header::CACHE_CONTROL,
         HeaderValue::from_static("no-cache, no-store, must-revalidate"),
     ));
-    let app: Router<(), MyBody1> = app.with_state(MyState {
+    let app: Router<(), MyBody0> = app.with_state(MyState {
         database: db,
         handlebars,
     });
-    let app: Router<(), MyBody1> = app.layer(PropagateRequestIdLayer::x_request_id());
-    let app: Router<(), MyBody1> = app.layer(
+    let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
+    let app: Router<(), MyBody0> = app.layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().include_headers(true))
             .on_response(DefaultOnResponse::new().include_headers(true)),
     );
-    let app: Router<(), MyBody1> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
-    let app = app.layer(SessionLayer);
+    let app: Router<(), MyBody0> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
     let mut app = app.into_make_service();
 
