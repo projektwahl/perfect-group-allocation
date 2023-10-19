@@ -48,6 +48,7 @@ use sea_orm::{
 use serde::Serialize;
 use serde_json::json;
 use tokio::net::TcpListener;
+use tokio::sync::Mutex;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
@@ -67,19 +68,25 @@ use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 const DB_NAME: &str = "postgres";
 
 #[derive(Clone)]
-struct SessionLayer;
+struct SessionLayer {
+    key: Key,
+}
 
 impl<S> Layer<S> for SessionLayer {
     type Service = SessionMiddleware<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        SessionMiddleware { inner }
+        SessionMiddleware {
+            inner,
+            key: self.key.clone(),
+        }
     }
 }
 
 #[derive(Clone)]
 struct SessionMiddleware<S> {
     inner: S,
+    key: Key,
 }
 
 impl<S, ReqBody> Service<Request<ReqBody>> for SessionMiddleware<S>
@@ -98,17 +105,21 @@ where
 
     fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
         let (parts, body) = request.into_parts();
-        let session = Session::new(PrivateCookieJar::from_headers(
+        let session = Arc::new(Mutex::new(Session::new(PrivateCookieJar::from_headers(
             &parts.headers,
-            Key::generate(),
-        ));
+            self.key.clone(),
+        ))));
         let future = self.inner.call(Request::from_parts(
             parts,
-            BodyWithSession { session, body },
+            BodyWithSession {
+                session: session.clone(),
+                body,
+            },
         ));
         Box::pin(async move {
             let response: Response = future.await?;
-            Ok(response)
+            let cookies = Arc::into_inner(session).unwrap().into_inner();
+            Ok((cookies, response).into_response())
         })
     }
 }
@@ -117,17 +128,18 @@ where
 struct Session(PrivateCookieJar);
 
 impl Session {
-    pub fn new(mut cookies: PrivateCookieJar) -> Self {
-        if cookies.get("session-id").is_none() {
-            let session_id = "the-session-id";
-            cookies = cookies.add(Cookie::new("session-id", session_id));
-        }
+    pub fn new(cookies: PrivateCookieJar) -> Self {
         Self(cookies)
     }
 
-    pub fn session_id(&self) -> String {
+    pub fn session_id(&mut self) -> String {
+        if self.0.get("session-id").is_none() {
+            let session_id = "the-session-id";
+            // this looks not efficient
+            self.0 = self.0.clone().add(Cookie::new("session-id", session_id));
+        }
         self.0
-            .get("session_id")
+            .get("session-id")
             .map(|c| c.value().to_string())
             .unwrap()
     }
@@ -137,7 +149,7 @@ impl Session {
 
 struct ExtractSession<E> {
     extractor: E,
-    session: Session,
+    session: Arc<Mutex<Session>>,
 }
 
 #[async_trait]
@@ -175,7 +187,7 @@ impl IntoResponseParts for Session {
 
 pin_project! {
     pub struct BodyWithSession<B> {
-        session: Session,
+        session: Arc<Mutex<Session>>,
         #[pin]
         body: B
     }
@@ -217,7 +229,6 @@ type MyBody = MyBody3;
 struct MyState {
     database: DatabaseConnection,
     handlebars: Handlebars<'static>,
-    key: Key,
 }
 // Make our own error that wraps `anyhow::Error`.
 struct AppError(anyhow::Error);
@@ -293,7 +304,7 @@ async fn create(
     State(handlebars): State<Handlebars<'static>>,
     mut multipart: ExtractSession<Multipart>,
 ) -> Result<impl IntoResponse, AppError> {
-    println!("{}", multipart.session.session_id());
+    println!("{}", multipart.session.lock().await.session_id());
 
     let mut title = None;
     let mut description = None;
@@ -500,6 +511,8 @@ async fn main() -> Result<(), DbErr> {
         DbBackend::Sqlite => db,
     };
 
+    // https://github.com/tokio-rs/axum/discussions/236
+
     // https://github.com/tokio-rs/axum/blob/main/examples/low-level-rustls/src/main.rs
 
     let rustls_config = rustls_server_config(
@@ -535,7 +548,9 @@ async fn main() -> Result<(), DbErr> {
         .fallback_service(service);
 
     // layers are in reverse order
-    let app: Router<MyState, MyBody2> = app.layer(SessionLayer);
+    let app: Router<MyState, MyBody2> = app.layer(SessionLayer {
+        key: Key::generate(),
+    });
     let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new());
     let app: Router<MyState, MyBody2> =
         app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
@@ -573,7 +588,6 @@ async fn main() -> Result<(), DbErr> {
     let app: Router<(), MyBody0> = app.with_state(MyState {
         database: db,
         handlebars,
-        key: Key::generate(),
     });
     let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
     let app: Router<(), MyBody0> = app.layer(
