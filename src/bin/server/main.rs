@@ -64,22 +64,22 @@ use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 const DB_NAME: &str = "postgres";
 
 #[derive(Clone)]
-struct MyLayer;
+struct SessionLayer;
 
-impl<S> Layer<S> for MyLayer {
-    type Service = MyMiddleware<S>;
+impl<S> Layer<S> for SessionLayer {
+    type Service = SessionMiddleware<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        MyMiddleware { inner }
+        SessionMiddleware { inner }
     }
 }
 
 #[derive(Clone)]
-struct MyMiddleware<S> {
+struct SessionMiddleware<S> {
     inner: S,
 }
 
-impl<S> Service<Request<axum::body::Body>> for MyMiddleware<S>
+impl<S> Service<Request<axum::body::Body>> for SessionMiddleware<S>
 where
     S: Service<Request<axum::body::Body>, Response = Response> + Send + 'static,
     S::Future: Send + 'static,
@@ -562,14 +562,7 @@ async fn main() -> Result<(), DbErr> {
             .on_response(DefaultOnResponse::new().include_headers(true)),
     );
     let app: Router<(), MyBody1> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
-
-    // TODO FIXME replace by layer?
-    let app = app.map_request(|request: Request<MyBody0>| {
-        request.map(|b| BodyWithSession {
-            body: b,
-            session: todo!(),
-        })
-    });
+    let app = app.layer(SessionLayer);
 
     let mut app = app.into_make_service();
 
