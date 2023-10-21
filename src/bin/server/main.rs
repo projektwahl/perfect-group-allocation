@@ -25,7 +25,8 @@ use axum::{
     ServiceExt as AxumServiceExt,
 };
 use axum_extra::extract::cookie::{Cookie, Key};
-use axum_extra::extract::PrivateCookieJar;
+use axum_extra::extract::{CookieJar, SignedCookieJar};
+use data_encoding::{BASE64, BASE64URL_NOPAD};
 use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
@@ -35,12 +36,14 @@ use handlebars::{
     Context as HandlebarsContext, Handlebars, Helper, HelperResult, Output, RenderContext,
 };
 use html_escape::encode_safe;
+use http_body::combinators::UnsyncBoxBody;
 use http_body::{Body, Limited};
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Request, StatusCode};
 use pin_project_lite::pin_project;
 use rand::{thread_rng, Rng};
+use ring::hmac;
 use rustls_pemfile::{certs, ec_private_keys};
 use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
@@ -106,10 +109,10 @@ where
 
     fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
         let (parts, body) = request.into_parts();
-        let session = Arc::new(Mutex::new(Session::new(PrivateCookieJar::from_headers(
-            &parts.headers,
-            self.key.clone(),
-        ))));
+        let session = Arc::new(Mutex::new(Session::new(
+            CookieJar::from_headers(&parts.headers),
+            SignedCookieJar::from_headers(&parts.headers, self.key.clone()),
+        )));
         let future = self.inner.call(Request::from_parts(
             parts,
             BodyWithSession {
@@ -126,15 +129,22 @@ where
 }
 
 #[derive(Clone)]
-struct Session(PrivateCookieJar);
+struct Session {
+    unsigned_cookies: CookieJar,
+    signed_cookies: SignedCookieJar,
+}
 
 impl Session {
-    pub fn new(cookies: PrivateCookieJar) -> Self {
-        Self(cookies)
+    pub fn new(unsigned_cookies: CookieJar, signed_cookies: SignedCookieJar) -> Self {
+        Self {
+            unsigned_cookies,
+            signed_cookies,
+        }
     }
 
     pub fn session_id(&mut self) -> String {
-        if self.0.get("session-id").is_none() {
+        const COOKIE_NAME: &str = "__Host-session_id";
+        if self.signed_cookies.get(COOKIE_NAME).is_none() {
             let rand_string: String = thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(30)
@@ -142,11 +152,43 @@ impl Session {
                 .collect();
 
             let session_id = rand_string;
-            // this looks not efficient
-            self.0 = self.0.clone().add(Cookie::new("session-id", session_id));
+            self.signed_cookies = self
+                .signed_cookies
+                .clone()
+                .add(Cookie::new(COOKIE_NAME, session_id));
         }
-        self.0
-            .get("session-id")
+        self.signed_cookies
+            .get(COOKIE_NAME)
+            .map(|c| c.value().to_string())
+            .unwrap()
+    }
+
+    pub fn csrf_token(&mut self) -> String {
+        const COOKIE_NAME: &str = " __Host-csrf_token";
+        if self.unsigned_cookies.get(COOKIE_NAME).is_none() {
+            let rand_string: String = thread_rng()
+                .sample_iter(&rand::distributions::Alphanumeric)
+                .take(30)
+                .map(char::from)
+                .collect();
+
+            let csrf_token = self.session_id() + &rand_string;
+
+            // hash the value to not leak the session id
+            let rng = ring::rand::SystemRandom::new();
+            let key = hmac::Key::generate(hmac::HMAC_SHA256, &rng).unwrap();
+
+            let tag = hmac::sign(&key, csrf_token.as_bytes());
+
+            let cookie = Cookie::build(COOKIE_NAME, BASE64URL_NOPAD.encode(tag.as_ref()))
+                .http_only(true)
+                .same_site(axum_extra::extract::cookie::SameSite::Strict)
+                .secure(true)
+                .finish();
+            self.unsigned_cookies = self.unsigned_cookies.clone().add(cookie);
+        }
+        self.unsigned_cookies
+            .get(COOKIE_NAME)
             .map(|c| c.value().to_string())
             .unwrap()
     }
@@ -182,13 +224,13 @@ where
 }
 
 impl IntoResponseParts for Session {
-    type Error = Infallible;
+    type Error = hyper::Response<UnsyncBoxBody<axum::body::Bytes, axum::Error>>;
 
     fn into_response_parts(
         self,
         res: axum::response::ResponseParts,
     ) -> Result<axum::response::ResponseParts, Self::Error> {
-        self.0.into_response_parts(res)
+        (self.unsigned_cookies, self.signed_cookies).into_response_parts(res)
     }
 }
 

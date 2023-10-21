@@ -36,6 +36,8 @@ sqlx = "0.7.2"
 handlebars = { version = "4", features = ["dir_source"] }
 serde_json = "1.0.107"
 serde = { version = "1", features = ["derive"] }
-axum-extra = { version = "0.8", features = ["cookie", "cookie-private"] }
+axum-extra = { version = "0.8", features = ["cookie", "cookie-private", "cookie-signed"] }
 pin-project-lite = "0.2.13"
 rand = "0.8.5"
+ring = "0.17.5"
+data-encoding = "2.4.0"
