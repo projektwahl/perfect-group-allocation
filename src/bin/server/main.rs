@@ -15,18 +15,13 @@ use std::time::Duration;
 
 use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
-use axum::extract::{BodyStream, FromRef, FromRequest, FromRequestParts, Multipart, State};
-use axum::http::request::Parts;
+use axum::extract::{BodyStream, FromRef, FromRequest, Multipart, State};
 use axum::http::HeaderValue;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
-use axum::{
-    async_trait, BoxError, Extension, RequestExt, RequestPartsExt, Router,
-    ServiceExt as AxumServiceExt,
-};
+use axum::{async_trait, Router};
 use axum_extra::extract::cookie::{Cookie, Key};
-use axum_extra::extract::{CookieJar, SignedCookieJar};
-use data_encoding::{BASE64, BASE64URL_NOPAD};
+use axum_extra::extract::SignedCookieJar;
 use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
@@ -36,14 +31,12 @@ use handlebars::{
     Context as HandlebarsContext, Handlebars, Helper, HelperResult, Output, RenderContext,
 };
 use html_escape::encode_safe;
-use http_body::combinators::UnsyncBoxBody;
-use http_body::{Body, Limited};
+use http_body::Limited;
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Request, StatusCode};
 use pin_project_lite::pin_project;
 use rand::{thread_rng, Rng};
-use ring::hmac;
 use rustls_pemfile::{certs, ec_private_keys};
 use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
@@ -57,7 +50,7 @@ use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
 use tower::make::MakeService;
-use tower::{Layer, Service, ServiceExt as TowerServiceExt};
+use tower::{Layer, Service};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
@@ -184,7 +177,7 @@ impl Session {
             .get(COOKIE_NAME)
             .map(|c| c.value().to_string())
             .unwrap()
-            .split_once(":")
+            .split_once(':')
             .unwrap()
             .1
             .to_string()
@@ -213,7 +206,7 @@ where
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
         let extractor = T::from_request(Request::from_parts(parts, body.body), state).await?;
-        Ok(ExtractSession {
+        Ok(Self {
             extractor,
             session: body.session,
         })
@@ -330,7 +323,10 @@ pub struct TemplateProject {
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn index(
     handlebars: State<Handlebars<'static>>,
-    ExtractSession { extractor, session }: ExtractSession<String>, // TODO FIXME empty extractor
+    ExtractSession {
+        extractor: _,
+        session,
+    }: ExtractSession<String>, // TODO FIXME empty extractor
 ) -> impl IntoResponse {
     let result = handlebars
         .render(
