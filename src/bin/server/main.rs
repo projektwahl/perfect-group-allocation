@@ -164,7 +164,6 @@ impl Session {
     }
 
     pub fn csrf_token(&mut self) -> String {
-        const COOKIE_NAME_HASH: &str = " __Host-csrf_token_hash";
         const COOKIE_NAME: &str = " __Host-csrf_token";
         if self.unsigned_cookies.get(COOKIE_NAME).is_none() {
             let rand_string: String = thread_rng()
@@ -173,33 +172,24 @@ impl Session {
                 .map(char::from)
                 .collect();
 
-            let csrf_token = self.session_id() + &rand_string;
+            let csrf_token = self.session_id() + ":" + &rand_string;
 
-            // hash the value to not leak the session id
-            let rng = ring::rand::SystemRandom::new();
-            let key = hmac::Key::generate(hmac::HMAC_SHA256, &rng).unwrap();
-
-            let tag = hmac::sign(&key, csrf_token.as_bytes());
-
-            let cookie = Cookie::build(COOKIE_NAME_HASH, BASE64URL_NOPAD.encode(tag.as_ref()))
-                .http_only(true)
-                .same_site(axum_extra::extract::cookie::SameSite::Strict)
-                .secure(true)
-                .finish();
-            self.unsigned_cookies = self.unsigned_cookies.clone().add(cookie);
-
-            // intentionally don't use the session_id for the html csrf_token
-            let cookie = Cookie::build(COOKIE_NAME, rand_string)
+            let cookie = Cookie::build(COOKIE_NAME, csrf_token)
                 .http_only(true)
                 .same_site(axum_extra::extract::cookie::SameSite::Strict)
                 .secure(true)
                 .finish();
             self.unsigned_cookies = self.unsigned_cookies.clone().add(cookie);
         }
+        // TODO FIXME unwrap
         self.unsigned_cookies
             .get(COOKIE_NAME)
             .map(|c| c.value().to_string())
             .unwrap()
+            .split_once(":")
+            .unwrap()
+            .1
+            .to_string()
     }
 }
 
@@ -340,12 +330,15 @@ pub struct TemplateProject {
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
+async fn index(
+    handlebars: State<Handlebars<'static>>,
+    ExtractSession { extractor, session }: ExtractSession<String>, // TODO FIXME empty extractor
+) -> impl IntoResponse {
     let result = handlebars
         .render(
             "create-project",
             &CreateProject {
-                csrf_token: "token".to_string(),
+                csrf_token: session.lock().await.csrf_token(),
                 title: None,
                 title_error: None,
                 description: None,
@@ -360,13 +353,16 @@ async fn index(handlebars: State<Handlebars<'static>>) -> impl IntoResponse {
 async fn create(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
-    mut multipart: ExtractSession<Multipart>,
+    ExtractSession {
+        extractor: mut multipart,
+        session,
+    }: ExtractSession<Multipart>,
 ) -> Result<impl IntoResponse, AppError> {
-    println!("{}", multipart.session.lock().await.session_id());
+    println!("{}", session.lock().await.session_id());
 
     let mut title = None;
     let mut description = None;
-    while let Some(field) = multipart.extractor.next_field().await? {
+    while let Some(field) = multipart.next_field().await? {
         match field.name().unwrap() {
             "title" => assert!(title.replace(field.text().await?).is_none()),
             "description" => assert!(description.replace(field.text().await?).is_none()),
@@ -393,7 +389,7 @@ async fn create(
             .render(
                 "create-project",
                 &CreateProject {
-                    csrf_token: "test".to_string(),
+                    csrf_token: session.lock().await.csrf_token(),
                     title: Some(title),
                     title_error,
                     description: Some(description),
