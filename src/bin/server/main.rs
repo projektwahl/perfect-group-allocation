@@ -109,10 +109,10 @@ where
 
     fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
         let (parts, body) = request.into_parts();
-        let session = Arc::new(Mutex::new(Session::new(
-            CookieJar::from_headers(&parts.headers),
-            SignedCookieJar::from_headers(&parts.headers, self.key.clone()),
-        )));
+        let session = Arc::new(Mutex::new(Session::new(SignedCookieJar::from_headers(
+            &parts.headers,
+            self.key.clone(),
+        ))));
         let future = self.inner.call(Request::from_parts(
             parts,
             BodyWithSession {
@@ -130,16 +130,12 @@ where
 
 #[derive(Clone)]
 struct Session {
-    unsigned_cookies: CookieJar,
     signed_cookies: SignedCookieJar,
 }
 
 impl Session {
-    pub fn new(unsigned_cookies: CookieJar, signed_cookies: SignedCookieJar) -> Self {
-        Self {
-            unsigned_cookies,
-            signed_cookies,
-        }
+    pub fn new(signed_cookies: SignedCookieJar) -> Self {
+        Self { signed_cookies }
     }
 
     pub fn session_id(&mut self) -> String {
@@ -152,10 +148,12 @@ impl Session {
                 .collect();
 
             let session_id = rand_string;
-            self.signed_cookies = self
-                .signed_cookies
-                .clone()
-                .add(Cookie::new(COOKIE_NAME, session_id));
+            let cookie = Cookie::build(COOKIE_NAME, session_id)
+                .http_only(true)
+                .same_site(axum_extra::extract::cookie::SameSite::Lax)
+                .secure(true)
+                .finish();
+            self.signed_cookies = self.signed_cookies.clone().add(cookie);
         }
         self.signed_cookies
             .get(COOKIE_NAME)
@@ -165,7 +163,7 @@ impl Session {
 
     pub fn csrf_token(&mut self) -> String {
         const COOKIE_NAME: &str = " __Host-csrf_token";
-        if self.unsigned_cookies.get(COOKIE_NAME).is_none() {
+        if self.signed_cookies.get(COOKIE_NAME).is_none() {
             let rand_string: String = thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(30)
@@ -176,13 +174,13 @@ impl Session {
 
             let cookie = Cookie::build(COOKIE_NAME, csrf_token)
                 .http_only(true)
-                .same_site(axum_extra::extract::cookie::SameSite::Strict)
+                .same_site(axum_extra::extract::cookie::SameSite::Lax)
                 .secure(true)
                 .finish();
-            self.unsigned_cookies = self.unsigned_cookies.clone().add(cookie);
+            self.signed_cookies = self.signed_cookies.clone().add(cookie);
         }
         // TODO FIXME unwrap
-        self.unsigned_cookies
+        self.signed_cookies
             .get(COOKIE_NAME)
             .map(|c| c.value().to_string())
             .unwrap()
@@ -223,13 +221,13 @@ where
 }
 
 impl IntoResponseParts for Session {
-    type Error = hyper::Response<UnsyncBoxBody<axum::body::Bytes, axum::Error>>;
+    type Error = Infallible;
 
     fn into_response_parts(
         self,
         res: axum::response::ResponseParts,
     ) -> Result<axum::response::ResponseParts, Self::Error> {
-        (self.unsigned_cookies, self.signed_cookies).into_response_parts(res)
+        self.signed_cookies.into_response_parts(res)
     }
 }
 
