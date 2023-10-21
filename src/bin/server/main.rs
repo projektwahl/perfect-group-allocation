@@ -164,6 +164,7 @@ impl Session {
     }
 
     pub fn csrf_token(&mut self) -> String {
+        const COOKIE_NAME_HASH: &str = " __Host-csrf_token_hash";
         const COOKIE_NAME: &str = " __Host-csrf_token";
         if self.unsigned_cookies.get(COOKIE_NAME).is_none() {
             let rand_string: String = thread_rng()
@@ -180,7 +181,15 @@ impl Session {
 
             let tag = hmac::sign(&key, csrf_token.as_bytes());
 
-            let cookie = Cookie::build(COOKIE_NAME, BASE64URL_NOPAD.encode(tag.as_ref()))
+            let cookie = Cookie::build(COOKIE_NAME_HASH, BASE64URL_NOPAD.encode(tag.as_ref()))
+                .http_only(true)
+                .same_site(axum_extra::extract::cookie::SameSite::Strict)
+                .secure(true)
+                .finish();
+            self.unsigned_cookies = self.unsigned_cookies.clone().add(cookie);
+
+            // intentionally don't use the session_id for the html csrf_token
+            let cookie = Cookie::build(COOKIE_NAME, rand_string)
                 .http_only(true)
                 .same_site(axum_extra::extract::cookie::SameSite::Strict)
                 .secure(true)
