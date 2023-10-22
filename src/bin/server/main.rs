@@ -23,6 +23,7 @@ use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Form, Router};
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::SignedCookieJar;
+use axum_extra::response::Css;
 use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
@@ -36,6 +37,10 @@ use http_body::{Body, Limited};
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Method, Request, StatusCode};
+use lightningcss::bundler::{Bundler, FileProvider};
+use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
+use lightningcss::targets::Targets;
+use parcel_sourcemap::SourceMap;
 use pin_project_lite::pin_project;
 use rand::{thread_rng, Rng};
 use rustls_pemfile::{certs, ec_private_keys};
@@ -48,6 +53,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
+use tokio::time::sleep;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
@@ -365,6 +371,26 @@ async fn index(
     Html(result)
 }
 
+#[axum::debug_handler(body=MyBody, state=MyState)]
+async fn indexcss() -> impl IntoResponse {
+    sleep(Duration::from_millis(1000)).await;
+    let fs = FileProvider::new();
+    let mut bundler = Bundler::new(&fs, None, ParserOptions::default());
+    let stylesheet = bundler.bundle(Path::new("frontend/index.css")).unwrap();
+    let mut source_map = SourceMap::new(".");
+    Css(stylesheet
+        .to_css(PrinterOptions {
+            minify: true,
+            source_map: Some(&mut source_map),
+            project_root: None,
+            targets: Targets::default(),
+            analyze_dependencies: None,
+            pseudo_classes: None,
+        })
+        .unwrap()
+        .code)
+}
+
 #[derive(Deserialize)]
 struct CreateProjectPayload {
     csrf_token: String,
@@ -642,6 +668,7 @@ async fn main() -> Result<(), DbErr> {
     let app: Router<MyState, MyBody> = Router::new()
         .route("/", get(index))
         .route("/", post(create))
+        .route("/index.css", get(indexcss))
         .route("/list", get(list))
         .route("/download", get(handler))
         .fallback_service(service);
