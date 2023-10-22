@@ -52,6 +52,8 @@ https://www.zaproxy.org/
 
 This should be a big focus
 
+ZAP doesn't properly check csrf security (it only checks for existence of token) so use the csrf.html for testing.
+
 ## https://www.zaproxy.org/docs/automate/
 
 

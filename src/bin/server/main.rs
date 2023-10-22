@@ -149,9 +149,9 @@ impl Session {
 
             let session_id = rand_string;
             let cookie = Cookie::build(COOKIE_NAME, session_id)
-                //.http_only(true)
-                //.same_site(axum_extra::extract::cookie::SameSite::Strict)
-                //.secure(true)
+                .http_only(true)
+                .same_site(axum_extra::extract::cookie::SameSite::Strict)
+                .secure(true)
                 .finish();
             self.signed_cookies = self.signed_cookies.clone().add(cookie);
         }
@@ -173,9 +173,9 @@ impl Session {
             let csrf_token = self.session_id() + ":" + &rand_string;
 
             let cookie = Cookie::build(COOKIE_NAME, csrf_token)
-                //.http_only(true)
-                //.same_site(axum_extra::extract::cookie::SameSite::Strict)
-                //.secure(true)
+                .http_only(true)
+                .same_site(axum_extra::extract::cookie::SameSite::Strict)
+                .secure(true)
                 .finish();
             self.signed_cookies = self.signed_cookies.clone().add(cookie);
         }
@@ -434,7 +434,7 @@ where
         if not_get_or_head {
             let actual_csrf_token = extractor.0.csrf_token();
 
-            //assert_eq!(expected_csrf_token, actual_csrf_token); // TODO FIXME
+            assert_eq!(expected_csrf_token, actual_csrf_token); // TODO FIXME
         }
         Ok(Self { value: extractor.0 })
     }
@@ -531,7 +531,7 @@ async fn list(
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> {
-    while let Some(chunk) = stream.try_next().await? {}
+    while let Some(_chunk) = stream.try_next().await? {}
     let file = tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
         .await
         .unwrap();
