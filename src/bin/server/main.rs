@@ -204,7 +204,7 @@ impl<S, B, T: CsrfSafeExtractor> FromRequest<S, BodyWithSession<B>> for ExtractS
 where
     B: Send + 'static,
     S: Send + Sync,
-    T: FromRequest<S, B>,
+    T: FromRequest<S, BodyWithSession<B>>,
 {
     type Rejection = T::Rejection;
 
@@ -213,11 +213,9 @@ where
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
-        let extractor = T::from_request(Request::from_parts(parts, body.body), state).await?;
-        Ok(Self {
-            extractor,
-            session: body.session,
-        })
+        let session = body.session.clone();
+        let extractor = T::from_request(Request::from_parts(parts, body), state).await?;
+        Ok(Self { extractor, session })
     }
 }
 
@@ -427,10 +425,12 @@ where
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
 
+        let expected_csrf_token = body.session.lock().await.csrf_token();
+        let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
+
         let extractor = Form::<T>::from_request(Request::from_parts(parts, body), state).await?;
 
-        if !(parts.method == Method::GET || parts.method == Method::HEAD) {
-            let expected_csrf_token = body.session.lock().await.csrf_token();
+        if not_get_or_head {
             let actual_csrf_token = extractor.0.csrf_token();
             assert_eq!(expected_csrf_token, actual_csrf_token); // TODO FIXME
         }
