@@ -57,7 +57,6 @@ ZAP doesn't properly check csrf security (it only checks for existence of token)
 ## https://www.zaproxy.org/docs/automate/
 
 
-
 ## sqlmap
 
 https://sqlmap.org/
@@ -115,3 +114,14 @@ https://github.com/OWASP/Nettacker/wiki/Usage
 # https://github.com/owasp-amass/amass
 
 # https://www.securecodebox.io/
+
+# https://github.com/0xInfection/XSRFProbe
+
+python -m venv venv
+. venv/bin/activate
+git clone git@github.com:0xInfection/XSRFProbe.git
+cd XSRFProbe
+python3 setup.py install
+xsrfprobe --help
+nano "/home/moritz/Documents/perfect-group-allocation/lib/python3.11/site-packages/xsrfprobe/core/inputin.py" 
+deactivate
