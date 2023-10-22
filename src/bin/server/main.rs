@@ -16,7 +16,7 @@ use std::time::Duration;
 use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
-use axum::extract::{BodyStream, FromRef, FromRequest, Multipart, State};
+use axum::extract::{BodyStream, FromRef, FromRequest, State};
 use axum::http::HeaderValue;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
@@ -33,7 +33,7 @@ use handlebars::{
     Context as HandlebarsContext, Handlebars, Helper, HelperResult, Output, RenderContext,
 };
 use html_escape::encode_safe;
-use http_body::{Body, Limited};
+use http_body::Limited;
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Method, Request, StatusCode};
@@ -53,7 +53,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
-use tokio::time::sleep;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
@@ -336,7 +335,7 @@ where
 {
     type Rejection = Infallible;
 
-    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(_req: Request<B>, _state: &S) -> Result<Self, Self::Rejection> {
         Ok(EmptyBody)
     }
 }
