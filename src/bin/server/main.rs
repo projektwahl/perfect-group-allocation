@@ -424,13 +424,17 @@ where
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
 
-        let expected_csrf_token = body.session.lock().await.csrf_token();
+        let mut session = body.session.lock().await;
+        let session_id = session.session_id();
+        let expected_csrf_token = session.csrf_token();
+        drop(session);
+
         let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
 
         let extractor = Form::<T>::from_request(Request::from_parts(parts, body), state).await?;
 
         if not_get_or_head {
-            let actual_csrf_token = extractor.0.csrf_token();
+            let actual_csrf_token = session_id + ":" + &extractor.0.csrf_token();
             assert_eq!(expected_csrf_token, actual_csrf_token); // TODO FIXME
         }
         Ok(Self { value: extractor.0 })
