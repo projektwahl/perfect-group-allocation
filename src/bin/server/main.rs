@@ -15,11 +15,12 @@ use std::time::Duration;
 
 use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
+use axum::extract::rejection::FormRejection;
 use axum::extract::{BodyStream, FromRef, FromRequest, Multipart, State};
 use axum::http::HeaderValue;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
-use axum::{async_trait, Form, Router};
+use axum::{async_trait, BoxError, Form, Router};
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::SignedCookieJar;
 use entities::prelude::*;
@@ -31,7 +32,7 @@ use handlebars::{
     Context as HandlebarsContext, Handlebars, Helper, HelperResult, Output, RenderContext,
 };
 use html_escape::encode_safe;
-use http_body::Limited;
+use http_body::{Body, Limited};
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Method, Request, StatusCode};
@@ -42,6 +43,7 @@ use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
     RuntimeErr, Statement,
 };
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -385,14 +387,34 @@ struct CsrfSafeForm<T: CsrfToken> {
     value: T,
 }
 
-//#[axum::debug_handler(body=MyBody, state=MyState)]
+#[async_trait]
+impl<T, S, B> FromRequest<S, B> for CsrfSafeForm<T>
+where
+    T: DeserializeOwned + CsrfToken,
+    B: http_body::Body + Send + 'static,
+    B::Data: Send,
+    B::Error: Into<BoxError>,
+    S: Send + Sync,
+{
+    type Rejection = FormRejection;
+
+    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+        let (parts, body) = req.into_parts();
+        let extractor = Form::<T>::from_request(Request::from_parts(parts, body), state).await?;
+        Ok(Self { value: extractor.0 })
+    }
+}
+
+impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
+
+#[axum::debug_handler(body=MyBody, state=MyState)]
 async fn create(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
     ExtractSession {
         extractor: form,
         session,
-    }: ExtractSession<Form<CreateProjectPayload>>,
+    }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppError> {
     println!("{}", session.lock().await.session_id());
 
