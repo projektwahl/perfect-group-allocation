@@ -149,9 +149,9 @@ impl Session {
 
             let session_id = rand_string;
             let cookie = Cookie::build(COOKIE_NAME, session_id)
-                .http_only(true)
-                .same_site(axum_extra::extract::cookie::SameSite::Lax)
-                .secure(true)
+                //.http_only(true)
+                //.same_site(axum_extra::extract::cookie::SameSite::Strict)
+                //.secure(true)
                 .finish();
             self.signed_cookies = self.signed_cookies.clone().add(cookie);
         }
@@ -173,9 +173,9 @@ impl Session {
             let csrf_token = self.session_id() + ":" + &rand_string;
 
             let cookie = Cookie::build(COOKIE_NAME, csrf_token)
-                .http_only(true)
-                .same_site(axum_extra::extract::cookie::SameSite::Lax)
-                .secure(true)
+                //.http_only(true)
+                //.same_site(axum_extra::extract::cookie::SameSite::Strict)
+                //.secure(true)
                 .finish();
             self.signed_cookies = self.signed_cookies.clone().add(cookie);
         }
@@ -433,7 +433,8 @@ where
 
         if not_get_or_head {
             let actual_csrf_token = extractor.0.csrf_token();
-            assert_eq!(expected_csrf_token, actual_csrf_token); // TODO FIXME
+
+            //assert_eq!(expected_csrf_token, actual_csrf_token); // TODO FIXME
         }
         Ok(Self { value: extractor.0 })
     }
@@ -687,7 +688,7 @@ async fn main() -> Result<(), DbErr> {
     let app: Router<MyState, MyBody1> =
         app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
     let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
-    let app: Router<MyState, MyBody0> = app.layer(CatchPanicLayer::new());
+    let app: Router<MyState, MyBody0> = app.layer(CatchPanicLayer::new()); // TODO replace by own layer that returns beautiful page with request id
     let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
     let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
         header::CONTENT_SECURITY_POLICY,

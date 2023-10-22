@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CSRF Test Create Project</title>
+    <link rel="stylesheet" href="index.css" />
+</head>
+
+<body>
+    <main>
+        <h1 class="center">Create project</h1>
+        <form action="https://h3.selfmade4u.de:8443/" method="post" enctype="application/x-www-form-urlencoded">
+            <input type="hidden" name="csrf_token" value="LQa6tBC9JZrwUEvpsd07MMWb0HbtSD">
+
+            <label for="title">Title:</label>
+            <input class="error" id="title" name="title" type="text" />
+
+            <label for="description">Description:</label>
+            <input class="error" id="description" name="description" type="text" />
+
+            <button type="submit">Create</button>
+
+            <a href="https://h3.selfmade4u.de:8443/list">Show all projects</a>
+        </form>
+    </main>
+</body>
+
+</html>
