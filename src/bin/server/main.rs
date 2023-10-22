@@ -162,7 +162,7 @@ impl Session {
     }
 
     pub fn csrf_token(&mut self) -> String {
-        const COOKIE_NAME: &str = " __Host-csrf_token";
+        const COOKIE_NAME: &str = "__Host-csrf_token";
         if self.signed_cookies.get(COOKIE_NAME).is_none() {
             let rand_string: String = thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
@@ -280,7 +280,6 @@ struct AppError(anyhow::Error);
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
-        println!("{}", self.0);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Something went wrong: {}", self.0),
@@ -425,7 +424,6 @@ where
         let (parts, body) = req.into_parts();
 
         let mut session = body.session.lock().await;
-        let session_id = session.session_id();
         let expected_csrf_token = session.csrf_token();
         drop(session);
 
@@ -434,7 +432,7 @@ where
         let extractor = Form::<T>::from_request(Request::from_parts(parts, body), state).await?;
 
         if not_get_or_head {
-            let actual_csrf_token = session_id + ":" + &extractor.0.csrf_token();
+            let actual_csrf_token = extractor.0.csrf_token();
             assert_eq!(expected_csrf_token, actual_csrf_token); // TODO FIXME
         }
         Ok(Self { value: extractor.0 })
@@ -452,8 +450,6 @@ async fn create(
         session,
     }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppError> {
-    println!("{}", session.lock().await.session_id());
-
     let mut title_error = None;
     let mut description_error = None;
 
@@ -534,9 +530,7 @@ async fn list(
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> {
-    while let Some(chunk) = stream.try_next().await? {
-        println!("{chunk:?}");
-    }
+    while let Some(chunk) = stream.try_next().await? {}
     let file = tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
         .await
         .unwrap();
@@ -699,8 +693,8 @@ async fn main() -> Result<(), DbErr> {
         header::CONTENT_SECURITY_POLICY,
         HeaderValue::from_static(
             "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
-             'self'; frame-ancestors 'none'; sandbox allow-forms; upgrade-insecure-requests; \
-             require-trusted-types-for 'script'; trusted-types a",
+             'self'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin; \
+             upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types a",
         ),
     ));
     let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
