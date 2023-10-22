@@ -19,7 +19,7 @@ use axum::extract::{BodyStream, FromRef, FromRequest, Multipart, State};
 use axum::http::HeaderValue;
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
-use axum::{async_trait, Router};
+use axum::{async_trait, Form, Router};
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::SignedCookieJar;
 use entities::prelude::*;
@@ -34,7 +34,7 @@ use html_escape::encode_safe;
 use http_body::Limited;
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
-use hyper::{header, Request, StatusCode};
+use hyper::{header, Method, Request, StatusCode};
 use pin_project_lite::pin_project;
 use rand::{thread_rng, Rng};
 use rustls_pemfile::{certs, ec_private_keys};
@@ -42,7 +42,7 @@ use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
     RuntimeErr, Statement,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
@@ -92,7 +92,6 @@ where
     S::Future: Send + 'static,
 {
     type Error = S::Error;
-    // `BoxFuture` is a type alias for `Pin<Box<dyn Future + Send + 'a>>`
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
     type Response = S::Response;
 
@@ -102,10 +101,14 @@ where
 
     fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
         let (parts, body) = request.into_parts();
-        let session = Arc::new(Mutex::new(Session::new(SignedCookieJar::from_headers(
+        let mut session = Session::new(SignedCookieJar::from_headers(
             &parts.headers,
             self.key.clone(),
-        ))));
+        ));
+        if parts.method == Method::POST {
+            let csrf_token = session.csrf_token();
+        }
+        let session = Arc::new(Mutex::new(session));
         let future = self.inner.call(Request::from_parts(
             parts,
             BodyWithSession {
@@ -184,15 +187,15 @@ impl Session {
     }
 }
 
-// fromrequestparts: TODO we could extract it from parts.extensions but then its not 100% type safe
+trait CsrfSafeExtractor {}
 
-struct ExtractSession<E> {
+struct ExtractSession<E: CsrfSafeExtractor> {
     extractor: E,
     session: Arc<Mutex<Session>>,
 }
 
 #[async_trait]
-impl<S, B, T> FromRequest<S, BodyWithSession<B>> for ExtractSession<T>
+impl<S, B, T: CsrfSafeExtractor> FromRequest<S, BodyWithSession<B>> for ExtractSession<T>
 where
     B: Send + 'static,
     S: Send + Sync,
@@ -320,13 +323,30 @@ pub struct TemplateProject {
     description: String,
 }
 
+pub struct EmptyBody;
+
+#[async_trait]
+impl<S, B> FromRequest<S, B> for EmptyBody
+where
+    B: Send + 'static,
+    S: Send + Sync,
+{
+    type Rejection = Infallible;
+
+    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(EmptyBody)
+    }
+}
+
+impl CsrfSafeExtractor for EmptyBody {}
+
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn index(
     handlebars: State<Handlebars<'static>>,
     ExtractSession {
         extractor: _,
         session,
-    }: ExtractSession<String>, // TODO FIXME empty extractor
+    }: ExtractSession<EmptyBody>,
 ) -> impl IntoResponse {
     let result = handlebars
         .render(
@@ -343,38 +363,47 @@ async fn index(
     Html(result)
 }
 
+#[derive(Deserialize)]
+struct CreateProjectPayload {
+    csrf_token: String,
+    title: String,
+    description: String,
+}
+
+impl CsrfToken for CreateProjectPayload {
+    fn csrf_token(&self) -> String {
+        self.csrf_token.clone()
+    }
+}
+
+trait CsrfToken {
+    fn csrf_token(&self) -> String;
+}
+
+#[derive(Deserialize)]
+struct CsrfSafeForm<T: CsrfToken> {
+    value: T,
+}
+
 //#[axum::debug_handler(body=MyBody, state=MyState)]
 async fn create(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
     ExtractSession {
-        extractor: mut multipart,
+        extractor: form,
         session,
-    }: ExtractSession<Multipart>,
+    }: ExtractSession<Form<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppError> {
     println!("{}", session.lock().await.session_id());
-
-    let mut title = None;
-    let mut description = None;
-    while let Some(field) = multipart.next_field().await? {
-        match field.name().unwrap() {
-            "title" => assert!(title.replace(field.text().await?).is_none()),
-            "description" => assert!(description.replace(field.text().await?).is_none()),
-            "CSRFToken" => {}
-            v => panic!("unexpected field {v}"),
-        }
-    }
-    let title = title.unwrap();
-    let description = description.unwrap();
 
     let mut title_error = None;
     let mut description_error = None;
 
-    if title.is_empty() {
+    if form.title.is_empty() {
         title_error = Some("title must not be empty".to_string());
     }
 
-    if description.is_empty() {
+    if form.description.is_empty() {
         description_error = Some("description must not be empty".to_string());
     }
 
@@ -384,9 +413,9 @@ async fn create(
                 "create-project",
                 &CreateProject {
                     csrf_token: session.lock().await.csrf_token(),
-                    title: Some(title),
+                    title: Some(form.title.clone()),
                     title_error,
-                    description: Some(description),
+                    description: Some(form.description.clone()),
                     description_error,
                 },
             )
@@ -396,8 +425,8 @@ async fn create(
 
     let project = project_history::ActiveModel {
         id: ActiveValue::Set(1),
-        title: ActiveValue::Set(title),
-        description: ActiveValue::Set(description),
+        title: ActiveValue::Set(form.title.clone()),
+        description: ActiveValue::Set(form.description.clone()),
         ..Default::default()
     };
     let _ = ProjectHistory::insert(project).exec(&db).await?;
