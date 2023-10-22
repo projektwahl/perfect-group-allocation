@@ -119,8 +119,13 @@ cargo build --bin server-http3 && sudo setcap CAP_NET_BIND_SERVICE+eip ./target/
 
 chromium-browser --enable-quic --origin-to-force-quic-on=localhost:443
 ```bash
+mkdir -p .lego/certificates
 
-openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout example.com.key.pem -out example.com.cert.pem -subj "/CN=example.com" -addext "subjectAltName=DNS:example.com,DNS:*.example.com,IP:10.0.0.1"
+openssl req -x509 -nodes -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout .lego/certificates/h3.selfmade4u.de.key -out .lego/certificates/h3.selfmade4u.de.crt -days 30  -subj "/CN=example.com"
+
+openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout .lego/certificates/h3.selfmade4u.de.key -out .lego/certificates/h3.selfmade4u.de.crt -subj "/CN=example.com" -addext "subjectAltName=DNS:example.com,DNS:*.example.com,IP:10.0.0.1"
+
+
 openssl rsa -inform pem -in example.com.key.pem -outform der -out example.com.key.der
 openssl x509 -outform der -in example.com.cert.pem -out example.com.cert.der
 

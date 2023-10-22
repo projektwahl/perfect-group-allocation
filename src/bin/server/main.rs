@@ -1,5 +1,5 @@
 #![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
-#![feature(generators)]
+#![feature(coroutines)]
 
 mod entities;
 use std::borrow::Cow;
@@ -43,7 +43,7 @@ use lightningcss::targets::Targets;
 use parcel_sourcemap::SourceMap;
 use pin_project_lite::pin_project;
 use rand::{thread_rng, Rng};
-use rustls_pemfile::{certs, ec_private_keys};
+use rustls_pemfile::{certs, ec_private_keys, pkcs8_private_keys};
 use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
     RuntimeErr, Statement,
@@ -554,7 +554,7 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
     let mut key_reader = BufReader::new(File::open(key).unwrap());
     let mut cert_reader = BufReader::new(File::open(cert).unwrap());
 
-    let key = PrivateKey(ec_private_keys(&mut key_reader).unwrap().remove(0));
+    let key = PrivateKey(pkcs8_private_keys(&mut key_reader).unwrap().remove(0));
     let certs = certs(&mut cert_reader)
         .unwrap()
         .into_iter()

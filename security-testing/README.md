@@ -123,5 +123,7 @@ git clone git@github.com:0xInfection/XSRFProbe.git
 cd XSRFProbe
 python3 setup.py install
 xsrfprobe --help
+# tool seems broken
+xsrfprobe -vv --display --no-verify --url https://h3.selfmade4u.de:8443/
 nano "/home/moritz/Documents/perfect-group-allocation/lib/python3.11/site-packages/xsrfprobe/core/inputin.py" 
 deactivate
