@@ -109,13 +109,10 @@ where
 
     fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
         let (parts, body) = request.into_parts();
-        let mut session = Session::new(SignedCookieJar::from_headers(
+        let session = Session::new(SignedCookieJar::from_headers(
             &parts.headers,
             self.key.clone(),
         ));
-        if parts.method == Method::POST {
-            let csrf_token = session.csrf_token();
-        }
         let session = Arc::new(Mutex::new(session));
         let future = self.inner.call(Request::from_parts(
             parts,
@@ -414,7 +411,7 @@ struct CsrfSafeForm<T: CsrfToken> {
 }
 
 #[async_trait]
-impl<T, S, B> FromRequest<S, B> for CsrfSafeForm<T>
+impl<T, S, B> FromRequest<S, BodyWithSession<B>> for CsrfSafeForm<T>
 where
     T: DeserializeOwned + CsrfToken,
     B: http_body::Body + Send + 'static,
@@ -424,9 +421,19 @@ where
 {
     type Rejection = FormRejection;
 
-    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request(
+        req: Request<BodyWithSession<B>>,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
+
         let extractor = Form::<T>::from_request(Request::from_parts(parts, body), state).await?;
+
+        if !(parts.method == Method::GET || parts.method == Method::HEAD) {
+            let expected_csrf_token = body.session.lock().await.csrf_token();
+            let actual_csrf_token = extractor.0.csrf_token();
+            assert_eq!(expected_csrf_token, actual_csrf_token); // TODO FIXME
+        }
         Ok(Self { value: extractor.0 })
     }
 }
