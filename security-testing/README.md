@@ -123,7 +123,25 @@ git clone git@github.com:0xInfection/XSRFProbe.git
 cd XSRFProbe
 python3 setup.py install
 xsrfprobe --help
-# tool seems broken
+# tool seems broken, try patching it again to see where the issue is
 xsrfprobe -vv --display --no-verify --url https://h3.selfmade4u.de:8443/
 nano "/home/moritz/Documents/perfect-group-allocation/lib/python3.11/site-packages/xsrfprobe/core/inputin.py" 
 deactivate
+
+# w3af from BlackArch
+
+currently broken
+https://github.com/BlackArch/blackarch/issues/3971
+
+# wapiti
+
+https://wapiti-scanner.github.io/
+
+https://github.com/BlackArch/blackarch/issues/3830
+
+
+
+https://github.com/psiinon/open-source-web-scanners
+
+
+https://github.com/zaproxy/zap-extensions/tree/main/addOns
