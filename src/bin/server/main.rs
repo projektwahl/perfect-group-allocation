@@ -421,11 +421,11 @@ async fn create(
     let mut title_error = None;
     let mut description_error = None;
 
-    if form.title.is_empty() {
+    if form.value.title.is_empty() {
         title_error = Some("title must not be empty".to_string());
     }
 
-    if form.description.is_empty() {
+    if form.value.description.is_empty() {
         description_error = Some("description must not be empty".to_string());
     }
 
@@ -435,9 +435,9 @@ async fn create(
                 "create-project",
                 &CreateProject {
                     csrf_token: session.lock().await.csrf_token(),
-                    title: Some(form.title.clone()),
+                    title: Some(form.value.title.clone()),
                     title_error,
-                    description: Some(form.description.clone()),
+                    description: Some(form.value.description.clone()),
                     description_error,
                 },
             )
@@ -447,8 +447,8 @@ async fn create(
 
     let project = project_history::ActiveModel {
         id: ActiveValue::Set(1),
-        title: ActiveValue::Set(form.title.clone()),
-        description: ActiveValue::Set(form.description.clone()),
+        title: ActiveValue::Set(form.value.title.clone()),
+        description: ActiveValue::Set(form.value.description.clone()),
         ..Default::default()
     };
     let _ = ProjectHistory::insert(project).exec(&db).await?;
