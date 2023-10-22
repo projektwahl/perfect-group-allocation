@@ -373,7 +373,7 @@ async fn index(
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 async fn indexcss() -> impl IntoResponse {
-    sleep(Duration::from_millis(1000)).await;
+    // @import would produce a flash of unstyled content and also is less efficient
     let fs = FileProvider::new();
     let mut bundler = Bundler::new(&fs, None, ParserOptions::default());
     let stylesheet = bundler.bundle(Path::new("frontend/index.css")).unwrap();
