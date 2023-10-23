@@ -39,6 +39,7 @@ where
         self.inner.poll_ready(cx)
     }
 
+    // TODO FIXME maybe we could return an Err here, then let it get traced, then convert to 500
     fn call(&mut self, request: Request<axum::body::Body>) -> Self::Future {
         let request_id = request
             .headers()

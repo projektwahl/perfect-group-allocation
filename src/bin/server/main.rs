@@ -68,7 +68,7 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::timeout::{
     RequestBodyTimeoutLayer, ResponseBodyTimeoutLayer, TimeoutBody, TimeoutLayer,
 };
-use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnFailure, DefaultOnResponse, TraceLayer};
 
 const DB_NAME: &str = "postgres";
 
@@ -735,12 +735,12 @@ async fn main() -> Result<(), DbErr> {
         database: db,
         handlebars,
     });
-    let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
+    //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
     let app: Router<(), MyBody0> = app.layer(CatchPanicLayer);
     let app: Router<(), MyBody0> = app.layer(
         TraceLayer::new_for_http()
-            .make_span_with(DefaultMakeSpan::new().include_headers(true))
-            .on_response(DefaultOnResponse::new().include_headers(true)),
+            .make_span_with(DefaultMakeSpan::default().include_headers(true))
+            .on_response(DefaultOnResponse::default().include_headers(true)),
     );
     let app: Router<(), MyBody0> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
