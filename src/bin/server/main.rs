@@ -601,7 +601,9 @@ fn csrf_helper(
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
 
-async fn handle_error_test(err: Box<dyn Any + Send>) -> (StatusCode, String) {
+async fn handle_error_test(
+    err: Box<dyn std::error::Error + Sync + Send + 'static>,
+) -> (StatusCode, String) {
     if err.is::<tower::timeout::error::Elapsed>() {
         (
             StatusCode::REQUEST_TIMEOUT,

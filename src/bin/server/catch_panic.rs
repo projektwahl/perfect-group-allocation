@@ -30,10 +30,11 @@ pub struct CatchPanicMiddleware<S> {
 impl<S> Service<Request<axum::body::Body>> for CatchPanicMiddleware<S>
 where
     S: Service<Request<axum::body::Body>, Response = Response> + Send + 'static,
-    S::Error: Into<Box<dyn Any + Send>>,
+    S::Error: Into<Box<dyn std::error::Error + Sync + Send + 'static>>,
     S::Future: Send + 'static,
 {
-    type Error = Box<dyn Any + Send>;
+    // it needs to be sync for some reason
+    type Error = Box<dyn std::error::Error + Sync + Send + 'static>;
     // `BoxFuture` is a type alias for `Pin<Box<dyn Future + Send + 'a>>`
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
     type Response = S::Response;
@@ -87,7 +88,9 @@ where
                         */
                     //let err: Box<dyn std::error::Error + std::marker::Send + Sync + 'static> =
                     //    anyhow!("test").into();
-                    return Err(err);
+
+                    // argument panic was called with, usually string
+                    return Err(anyhow!("{:?}", err).into());
                     //return Ok(res.map(|body| body.map_err(|v| axum::Error::new(v)).boxed_unsync()));
                 }
             }
