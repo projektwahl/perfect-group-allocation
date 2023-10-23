@@ -25,6 +25,7 @@ use axum::{async_trait, BoxError, Form, Router};
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::SignedCookieJar;
 use axum_extra::response::Css;
+use catch_panic::CatchPanicLayer;
 use entities::prelude::*;
 use entities::project_history;
 use futures_async_stream::try_stream;
@@ -59,7 +60,6 @@ use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
 use tower::make::MakeService;
 use tower::{Layer, Service};
-use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
@@ -689,7 +689,7 @@ async fn main() -> Result<(), DbErr> {
     let app: Router<MyState, MyBody1> =
         app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
     let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
-    let app: Router<MyState, MyBody0> = app.layer(CatchPanicLayer::new()); // TODO replace by own layer that returns beautiful page with request id
+    let app: Router<MyState, MyBody0> = app.layer(CatchPanicLayer); // TODO replace by own layer that returns beautiful page with request id
     let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
     let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
         header::CONTENT_SECURITY_POLICY,

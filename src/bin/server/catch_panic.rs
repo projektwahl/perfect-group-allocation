@@ -10,7 +10,7 @@ use hyper::StatusCode;
 use tower::{Layer, Service};
 
 #[derive(Clone)]
-struct CatchPanicLayer;
+pub struct CatchPanicLayer;
 
 impl<S> Layer<S> for CatchPanicLayer {
     type Service = CatchPanicMiddleware<S>;
@@ -21,7 +21,7 @@ impl<S> Layer<S> for CatchPanicLayer {
 }
 
 #[derive(Clone)]
-struct CatchPanicMiddleware<S> {
+pub struct CatchPanicMiddleware<S> {
     inner: S,
 }
 
@@ -65,8 +65,23 @@ where
             });
         };
         Box::pin(async move {
-            let response: Response = AssertUnwindSafe(future).catch_unwind().await.unwrap()?;
-            Ok(response)
+            let Ok(response) = AssertUnwindSafe(future).catch_unwind().await else {
+                let mut res = Response::new(Full::from(format!(
+                    "an unexpected internal error occured. to report this error, specify the \
+                     following request id: {}",
+                    request_id
+                )));
+                *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+
+                #[allow(clippy::declare_interior_mutable_const)]
+                const TEXT_PLAIN: HeaderValue =
+                    HeaderValue::from_static("text/plain; charset=utf-8");
+                res.headers_mut()
+                    .insert(http::header::CONTENT_TYPE, TEXT_PLAIN);
+
+                return Ok(res.map(|body| body.map_err(|v| axum::Error::new(v)).boxed_unsync()));
+            };
+            response
         })
     }
 }
