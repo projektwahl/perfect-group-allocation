@@ -1,4 +1,5 @@
-use std::any::Any;
+use std::any::{type_name_of_val, Any};
+use std::fmt::Debug;
 use std::panic::AssertUnwindSafe;
 use std::task::{Context, Poll};
 
@@ -25,6 +26,22 @@ impl<S> Layer<S> for CatchPanicLayer {
 #[derive(Clone)]
 pub struct CatchPanicMiddleware<S> {
     inner: S,
+}
+
+fn log<T: Any + Debug>(value: &T) -> anyhow::Error {
+    let value_any = value as &dyn Any;
+
+    // Try to convert our value to a `String`. If successful, we want to
+    // output the `String`'s length as well as its value. If not, it's a
+    // different type: just print it out unadorned.
+    match value_any.downcast_ref::<String>() {
+        Some(as_string) => {
+            anyhow!("String ({}): {}", as_string.len(), as_string)
+        }
+        None => {
+            anyhow!("{:?} {value:?}", type_name_of_val(value_any))
+        }
+    }
 }
 
 impl<S> Service<Request<axum::body::Body>> for CatchPanicMiddleware<S>
@@ -90,7 +107,7 @@ where
                     //    anyhow!("test").into();
 
                     // argument panic was called with, usually string
-                    return Err(anyhow!("{:?}", err).into());
+                    return Err(log(&err).into());
                     //return Ok(res.map(|body| body.map_err(|v| axum::Error::new(v)).boxed_unsync()));
                 }
             }

@@ -1,5 +1,6 @@
 #![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![feature(coroutines)]
+#![feature(type_name_of_val)]
 
 pub mod catch_panic;
 mod entities;
