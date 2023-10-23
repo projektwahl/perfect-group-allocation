@@ -1,6 +1,7 @@
 use std::panic::AssertUnwindSafe;
 use std::task::{Context, Poll};
 
+use anyhow::anyhow;
 use axum::http::{self, HeaderValue, Request};
 use axum::response::Response;
 use futures_util::future::BoxFuture;
@@ -28,15 +29,16 @@ pub struct CatchPanicMiddleware<S> {
 impl<S> Service<Request<axum::body::Body>> for CatchPanicMiddleware<S>
 where
     S: Service<Request<axum::body::Body>, Response = Response> + Send + 'static,
+    S::Error: Into<Box<dyn std::error::Error + std::marker::Send + Sync + 'static>>,
     S::Future: Send + 'static,
 {
-    type Error = S::Error;
+    type Error = Box<dyn std::error::Error + std::marker::Send + Sync + 'static>;
     // `BoxFuture` is a type alias for `Pin<Box<dyn Future + Send + 'a>>`
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
     type Response = S::Response;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
+        self.inner.poll_ready(cx).map_err(|e| e.into())
     }
 
     // TODO FIXME maybe we could return an Err here, then let it get traced, then convert to 500
@@ -80,9 +82,13 @@ where
                 res.headers_mut()
                     .insert(http::header::CONTENT_TYPE, TEXT_PLAIN);
 
+                let err: Box<dyn std::error::Error + std::marker::Send + Sync + 'static> =
+                    anyhow!("test").into();
+                return Err(err);
+
                 return Ok(res.map(|body| body.map_err(|v| axum::Error::new(v)).boxed_unsync()));
             };
-            response
+            response.map_err(|e| e.into())
         })
     }
 }
