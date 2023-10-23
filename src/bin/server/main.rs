@@ -24,7 +24,7 @@ use axum::extract::{BodyStream, FromRef, FromRequest, State};
 use axum::http::{HeaderName, HeaderValue};
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Form, Router};
+use axum::{async_trait, BoxError, Form, Router, TypedHeader};
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::SignedCookieJar;
 use axum_extra::response::Css;
@@ -602,20 +602,54 @@ fn csrf_helper(
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
 
+struct XRequestId(String);
+
+impl Header for Dnt {
+    fn name() -> &'static HeaderName {
+         &http::header::DNT
+    }
+
+    fn decode<'i, I>(values: &mut I) -> Result<Self, headers::Error>
+    where
+        I: Iterator<Item = &'i HeaderValue>,
+    {
+        let value = values
+            .next()
+            .ok_or_else(headers::Error::invalid)?;
+
+        if value == "0" {
+            Ok(Dnt(false))
+        } else if value == "1" {
+            Ok(Dnt(true))
+        } else {
+            Err(headers::Error::invalid())
+        }
+    }
+
+    fn encode<E>(&self, values: &mut E)
+    where
+        E: Extend<HeaderValue>,
+    {
+        let s = if self.0 {
+            "1"
+        } else {
+            "0"
+        };
+
+        let value = HeaderValue::from_static(s);
+
+        values.extend(std::iter::once(value));
+    }
+}
+
 async fn handle_error_test(
     err: Box<dyn std::error::Error + Sync + Send + 'static>,
+    TypedHeader(user_agent): TypedHeader<axum::headers::>,
 ) -> (StatusCode, String) {
-    if err.is::<tower::timeout::error::Elapsed>() {
-        (
-            StatusCode::REQUEST_TIMEOUT,
-            "Request took too long".to_string(),
-        )
-    } else {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Unhandled internal error"),
-        )
-    }
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        format!("Unhandled internal error {:?}", err),
+    )
 }
 
 #[tokio::main]
