@@ -3,6 +3,7 @@
 
 pub mod catch_panic;
 mod entities;
+use std::any::Any;
 use std::borrow::Cow;
 use std::convert::Infallible;
 use std::fs::File;
@@ -600,9 +601,7 @@ fn csrf_helper(
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
 
-async fn handle_error_test(
-    err: std::boxed::Box<(dyn std::error::Error + std::marker::Send + Sync + 'static)>,
-) -> (StatusCode, String) {
+async fn handle_error_test(err: Box<dyn Any + Send>) -> (StatusCode, String) {
     if err.is::<tower::timeout::error::Elapsed>() {
         (
             StatusCode::REQUEST_TIMEOUT,
@@ -611,7 +610,7 @@ async fn handle_error_test(
     } else {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Unhandled internal error: {}", err),
+            format!("Unhandled internal error"),
         )
     }
 }

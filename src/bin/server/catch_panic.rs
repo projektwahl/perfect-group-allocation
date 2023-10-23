@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::panic::AssertUnwindSafe;
 use std::task::{Context, Poll};
 
@@ -29,10 +30,10 @@ pub struct CatchPanicMiddleware<S> {
 impl<S> Service<Request<axum::body::Body>> for CatchPanicMiddleware<S>
 where
     S: Service<Request<axum::body::Body>, Response = Response> + Send + 'static,
-    S::Error: Into<Box<dyn std::error::Error + std::marker::Send + Sync + 'static>>,
+    S::Error: Into<Box<dyn Any + Send>>,
     S::Future: Send + 'static,
 {
-    type Error = Box<dyn std::error::Error + std::marker::Send + Sync + 'static>;
+    type Error = Box<dyn Any + Send>;
     // `BoxFuture` is a type alias for `Pin<Box<dyn Future + Send + 'a>>`
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
     type Response = S::Response;
@@ -68,27 +69,28 @@ where
             });
         };
         Box::pin(async move {
-            let Ok(response) = AssertUnwindSafe(future).catch_unwind().await else {
-                let mut res = Response::new(Full::from(format!(
-                    "an unexpected internal error occured. to report this error, specify the \
-                     following request id: {}",
-                    request_id
-                )));
-                *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+            match AssertUnwindSafe(future).catch_unwind().await {
+                Ok(response) => response.map_err(|e| e.into()),
+                Err(err) => {
+                    /*let mut res = Response::new(Full::from(format!(
+                        "an unexpected internal error occured. to report this error, specify the \
+                            following request id: {}",
+                        request_id
+                    )));
+                    *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
 
-                #[allow(clippy::declare_interior_mutable_const)]
-                const TEXT_PLAIN: HeaderValue =
-                    HeaderValue::from_static("text/plain; charset=utf-8");
-                res.headers_mut()
-                    .insert(http::header::CONTENT_TYPE, TEXT_PLAIN);
-
-                let err: Box<dyn std::error::Error + std::marker::Send + Sync + 'static> =
-                    anyhow!("test").into();
-                return Err(err);
-
-                return Ok(res.map(|body| body.map_err(|v| axum::Error::new(v)).boxed_unsync()));
-            };
-            response.map_err(|e| e.into())
+                    #[allow(clippy::declare_interior_mutable_const)]
+                    const TEXT_PLAIN: HeaderValue =
+                        HeaderValue::from_static("text/plain; charset=utf-8");
+                    res.headers_mut()
+                        .insert(http::header::CONTENT_TYPE, TEXT_PLAIN);
+                        */
+                    //let err: Box<dyn std::error::Error + std::marker::Send + Sync + 'static> =
+                    //    anyhow!("test").into();
+                    return Err(err);
+                    //return Ok(res.map(|body| body.map_err(|v| axum::Error::new(v)).boxed_unsync()));
+                }
+            }
         })
     }
 }
