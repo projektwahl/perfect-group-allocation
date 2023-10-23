@@ -17,7 +17,7 @@ use axum::body::StreamBody;
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
 use axum::extract::{BodyStream, FromRef, FromRequest, State};
-use axum::http::HeaderValue;
+use axum::http::{HeaderName, HeaderValue};
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Form, Router};
@@ -696,6 +696,21 @@ async fn main() -> Result<(), DbErr> {
             "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
              'self'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin; \
              upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types a",
+        ),
+    ));
+    // don't ask, thanks
+    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+        HeaderName::from_static("permissions-policy"),
+        HeaderValue::from_static(
+            "accelerometer=(), ambient-light-sensor=(), attribution-reporting=(), autoplay=(), \
+             battery=(), camera=(), display-capture=(), document-domain=(), encrypted-media=(), \
+             execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), \
+             gamepad=(), gamepad=(), gyroscope=(), hid=(), identity-credentials-get=(), \
+             idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), \
+             otp-credentials=(), payment=(), picture-in-picture=(), \
+             publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), \
+             serial=(), speaker-selection=(), storage-access=(), usb=(), web-share=(), \
+             window-management=(), xr-spatial-tracking=();",
         ),
     ));
     let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
