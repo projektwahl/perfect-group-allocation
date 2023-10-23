@@ -40,10 +40,19 @@ where
     }
 
     fn call(&mut self, request: Request<axum::body::Body>) -> Self::Future {
+        let request_id = request
+            .headers()
+            .get("x-request-id")
+            .map(|h| h.to_str().unwrap_or_default().to_string())
+            .unwrap_or(String::from("hi"));
         let Ok(future) = std::panic::catch_unwind(AssertUnwindSafe(|| self.inner.call(request)))
         else {
             return Box::pin(async move {
-                let mut res = Response::new(Full::from("Service panicked"));
+                let mut res = Response::new(Full::from(format!(
+                    "an unexpected internal error occured. to report this error, specify the \
+                     following request id: {}",
+                    request_id
+                )));
                 *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
 
                 #[allow(clippy::declare_interior_mutable_const)]
