@@ -15,6 +15,7 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use axum::body::StreamBody;
+use axum::error_handling::HandleErrorLayer;
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
 use axum::extract::{BodyStream, FromRef, FromRequest, State};
@@ -59,7 +60,7 @@ use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tokio_util::io::ReaderStream;
 use tower::make::MakeService;
-use tower::{Layer, Service};
+use tower::{Layer, Service, ServiceBuilder};
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
@@ -599,6 +600,22 @@ fn csrf_helper(
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
 
+async fn handle_error_test(
+    err: std::boxed::Box<(dyn std::error::Error + std::marker::Send + Sync + 'static)>,
+) -> (StatusCode, String) {
+    if err.is::<tower::timeout::error::Elapsed>() {
+        (
+            StatusCode::REQUEST_TIMEOUT,
+            "Request took too long".to_string(),
+        )
+    } else {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Unhandled internal error: {}", err),
+        )
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), DbErr> {
     tracing_subscriber::fmt::init();
@@ -736,7 +753,11 @@ async fn main() -> Result<(), DbErr> {
         handlebars,
     });
     //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
-    let app: Router<(), MyBody0> = app.layer(CatchPanicLayer);
+    let app = app.layer(
+        ServiceBuilder::new()
+            .layer(HandleErrorLayer::new(handle_error_test))
+            .layer(CatchPanicLayer),
+    );
     let app: Router<(), MyBody0> = app.layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::default().include_headers(true))
