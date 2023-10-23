@@ -756,12 +756,12 @@ async fn main() -> Result<(), DbErr> {
     let app = app.layer(
         ServiceBuilder::new()
             .layer(HandleErrorLayer::new(handle_error_test))
+            .layer(
+                TraceLayer::new_for_http()
+                    .make_span_with(DefaultMakeSpan::default().include_headers(true))
+                    .on_response(DefaultOnResponse::default().include_headers(true)),
+            )
             .layer(CatchPanicLayer),
-    );
-    let app: Router<(), MyBody0> = app.layer(
-        TraceLayer::new_for_http()
-            .make_span_with(DefaultMakeSpan::default().include_headers(true))
-            .on_response(DefaultOnResponse::default().include_headers(true)),
     );
     let app: Router<(), MyBody0> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
 
