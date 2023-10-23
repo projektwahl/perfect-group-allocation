@@ -689,7 +689,6 @@ async fn main() -> Result<(), DbErr> {
     let app: Router<MyState, MyBody1> =
         app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
     let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
-    let app: Router<MyState, MyBody0> = app.layer(CatchPanicLayer); // TODO replace by own layer that returns beautiful page with request id
     let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
     let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
         header::CONTENT_SECURITY_POLICY,
@@ -737,6 +736,7 @@ async fn main() -> Result<(), DbErr> {
         handlebars,
     });
     let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
+    let app: Router<(), MyBody0> = app.layer(CatchPanicLayer);
     let app: Router<(), MyBody0> = app.layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().include_headers(true))
