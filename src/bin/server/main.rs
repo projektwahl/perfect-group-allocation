@@ -1,6 +1,7 @@
 #![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![feature(coroutines)]
 
+pub mod catch_panic;
 mod entities;
 use std::borrow::Cow;
 use std::convert::Infallible;
