@@ -601,6 +601,8 @@ async fn openid_login(
         session,
     }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppError> {
+    let client = get_openid_client().await?;
+
     // Generate a PKCE challenge.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
@@ -633,6 +635,7 @@ async fn openid_redirect(
         session,
     }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppError> {
+    let client = get_openid_client().await?;
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
@@ -673,6 +676,7 @@ async fn openid_redirect(
             .map(|email| email.as_str())
             .unwrap_or("<not provided>"),
     );
+    Ok(Redirect::to("/list").into_response())
 }
 
 // TODO rtt0
