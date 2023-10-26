@@ -606,9 +606,11 @@ fn csrf_helper(
 
 struct XRequestId(String);
 
+static X_REQUEST_ID_HEADER_NAME: HeaderName = http::header::HeaderName::from_static("x-request-id");
+
 impl Header for XRequestId {
     fn name() -> &'static HeaderName {
-        &http::header::HeaderName::from_static("X-Request-ID")
+        &X_REQUEST_ID_HEADER_NAME
     }
 
     fn decode<'i, I>(values: &mut I) -> Result<Self, headers::Error>
@@ -626,7 +628,7 @@ impl Header for XRequestId {
     where
         E: Extend<HeaderValue>,
     {
-        let value = HeaderValue::from_static(&self.0);
+        let value = HeaderValue::from_str(&self.0).unwrap();
 
         values.extend(std::iter::once(value));
     }
@@ -634,7 +636,6 @@ impl Header for XRequestId {
 
 async fn handle_error_test(
     err: Box<dyn std::error::Error + Sync + Send + 'static>,
-    TypedHeader(user_agent): TypedHeader<XRequestId>,
 ) -> (StatusCode, String) {
     (
         StatusCode::INTERNAL_SERVER_ERROR,
