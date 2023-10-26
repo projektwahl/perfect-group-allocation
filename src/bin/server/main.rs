@@ -4,6 +4,7 @@
 
 pub mod catch_panic;
 mod entities;
+mod error;
 use std::any::Any;
 use std::borrow::Cow;
 use std::convert::Infallible;
@@ -32,6 +33,7 @@ use axum_extra::response::Css;
 use catch_panic::CatchPanicLayer;
 use entities::prelude::*;
 use entities::project_history;
+use error::AppError;
 use futures_async_stream::try_stream;
 use futures_util::future::BoxFuture;
 use futures_util::{StreamExt, TryStreamExt};
@@ -280,37 +282,6 @@ struct MyState {
     database: DatabaseConnection,
     handlebars: Handlebars<'static>,
 }
-// Make our own error that wraps `anyhow::Error`.
-struct AppError(anyhow::Error);
-
-// Tell axum how to convert `AppError` into a response.
-impl IntoResponse for AppError {
-    fn into_response(self) -> axum::response::Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Something went wrong: {}", self.0),
-        )
-            .into_response()
-    }
-}
-
-// This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
-// `Result<_, AppError>`. That way you don't need to do that manually.
-impl From<MultipartError> for AppError {
-    fn from(err: MultipartError) -> Self {
-        Self(err.into())
-    }
-}
-impl From<axum::Error> for AppError {
-    fn from(err: axum::Error) -> Self {
-        Self(err.into())
-    }
-}
-impl From<sea_orm::DbErr> for AppError {
-    fn from(err: sea_orm::DbErr) -> Self {
-        Self(err.into())
-    }
-}
 
 // https://handlebarsjs.com/api-reference/
 // https://handlebarsjs.com/api-reference/data-variables.html
@@ -421,7 +392,7 @@ where
     B::Error: Into<BoxError>,
     S: Send + Sync,
 {
-    type Rejection = FormRejection;
+    type Rejection = AppError;
 
     async fn from_request(
         req: Request<BodyWithSession<B>>,
@@ -435,12 +406,16 @@ where
 
         let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
 
-        let extractor = Form::<T>::from_request(Request::from_parts(parts, body), state).await?;
+        let extractor = Form::<T>::from_request(Request::from_parts(parts, body), state)
+            .await
+            .map_err(AppError::from)?;
 
         if not_get_or_head {
             let actual_csrf_token = extractor.0.csrf_token();
 
-            assert_eq!(expected_csrf_token, actual_csrf_token);
+            if expected_csrf_token != actual_csrf_token {
+                return Err(AppError::WrongCsrfToken);
+            }
         }
         Ok(Self { value: extractor.0 })
     }
