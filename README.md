@@ -1,5 +1,8 @@
 # perfect-group-allocation
 
+TODO FIXME audit all database queries for race conditions
+or use SERIALIZABLE I think
+
 ```
 https://www.keycloak.org/getting-started/getting-started-podman
 podman run -p 8080:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:22.0.5 start-dev

@@ -51,9 +51,10 @@ use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
 use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
+use openidconnect::reqwest::async_http_client;
 use openidconnect::{
     AccessTokenHash, AuthorizationCode, ClientId, ClientSecret, IssuerUrl, Nonce,
-    PkceCodeChallenge, RedirectUrl, Scope,
+    OAuth2TokenResponse, PkceCodeChallenge, RedirectUrl, Scope, TokenResponse,
 };
 use parcel_sourcemap::SourceMap;
 use pin_project_lite::pin_project;
@@ -567,7 +568,7 @@ async fn openid_login(
     let (auth_url, csrf_token, nonce) = client
         .authorize_url(
             CoreAuthenticationFlow::AuthorizationCode,
-            CsrfToken::new_random,
+            openidconnect::CsrfToken::new_random,
             Nonce::new_random,
         )
         // Set the desired scopes.
