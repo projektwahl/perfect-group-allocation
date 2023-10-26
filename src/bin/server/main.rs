@@ -50,6 +50,8 @@ use itertools::Itertools;
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
+use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
+use oauth2::StandardRevocableToken;
 use openidconnect::core::{
     CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreClient, CoreGenderClaim,
     CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
@@ -543,32 +545,35 @@ async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> 
     Ok((headers, hyper::Response::new(body)))
 }
 
-async fn get_openid_client() -> Client<
-    EmptyAdditionalClaims,
-    CoreAuthDisplay,
-    CoreGenderClaim,
-    CoreJweContentEncryptionAlgorithm,
-    CoreJwsSigningAlgorithm,
-    CoreJsonWebKeyType,
-    CoreJsonWebKeyUse,
-    CoreJsonWebKey,
-    CoreAuthPrompt,
-    StandardErrorResponse<BasicErrorResponseType>,
-    StandardTokenResponse<
-        IdTokenFields<
-            EmptyAdditionalClaims,
-            EmptyExtraTokenFields,
-            CoreGenderClaim,
-            CoreJweContentEncryptionAlgorithm,
-            CoreJwsSigningAlgorithm,
-            CoreJsonWebKeyType,
+async fn get_openid_client() -> Result<
+    Client<
+        EmptyAdditionalClaims,
+        CoreAuthDisplay,
+        CoreGenderClaim,
+        CoreJweContentEncryptionAlgorithm,
+        CoreJwsSigningAlgorithm,
+        CoreJsonWebKeyType,
+        CoreJsonWebKeyUse,
+        CoreJsonWebKey,
+        CoreAuthPrompt,
+        StandardErrorResponse<BasicErrorResponseType>,
+        StandardTokenResponse<
+            IdTokenFields<
+                EmptyAdditionalClaims,
+                EmptyExtraTokenFields,
+                CoreGenderClaim,
+                CoreJweContentEncryptionAlgorithm,
+                CoreJwsSigningAlgorithm,
+                CoreJsonWebKeyType,
+            >,
+            BasicTokenType,
         >,
         BasicTokenType,
+        StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
+        StandardRevocableToken,
+        StandardErrorResponse<RevocationErrorResponseType>,
     >,
-    BasicTokenType,
-    StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
-    StandardRevocableToken,
-    StandardErrorResponse<RevocationErrorResponseType>,
+    AppError,
 > {
     let provider_metadata = CoreProviderMetadata::discover_async(
         IssuerUrl::new("https://accounts.example.com".to_string())?,
@@ -585,7 +590,7 @@ async fn get_openid_client() -> Client<
     )
     // Set the URL the user will be redirected to after the authorization process.
     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
-    client
+    Ok(client)
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
