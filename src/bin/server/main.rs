@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
+use anyhow::anyhow;
 use axum::body::StreamBody;
 use axum::error_handling::HandleErrorLayer;
 use axum::extract::multipart::MultipartError;
@@ -49,6 +50,11 @@ use itertools::Itertools;
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
+use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
+use openidconnect::{
+    AccessTokenHash, AuthorizationCode, ClientId, ClientSecret, IssuerUrl, Nonce,
+    PkceCodeChallenge, RedirectUrl, Scope,
+};
 use parcel_sourcemap::SourceMap;
 use pin_project_lite::pin_project;
 use rand::{thread_rng, Rng};
@@ -528,6 +534,95 @@ async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> 
     ];
 
     Ok((headers, hyper::Response::new(body)))
+}
+
+#[axum::debug_handler(body=MyBody, state=MyState)]
+async fn openid_login(
+    State(db): State<DatabaseConnection>,
+    ExtractSession {
+        extractor: form,
+        session,
+    }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
+) -> Result<impl IntoResponse, AppError> {
+    let provider_metadata = CoreProviderMetadata::discover_async(
+        IssuerUrl::new("https://accounts.example.com".to_string())?,
+        async_http_client,
+    )
+    .await?;
+
+    // Create an OpenID Connect client by specifying the client ID, client secret, authorization URL
+    // and token URL.
+    let client = CoreClient::from_provider_metadata(
+        provider_metadata,
+        ClientId::new("client_id".to_string()),
+        Some(ClientSecret::new("client_secret".to_string())),
+    )
+    // Set the URL the user will be redirected to after the authorization process.
+    .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
+
+    // Generate a PKCE challenge.
+    let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+
+    // Generate the full authorization URL.
+    let (auth_url, csrf_token, nonce) = client
+        .authorize_url(
+            CoreAuthenticationFlow::AuthorizationCode,
+            CsrfToken::new_random,
+            Nonce::new_random,
+        )
+        // Set the desired scopes.
+        .add_scope(Scope::new("read".to_string()))
+        .add_scope(Scope::new("write".to_string()))
+        // Set the PKCE code challenge.
+        .set_pkce_challenge(pkce_challenge)
+        .url();
+
+    // This is the URL you should redirect the user to, in order to trigger the authorization
+    // process.
+    println!("Browse to: {}", auth_url);
+
+    // Once the user has been redirected to the redirect URL, you'll have access to the
+    // authorization code. For security reasons, your code should verify that the `state`
+    // parameter returned by the server matches `csrf_state`.
+
+    // Now you can exchange it for an access token and ID token.
+    let token_response = client
+        .exchange_code(AuthorizationCode::new(
+            "some authorization code".to_string(),
+        ))
+        // Set the PKCE code verifier.
+        .set_pkce_verifier(pkce_verifier)
+        .request_async(async_http_client)
+        .await?;
+
+    // Extract the ID token claims after verifying its authenticity and nonce.
+    let id_token = token_response
+        .id_token()
+        .ok_or_else(|| anyhow!("Server did not return an ID token"))?;
+    let claims = id_token.claims(&client.id_token_verifier(), &nonce)?;
+
+    // Verify the access token hash to ensure that the access token hasn't been substituted for
+    // another user's.
+    if let Some(expected_access_token_hash) = claims.access_token_hash() {
+        let actual_access_token_hash =
+            AccessTokenHash::from_token(token_response.access_token(), &id_token.signing_alg()?)?;
+        if actual_access_token_hash != *expected_access_token_hash {
+            return Err(anyhow!("Invalid access token"));
+        }
+    }
+
+    // The authenticated user's identity is now available. See the IdTokenClaims struct for a
+    // complete listing of the available claims.
+    println!(
+        "User {} with e-mail address {} has authenticated successfully",
+        claims.subject().as_str(),
+        claims
+            .email()
+            .map(|email| email.as_str())
+            .unwrap_or("<not provided>"),
+    );
+
+    Ok(Redirect::to("/list").into_response())
 }
 
 // TODO rtt0
