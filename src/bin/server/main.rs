@@ -635,11 +635,15 @@ impl Header for XRequestId {
 }
 
 async fn handle_error_test(
+    TypedHeader(request_id): TypedHeader<XRequestId>,
     err: Box<dyn std::error::Error + Sync + Send + 'static>,
 ) -> (StatusCode, String) {
     (
         StatusCode::INTERNAL_SERVER_ERROR,
-        format!("Unhandled internal error {:?}", err),
+        format!(
+            "Unhandled internal error for request {} {:?}",
+            request_id.0, err
+        ),
     )
 }
 
