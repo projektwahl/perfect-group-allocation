@@ -1,6 +1,16 @@
 # perfect-group-allocation
 
 ```
+https://www.keycloak.org/getting-started/getting-started-podman
+podman run -p 8080:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:22.0.5 start-dev
+podman start b217886c51eb
+
+http://localhost:8080/realms/pga/account/
+
+Add GitHub as identity provider for demo
+
+Identity Providers -> Manage display order
+
 DATABASE_URL="sqlite:./sqlite.db?mode=rwc" sea-orm-cli migrate refresh
 sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
 DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -w src -x 'run --release --bin server'
