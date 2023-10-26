@@ -22,10 +22,19 @@ pub enum AppError {
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Something went wrong: {}", self),
-        )
-            .into_response()
+        match self {
+            err @ (AppError::FormRejection(_)
+            | AppError::Multipart(_)
+            | AppError::Axum(_)
+            | AppError::Database(_)
+            | AppError::Other(_)) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Something went wrong: {}", err),
+            )
+                .into_response(),
+            err @ AppError::WrongCsrfToken => {
+                (StatusCode::BAD_REQUEST, format!("{}", err)).into_response()
+            }
+        }
     }
 }
