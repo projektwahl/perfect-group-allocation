@@ -50,11 +50,17 @@ use itertools::Itertools;
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
-use openidconnect::core::{CoreAuthenticationFlow, CoreClient, CoreProviderMetadata};
+use openidconnect::core::{
+    CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreClient, CoreGenderClaim,
+    CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
+    CoreJwsSigningAlgorithm, CoreProviderMetadata,
+};
 use openidconnect::reqwest::async_http_client;
 use openidconnect::{
-    AccessTokenHash, AuthorizationCode, ClientId, ClientSecret, IssuerUrl, Nonce,
-    OAuth2TokenResponse, PkceCodeChallenge, RedirectUrl, Scope, TokenResponse,
+    AccessTokenHash, AuthorizationCode, Client, ClientId, ClientSecret, EmptyAdditionalClaims,
+    EmptyExtraTokenFields, IdTokenFields, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge,
+    RedirectUrl, RevocationErrorResponseType, Scope, StandardErrorResponse,
+    StandardTokenIntrospectionResponse, StandardTokenResponse, TokenResponse,
 };
 use parcel_sourcemap::SourceMap;
 use pin_project_lite::pin_project;
@@ -537,14 +543,33 @@ async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> 
     Ok((headers, hyper::Response::new(body)))
 }
 
-#[axum::debug_handler(body=MyBody, state=MyState)]
-async fn openid_login(
-    State(db): State<DatabaseConnection>,
-    ExtractSession {
-        extractor: form,
-        session,
-    }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
-) -> Result<impl IntoResponse, AppError> {
+async fn get_openid_client() -> Client<
+    EmptyAdditionalClaims,
+    CoreAuthDisplay,
+    CoreGenderClaim,
+    CoreJweContentEncryptionAlgorithm,
+    CoreJwsSigningAlgorithm,
+    CoreJsonWebKeyType,
+    CoreJsonWebKeyUse,
+    CoreJsonWebKey,
+    CoreAuthPrompt,
+    StandardErrorResponse<BasicErrorResponseType>,
+    StandardTokenResponse<
+        IdTokenFields<
+            EmptyAdditionalClaims,
+            EmptyExtraTokenFields,
+            CoreGenderClaim,
+            CoreJweContentEncryptionAlgorithm,
+            CoreJwsSigningAlgorithm,
+            CoreJsonWebKeyType,
+        >,
+        BasicTokenType,
+    >,
+    BasicTokenType,
+    StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
+    StandardRevocableToken,
+    StandardErrorResponse<RevocationErrorResponseType>,
+> {
     let provider_metadata = CoreProviderMetadata::discover_async(
         IssuerUrl::new("https://accounts.example.com".to_string())?,
         async_http_client,
@@ -560,7 +585,17 @@ async fn openid_login(
     )
     // Set the URL the user will be redirected to after the authorization process.
     .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
+    client
+}
 
+#[axum::debug_handler(body=MyBody, state=MyState)]
+async fn openid_login(
+    State(db): State<DatabaseConnection>,
+    ExtractSession {
+        extractor: form,
+        session,
+    }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
+) -> Result<impl IntoResponse, AppError> {
     // Generate a PKCE challenge.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
