@@ -582,6 +582,17 @@ async fn openid_login(
     // process.
     println!("Browse to: {}", auth_url);
 
+    Ok(Redirect::to("/list").into_response())
+}
+
+#[axum::debug_handler(body=MyBody, state=MyState)]
+async fn openid_redirect(
+    State(db): State<DatabaseConnection>,
+    ExtractSession {
+        extractor: form,
+        session,
+    }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
+) -> Result<impl IntoResponse, AppError> {
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
@@ -622,8 +633,6 @@ async fn openid_login(
             .map(|email| email.as_str())
             .unwrap_or("<not provided>"),
     );
-
-    Ok(Redirect::to("/list").into_response())
 }
 
 // TODO rtt0
