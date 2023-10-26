@@ -21,7 +21,8 @@ use axum::error_handling::HandleErrorLayer;
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
 use axum::extract::{BodyStream, FromRef, FromRequest, State};
-use axum::http::{HeaderName, HeaderValue};
+use axum::headers::{self, Header};
+use axum::http::{self, HeaderName, HeaderValue};
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Form, Router, TypedHeader};
@@ -42,6 +43,7 @@ use http_body::Limited;
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Method, Request, StatusCode};
+use itertools::Itertools;
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
@@ -604,9 +606,9 @@ fn csrf_helper(
 
 struct XRequestId(String);
 
-impl Header for Dnt {
+impl Header for XRequestId {
     fn name() -> &'static HeaderName {
-         &http::header::DNT
+        &http::header::HeaderName::from_static("X-Request-ID")
     }
 
     fn decode<'i, I>(values: &mut I) -> Result<Self, headers::Error>
@@ -614,29 +616,17 @@ impl Header for Dnt {
         I: Iterator<Item = &'i HeaderValue>,
     {
         let value = values
-            .next()
-            .ok_or_else(headers::Error::invalid)?;
-
-        if value == "0" {
-            Ok(Dnt(false))
-        } else if value == "1" {
-            Ok(Dnt(true))
-        } else {
-            Err(headers::Error::invalid())
-        }
+            .exactly_one()
+            .map_err(|e| headers::Error::invalid())?;
+        let value = value.to_str().map_err(|e| headers::Error::invalid())?;
+        Ok(XRequestId(value.to_string()))
     }
 
     fn encode<E>(&self, values: &mut E)
     where
         E: Extend<HeaderValue>,
     {
-        let s = if self.0 {
-            "1"
-        } else {
-            "0"
-        };
-
-        let value = HeaderValue::from_static(s);
+        let value = HeaderValue::from_static(&self.0);
 
         values.extend(std::iter::once(value));
     }
@@ -644,7 +634,7 @@ impl Header for Dnt {
 
 async fn handle_error_test(
     err: Box<dyn std::error::Error + Sync + Send + 'static>,
-    TypedHeader(user_agent): TypedHeader<axum::headers::>,
+    TypedHeader(user_agent): TypedHeader<XRequestId>,
 ) -> (StatusCode, String) {
     (
         StatusCode::INTERNAL_SERVER_ERROR,
