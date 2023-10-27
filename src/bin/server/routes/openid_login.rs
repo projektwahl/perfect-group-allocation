@@ -4,10 +4,22 @@ use oauth2::{PkceCodeChallenge, Scope};
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::Nonce;
 use sea_orm::DatabaseConnection;
+use serde::Deserialize;
 
 use crate::error::AppError;
 use crate::openid::get_openid_client;
-use crate::{CreateProjectPayload, CsrfSafeForm, ExtractSession};
+use crate::{CsrfSafeForm, CsrfToken, ExtractSession};
+
+#[derive(Deserialize)]
+pub struct OpenIdLoginPayload {
+    csrf_token: String,
+}
+
+impl CsrfToken for OpenIdLoginPayload {
+    fn csrf_token(&self) -> String {
+        self.csrf_token.clone()
+    }
+}
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_login(
@@ -15,7 +27,7 @@ pub async fn openid_login(
     ExtractSession {
         extractor: _form,
         session,
-    }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
+    }: ExtractSession<CsrfSafeForm<OpenIdLoginPayload>>,
 ) -> Result<impl IntoResponse, AppError> {
     let client = get_openid_client().await?;
 
