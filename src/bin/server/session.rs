@@ -1,11 +1,68 @@
 use std::convert::Infallible;
 
 use axum::response::IntoResponseParts;
-use axum_extra::extract::cookie::Cookie;
+use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::PrivateCookieJar;
 use oauth2::PkceCodeVerifier;
 use openidconnect::Nonce;
 use rand::{thread_rng, Rng};
+
+#[derive(Clone)]
+struct SessionLayer {
+    key: Key,
+}
+
+impl<S> Layer<S> for SessionLayer {
+    type Service = SessionMiddleware<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        SessionMiddleware {
+            inner,
+            key: self.key.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct SessionMiddleware<S> {
+    inner: S,
+    key: Key,
+}
+
+impl<S, ReqBody> Service<Request<ReqBody>> for SessionMiddleware<S>
+where
+    S: Service<Request<BodyWithSession<ReqBody>>, Response = Response> + Send + 'static,
+    S::Future: Send + 'static,
+{
+    type Error = S::Error;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Response = S::Response;
+
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
+        let (parts, body) = request.into_parts();
+        let session = Session::new(PrivateCookieJar::from_headers(
+            &parts.headers,
+            self.key.clone(),
+        ));
+        let session = Arc::new(Mutex::new(session));
+        let future = self.inner.call(Request::from_parts(
+            parts,
+            BodyWithSession {
+                session: session.clone(),
+                body,
+            },
+        ));
+        Box::pin(async move {
+            let response: Response = future.await?;
+            let cookies = Arc::into_inner(session).unwrap().into_inner();
+            Ok((cookies, response).into_response())
+        })
+    }
+}
 
 #[derive(Clone)]
 pub struct Session {
