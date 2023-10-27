@@ -496,7 +496,7 @@ async fn main() -> Result<(), DbErr> {
         .route("/list", get(list))
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))
-        .route("/openidconnect-redirect", post(openid_redirect))
+        .route("/openidconnect-redirect", get(openid_redirect))
         .fallback_service(service);
 
     let app = layers(app, db, handlebars);

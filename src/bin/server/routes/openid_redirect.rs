@@ -1,27 +1,62 @@
 use anyhow::anyhow;
 use axum::extract::State;
-use axum::response::{IntoResponse, Redirect};
+use axum::response::{Html, IntoResponse, Redirect};
+use axum::Form;
+use handlebars::Handlebars;
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
 use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
 use sea_orm::DatabaseConnection;
+use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 use crate::openid::get_openid_client;
-use crate::{CreateProjectPayload, CsrfSafeForm, ExtractSession};
+use crate::{CreateProjectPayload, CsrfSafeExtractor, CsrfSafeForm, ExtractSession};
+
+#[derive(Deserialize, Serialize)]
+pub struct OpenIdRedirectError {
+    error: String,
+    error_description: String,
+    state: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct OpenIdRedirectSuccess {
+    state: String,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub enum OpenIdRedirect {
+    Success(OpenIdRedirectSuccess),
+    Error(OpenIdRedirectError),
+}
+
+// THIS IS DANGEROUS
+impl CsrfSafeExtractor for Form<OpenIdRedirect> {}
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
-    State(_db): State<DatabaseConnection>,
+    State(handlebars): State<Handlebars<'static>>,
     ExtractSession {
-        extractor: _form,
+        extractor: form,
         session,
-    }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
+    }: ExtractSession<Form<OpenIdRedirect>>,
 ) -> Result<impl IntoResponse, AppError> {
     let client = get_openid_client().await?;
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
+
+    match form.0 {
+        OpenIdRedirect::Error(err) => {
+            let result = handlebars
+                .render("openid_redirect", &err)
+                .unwrap_or_else(|e| e.to_string());
+            return Ok(Html(result).into_response());
+        }
+        OpenIdRedirect::Success(_) => todo!(),
+    }
 
     let session = session.lock().await;
     let pkce_verifier = session.openid_pkce_verifier();

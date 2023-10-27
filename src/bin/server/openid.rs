@@ -60,6 +60,8 @@ pub async fn get_openid_client() -> Result<
         )),
     )
     // Set the URL the user will be redirected to after the authorization process.
-    .set_redirect_uri(RedirectUrl::new("https://localhost:8443/".to_string())?);
+    .set_redirect_uri(RedirectUrl::new(
+        "https://localhost:8443/openidconnect-redirect".to_string(),
+    )?);
     Ok(client)
 }

@@ -35,7 +35,7 @@ pub async fn openid_login(
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
     // Generate the full authorization URL.
-    let (auth_url, _csrf_token, nonce) = client
+    let (auth_url, csrf_token, nonce) = client
         .authorize_url(
             CoreAuthenticationFlow::AuthorizationCode,
             openidconnect::CsrfToken::new_random,
@@ -52,6 +52,7 @@ pub async fn openid_login(
 
     session.set_openid_pkce_verifier(&pkce_verifier);
     session.set_openid_nonce(&nonce);
+    session.set_openid_csrf_token(&csrf_token);
 
     drop(session);
 
