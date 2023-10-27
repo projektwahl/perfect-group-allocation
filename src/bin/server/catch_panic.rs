@@ -1,9 +1,9 @@
 use std::any::Any;
 use std::panic::AssertUnwindSafe;
-use std::task::{Context, Poll};
+use std::task::Poll;
 
 use anyhow::anyhow;
-use axum::http::{self, HeaderValue, Request};
+use axum::http::{self, HeaderValue};
 use axum::response::Response;
 use futures_util::future::BoxFuture;
 use futures_util::FutureExt;
@@ -27,19 +27,19 @@ pub struct CatchPanicMiddleware<S> {
     inner: S,
 }
 
-fn log(value: Box<dyn Any + Send + 'static>) -> anyhow::Error {
+fn log(value: &Box<dyn Any + Send + 'static>) -> anyhow::Error {
     if let Some(str_slice) = value.downcast_ref::<&'static str>() {
         anyhow!("{}", str_slice)
     } else if let Some(string) = value.downcast_ref::<String>() {
         anyhow!("{}", string)
     } else {
-        anyhow!("unknown panic {:?}", (&*value).type_id())
+        anyhow!("unknown panic {:?}", (*value).type_id())
     }
 }
 
-impl<S> Service<Request<axum::body::Body>> for CatchPanicMiddleware<S>
+impl<S> Service<axum::http::Request<axum::body::Body>> for CatchPanicMiddleware<S>
 where
-    S: Service<Request<axum::body::Body>, Response = Response> + Send + 'static,
+    S: Service<axum::http::Request<axum::body::Body>, Response = Response> + Send + 'static,
     S::Error: Into<Box<dyn std::error::Error + Sync + Send + 'static>>,
     S::Future: Send + 'static,
 {
@@ -49,12 +49,12 @@ where
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
     type Response = S::Response;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx).map_err(|e| e.into())
     }
 
     // TODO FIXME maybe we could return an Err here, then let it get traced, then convert to 500
-    fn call(&mut self, request: Request<axum::body::Body>) -> Self::Future {
+    fn call(&mut self, request: axum::http::Request<axum::body::Body>) -> Self::Future {
         let request_id = request
             .headers()
             .get("x-request-id")
@@ -100,7 +100,7 @@ where
                     //    anyhow!("test").into();
 
                     // argument panic was called with, usually string
-                    return Err(log(err).into());
+                    return Err(log(&err).into());
                     //return Ok(res.map(|body| body.map_err(|v| axum::Error::new(v)).boxed_unsync()));
                 }
             }

@@ -4,7 +4,11 @@
     clippy::cargo,
     clippy::wildcard_imports
 )]
-#![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
+#![allow(
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::module_name_repetitions
+)]
 #![feature(coroutines)]
 
 pub mod catch_panic;
