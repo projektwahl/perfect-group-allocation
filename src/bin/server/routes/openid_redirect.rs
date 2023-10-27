@@ -13,19 +13,23 @@ use crate::error::AppError;
 use crate::openid::get_openid_client;
 use crate::{CreateProjectPayload, CsrfSafeExtractor, CsrfSafeForm, ExtractSession};
 
+// TODO FIXME check that form does an exact check and no unused inputs are accepted
+
 #[derive(Deserialize, Serialize)]
 pub struct OpenIdRedirectError {
+    state: String,
     error: String,
     error_description: String,
-    state: String,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct OpenIdRedirectSuccess {
     state: String,
-    test: String,
+    session_state: String,
+    code: String,
 }
 
+// TODO FIXME put common `state` directly into outer struct
 #[derive(Deserialize)]
 #[serde(untagged)]
 pub enum OpenIdRedirect {
@@ -52,17 +56,20 @@ pub async fn openid_redirect(
         session,
     }: ExtractSession<Form<OpenIdRedirect>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let client = get_openid_client().await?;
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
+    let client = get_openid_client().await?;
 
     let mut session = session.lock().await;
 
     match form.0 {
         OpenIdRedirect::Error(err) => {
             let csrf_token = session.session_id();
+            let openid_csrf_token = session.openid_csrf_token();
             drop(session);
+
+            assert_eq!(&err.state, openid_csrf_token.secret());
 
             let result = handlebars
                 .render(
@@ -77,16 +84,17 @@ pub async fn openid_redirect(
                 .unwrap_or_else(|e| e.to_string());
             Ok(Html(result).into_response())
         }
-        OpenIdRedirect::Success(_) => {
+        OpenIdRedirect::Success(ok) => {
             let pkce_verifier = session.openid_pkce_verifier();
             let nonce = session.openid_nonce();
+            let openid_csrf_token = session.openid_csrf_token();
             drop(session);
+
+            assert_eq!(&ok.state, openid_csrf_token.secret());
 
             // Now you can exchange it for an access token and ID token.
             let token_response = client
-                .exchange_code(AuthorizationCode::new(
-                    "some authorization code".to_string(),
-                ))
+                .exchange_code(AuthorizationCode::new(ok.code))
                 // Set the PKCE code verifier.
                 .set_pkce_verifier(pkce_verifier)
                 .request_async(async_http_client)
