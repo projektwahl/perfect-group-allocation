@@ -36,6 +36,14 @@ pub enum OpenIdRedirect {
 // THIS IS DANGEROUS
 impl CsrfSafeExtractor for Form<OpenIdRedirect> {}
 
+#[derive(Deserialize, Serialize)]
+pub struct OpenIdRedirectErrorTemplate {
+    csrf_token: String,
+    error: String,
+    error_description: String,
+    state: String,
+}
+
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
     State(handlebars): State<Handlebars<'static>>,
@@ -49,15 +57,27 @@ pub async fn openid_redirect(
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
 
+    let mut session = session.lock().await;
+
     match form.0 {
         OpenIdRedirect::Error(err) => {
+            let csrf_token = session.session_id();
+            drop(session);
+
             let result = handlebars
-                .render("openid_redirect", &err)
+                .render(
+                    "openid_redirect",
+                    &OpenIdRedirectErrorTemplate {
+                        csrf_token,
+                        error: err.error,
+                        error_description: err.error_description,
+                        state: err.state,
+                    },
+                )
                 .unwrap_or_else(|e| e.to_string());
             Ok(Html(result).into_response())
         }
         OpenIdRedirect::Success(_) => {
-            let session = session.lock().await;
             let pkce_verifier = session.openid_pkce_verifier();
             let nonce = session.openid_nonce();
             drop(session);
