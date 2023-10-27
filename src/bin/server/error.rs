@@ -2,6 +2,8 @@ use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
 use axum::response::IntoResponse;
 use hyper::StatusCode;
+use oauth2::basic::BasicErrorResponseType;
+use oauth2::{RequestTokenError, StandardErrorResponse};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
@@ -14,7 +16,15 @@ pub enum AppError {
     #[error("database error {0}")]
     Database(#[from] sea_orm::DbErr),
     #[error("unknown error {0}")]
-    Other(anyhow::Error),
+    Other(#[from] anyhow::Error),
+    #[error("request token error")]
+    RequestTokenError(
+        #[from]
+        RequestTokenError<
+            oauth2::reqwest::Error<reqwest::error::Error>,
+            StandardErrorResponse<BasicErrorResponseType>,
+        >,
+    ),
     #[error("wrong csrf token")]
     WrongCsrfToken,
 }

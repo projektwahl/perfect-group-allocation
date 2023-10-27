@@ -29,20 +29,21 @@ tower = { version = "0.4", features = ["full"] }
 tower-http = { version = "0.4", features = ["full"] }
 http-body = "0.4"
 tokio-util = { version = "0.7", features = ["io"] }
-anyhow = "1.0.75"
+anyhow = "1"
 futures-async-stream = "0.2"
-html-escape = "0.2.13"
-sqlx = "0.7.2"
+html-escape = "0.2"
+sqlx = "0.7"
 handlebars = { version = "4", features = ["dir_source"] }
-serde_json = "1.0.107"
+serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 axum-extra = { version = "0.8", features = ["cookie", "cookie-private", "cookie-signed"] }
-pin-project-lite = "0.2.13"
-rand = "0.8.5"
-ring = "0.17.5"
-data-encoding = "2.4.0"
+pin-project-lite = "0.2"
+rand = "0.8"
+ring = "0.17"
+data-encoding = "2"
 lightningcss = "1.0.0-alpha.49"
-parcel_sourcemap = "2.1.1"
-thiserror = "1.0.50"
-openidconnect = "3.4.0"
-oauth2 = "4.4.2"
+parcel_sourcemap = "2"
+thiserror = "1"
+openidconnect = "3"
+oauth2 = "4"
+reqwest = { version = "0.11", features = ["json"] }

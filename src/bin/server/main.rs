@@ -5,6 +5,7 @@
 pub mod catch_panic;
 mod entities;
 mod error;
+pub mod session;
 use std::any::Any;
 use std::borrow::Cow;
 use std::convert::Infallible;
@@ -28,8 +29,8 @@ use axum::http::{self, HeaderName, HeaderValue};
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Form, Router, TypedHeader};
-use axum_extra::extract::PrivateCookieJar;
 use axum_extra::extract::cookie::{Cookie, Key};
+use axum_extra::extract::PrivateCookieJar;
 use axum_extra::response::Css;
 use catch_panic::CatchPanicLayer;
 use entities::prelude::*;
@@ -51,7 +52,7 @@ use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
 use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
-use oauth2::{StandardRevocableToken, PkceCodeVerifier};
+use oauth2::{PkceCodeVerifier, StandardRevocableToken};
 use openidconnect::core::{
     CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreClient, CoreGenderClaim,
     CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
@@ -75,6 +76,7 @@ use sea_orm::{
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use session::Session;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
@@ -151,69 +153,6 @@ where
     }
 }
 
-#[derive(Clone)]
-struct Session {
-    private_cookies: PrivateCookieJar,
-}
-
-impl Session {
-    pub fn new(private_cookies: PrivateCookieJar) -> Self {
-        Self { private_cookies }
-    }
-
-    pub fn session_id(&mut self) -> String {
-        const COOKIE_NAME: &str = "__Host-session_id";
-        if self.private_cookies.get(COOKIE_NAME).is_none() {
-            let rand_string: String = thread_rng()
-                .sample_iter(&rand::distributions::Alphanumeric)
-                .take(30)
-                .map(char::from)
-                .collect();
-
-            let session_id = rand_string;
-            let cookie = Cookie::build(COOKIE_NAME, session_id)
-                .http_only(true)
-                .same_site(axum_extra::extract::cookie::SameSite::Strict)
-                .secure(true)
-                .finish();
-            self.private_cookies = self.private_cookies.clone().add(cookie);
-        }
-        self.private_cookies
-            .get(COOKIE_NAME)
-            .map(|c| c.value().to_string())
-            .unwrap()
-    }
-
-    pub fn csrf_token(&mut self) -> String {
-        const COOKIE_NAME: &str = "__Host-csrf_token";
-        if self.private_cookies.get(COOKIE_NAME).is_none() {
-            let rand_string: String = thread_rng()
-                .sample_iter(&rand::distributions::Alphanumeric)
-                .take(30)
-                .map(char::from)
-                .collect();
-
-            let csrf_token = self.session_id() + ":" + &rand_string;
-
-            let cookie = Cookie::build(COOKIE_NAME, csrf_token)
-                .http_only(true)
-                .same_site(axum_extra::extract::cookie::SameSite::Strict)
-                .secure(true)
-                .finish();
-            self.private_cookies = self.private_cookies.clone().add(cookie);
-        }
-        // TODO FIXME unwrap
-        self.private_cookies
-            .get(COOKIE_NAME)
-            .map(|c| c.value().to_string())
-            .unwrap()
-            .split_once(':')
-            .unwrap()
-            .1
-            .to_string()
-    }
-}
-
 trait CsrfSafeExtractor {}
 
 struct ExtractSession<E: CsrfSafeExtractor> {
@@ -238,17 +177,6 @@ where
         let session = body.session.clone();
         let extractor = T::from_request(Request::from_parts(parts, body), state).await?;
         Ok(Self { extractor, session })
-    }
-}
-
-impl IntoResponseParts for Session {
-    type Error = Infallible;
-
-    fn into_response_parts(
-        self,
-        res: axum::response::ResponseParts,
-    ) -> Result<axum::response::ResponseParts, Self::Error> {
-        self.private_cookies.into_response_parts(res)
     }
 }
 
@@ -345,7 +273,7 @@ async fn index(
         .render(
             "create-project",
             &CreateProject {
-                csrf_token: session.lock().await.csrf_token(),
+                csrf_token: session.lock().await.session_id(),
                 title: None,
                 title_error: None,
                 description: None,
@@ -416,7 +344,7 @@ where
         let (parts, body) = req.into_parts();
 
         let mut session = body.session.lock().await;
-        let expected_csrf_token = session.csrf_token();
+        let expected_csrf_token = session.session_id();
         drop(session);
 
         let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
@@ -463,7 +391,7 @@ async fn create(
             .render(
                 "create-project",
                 &CreateProject {
-                    csrf_token: session.lock().await.csrf_token(),
+                    csrf_token: session.lock().await.session_id(),
                     title: Some(form.value.title.clone()),
                     title_error,
                     description: Some(form.value.description.clone()),
@@ -604,7 +532,9 @@ async fn openid_login(
     let client = get_openid_client().await?;
 
     // Generate a PKCE challenge.
-    let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();.
+    let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+
+    session.lock().await.set_pkce_verifier(&pkce_verifier);
 
     // Generate the full authorization URL.
     let (auth_url, csrf_token, nonce) = client
@@ -639,6 +569,8 @@ async fn openid_redirect(
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
+
+    let pkce_verifier = session.lock().await.pkce_verifier();
 
     // Now you can exchange it for an access token and ID token.
     let token_response = client
