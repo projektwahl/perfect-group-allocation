@@ -11,9 +11,9 @@ use crate::{CreateProjectPayload, CsrfSafeForm, ExtractSession, MyBody, MyState}
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 pub async fn openid_login(
-    State(db): State<DatabaseConnection>,
+    State(_db): State<DatabaseConnection>,
     ExtractSession {
-        extractor: form,
+        extractor: _form,
         session,
     }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -23,7 +23,7 @@ pub async fn openid_login(
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
     // Generate the full authorization URL.
-    let (auth_url, csrf_token, nonce) = client
+    let (auth_url, _csrf_token, nonce) = client
         .authorize_url(
             CoreAuthenticationFlow::AuthorizationCode,
             openidconnect::CsrfToken::new_random,

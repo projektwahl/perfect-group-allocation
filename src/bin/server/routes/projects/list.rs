@@ -9,7 +9,7 @@ use hyper::header;
 use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
 
-use crate::entities::project_history::{self, Entity};
+use crate::entities::project_history::{self};
 use crate::{MyBody, MyState, TemplateProject};
 
 #[try_stream(ok = String, error = DbErr)]

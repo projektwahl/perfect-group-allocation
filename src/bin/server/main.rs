@@ -13,7 +13,7 @@ mod error;
 mod openid;
 pub mod routes;
 pub mod session;
-use std::any::Any;
+
 use std::borrow::Cow;
 use std::convert::Infallible;
 use std::fs::File;
@@ -22,59 +22,50 @@ use std::io::BufReader;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
+
 use std::time::Duration;
 
-use anyhow::anyhow;
-use axum::body::StreamBody;
+
+
 use axum::error_handling::HandleErrorLayer;
-use axum::extract::multipart::MultipartError;
-use axum::extract::rejection::FormRejection;
-use axum::extract::{BodyStream, FromRef, FromRequest, State};
+
+
+use axum::extract::{FromRef, FromRequest};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
-use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
+
 use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Form, Router, TypedHeader};
-use axum_extra::extract::cookie::{Cookie, Key};
-use axum_extra::extract::PrivateCookieJar;
-use axum_extra::response::Css;
+use axum_extra::extract::cookie::{Key};
+
+
 use catch_panic::CatchPanicLayer;
-use entities::prelude::*;
-use entities::project_history;
+
+
 use error::AppError;
-use futures_async_stream::try_stream;
-use futures_util::future::BoxFuture;
+
+
 use futures_util::{StreamExt, TryStreamExt};
 use handlebars::{
     Context as HandlebarsContext, Handlebars, Helper, HelperResult, Output, RenderContext,
 };
-use html_escape::encode_safe;
+
 use http_body::Limited;
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Method, Request, StatusCode};
 use itertools::Itertools;
-use lightningcss::bundler::{Bundler, FileProvider};
-use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
-use lightningcss::targets::Targets;
-use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
-use oauth2::{PkceCodeVerifier, StandardRevocableToken};
-use openidconnect::core::{
-    CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreClient, CoreGenderClaim,
-    CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
-    CoreJwsSigningAlgorithm, CoreProviderMetadata,
-};
-use openidconnect::reqwest::async_http_client;
-use openidconnect::{
-    AccessTokenHash, AuthorizationCode, Client, ClientId, ClientSecret, EmptyAdditionalClaims,
-    EmptyExtraTokenFields, IdTokenFields, IssuerUrl, Nonce, OAuth2TokenResponse, PkceCodeChallenge,
-    RedirectUrl, RevocationErrorResponseType, Scope, StandardErrorResponse,
-    StandardTokenIntrospectionResponse, StandardTokenResponse, TokenResponse,
-};
-use parcel_sourcemap::SourceMap;
+
+
+
+
+
+
+
+
+
 use pin_project_lite::pin_project;
-use rand::{thread_rng, Rng};
+
 use routes::download::handler;
 use routes::index::index;
 use routes::indexcss::indexcss;
@@ -82,31 +73,31 @@ use routes::openid_login::openid_login;
 use routes::openid_redirect::openid_redirect;
 use routes::projects::create::create;
 use routes::projects::list::list;
-use rustls_pemfile::{certs, ec_private_keys, pkcs8_private_keys};
+use rustls_pemfile::{certs, pkcs8_private_keys};
 use sea_orm::{
-    ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,
+    ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr,
     RuntimeErr, Statement,
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+
 use session::{Session, SessionLayer};
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
-use tokio_util::io::ReaderStream;
+
 use tower::make::MakeService;
-use tower::{Layer, Service, ServiceBuilder};
+use tower::{Layer, ServiceBuilder};
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
+use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::timeout::{
     RequestBodyTimeoutLayer, ResponseBodyTimeoutLayer, TimeoutBody, TimeoutLayer,
 };
-use tower_http::trace::{DefaultMakeSpan, DefaultOnFailure, DefaultOnResponse, TraceLayer};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 
 const DB_NAME: &str = "postgres";
 
@@ -344,8 +335,8 @@ impl Header for XRequestId {
     {
         let value = values
             .exactly_one()
-            .map_err(|e| headers::Error::invalid())?;
-        let value = value.to_str().map_err(|e| headers::Error::invalid())?;
+            .map_err(|_e| headers::Error::invalid())?;
+        let value = value.to_str().map_err(|_e| headers::Error::invalid())?;
         Ok(XRequestId(value.to_string()))
     }
 

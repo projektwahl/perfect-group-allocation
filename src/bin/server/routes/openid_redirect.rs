@@ -12,9 +12,9 @@ use crate::{CreateProjectPayload, CsrfSafeForm, ExtractSession, MyBody, MyState}
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
 pub async fn openid_redirect(
-    State(db): State<DatabaseConnection>,
+    State(_db): State<DatabaseConnection>,
     ExtractSession {
-        extractor: form,
+        extractor: _form,
         session,
     }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppError> {
