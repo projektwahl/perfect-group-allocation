@@ -6,6 +6,9 @@ use axum_extra::extract::PrivateCookieJar;
 use oauth2::PkceCodeVerifier;
 use openidconnect::Nonce;
 use rand::{thread_rng, Rng};
+use tower::{Layer, Service};
+
+use crate::BodyWithSession;
 
 #[derive(Clone)]
 struct SessionLayer {
@@ -29,9 +32,9 @@ struct SessionMiddleware<S> {
     key: Key,
 }
 
-impl<S, ReqBody> Service<Request<ReqBody>> for SessionMiddleware<S>
+impl<S, ReqBody> Service<hyper::Request<ReqBody>> for SessionMiddleware<S>
 where
-    S: Service<Request<BodyWithSession<ReqBody>>, Response = Response> + Send + 'static,
+    S: Service<Request<BodyWithSession<ReqBody>>, Response = hyper::Response> + Send + 'static,
     S::Future: Send + 'static,
 {
     type Error = S::Error;

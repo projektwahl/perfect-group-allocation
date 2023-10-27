@@ -1,6 +1,10 @@
-#![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
+#![warn(
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::cargo,
+    clippy::wildcard_imports
+)]
 #![feature(coroutines)]
-#![feature(type_name_of_val)]
 
 pub mod catch_panic;
 pub mod csrf_protection;
@@ -71,6 +75,7 @@ use openidconnect::{
 use parcel_sourcemap::SourceMap;
 use pin_project_lite::pin_project;
 use rand::{thread_rng, Rng};
+use routes::index::index;
 use rustls_pemfile::{certs, ec_private_keys, pkcs8_private_keys};
 use sea_orm::{
     ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, EntityTrait,

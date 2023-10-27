@@ -1,5 +1,21 @@
-async fn get_openid_client() -> Result<
-    Client<
+use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
+use oauth2::reqwest::async_http_client;
+use oauth2::{
+    ClientId, ClientSecret, EmptyExtraTokenFields, RedirectUrl, RevocationErrorResponseType,
+    StandardErrorResponse, StandardRevocableToken, StandardTokenIntrospectionResponse,
+    StandardTokenResponse,
+};
+use openidconnect::core::{
+    CoreAuthDisplay, CoreAuthPrompt, CoreClient, CoreGenderClaim, CoreJsonWebKey,
+    CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
+    CoreJwsSigningAlgorithm, CoreProviderMetadata,
+};
+use openidconnect::{EmptyAdditionalClaims, IdTokenFields, IssuerUrl};
+
+use crate::error::AppError;
+
+pub async fn get_openid_client() -> Result<
+    openidconnect::Client<
         EmptyAdditionalClaims,
         CoreAuthDisplay,
         CoreGenderClaim,

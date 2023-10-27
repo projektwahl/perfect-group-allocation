@@ -1,5 +1,11 @@
+use axum::extract::State;
+use axum::response::{Html, IntoResponse};
+use handlebars::Handlebars;
+
+use crate::{CreateProject, EmptyBody, ExtractSession, MyBody, MyState};
+
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn index(
+pub async fn index(
     handlebars: State<Handlebars<'static>>,
     ExtractSession {
         extractor: _,

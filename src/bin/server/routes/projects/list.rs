@@ -1,5 +1,18 @@
+use axum::body::StreamBody;
+use axum::extract::State;
+use axum::response::IntoResponse;
+use futures_async_stream::try_stream;
+use handlebars::Handlebars;
+use html_escape::encode_safe;
+use hyper::header;
+use sea_orm::{DatabaseConnection, DbErr};
+use serde_json::json;
+
+use crate::entities::project_history::Entity;
+use crate::{MyBody, MyState, TemplateProject};
+
 #[try_stream(ok = String, error = DbErr)]
-async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'static>) {
+pub async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'static>) {
     let stream = ProjectHistory::find().stream(&db).await.unwrap();
     yield handlebars
         .render("main_pre", &json!({"page_title": "Projects"}))

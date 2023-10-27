@@ -1,5 +1,17 @@
+use anyhow::anyhow;
+use axum::extract::State;
+use axum::response::{IntoResponse, Redirect};
+use oauth2::reqwest::async_http_client;
+use oauth2::AuthorizationCode;
+use openidconnect::AccessTokenHash;
+use sea_orm::DatabaseConnection;
+
+use crate::error::AppError;
+use crate::openid::get_openid_client;
+use crate::{CreateProjectPayload, CsrfSafeForm, ExtractSession, MyBody, MyState};
+
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn openid_redirect(
+pub async fn openid_redirect(
     State(db): State<DatabaseConnection>,
     ExtractSession {
         extractor: form,

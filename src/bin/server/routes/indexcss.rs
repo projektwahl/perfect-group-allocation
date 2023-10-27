@@ -1,5 +1,14 @@
+use std::path::Path;
+
+use axum::response::IntoResponse;
+use axum_extra::response::Css;
+use lightningcss::bundler::{Bundler, FileProvider};
+use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
+use lightningcss::targets::Targets;
+use parcel_sourcemap::SourceMap;
+
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn indexcss() -> impl IntoResponse {
+pub async fn indexcss() -> impl IntoResponse {
     // @import would produce a flash of unstyled content and also is less efficient
     let fs = FileProvider::new();
     let mut bundler = Bundler::new(&fs, None, ParserOptions::default());

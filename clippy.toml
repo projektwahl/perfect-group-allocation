@@ -1,1 +1,2 @@
 avoid-breaking-exported-api = false
+enforced-import-renames = [ { path = "hyper::Request", rename = "HyperRequest" }]

@@ -1,4 +1,4 @@
-use std::any::{type_name_of_val, Any, TypeId};
+use std::any::{Any, TypeId};
 use std::fmt::Debug;
 use std::panic::AssertUnwindSafe;
 use std::task::{Context, Poll};

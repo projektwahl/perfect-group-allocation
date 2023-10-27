@@ -1,5 +1,16 @@
+use axum::extract::State;
+use axum::response::{IntoResponse, Redirect};
+use oauth2::{PkceCodeChallenge, Scope};
+use openidconnect::core::CoreAuthenticationFlow;
+use openidconnect::Nonce;
+use sea_orm::DatabaseConnection;
+
+use crate::error::AppError;
+use crate::openid::get_openid_client;
+use crate::{CreateProjectPayload, CsrfSafeForm, ExtractSession, MyBody, MyState};
+
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn openid_login(
+pub async fn openid_login(
     State(db): State<DatabaseConnection>,
     ExtractSession {
         extractor: form,
