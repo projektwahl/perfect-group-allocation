@@ -1,7 +1,6 @@
 form {
     display: grid;
     max-width: 50em;
-    margin: auto;
 }
 
 label {

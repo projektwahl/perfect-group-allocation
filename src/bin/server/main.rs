@@ -787,6 +787,8 @@ async fn main() -> Result<(), DbErr> {
         .route("/index.css", get(indexcss))
         .route("/list", get(list))
         .route("/download", get(handler))
+        .route("/openidconnect-login", post(openid_login))
+        .route("/openidconnect-redirect", post(openid_redirect))
         .fallback_service(service);
 
     // layers are in reverse order
