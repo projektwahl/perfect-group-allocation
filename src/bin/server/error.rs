@@ -21,7 +21,7 @@ pub enum AppError {
     RequestTokenError(
         #[from]
         RequestTokenError<
-            oauth2::reqwest::Error<reqwest::error::Error>,
+            oauth2::reqwest::Error<reqwest::Error>,
             StandardErrorResponse<BasicErrorResponseType>,
         >,
     ),
