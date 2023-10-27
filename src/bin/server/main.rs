@@ -4,6 +4,7 @@
     clippy::cargo,
     clippy::wildcard_imports
 )]
+#![allow(clippy::missing_errors_doc)]
 #![feature(coroutines)]
 
 pub mod catch_panic;
@@ -37,7 +38,7 @@ use handlebars::Handlebars;
 use http_body::Limited;
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
-use hyper::{header, Method, Request, StatusCode};
+use hyper::{header, Method, StatusCode};
 use itertools::Itertools;
 use pin_project_lite::pin_project;
 use routes::download::handler;
@@ -80,21 +81,21 @@ pub struct ExtractSession<E: CsrfSafeExtractor> {
 }
 
 #[async_trait]
-impl<S, B, T: CsrfSafeExtractor> FromRequest<S, BodyWithSession<B>> for ExtractSession<T>
+impl<S, B, T> FromRequest<S, BodyWithSession<B>> for ExtractSession<T>
 where
     B: Send + 'static,
     S: Send + Sync,
-    T: FromRequest<S, BodyWithSession<B>>,
+    T: CsrfSafeExtractor + FromRequest<S, BodyWithSession<B>>,
 {
     type Rejection = T::Rejection;
 
     async fn from_request(
-        req: Request<BodyWithSession<B>>,
+        req: hyper::Request<BodyWithSession<B>>,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
         let session = body.session.clone();
-        let extractor = T::from_request(Request::from_parts(parts, body), state).await?;
+        let extractor = T::from_request(hyper::Request::from_parts(parts, body), state).await?;
         Ok(Self { extractor, session })
     }
 }
@@ -173,8 +174,8 @@ where
 {
     type Rejection = Infallible;
 
-    async fn from_request(_req: Request<B>, _state: &S) -> Result<Self, Self::Rejection> {
-        Ok(EmptyBody)
+    async fn from_request(_req: hyper::Request<B>, _state: &S) -> Result<Self, Self::Rejection> {
+        Ok(Self)
     }
 }
 
@@ -214,7 +215,7 @@ where
     type Rejection = AppError;
 
     async fn from_request(
-        req: Request<BodyWithSession<B>>,
+        req: hyper::Request<BodyWithSession<B>>,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
@@ -225,7 +226,7 @@ where
 
         let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
 
-        let extractor = Form::<T>::from_request(Request::from_parts(parts, body), state)
+        let extractor = Form::<T>::from_request(hyper::Request::from_parts(parts, body), state)
             .await
             .map_err(AppError::from)?;
 
@@ -309,7 +310,7 @@ impl Header for XRequestId {
             .exactly_one()
             .map_err(|_e| headers::Error::invalid())?;
         let value = value.to_str().map_err(|_e| headers::Error::invalid())?;
-        Ok(XRequestId(value.to_string()))
+        Ok(Self(value.to_string()))
     }
 
     fn encode<E>(&self, values: &mut E)
@@ -335,10 +336,7 @@ async fn handle_error_test(
     )
 }
 
-#[tokio::main]
-async fn main() -> Result<(), DbErr> {
-    tracing_subscriber::fmt::init();
-
+pub async fn get_database_connection() -> Result<DatabaseConnection, DbErr> {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL env must be set");
 
     let db = Database::connect(&database_url).await?;
@@ -377,46 +375,14 @@ async fn main() -> Result<(), DbErr> {
         }
         DbBackend::Sqlite => db,
     };
+    Ok(db)
+}
 
-    // https://github.com/tokio-rs/axum/discussions/236
-
-    // https://github.com/tokio-rs/axum/blob/main/examples/low-level-rustls/src/main.rs
-
-    let rustls_config = rustls_server_config(
-        ".lego/certificates/h3.selfmade4u.de.key",
-        ".lego/certificates/h3.selfmade4u.de.crt",
-    );
-
-    let acceptor = TlsAcceptor::from(rustls_config);
-
-    let listener = TcpListener::bind("127.0.0.1:8443").await.unwrap();
-    let mut listener = AddrIncoming::from_listener(listener).unwrap();
-
-    let http = Http::new();
-
-    let protocol = Arc::new(http);
-
-    let service = ServeDir::new("frontend");
-
-    let mut handlebars = Handlebars::new();
-    handlebars.set_dev_mode(true);
-    handlebars.set_strict_mode(true);
-
-    handlebars
-        .register_templates_directory(".hbs", "./templates/")
-        .unwrap();
-
-    //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let app: Router<MyState, MyBody> = Router::new()
-        .route("/", get(index))
-        .route("/", post(create))
-        .route("/index.css", get(indexcss))
-        .route("/list", get(list))
-        .route("/download", get(handler))
-        .route("/openidconnect-login", post(openid_login))
-        .route("/openidconnect-redirect", post(openid_redirect))
-        .fallback_service(service);
-
+fn layers(
+    app: Router<MyState, MyBody3>,
+    db: DatabaseConnection,
+    handlebars: Handlebars<'static>,
+) -> Router<(), MyBody0> {
     // layers are in reverse order
     let app: Router<MyState, MyBody2> = app.layer(SessionLayer {
         key: Key::generate(),
@@ -485,7 +451,51 @@ async fn main() -> Result<(), DbErr> {
             .layer(CatchPanicLayer),
     );
     let app: Router<(), MyBody0> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
+    app
+}
 
+#[tokio::main]
+async fn main() -> Result<(), DbErr> {
+    tracing_subscriber::fmt::init();
+
+    let db = get_database_connection().await?;
+
+    let rustls_config = rustls_server_config(
+        ".lego/certificates/h3.selfmade4u.de.key",
+        ".lego/certificates/h3.selfmade4u.de.crt",
+    );
+
+    let acceptor = TlsAcceptor::from(rustls_config);
+
+    let listener = TcpListener::bind("127.0.0.1:8443").await.unwrap();
+    let mut listener = AddrIncoming::from_listener(listener).unwrap();
+
+    let http = Http::new();
+
+    let protocol = Arc::new(http);
+
+    let service = ServeDir::new("frontend");
+
+    let mut handlebars = Handlebars::new();
+    handlebars.set_dev_mode(true);
+    handlebars.set_strict_mode(true);
+
+    handlebars
+        .register_templates_directory(".hbs", "./templates/")
+        .unwrap();
+
+    //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
+    let app: Router<MyState, MyBody> = Router::new()
+        .route("/", get(index))
+        .route("/", post(create))
+        .route("/index.css", get(indexcss))
+        .route("/list", get(list))
+        .route("/download", get(handler))
+        .route("/openidconnect-login", post(openid_login))
+        .route("/openidconnect-redirect", post(openid_redirect))
+        .fallback_service(service);
+
+    let app = layers(app, db, handlebars);
     let mut app = app.into_make_service();
 
     loop {
@@ -498,7 +508,7 @@ async fn main() -> Result<(), DbErr> {
 
         let protocol = protocol.clone();
 
-        let svc = MakeService::<_, Request<hyper::Body>>::make_service(&mut app, &stream);
+        let svc = MakeService::<_, hyper::Request<hyper::Body>>::make_service(&mut app, &stream);
 
         tokio::spawn(async move {
             if let Ok(stream) = acceptor.accept(stream).await {
