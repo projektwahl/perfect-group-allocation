@@ -7,7 +7,7 @@ use crate::entities::project_history::{self};
 use crate::error::AppError;
 use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, MyBody, MyState};
 
-#[axum::debug_handler(body=MyBody, state=MyState)]
+#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn create(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,

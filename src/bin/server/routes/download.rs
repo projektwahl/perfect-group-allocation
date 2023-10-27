@@ -5,9 +5,8 @@ use hyper::header;
 use tokio_util::io::ReaderStream;
 
 use crate::error::AppError;
-use crate::{MyBody, MyState};
 
-#[axum::debug_handler(body=MyBody, state=MyState)]
+#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn handler(mut stream: BodyStream) -> Result<impl IntoResponse, AppError> {
     while let Some(_chunk) = stream.try_next().await? {}
     let file = tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")

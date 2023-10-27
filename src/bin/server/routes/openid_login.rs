@@ -9,7 +9,7 @@ use crate::error::AppError;
 use crate::openid::get_openid_client;
 use crate::{CreateProjectPayload, CsrfSafeForm, ExtractSession, MyBody, MyState};
 
-#[axum::debug_handler(body=MyBody, state=MyState)]
+#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_login(
     State(_db): State<DatabaseConnection>,
     ExtractSession {

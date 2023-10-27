@@ -7,7 +7,7 @@ use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
 use parcel_sourcemap::SourceMap;
 
-#[axum::debug_handler(body=MyBody, state=MyState)]
+#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn indexcss() -> impl IntoResponse {
     // @import would produce a flash of unstyled content and also is less efficient
     let fs = FileProvider::new();

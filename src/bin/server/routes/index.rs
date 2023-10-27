@@ -4,7 +4,7 @@ use handlebars::Handlebars;
 
 use crate::{CreateProject, EmptyBody, ExtractSession, MyBody, MyState};
 
-#[axum::debug_handler(body=MyBody, state=MyState)]
+#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn index(
     handlebars: State<Handlebars<'static>>,
     ExtractSession {

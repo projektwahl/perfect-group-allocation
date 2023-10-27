@@ -37,7 +37,7 @@ async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'static>) 
         .unwrap_or_else(|e| e.to_string());
 }
 
-#[axum::debug_handler(body=MyBody, state=MyState)]
+#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn list(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
