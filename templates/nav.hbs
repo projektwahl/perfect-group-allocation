@@ -16,8 +16,10 @@
             <a href="#test">Test</a>
         </li>
         <li>
-            <form method="post" action="/openidconnect-login">
-                <button class="submit-link" type="submit">your button that looks like a link</button>
+            <form method="post" action="/openidconnect-login" enctype="application/x-www-form-urlencoded">
+                <input type="hidden" name="csrf_token" value="{{@root.csrf_token}}">
+
+                <button class="submit-link" type="submit">Login</button>
             </form>
         </li>
     </ul>

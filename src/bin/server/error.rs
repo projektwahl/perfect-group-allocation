@@ -8,15 +8,15 @@ use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
-    #[error("form submission error {0}")]
+    #[error("form submission error: {0}")]
     FormRejection(#[from] FormRejection),
-    #[error("form upload error {0}")]
+    #[error("form upload error: {0}")]
     Multipart(#[from] MultipartError),
-    #[error("webserver error {0}")]
+    #[error("webserver error: {0}")]
     Axum(#[from] axum::Error),
-    #[error("database error {0}")]
+    #[error("database error: {0}")]
     Database(#[from] sea_orm::DbErr),
-    #[error("request token error {0}")]
+    #[error("request token error: {0}")]
     RequestToken(
         #[from]
         RequestTokenError<
@@ -24,15 +24,15 @@ pub enum AppError {
             StandardErrorResponse<BasicErrorResponseType>,
         >,
     ),
-    #[error("claims verification error {0}")]
+    #[error("claims verification error: {0}")]
     ClaimsVerification(#[from] ClaimsVerificationError),
-    #[error("openid signing error {0}")]
+    #[error("openid signing error: {0}")]
     Signing(#[from] SigningError),
-    #[error("oauth error {0}")]
+    #[error("oauth error: {0}")]
     Oauth2Parse(#[from] oauth2::url::ParseError),
-    #[error("discovery error {0}")]
+    #[error("discovery error: {0}")]
     Discovery(#[from] DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>),
-    #[error("unknown error {0}")]
+    #[error("unknown error: {0}")]
     Other(#[from] anyhow::Error),
     #[error("wrong csrf token")]
     WrongCsrfToken,
