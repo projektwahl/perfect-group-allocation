@@ -28,8 +28,8 @@ use axum::http::{self, HeaderName, HeaderValue};
 use axum::response::{Html, IntoResponse, IntoResponseParts, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Form, Router, TypedHeader};
+use axum_extra::extract::PrivateCookieJar;
 use axum_extra::extract::cookie::{Cookie, Key};
-use axum_extra::extract::SignedCookieJar;
 use axum_extra::response::Css;
 use catch_panic::CatchPanicLayer;
 use entities::prelude::*;
@@ -51,7 +51,7 @@ use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
 use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
-use oauth2::StandardRevocableToken;
+use oauth2::{StandardRevocableToken, PkceCodeVerifier};
 use openidconnect::core::{
     CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreClient, CoreGenderClaim,
     CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
@@ -131,7 +131,7 @@ where
 
     fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
         let (parts, body) = request.into_parts();
-        let session = Session::new(SignedCookieJar::from_headers(
+        let session = Session::new(PrivateCookieJar::from_headers(
             &parts.headers,
             self.key.clone(),
         ));
@@ -153,17 +153,17 @@ where
 
 #[derive(Clone)]
 struct Session {
-    signed_cookies: SignedCookieJar,
+    private_cookies: PrivateCookieJar,
 }
 
 impl Session {
-    pub fn new(signed_cookies: SignedCookieJar) -> Self {
-        Self { signed_cookies }
+    pub fn new(private_cookies: PrivateCookieJar) -> Self {
+        Self { private_cookies }
     }
 
     pub fn session_id(&mut self) -> String {
         const COOKIE_NAME: &str = "__Host-session_id";
-        if self.signed_cookies.get(COOKIE_NAME).is_none() {
+        if self.private_cookies.get(COOKIE_NAME).is_none() {
             let rand_string: String = thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(30)
@@ -176,9 +176,9 @@ impl Session {
                 .same_site(axum_extra::extract::cookie::SameSite::Strict)
                 .secure(true)
                 .finish();
-            self.signed_cookies = self.signed_cookies.clone().add(cookie);
+            self.private_cookies = self.private_cookies.clone().add(cookie);
         }
-        self.signed_cookies
+        self.private_cookies
             .get(COOKIE_NAME)
             .map(|c| c.value().to_string())
             .unwrap()
@@ -186,7 +186,7 @@ impl Session {
 
     pub fn csrf_token(&mut self) -> String {
         const COOKIE_NAME: &str = "__Host-csrf_token";
-        if self.signed_cookies.get(COOKIE_NAME).is_none() {
+        if self.private_cookies.get(COOKIE_NAME).is_none() {
             let rand_string: String = thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(30)
@@ -200,10 +200,10 @@ impl Session {
                 .same_site(axum_extra::extract::cookie::SameSite::Strict)
                 .secure(true)
                 .finish();
-            self.signed_cookies = self.signed_cookies.clone().add(cookie);
+            self.private_cookies = self.private_cookies.clone().add(cookie);
         }
         // TODO FIXME unwrap
-        self.signed_cookies
+        self.private_cookies
             .get(COOKIE_NAME)
             .map(|c| c.value().to_string())
             .unwrap()
@@ -248,7 +248,7 @@ impl IntoResponseParts for Session {
         self,
         res: axum::response::ResponseParts,
     ) -> Result<axum::response::ResponseParts, Self::Error> {
-        self.signed_cookies.into_response_parts(res)
+        self.private_cookies.into_response_parts(res)
     }
 }
 
@@ -603,6 +603,9 @@ async fn openid_login(
 ) -> Result<impl IntoResponse, AppError> {
     let client = get_openid_client().await?;
 
+    // Generate a PKCE challenge.
+    let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();.
+
     // Generate the full authorization URL.
     let (auth_url, csrf_token, nonce) = client
         .authorize_url(
@@ -613,6 +616,8 @@ async fn openid_login(
         // Set the desired scopes.
         .add_scope(Scope::new("read".to_string()))
         .add_scope(Scope::new("write".to_string()))
+        // Set the PKCE code challenge.
+        .set_pkce_challenge(pkce_challenge)
         .url();
 
     // This is the URL you should redirect the user to, in order to trigger the authorization
@@ -641,6 +646,7 @@ async fn openid_redirect(
             "some authorization code".to_string(),
         ))
         // Set the PKCE code verifier.
+        .set_pkce_verifier(pkce_verifier)
         .request_async(async_http_client)
         .await?;
 
