@@ -4,6 +4,7 @@ use axum::response::IntoResponse;
 use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
+use openidconnect::{ClaimsVerificationError, SigningError};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
@@ -15,7 +16,7 @@ pub enum AppError {
     Axum(#[from] axum::Error),
     #[error("database error {0}")]
     Database(#[from] sea_orm::DbErr),
-    #[error("request token error")]
+    #[error("request token error {0}")]
     RequestToken(
         #[from]
         RequestTokenError<
@@ -23,6 +24,10 @@ pub enum AppError {
             StandardErrorResponse<BasicErrorResponseType>,
         >,
     ),
+    #[error("claims verification error {0}")]
+    ClaimsVerification(#[from] ClaimsVerificationError),
+    #[error("openid signing error {0}")]
+    Signing(#[from] SigningError),
     #[error("unknown error {0}")]
     Other(#[from] anyhow::Error),
     #[error("wrong csrf token")]
@@ -38,6 +43,8 @@ impl IntoResponse for AppError {
             | AppError::Axum(_)
             | AppError::Database(_)
             | AppError::RequestToken(_)
+            | AppError::ClaimsVerification(_)
+            | AppError::Signing(_)
             | AppError::Other(_)) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Something went wrong: {}", err),

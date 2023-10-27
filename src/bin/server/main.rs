@@ -534,8 +534,6 @@ async fn openid_login(
     // Generate a PKCE challenge.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
-    session.lock().await.set_pkce_verifier(&pkce_verifier);
-
     // Generate the full authorization URL.
     let (auth_url, csrf_token, nonce) = client
         .authorize_url(
@@ -549,6 +547,11 @@ async fn openid_login(
         // Set the PKCE code challenge.
         .set_pkce_challenge(pkce_challenge)
         .url();
+
+    let mut session = session.lock().await;
+
+    session.set_openid_pkce_verifier(&pkce_verifier);
+    session.set_openid_nonce(&nonce);
 
     // This is the URL you should redirect the user to, in order to trigger the authorization
     // process.
@@ -570,7 +573,10 @@ async fn openid_redirect(
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
 
-    let pkce_verifier = session.lock().await.pkce_verifier();
+    let session = session.lock().await;
+
+    let pkce_verifier = session.openid_pkce_verifier();
+    let nonce = session.openid_nonce();
 
     // Now you can exchange it for an access token and ID token.
     let token_response = client
@@ -594,7 +600,7 @@ async fn openid_redirect(
         let actual_access_token_hash =
             AccessTokenHash::from_token(token_response.access_token(), &id_token.signing_alg()?)?;
         if actual_access_token_hash != *expected_access_token_hash {
-            return Err(anyhow!("Invalid access token"));
+            Err(anyhow!("Invalid access token"))?;
         }
     }
 
