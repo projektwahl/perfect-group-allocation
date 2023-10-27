@@ -603,9 +603,6 @@ async fn openid_login(
 ) -> Result<impl IntoResponse, AppError> {
     let client = get_openid_client().await?;
 
-    // Generate a PKCE challenge.
-    let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-
     // Generate the full authorization URL.
     let (auth_url, csrf_token, nonce) = client
         .authorize_url(
@@ -616,8 +613,6 @@ async fn openid_login(
         // Set the desired scopes.
         .add_scope(Scope::new("read".to_string()))
         .add_scope(Scope::new("write".to_string()))
-        // Set the PKCE code challenge.
-        .set_pkce_challenge(pkce_challenge)
         .url();
 
     // This is the URL you should redirect the user to, in order to trigger the authorization
@@ -646,7 +641,6 @@ async fn openid_redirect(
             "some authorization code".to_string(),
         ))
         // Set the PKCE code verifier.
-        .set_pkce_verifier(pkce_verifier)
         .request_async(async_http_client)
         .await?;
 
