@@ -15,16 +15,16 @@ pub enum AppError {
     Axum(#[from] axum::Error),
     #[error("database error {0}")]
     Database(#[from] sea_orm::DbErr),
-    #[error("unknown error {0}")]
-    Other(#[from] anyhow::Error),
     #[error("request token error")]
-    RequestTokenError(
+    RequestToken(
         #[from]
         RequestTokenError<
             oauth2::reqwest::Error<reqwest::Error>,
             StandardErrorResponse<BasicErrorResponseType>,
         >,
     ),
+    #[error("unknown error {0}")]
+    Other(#[from] anyhow::Error),
     #[error("wrong csrf token")]
     WrongCsrfToken,
 }
@@ -37,6 +37,7 @@ impl IntoResponse for AppError {
             | AppError::Multipart(_)
             | AppError::Axum(_)
             | AppError::Database(_)
+            | AppError::RequestToken(_)
             | AppError::Other(_)) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Something went wrong: {}", err),
