@@ -45,7 +45,7 @@ pub async fn get_openid_client() -> Result<
     AppError,
 > {
     let provider_metadata = CoreProviderMetadata::discover_async(
-        IssuerUrl::new("https://accounts.example.com".to_string())?,
+        IssuerUrl::new("http://localhost:8080/realms/pga".to_string())?,
         async_http_client,
     )
     .await?;
@@ -54,10 +54,12 @@ pub async fn get_openid_client() -> Result<
     // and token URL.
     let client = CoreClient::from_provider_metadata(
         provider_metadata,
-        ClientId::new("client_id".to_string()),
-        Some(ClientSecret::new("client_secret".to_string())),
+        ClientId::new("pga".to_string()),
+        Some(ClientSecret::new(
+            "cGRSAwBaSfTENHt7npPrsAfcqqWM1uqU".to_string(),
+        )),
     )
     // Set the URL the user will be redirected to after the authorization process.
-    .set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
+    .set_redirect_uri(RedirectUrl::new("https://localhost:8443/".to_string())?);
     Ok(client)
 }
