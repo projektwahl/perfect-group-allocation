@@ -43,12 +43,15 @@ impl Session {
             .unwrap()
     }
 
-    pub fn set_openid_pkce_verifier(&mut self, verifier: &PkceCodeVerifier) {
-        let cookie = Cookie::build(Self::COOKIE_NAME_PKCE_VERIFIER, verifier.secret())
-            .http_only(true)
-            .same_site(axum_extra::extract::cookie::SameSite::Strict)
-            .secure(true)
-            .finish();
+    pub fn set_openid_pkce_verifier(&mut self, verifier: PkceCodeVerifier) {
+        let cookie = Cookie::build(
+            Self::COOKIE_NAME_PKCE_VERIFIER,
+            verifier.secret().to_owned(),
+        )
+        .http_only(true)
+        .same_site(axum_extra::extract::cookie::SameSite::Strict)
+        .secure(true)
+        .finish();
         self.private_cookies = self.private_cookies.clone().add(cookie);
     }
 
@@ -59,8 +62,8 @@ impl Session {
             .unwrap()
     }
 
-    pub fn set_openid_nonce(&mut self, nonce: &Nonce) {
-        let cookie = Cookie::build(Self::COOKIE_NAME_OPENID_NONCE, nonce.secret())
+    pub fn set_openid_nonce(&mut self, nonce: Nonce) {
+        let cookie = Cookie::build(Self::COOKIE_NAME_OPENID_NONCE, nonce.secret().to_owned())
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Strict)
             .secure(true)

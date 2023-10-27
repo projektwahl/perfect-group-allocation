@@ -550,8 +550,8 @@ async fn openid_login(
 
     let mut session = session.lock().await;
 
-    session.set_openid_pkce_verifier(&pkce_verifier);
-    session.set_openid_nonce(&nonce);
+    session.set_openid_pkce_verifier(pkce_verifier);
+    session.set_openid_nonce(nonce);
 
     // This is the URL you should redirect the user to, in order to trigger the authorization
     // process.

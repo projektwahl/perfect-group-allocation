@@ -4,7 +4,7 @@ use axum::response::IntoResponse;
 use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
-use openidconnect::{ClaimsVerificationError, SigningError};
+use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
@@ -28,6 +28,10 @@ pub enum AppError {
     ClaimsVerification(#[from] ClaimsVerificationError),
     #[error("openid signing error {0}")]
     Signing(#[from] SigningError),
+    #[error("oauth error {0}")]
+    Oauth2Parse(#[from] oauth2::url::ParseError),
+    #[error("discovery error {0}")]
+    Discovery(#[from] DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>),
     #[error("unknown error {0}")]
     Other(#[from] anyhow::Error),
     #[error("wrong csrf token")]
@@ -45,6 +49,8 @@ impl IntoResponse for AppError {
             | AppError::RequestToken(_)
             | AppError::ClaimsVerification(_)
             | AppError::Signing(_)
+            | AppError::Discovery(_)
+            | AppError::Oauth2Parse(_)
             | AppError::Other(_)) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Something went wrong: {}", err),
