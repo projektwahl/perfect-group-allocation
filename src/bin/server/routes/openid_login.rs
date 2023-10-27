@@ -38,12 +38,14 @@ pub async fn openid_login(
 
     let mut session = session.lock().await;
 
-    session.set_openid_pkce_verifier(pkce_verifier);
-    session.set_openid_nonce(nonce);
+    session.set_openid_pkce_verifier(&pkce_verifier);
+    session.set_openid_nonce(&nonce);
+
+    drop(session);
 
     // This is the URL you should redirect the user to, in order to trigger the authorization
     // process.
-    println!("Browse to: {}", auth_url);
+    println!("Browse to: {auth_url}");
 
     Ok(Redirect::to("/list").into_response())
 }

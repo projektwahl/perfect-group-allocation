@@ -24,9 +24,9 @@ pub async fn openid_redirect(
     // parameter returned by the server matches `csrf_state`.
 
     let session = session.lock().await;
-
     let pkce_verifier = session.openid_pkce_verifier();
     let nonce = session.openid_nonce();
+    drop(session);
 
     // Now you can exchange it for an access token and ID token.
     let token_response = client
@@ -61,8 +61,7 @@ pub async fn openid_redirect(
         claims.subject().as_str(),
         claims
             .email()
-            .map(|email| email.as_str())
-            .unwrap_or("<not provided>"),
+            .map_or("<not provided>", |email| email.as_str())
     );
     Ok(Redirect::to("/list").into_response())
 }

@@ -42,22 +42,22 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         match self {
-            err @ (AppError::FormRejection(_)
-            | AppError::Multipart(_)
-            | AppError::Axum(_)
-            | AppError::Database(_)
-            | AppError::RequestToken(_)
-            | AppError::ClaimsVerification(_)
-            | AppError::Signing(_)
-            | AppError::Discovery(_)
-            | AppError::Oauth2Parse(_)
-            | AppError::Other(_)) => (
+            err @ (Self::FormRejection(_)
+            | Self::Multipart(_)
+            | Self::Axum(_)
+            | Self::Database(_)
+            | Self::RequestToken(_)
+            | Self::ClaimsVerification(_)
+            | Self::Signing(_)
+            | Self::Discovery(_)
+            | Self::Oauth2Parse(_)
+            | Self::Other(_)) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Something went wrong: {}", err),
+                format!("Something went wrong: {err}"),
             )
                 .into_response(),
-            err @ AppError::WrongCsrfToken => {
-                (StatusCode::BAD_REQUEST, format!("{}", err)).into_response()
+            err @ Self::WrongCsrfToken => {
+                (StatusCode::BAD_REQUEST, format!("{err}")).into_response()
             }
         }
     }

@@ -6,7 +6,6 @@ use axum::response::{IntoResponse, IntoResponseParts, Response};
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::PrivateCookieJar;
 use futures_util::future::BoxFuture;
-use hyper::Request;
 use oauth2::PkceCodeVerifier;
 use openidconnect::Nonce;
 use rand::{thread_rng, Rng};
@@ -39,7 +38,7 @@ pub struct SessionMiddleware<S> {
 
 impl<S, ReqBody> Service<hyper::Request<ReqBody>> for SessionMiddleware<S>
 where
-    S: Service<Request<BodyWithSession<ReqBody>>, Response = axum::response::Response>
+    S: Service<hyper::Request<BodyWithSession<ReqBody>>, Response = axum::response::Response>
         + Send
         + 'static,
     S::Future: Send + 'static,
@@ -52,14 +51,14 @@ where
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, request: Request<ReqBody>) -> Self::Future {
+    fn call(&mut self, request: hyper::Request<ReqBody>) -> Self::Future {
         let (parts, body) = request.into_parts();
         let session = Session::new(PrivateCookieJar::from_headers(
             &parts.headers,
             self.key.clone(),
         ));
         let session = Arc::new(Mutex::new(session));
-        let future = self.inner.call(Request::from_parts(
+        let future = self.inner.call(hyper::Request::from_parts(
             parts,
             BodyWithSession {
                 session: session.clone(),
@@ -83,7 +82,8 @@ impl Session {
     const COOKIE_NAME_OPENID_NONCE: &'static str = "__Host-openid-nonce";
     const COOKIE_NAME_PKCE_VERIFIER: &'static str = "__Host-openid-pkce-verifier";
 
-    pub fn new(private_cookies: PrivateCookieJar) -> Self {
+    #[must_use]
+    pub const fn new(private_cookies: PrivateCookieJar) -> Self {
         Self { private_cookies }
     }
 
@@ -110,7 +110,7 @@ impl Session {
             .unwrap()
     }
 
-    pub fn set_openid_pkce_verifier(&mut self, verifier: PkceCodeVerifier) {
+    pub fn set_openid_pkce_verifier(&mut self, verifier: &PkceCodeVerifier) {
         let cookie = Cookie::build(
             Self::COOKIE_NAME_PKCE_VERIFIER,
             verifier.secret().to_owned(),
@@ -122,6 +122,7 @@ impl Session {
         self.private_cookies = self.private_cookies.clone().add(cookie);
     }
 
+    #[must_use]
     pub fn openid_pkce_verifier(&self) -> PkceCodeVerifier {
         self.private_cookies
             .get(Self::COOKIE_NAME_PKCE_VERIFIER)
@@ -129,7 +130,7 @@ impl Session {
             .unwrap()
     }
 
-    pub fn set_openid_nonce(&mut self, nonce: Nonce) {
+    pub fn set_openid_nonce(&mut self, nonce: &Nonce) {
         let cookie = Cookie::build(Self::COOKIE_NAME_OPENID_NONCE, nonce.secret().to_owned())
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Strict)
@@ -138,6 +139,7 @@ impl Session {
         self.private_cookies = self.private_cookies.clone().add(cookie);
     }
 
+    #[must_use]
     pub fn openid_nonce(&self) -> Nonce {
         self.private_cookies
             .get(Self::COOKIE_NAME_OPENID_NONCE)
