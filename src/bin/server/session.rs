@@ -1,18 +1,23 @@
 use std::convert::Infallible;
+use std::sync::Arc;
+use std::task::Poll;
 
-use axum::response::IntoResponseParts;
+use axum::response::{IntoResponse, IntoResponseParts, Response};
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::PrivateCookieJar;
+use futures_util::future::BoxFuture;
+use hyper::Request;
 use oauth2::PkceCodeVerifier;
 use openidconnect::Nonce;
 use rand::{thread_rng, Rng};
+use tokio::sync::Mutex;
 use tower::{Layer, Service};
 
 use crate::BodyWithSession;
 
 #[derive(Clone)]
-struct SessionLayer {
-    key: Key,
+pub struct SessionLayer {
+    pub key: Key,
 }
 
 impl<S> Layer<S> for SessionLayer {
@@ -27,21 +32,23 @@ impl<S> Layer<S> for SessionLayer {
 }
 
 #[derive(Clone)]
-struct SessionMiddleware<S> {
+pub struct SessionMiddleware<S> {
     inner: S,
     key: Key,
 }
 
 impl<S, ReqBody> Service<hyper::Request<ReqBody>> for SessionMiddleware<S>
 where
-    S: Service<Request<BodyWithSession<ReqBody>>, Response = hyper::Response> + Send + 'static,
+    S: Service<Request<BodyWithSession<ReqBody>>, Response = axum::response::Response>
+        + Send
+        + 'static,
     S::Future: Send + 'static,
 {
     type Error = S::Error;
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
     type Response = S::Response;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
     }
 

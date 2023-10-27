@@ -1,7 +1,7 @@
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use handlebars::Handlebars;
-use sea_orm::{ActiveValue, DatabaseConnection};
+use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
 
 use crate::entities::project_history::{self, Entity};
 use crate::error::AppError;
@@ -49,7 +49,7 @@ pub async fn create(
         description: ActiveValue::Set(form.value.description.clone()),
         ..Default::default()
     };
-    let _ = ProjectHistory::insert(project).exec(&db).await?;
+    let _ = project_history::Entity::insert(project).exec(&db).await?;
 
     Ok(Redirect::to("/list").into_response())
 }

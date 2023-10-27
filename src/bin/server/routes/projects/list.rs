@@ -2,18 +2,19 @@ use axum::body::StreamBody;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use futures_async_stream::try_stream;
+use futures_util::StreamExt;
 use handlebars::Handlebars;
 use html_escape::encode_safe;
 use hyper::header;
-use sea_orm::{DatabaseConnection, DbErr};
+use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
 
-use crate::entities::project_history::Entity;
+use crate::entities::project_history::{self, Entity};
 use crate::{MyBody, MyState, TemplateProject};
 
 #[try_stream(ok = String, error = DbErr)]
-pub async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'static>) {
-    let stream = ProjectHistory::find().stream(&db).await.unwrap();
+async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'static>) {
+    let stream = project_history::Entity::find().stream(&db).await.unwrap();
     yield handlebars
         .render("main_pre", &json!({"page_title": "Projects"}))
         .unwrap_or_else(|e| e.to_string());
@@ -37,7 +38,7 @@ pub async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'stati
 }
 
 #[axum::debug_handler(body=MyBody, state=MyState)]
-async fn list(
+pub async fn list(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
 ) -> impl IntoResponse {

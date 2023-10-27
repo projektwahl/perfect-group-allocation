@@ -2,8 +2,8 @@ use anyhow::anyhow;
 use axum::extract::State;
 use axum::response::{IntoResponse, Redirect};
 use oauth2::reqwest::async_http_client;
-use oauth2::AuthorizationCode;
-use openidconnect::AccessTokenHash;
+use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
+use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
 use sea_orm::DatabaseConnection;
 
 use crate::error::AppError;
