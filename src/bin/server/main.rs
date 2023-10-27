@@ -4,7 +4,7 @@
     clippy::cargo,
     clippy::wildcard_imports
 )]
-#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 #![feature(coroutines)]
 
 pub mod catch_panic;
@@ -484,7 +484,7 @@ async fn main() -> Result<(), DbErr> {
         .register_templates_directory(".hbs", "./templates/")
         .unwrap();
 
-    //  RUST_LOG=tower_http::trace=TRACE cargo run --bin server
+    // RUST_LOG=tower_http::trace=TRACE cargo run --bin server
     let app: Router<MyState, MyBody> = Router::new()
         .route("/", get(index))
         .route("/", post(create))
