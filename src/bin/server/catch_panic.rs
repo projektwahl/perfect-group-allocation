@@ -1,5 +1,4 @@
-use std::any::{Any};
-
+use std::any::Any;
 use std::panic::AssertUnwindSafe;
 use std::task::{Context, Poll};
 

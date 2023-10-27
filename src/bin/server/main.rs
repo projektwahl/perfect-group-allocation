@@ -22,50 +22,24 @@ use std::io::BufReader;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
-
 use std::time::Duration;
 
-
-
 use axum::error_handling::HandleErrorLayer;
-
-
 use axum::extract::{FromRef, FromRequest};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
-
 use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Form, Router, TypedHeader};
-use axum_extra::extract::cookie::{Key};
-
-
+use axum_extra::extract::cookie::Key;
 use catch_panic::CatchPanicLayer;
-
-
 use error::AppError;
-
-
-use futures_util::{StreamExt, TryStreamExt};
-use handlebars::{
-    Context as HandlebarsContext, Handlebars, Helper, HelperResult, Output, RenderContext,
-};
-
+use handlebars::Handlebars;
 use http_body::Limited;
 use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Method, Request, StatusCode};
 use itertools::Itertools;
-
-
-
-
-
-
-
-
-
 use pin_project_lite::pin_project;
-
 use routes::download::handler;
 use routes::index::index;
 use routes::indexcss::indexcss;
@@ -75,20 +49,17 @@ use routes::projects::create::create;
 use routes::projects::list::list;
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use sea_orm::{
-    ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr,
-    RuntimeErr, Statement,
+    ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, RuntimeErr, Statement,
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-
 use session::{Session, SessionLayer};
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
-
 use tower::make::MakeService;
-use tower::{Layer, ServiceBuilder};
+use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
@@ -101,9 +72,9 @@ use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 
 const DB_NAME: &str = "postgres";
 
-trait CsrfSafeExtractor {}
+pub trait CsrfSafeExtractor {}
 
-struct ExtractSession<E: CsrfSafeExtractor> {
+pub struct ExtractSession<E: CsrfSafeExtractor> {
     extractor: E,
     session: Arc<Mutex<Session>>,
 }
@@ -210,7 +181,7 @@ where
 impl CsrfSafeExtractor for EmptyBody {}
 
 #[derive(Deserialize)]
-struct CreateProjectPayload {
+pub struct CreateProjectPayload {
     csrf_token: String,
     title: String,
     description: String,
@@ -222,12 +193,12 @@ impl CsrfToken for CreateProjectPayload {
     }
 }
 
-trait CsrfToken {
+pub trait CsrfToken {
     fn csrf_token(&self) -> String;
 }
 
 #[derive(Deserialize)]
-struct CsrfSafeForm<T: CsrfToken> {
+pub struct CsrfSafeForm<T: CsrfToken> {
     value: T,
 }
 
@@ -295,7 +266,7 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
 }
 
 // maybe not per request csrf but per form a different csrf token that is only valid for the form as defense in depth.
-
+/*
 fn csrf_helper(
     h: &Helper<'_, '_>,
     _hb: &Handlebars<'_>,
@@ -315,6 +286,7 @@ fn csrf_helper(
     out.write(param.to_uppercase().as_ref())?;
     Ok(())
 }
+*/
 
 // https://github.com/sunng87/handlebars-rust/tree/master/src/helpers
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
