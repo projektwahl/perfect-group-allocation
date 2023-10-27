@@ -10,7 +10,7 @@ use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
 
 use crate::entities::project_history::{self};
-use crate::{MyBody, MyState, TemplateProject};
+use crate::{TemplateProject};
 
 #[try_stream(ok = String, error = DbErr)]
 async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'static>) {

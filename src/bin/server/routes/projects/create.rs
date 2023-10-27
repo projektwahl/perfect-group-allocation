@@ -5,7 +5,7 @@ use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
 
 use crate::entities::project_history::{self};
 use crate::error::AppError;
-use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, MyBody, MyState};
+use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn create(

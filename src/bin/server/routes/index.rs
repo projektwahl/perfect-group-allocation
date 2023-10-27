@@ -2,7 +2,7 @@ use axum::extract::State;
 use axum::response::{Html, IntoResponse};
 use handlebars::Handlebars;
 
-use crate::{CreateProject, EmptyBody, ExtractSession, MyBody, MyState};
+use crate::{CreateProject, EmptyBody, ExtractSession};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn index(

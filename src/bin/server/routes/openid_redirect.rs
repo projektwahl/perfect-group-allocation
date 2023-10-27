@@ -8,7 +8,7 @@ use sea_orm::DatabaseConnection;
 
 use crate::error::AppError;
 use crate::openid::get_openid_client;
-use crate::{CreateProjectPayload, CsrfSafeForm, ExtractSession, MyBody, MyState};
+use crate::{CreateProjectPayload, CsrfSafeForm, ExtractSession};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
