@@ -55,9 +55,5 @@ pub async fn openid_login(
 
     drop(session);
 
-    // This is the URL you should redirect the user to, in order to trigger the authorization
-    // process.
-    println!("Browse to: {auth_url}");
-
-    Ok(Redirect::to("/list").into_response())
+    Ok(Redirect::to(auth_url.as_str()).into_response())
 }
