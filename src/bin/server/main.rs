@@ -66,7 +66,6 @@
     clippy::same_name_method,
     clippy::semicolon_inside_block,
     clippy::shadow_unrelated,
-    clippy::single_char_lifetime_names,
     clippy::std_instead_of_alloc,
     clippy::std_instead_of_core,
     clippy::str_to_string,
@@ -186,7 +185,7 @@ where
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
-        let session = body.session.clone();
+        let session = Arc::clone(&body.session);
         let extractor = T::from_request(hyper::Request::from_parts(parts, body), state).await?;
         Ok(Self { extractor, session })
     }
@@ -314,7 +313,7 @@ where
         let request_id = parts
             .extract::<TypedHeader<XRequestId>>()
             .await
-            .map_or("unknown".to_string(), |h| h.0.0);
+            .map_or("unknown-request-id".to_owned(), |header| header.0.0);
         let handlebars = match parts
             .extract_with_state::<State<Arc<Handlebars<'static>>>, MyState>(state)
             .await
@@ -424,7 +423,7 @@ impl Header for XRequestId {
             .exactly_one()
             .map_err(|_e| headers::Error::invalid())?;
         let value = value.to_str().map_err(|_e| headers::Error::invalid())?;
-        Ok(Self(value.to_string()))
+        Ok(Self(value.to_owned()))
     }
 
     fn encode<E>(&self, values: &mut E)
@@ -446,7 +445,7 @@ async fn handle_error_test(
         // intentionally not using handlebars etc to reduce amount of potentially broken code executed here
         format!(
             "Unhandled internal error for request {}: {:?}",
-            request_id.map_or("unknown-request-id".to_string(), |h| h.0.0),
+            request_id.map_or("unknown-request-id".to_owned(), |h| h.0.0),
             err
         ),
     )
@@ -482,7 +481,7 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, DbErr> {
                 {
                     // database already exists error
                 }
-                Err(err) => panic!("{}", err),
+                Err(err) => return Err(err),
                 Ok(_) => {}
             }
 
@@ -621,7 +620,7 @@ async fn main() -> Result<(), DbErr> {
 
         let acceptor = acceptor.clone();
 
-        let protocol = protocol.clone();
+        let protocol = Arc::clone(&protocol);
 
         let svc = MakeService::<_, hyper::Request<hyper::Body>>::make_service(&mut app, &stream);
 

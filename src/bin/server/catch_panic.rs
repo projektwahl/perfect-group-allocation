@@ -58,13 +58,13 @@ where
     // TODO FIXME maybe we could return an Err here, then let it get traced, then convert to 500
     fn call(&mut self, request: axum::http::Request<axum::body::Body>) -> Self::Future {
         let request_id = request.headers().get("x-request-id").map_or_else(
-            || String::from("hi"),
-            |h| h.to_str().unwrap_or_default().to_string(),
+            || String::from("unknown-request-id"),
+            |header| header.to_str().unwrap_or_default().to_owned(),
         );
         let Ok(future) = std::panic::catch_unwind(AssertUnwindSafe(|| self.inner.call(request)))
         else {
             return Box::pin(async move {
-                let text_plain: HeaderValue = HeaderValue::from_static("text/plain; charset=utf-8");
+                let text_plain = HeaderValue::from_static("text/plain; charset=utf-8");
 
                 let mut res = Response::new(Full::from(format!(
                     "an unexpected internal error occured. to report this error, specify the \

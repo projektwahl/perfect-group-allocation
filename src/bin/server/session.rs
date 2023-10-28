@@ -131,7 +131,6 @@ impl Session {
         Ok(())
     }
 
-    #[must_use]
     pub fn get_openidconnect(
         &self,
     ) -> Result<(PkceCodeVerifier, Nonce, oauth2::CsrfToken), AppError> {
