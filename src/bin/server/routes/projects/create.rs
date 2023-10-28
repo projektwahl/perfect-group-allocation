@@ -4,9 +4,9 @@ use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum::TypedHeader;
 use handlebars::Handlebars;
-use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
+use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
 
-use crate::entities::project_history::{self};
+use crate::entities::project_history::{self, ActiveModel};
 use crate::error::AppErrorWithMetadata;
 use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, XRequestId};
 
@@ -28,11 +28,11 @@ pub async fn create(
         let mut description_error = None;
 
         if form.value.title.is_empty() {
-            title_error = Some("title must not be empty".to_string());
+            title_error = Some("title must not be empty".to_owned());
         }
 
         if form.value.description.is_empty() {
-            description_error = Some("description must not be empty".to_string());
+            description_error = Some("description must not be empty".to_owned());
         }
 
         if title_error.is_some() || description_error.is_some() {
@@ -47,22 +47,23 @@ pub async fn create(
                         description_error,
                     },
                 )
-                .unwrap_or_else(|e| e.to_string());
+                .unwrap_or_else(|error| error.to_string());
             return Ok(Html(result).into_response());
         }
 
         let project = project_history::ActiveModel {
-            id: ActiveValue::Set(1),
+            id: ActiveValue::Set(1_i32),
             title: ActiveValue::Set(form.value.title.clone()),
             description: ActiveValue::Set(form.value.description.clone()),
             ..Default::default()
         };
-        let _ = project_history::Entity::insert(project).exec(&db).await?;
+        let _unused: InsertResult<ActiveModel> =
+            project_history::Entity::insert(project).exec(&db).await?;
 
         Ok(Redirect::to("/list").into_response())
     };
     match result.await {
-        Ok(v) => Ok(v),
+        Ok(ok) => Ok(ok),
         Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {

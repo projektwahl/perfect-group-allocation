@@ -12,7 +12,7 @@ use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
 
 use crate::csrf_protection::WithCsrfToken;
-use crate::entities::project_history::{self};
+use crate::entities::project_history;
 use crate::{EmptyBody, ExtractSession, TemplateProject};
 
 #[try_stream(ok = String, error = DbErr)]
@@ -21,7 +21,7 @@ async fn list_internal(
     handlebars: Arc<Handlebars<'static>>, // TODO FIXME handle WithCsrfToken inside
     csrf_token: String,
 ) {
-    let stream = project_history::Entity::find().stream(&db).await.unwrap();
+    let stream = project_history::Entity::find().stream(&db).await?;
     yield handlebars
         .render(
             "main_pre",
@@ -30,7 +30,7 @@ async fn list_internal(
                 inner: json!({"page_title": "Projects"}),
             },
         )
-        .unwrap_or_else(|e| e.to_string());
+        .unwrap_or_else(|render_error| render_error.to_string());
     #[for_await]
     for x in stream {
         let x = x?;
@@ -42,12 +42,12 @@ async fn list_internal(
                     description: x.description,
                 },
             )
-            .unwrap_or_else(|e| e.to_string());
+            .unwrap_or_else(|render_error| render_error.to_string());
         yield result;
     }
     yield handlebars
         .render("main_post", &json!({}))
-        .unwrap_or_else(|e| e.to_string());
+        .unwrap_or_else(|render_error| render_error.to_string());
 }
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
@@ -61,8 +61,11 @@ pub async fn list(
 ) -> impl IntoResponse {
     let session_id = session.lock().await.session_id();
     let stream = list_internal(db, handlebars, session_id).map(|elem| match elem {
-        Err(v) => Ok(format!("<h1>Error {}</h1>", encode_safe(&v.to_string()))),
-        o => o,
+        Err(db_err) => Ok::<String, DbErr>(format!(
+            "<h1>Error {}</h1>",
+            encode_safe(&db_err.to_string())
+        )),
+        Ok::<String, DbErr>(ok) => Ok(ok),
     });
     (
         [(header::CONTENT_TYPE, "text/html")],
