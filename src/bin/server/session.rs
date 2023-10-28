@@ -61,7 +61,7 @@ where
         let future = self.inner.call(hyper::Request::from_parts(
             parts,
             BodyWithSession {
-                session: session.clone(),
+                session: Arc::clone(&session),
                 body,
             },
         ));
@@ -94,7 +94,9 @@ impl Session {
 
     pub fn session_id(&mut self) -> String {
         const COOKIE_NAME: &str = "__Host-session_id";
-        if self.private_cookies.get(COOKIE_NAME).is_none() {
+        if let Some(cookie) = self.private_cookies.get(COOKIE_NAME) {
+            cookie.value().to_owned()
+        } else {
             let rand_string: String = thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(30)
@@ -102,17 +104,14 @@ impl Session {
                 .collect();
 
             let session_id = rand_string;
-            let cookie = Cookie::build(COOKIE_NAME, session_id)
+            let cookie = Cookie::build(COOKIE_NAME, session_id.clone())
                 .http_only(true)
                 .same_site(axum_extra::extract::cookie::SameSite::Strict)
                 .secure(true)
                 .finish();
             self.private_cookies = self.private_cookies.clone().add(cookie);
+            session_id
         }
-        self.private_cookies
-            .get(COOKIE_NAME)
-            .map(|c| c.value().to_string())
-            .unwrap()
     }
 
     pub fn set_openidconnect(&mut self, input: &(&PkceCodeVerifier, &Nonce, &oauth2::CsrfToken)) {
@@ -127,10 +126,11 @@ impl Session {
         self.private_cookies = self.private_cookies.clone().add(cookie);
     }
 
+    #[must_use]
     pub fn get_openidconnect(&self) -> Option<(PkceCodeVerifier, Nonce, oauth2::CsrfToken)> {
         self.private_cookies
             .get(Self::COOKIE_NAME_OPENIDCONNECT)
-            .map(|c| serde_json::from_str(c.value()).unwrap())
+            .map(|cookie| serde_json::from_str(cookie.value()).unwrap())
     }
 }
 
