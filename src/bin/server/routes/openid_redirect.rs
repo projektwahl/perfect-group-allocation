@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 use anyhow::anyhow;
 use axum::extract::State;
@@ -116,7 +116,7 @@ pub async fn openid_redirect(
                         &id_token.signing_alg()?,
                     )?;
                     if actual_access_token_hash != *expected_access_token_hash {
-                        Err(anyhow!("Invalid access token"))?;
+                        return Err(anyhow!("Invalid access token").into());
                     }
                 }
 

@@ -1,6 +1,6 @@
-use std::any::Any;
-use std::panic::AssertUnwindSafe;
-use std::task::Poll;
+use core::any::Any;
+use core::panic::AssertUnwindSafe;
+use core::task::Poll;
 
 use anyhow::anyhow;
 use axum::http::{self, HeaderValue};
@@ -51,8 +51,8 @@ where
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
     type Response = S::Response;
 
-    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx).map_err(std::convert::Into::into)
+    fn poll_ready(&mut self, cx: &mut core::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx).map_err(core::convert::Into::into)
     }
 
     // TODO FIXME maybe we could return an Err here, then let it get traced, then convert to 500
@@ -81,7 +81,7 @@ where
         };
         Box::pin(async move {
             match AssertUnwindSafe(future).catch_unwind().await {
-                Ok(response) => response.map_err(std::convert::Into::into),
+                Ok(response) => response.map_err(core::convert::Into::into),
                 Err(err) => {
                     /*let mut res = Response::new(Full::from(format!(
                         "an unexpected internal error occured. to report this error, specify the \

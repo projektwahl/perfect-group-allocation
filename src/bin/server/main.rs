@@ -106,14 +106,14 @@ pub mod routes;
 pub mod session;
 
 use alloc::borrow::Cow;
-use std::convert::Infallible;
+use core::convert::Infallible;
 use std::fs::File;
-use std::future::poll_fn;
+use core::future::poll_fn;
 use std::io::BufReader;
 use std::path::Path;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::time::Duration;
+use core::pin::Pin;
+use alloc::sync::Arc;
+use core::time::Duration;
 
 use axum::error_handling::HandleErrorLayer;
 use axum::extract::rejection::TypedHeaderRejection;
@@ -210,8 +210,8 @@ where
 
     fn poll_data(
         self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Result<Self::Data, Self::Error>>> {
+        cx: &mut core::task::Context<'_>,
+    ) -> core::task::Poll<Option<Result<Self::Data, Self::Error>>> {
         let this = self.project();
 
         this.body.poll_data(cx)
@@ -219,8 +219,8 @@ where
 
     fn poll_trailers(
         self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Result<Option<hyper::HeaderMap>, Self::Error>> {
+        cx: &mut core::task::Context<'_>,
+    ) -> core::task::Poll<Result<Option<hyper::HeaderMap>, Self::Error>> {
         let this = self.project();
 
         this.body.poll_trailers(cx)
@@ -433,7 +433,7 @@ impl Header for XRequestId {
     {
         let value = HeaderValue::from_str(&self.0).unwrap();
 
-        values.extend(std::iter::once(value));
+        values.extend(core::iter::once(value));
     }
 }
 

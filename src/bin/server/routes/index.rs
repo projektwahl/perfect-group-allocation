@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 use axum::extract::State;
 use axum::response::{Html, IntoResponse};

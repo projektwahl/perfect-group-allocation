@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 use axum::body::StreamBody;
 use axum::extract::State;

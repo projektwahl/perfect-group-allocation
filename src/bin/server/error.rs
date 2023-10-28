@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;

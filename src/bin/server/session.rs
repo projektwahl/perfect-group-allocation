@@ -1,6 +1,6 @@
-use std::convert::Infallible;
-use std::sync::Arc;
-use std::task::Poll;
+use core::convert::Infallible;
+use alloc::sync::Arc;
+use core::task::Poll;
 
 use axum::response::{IntoResponse, IntoResponseParts, Response};
 use axum_extra::extract::cookie::{Cookie, Key};
@@ -47,7 +47,7 @@ where
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
     type Response = S::Response;
 
-    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&mut self, cx: &mut core::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
     }
 
