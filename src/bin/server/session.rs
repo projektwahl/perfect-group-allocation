@@ -1,5 +1,5 @@
-use core::convert::Infallible;
 use alloc::sync::Arc;
+use core::convert::Infallible;
 use core::task::Poll;
 
 use axum::response::{IntoResponse, IntoResponseParts, Response};
@@ -85,9 +85,7 @@ pub struct Session {
 }
 
 impl Session {
-    const COOKIE_NAME_OPENID_CSRF_TOKEN: &'static str = "__Host-openid-csrf-token";
-    const COOKIE_NAME_OPENID_NONCE: &'static str = "__Host-openid-nonce";
-    const COOKIE_NAME_PKCE_VERIFIER: &'static str = "__Host-openid-pkce-verifier";
+    const COOKIE_NAME_OPENIDCONNECT: &'static str = "__Host-openidconnect";
 
     #[must_use]
     pub const fn new(private_cookies: PrivateCookieJar) -> Self {
@@ -117,10 +115,10 @@ impl Session {
             .unwrap()
     }
 
-    pub fn set_openid_pkce_verifier(&mut self, verifier: &PkceCodeVerifier) {
+    pub fn set_openidconnect(&mut self, input: &(&PkceCodeVerifier, &Nonce, &oauth2::CsrfToken)) {
         let cookie = Cookie::build(
-            Self::COOKIE_NAME_PKCE_VERIFIER,
-            verifier.secret().to_owned(),
+            Self::COOKIE_NAME_OPENIDCONNECT,
+            serde_json::to_string(input).unwrap(),
         )
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Strict)
@@ -129,48 +127,10 @@ impl Session {
         self.private_cookies = self.private_cookies.clone().add(cookie);
     }
 
-    #[must_use]
-    pub fn openid_pkce_verifier(&self) -> PkceCodeVerifier {
+    pub fn get_openidconnect(&self) -> Option<(PkceCodeVerifier, Nonce, oauth2::CsrfToken)> {
         self.private_cookies
-            .get(Self::COOKIE_NAME_PKCE_VERIFIER)
-            .map(|c| PkceCodeVerifier::new(c.value().to_string()))
-            .unwrap()
-    }
-
-    pub fn set_openid_nonce(&mut self, nonce: &Nonce) {
-        let cookie = Cookie::build(Self::COOKIE_NAME_OPENID_NONCE, nonce.secret().to_owned())
-            .http_only(true)
-            .same_site(axum_extra::extract::cookie::SameSite::Strict)
-            .secure(true)
-            .finish();
-        self.private_cookies = self.private_cookies.clone().add(cookie);
-    }
-
-    pub fn set_openid_csrf_token(&mut self, csrf_token: &oauth2::CsrfToken) {
-        let cookie = Cookie::build(
-            Self::COOKIE_NAME_OPENID_CSRF_TOKEN,
-            csrf_token.secret().to_owned(),
-        )
-        .http_only(true)
-        .same_site(axum_extra::extract::cookie::SameSite::Strict)
-        .secure(true)
-        .finish();
-        self.private_cookies = self.private_cookies.clone().add(cookie);
-    }
-
-    #[must_use]
-    pub fn openid_nonce(&self) -> Nonce {
-        self.private_cookies
-            .get(Self::COOKIE_NAME_OPENID_NONCE)
-            .map(|c| Nonce::new(c.value().to_string()))
-            .unwrap()
-    }
-
-    pub fn openid_csrf_token(&self) -> oauth2::CsrfToken {
-        self.private_cookies
-            .get(Self::COOKIE_NAME_OPENID_CSRF_TOKEN)
-            .map(|c| oauth2::CsrfToken::new(c.value().to_string()))
-            .unwrap()
+            .get(Self::COOKIE_NAME_OPENIDCONNECT)
+            .map(|c| serde_json::from_str(c.value()).unwrap())
     }
 }
 
