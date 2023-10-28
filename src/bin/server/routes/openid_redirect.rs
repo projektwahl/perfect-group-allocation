@@ -18,22 +18,26 @@ use crate::{CsrfSafeExtractor, ExtractSession, XRequestId};
 
 #[derive(Deserialize, Serialize)]
 pub struct OpenIdRedirectError {
-    state: String,
     error: String,
     error_description: String,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct OpenIdRedirectSuccess {
-    state: String,
     session_state: String,
     code: String,
 }
 
-// TODO FIXME put common `state` directly into outer struct
+#[derive(Deserialize)]
+pub struct OpenIdRedirect {
+    state: String,
+    #[serde(flatten)]
+    inner: OpenIdRedirectInner,
+}
+
 #[derive(Deserialize)]
 #[serde(untagged)]
-pub enum OpenIdRedirect {
+pub enum OpenIdRedirectInner {
     Success(OpenIdRedirectSuccess),
     Error(OpenIdRedirectError),
 }
@@ -64,15 +68,18 @@ pub async fn openid_redirect(
         let session_lock2 = session.lock().await;
         let (pkce_verifier, nonce, openid_csrf_token) = session_lock2.get_openidconnect()?;
         drop(session_lock2);
+
+        if &form.0.state != openid_csrf_token.secret() {
+            return Err(AppError::WrongCsrfToken);
+        };
+
         // Once the user has been redirected to the redirect URL, you'll have access to the
         // authorization code. For security reasons, your code should verify that the `state`
         // parameter returned by the server matches `csrf_state`.
         let client = get_openid_client().await?;
 
-        match form.0 {
-            OpenIdRedirect::Error(err) => {
-                assert_eq!(&err.state, openid_csrf_token.secret());
-
+        match form.0.inner {
+            OpenIdRedirectInner::Error(err) => {
                 let result = handlebars
                     .render(
                         "openid_redirect",
@@ -85,9 +92,7 @@ pub async fn openid_redirect(
                     .unwrap_or_else(|render_error| render_error.to_string());
                 Ok::<_, AppError>(Html(result).into_response())
             }
-            OpenIdRedirect::Success(ok) => {
-                assert_eq!(&ok.state, openid_csrf_token.secret());
-
+            OpenIdRedirectInner::Success(ok) => {
                 // Now you can exchange it for an access token and ID token.
                 let token_response = client
                     .exchange_code(AuthorizationCode::new(ok.code))
