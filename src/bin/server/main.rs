@@ -68,7 +68,6 @@
     clippy::shadow_unrelated,
     clippy::single_char_lifetime_names,
     clippy::std_instead_of_alloc,
-    clippy::std_instead_of_core,
     clippy::str_to_string,
     clippy::string_lit_chars_any,
     clippy::string_slice,
