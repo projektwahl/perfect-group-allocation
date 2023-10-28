@@ -166,7 +166,6 @@ impl Session {
             .unwrap()
     }
 
-    #[must_use]
     pub fn openid_csrf_token(&self) -> oauth2::CsrfToken {
         self.private_cookies
             .get(Self::COOKIE_NAME_OPENID_CSRF_TOKEN)

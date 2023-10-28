@@ -4,7 +4,6 @@ use anyhow::anyhow;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum::{Form, TypedHeader};
-use futures_util::TryFutureExt;
 use handlebars::Handlebars;
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
@@ -59,8 +58,10 @@ pub async fn openid_redirect(
         session,
     }: ExtractSession<Form<OpenIdRedirect>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
-    let mut session = session.lock().await;
-    let expected_csrf_token = session.session_id();
+    let mut session_lock = session.lock().await;
+    let expected_csrf_token = session_lock.session_id();
+    let openid_csrf_token = session_lock.openid_csrf_token();
+    drop(session_lock);
     let result = async {
         // Once the user has been redirected to the redirect URL, you'll have access to the
         // authorization code. For security reasons, your code should verify that the `state`
@@ -69,17 +70,13 @@ pub async fn openid_redirect(
 
         match form.0 {
             OpenIdRedirect::Error(err) => {
-                let csrf_token = session.session_id();
-                let openid_csrf_token = session.openid_csrf_token();
-                drop(session);
-
                 assert_eq!(&err.state, openid_csrf_token.secret());
 
                 let result = handlebars
                     .render(
                         "openid_redirect",
                         &OpenIdRedirectErrorTemplate {
-                            csrf_token,
+                            csrf_token: expected_csrf_token.clone(),
                             error: err.error,
                             error_description: err.error_description,
                             state: err.state,
@@ -89,10 +86,11 @@ pub async fn openid_redirect(
                 Ok::<_, AppError>(Html(result).into_response())
             }
             OpenIdRedirect::Success(ok) => {
-                let pkce_verifier = session.openid_pkce_verifier();
-                let nonce = session.openid_nonce();
-                let openid_csrf_token = session.openid_csrf_token();
-                drop(session);
+                let session_lock = session.lock().await;
+                let pkce_verifier = session_lock.openid_pkce_verifier();
+                let nonce = session_lock.openid_nonce();
+                let openid_csrf_token = session_lock.openid_csrf_token();
+                drop(session_lock);
 
                 assert_eq!(&ok.state, openid_csrf_token.secret());
 

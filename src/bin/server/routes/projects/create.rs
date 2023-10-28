@@ -3,7 +3,6 @@ use std::sync::Arc;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum::TypedHeader;
-use futures_util::TryFutureExt;
 use handlebars::Handlebars;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
 

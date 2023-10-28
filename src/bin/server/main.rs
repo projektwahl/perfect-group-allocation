@@ -36,7 +36,7 @@ use axum::extract::{FromRef, FromRequest, State};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Form, RequestExt, RequestPartsExt, Router, TypedHeader};
+use axum::{async_trait, BoxError, Form, RequestPartsExt, Router, TypedHeader};
 use axum_extra::extract::cookie::Key;
 use catch_panic::CatchPanicLayer;
 use error::{AppError, AppErrorWithMetadata};

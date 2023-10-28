@@ -16,6 +16,7 @@ pub struct Model {
     pub description: String,
 }
 
+#[allow(clippy::empty_enum)]
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
 

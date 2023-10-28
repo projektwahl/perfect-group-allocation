@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::TypedHeader;
-use futures_util::{TryFutureExt, TryStreamExt};
+use futures_util::TryFutureExt;
 use handlebars::Handlebars;
 use hyper::header;
 use tokio_util::io::ReaderStream;

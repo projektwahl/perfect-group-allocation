@@ -36,8 +36,7 @@ pub async fn openid_login(
         session,
     }: ExtractSession<CsrfSafeForm<OpenIdLoginPayload>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
-    let mut session = session.lock().await;
-    let expected_csrf_token = session.session_id();
+    let expected_csrf_token = session.lock().await.session_id();
     let result = async {
         let client = get_openid_client().await?;
 
@@ -55,23 +54,23 @@ pub async fn openid_login(
             .set_pkce_challenge(pkce_challenge)
             .url();
 
+        let mut session = session.lock().await;
         session.set_openid_pkce_verifier(&pkce_verifier);
         session.set_openid_nonce(&nonce);
         session.set_openid_csrf_token(&csrf_token);
-
         drop(session);
 
         Ok(Redirect::to(auth_url.as_str()).into_response())
     };
     result
-        .or_else(|app_error| async {
+        .map_err(|app_error| {
             // TODO FIXME store request id type-safe in body/session
-            Err(AppErrorWithMetadata {
+            AppErrorWithMetadata {
                 csrf_token: expected_csrf_token.clone(),
                 request_id,
                 handlebars,
                 app_error,
-            })
+            }
         })
         .await
 }
