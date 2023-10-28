@@ -16,7 +16,7 @@ Identity Providers -> Manage display order
 
 DATABASE_URL="sqlite:./sqlite.db?mode=rwc" sea-orm-cli migrate refresh
 sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -w src -x 'run --release --bin server'
+DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -w src -x 'run --bin server'
 
 https://lightningcss.dev/docs.html
 

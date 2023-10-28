@@ -26,8 +26,7 @@ pub async fn handler(
     let result = async {
         let file =
             tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
-                .await
-                .unwrap();
+                .await?;
         let stream = ReaderStream::new(file);
         let body = hyper::Body::wrap_stream(stream);
 

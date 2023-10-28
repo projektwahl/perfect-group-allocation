@@ -36,6 +36,12 @@ pub enum AppError {
     Oauth2Parse(#[from] oauth2::url::ParseError),
     #[error("discovery error: {0}")]
     Discovery(#[from] DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>),
+    #[error("IO error: {0}")]
+    File(#[from] std::io::Error),
+    #[error("bundling error: {0}")]
+    Bundling(#[from] lightningcss::error::Error<String>),
+    #[error("bundling error type 2: {0}")]
+    Bundling2(#[from] lightningcss::error::Error<lightningcss::error::PrinterErrorKind>),
     #[error("unknown error: {0}")]
     Other(#[from] anyhow::Error),
     #[error("wrong csrf token")]
@@ -68,6 +74,9 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::Signing(_)
             | AppError::Discovery(_)
             | AppError::Oauth2Parse(_)
+            | AppError::File(_)
+            | AppError::Bundling(_)
+            | AppError::Bundling2(_)
             | AppError::Other(_)) => {
                 let result = self
                     .handlebars

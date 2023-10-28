@@ -9,10 +9,7 @@ use crate::{CreateProject, EmptyBody, ExtractSession};
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn index(
     State(handlebars): State<Arc<Handlebars<'static>>>,
-    ExtractSession {
-        extractor: _,
-        session,
-    }: ExtractSession<EmptyBody>,
+    ExtractSession { session, .. }: ExtractSession<EmptyBody>,
 ) -> impl IntoResponse {
     let result = handlebars
         .render(
@@ -25,6 +22,6 @@ pub async fn index(
                 description_error: None,
             },
         )
-        .unwrap_or_else(|e| e.to_string());
+        .unwrap_or_else(|render_error| render_error.to_string());
     Html(result)
 }
