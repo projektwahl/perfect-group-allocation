@@ -42,12 +42,18 @@ pub enum AppError {
     Bundling(#[from] lightningcss::error::Error<String>),
     #[error("bundling error type 2: {0}")]
     Bundling2(#[from] lightningcss::error::Error<lightningcss::error::PrinterErrorKind>),
-    #[error("json error {0}")]
+    #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("webserver error: {0}")]
+    Hyper(#[from] hyper::Error),
+    #[error("template error: {0}")]
+    Template(#[from] Box<handlebars::TemplateError>),
     #[error("unknown error: {0}")]
     Other(#[from] anyhow::Error),
     #[error("wrong csrf token")]
     WrongCsrfToken,
+    #[error("no accept remaining")]
+    NoAcceptRemaining,
     #[error(
         "Höchstwahrscheinlich ist deine Anmeldesession abgelaufen und du musst es erneut \
          versuchen. Wenn dies wieder auftritt, melde das Problem bitte an einen \
@@ -86,7 +92,10 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::Bundling(_)
             | AppError::Bundling2(_)
             | AppError::Json(_)
+            | AppError::Hyper(_)
+            | AppError::Template(_)
             | AppError::OpenIdTokenNotFound
+            | AppError::NoAcceptRemaining
             | AppError::Other(_)) => {
                 let result = self
                     .handlebars

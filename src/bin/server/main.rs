@@ -357,9 +357,12 @@ where
 impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
 
 // TODO rtt0
-fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<ServerConfig> {
-    let mut key_reader = BufReader::new(File::open(key).unwrap());
-    let mut cert_reader = BufReader::new(File::open(cert).unwrap());
+fn rustls_server_config(
+    key: impl AsRef<Path>,
+    cert: impl AsRef<Path>,
+) -> Result<Arc<ServerConfig>, std::io::Error> {
+    let mut key_reader = BufReader::new(File::open(key)?);
+    let mut cert_reader = BufReader::new(File::open(cert)?);
 
     let key = PrivateKey(pkcs8_private_keys(&mut key_reader).unwrap().remove(0));
     let certs = certs(&mut cert_reader)
@@ -376,7 +379,7 @@ fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Arc<Se
 
     config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
 
-    Arc::new(config)
+    Ok(Arc::new(config))
 }
 
 // maybe not per request csrf but per form a different csrf token that is only valid for the form as defense in depth.
@@ -570,7 +573,7 @@ fn layers(
 }
 
 #[tokio::main]
-async fn main() -> Result<(), DbErr> {
+async fn main() -> Result<(), AppError> {
     tracing_subscriber::fmt::init();
 
     let db = get_database_connection().await?;
@@ -578,12 +581,12 @@ async fn main() -> Result<(), DbErr> {
     let rustls_config = rustls_server_config(
         ".lego/certificates/h3.selfmade4u.de.key",
         ".lego/certificates/h3.selfmade4u.de.crt",
-    );
+    )?;
 
     let acceptor = TlsAcceptor::from(rustls_config);
 
-    let listener = TcpListener::bind("127.0.0.1:8443").await.unwrap();
-    let mut listener = AddrIncoming::from_listener(listener).unwrap();
+    let listener = TcpListener::bind("127.0.0.1:8443").await?;
+    let mut listener = AddrIncoming::from_listener(listener)?;
 
     let http = Http::new();
 
@@ -607,7 +610,7 @@ async fn main() -> Result<(), DbErr> {
     handlebars.set_strict_mode(true);
     handlebars
         .register_templates_directory(".hbs", "./templates/")
-        .unwrap();
+        .map_err(Box::new)?;
 
     let app = layers(app, db, handlebars);
     let mut app = app.into_make_service();
@@ -615,8 +618,7 @@ async fn main() -> Result<(), DbErr> {
     loop {
         let stream = poll_fn(|cx| Pin::new(&mut listener).poll_accept(cx))
             .await
-            .unwrap()
-            .unwrap();
+            .ok_or(AppError::NoAcceptRemaining)??;
 
         let acceptor = acceptor.clone();
 
