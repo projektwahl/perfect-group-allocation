@@ -105,7 +105,7 @@ mod openid;
 pub mod routes;
 pub mod session;
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 use std::convert::Infallible;
 use std::fs::File;
 use std::future::poll_fn;
