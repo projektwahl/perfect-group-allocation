@@ -2,18 +2,21 @@ use alloc::sync::Arc;
 use core::convert::Infallible;
 use core::task::Poll;
 
+use axum::extract::State;
 use axum::response::{IntoResponse, IntoResponseParts, Response};
+use axum::RequestPartsExt;
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::PrivateCookieJar;
 use futures_util::future::BoxFuture;
+use handlebars::Handlebars;
 use oauth2::PkceCodeVerifier;
 use openidconnect::Nonce;
 use rand::{thread_rng, Rng};
 use tokio::sync::Mutex;
 use tower::{Layer, Service};
 
-use crate::error::AppError;
-use crate::BodyWithSession;
+use crate::error::{AppError, AppErrorWithMetadata};
+use crate::{BodyWithSession, MyState};
 
 #[derive(Clone)]
 pub struct SessionLayer {
@@ -39,16 +42,19 @@ pub struct SessionMiddleware<S> {
 
 impl<S, ReqBody> Service<hyper::Request<ReqBody>> for SessionMiddleware<S>
 where
-    S: Service<hyper::Request<BodyWithSession<ReqBody>>, Response = axum::response::Response>
-        + Send
+    S: Service<
+            hyper::Request<BodyWithSession<ReqBody>>,
+            Response = axum::response::Response,
+            Error = Infallible,
+        > + Send
         + 'static,
     S::Future: Send + 'static,
 {
-    type Error = S::Error;
-    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Error = Infallible;
+    type Future = BoxFuture<'static, Result<Self::Response, Infallible>>;
     type Response = S::Response;
 
-    fn poll_ready(&mut self, cx: &mut core::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&mut self, cx: &mut core::task::Context<'_>) -> Poll<Result<(), Infallible>> {
         self.inner.poll_ready(cx)
     }
 
@@ -69,13 +75,25 @@ where
         Box::pin(async move {
             let response: Response = future.await?;
             // this may not work if you return a streaming response
-            let cookies = Arc::into_inner(session)
-                .expect(
-                    "you still seem to be holding onto the request session somewhere. maybe you \
-                     keep it inside a streaming response?",
-                )
-                .into_inner();
-            Ok((cookies, response).into_response())
+            match Arc::into_inner(session) {
+                Some(cookies) => Ok((cookies.into_inner(), response).into_response()),
+                None => {
+                    let handlebars = match parts
+                        .extract_with_state::<State<Arc<Handlebars<'static>>>, MyState>(state)
+                        .await
+                    {
+                        Ok(State(handlebars)) => handlebars,
+                        Err(infallible) => match infallible {},
+                    };
+                    Ok(AppErrorWithMetadata {
+                        csrf_token: "no-csrf-token".to_string(),
+                        request_id: "no-request-id".to_string(),
+                        handlebars,
+                        app_error: AppError::SessionStillHeld,
+                    }
+                    .into_response())
+                }
+            }
         })
     }
 }

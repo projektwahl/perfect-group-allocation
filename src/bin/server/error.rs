@@ -59,6 +59,11 @@ pub enum AppError {
     #[error("no accept remaining")]
     NoAcceptRemaining,
     #[error(
+        "The request session is still held onto. Maybe you keep it alive inside a streaming \
+         response?"
+    )]
+    SessionStillHeld,
+    #[error(
         "Höchstwahrscheinlich ist deine Anmeldesession abgelaufen und du musst es erneut \
          versuchen. Wenn dies wieder auftritt, melde das Problem bitte an einen \
          Serveradministrator."
@@ -102,6 +107,7 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::Rustls(_)
             | AppError::OpenIdTokenNotFound
             | AppError::NoAcceptRemaining
+            | AppError::SessionStillHeld
             | AppError::Other(_)) => {
                 let result = self
                     .handlebars
