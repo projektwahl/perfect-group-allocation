@@ -59,9 +59,11 @@ pub async fn openid_redirect(
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let mut session_lock = session.lock().await;
     let expected_csrf_token = session_lock.session_id();
+    drop(session_lock);
     let result = async {
-        let (pkce_verifier, nonce, openid_csrf_token) = session_lock.get_openidconnect()?;
-        drop(session_lock);
+        let session_lock2 = session.lock().await;
+        let (pkce_verifier, nonce, openid_csrf_token) = session_lock2.get_openidconnect()?;
+        drop(session_lock2);
         // Once the user has been redirected to the redirect URL, you'll have access to the
         // authorization code. For security reasons, your code should verify that the `state`
         // parameter returned by the server matches `csrf_state`.
@@ -80,7 +82,7 @@ pub async fn openid_redirect(
                             error_description: err.error_description,
                         },
                     )
-                    .unwrap_or_else(|e| e.to_string());
+                    .unwrap_or_else(|render_error| render_error.to_string());
                 Ok::<_, AppError>(Html(result).into_response())
             }
             OpenIdRedirect::Success(ok) => {
@@ -126,7 +128,7 @@ pub async fn openid_redirect(
         }
     };
     match result.await {
-        Ok(v) => Ok(v),
+        Ok(response) => Ok(response),
         Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {

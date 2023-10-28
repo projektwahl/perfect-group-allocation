@@ -98,7 +98,7 @@ impl IntoResponse for AppErrorWithMetadata {
                             error: err.to_string(),
                         },
                     )
-                    .unwrap_or_else(|e| e.to_string());
+                    .unwrap_or_else(|render_error| render_error.to_string());
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Html(result).into_response(),
