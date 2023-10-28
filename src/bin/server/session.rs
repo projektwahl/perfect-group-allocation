@@ -121,7 +121,7 @@ impl Session {
             serde_json::to_string(input).unwrap(),
         )
         .http_only(true)
-        .same_site(axum_extra::extract::cookie::SameSite::Strict)
+        .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
         .secure(true)
         .finish();
         self.private_cookies = self.private_cookies.clone().add(cookie);
