@@ -44,6 +44,7 @@ use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Method, StatusCode};
 use itertools::Itertools;
+use once_cell::sync::Lazy;
 use pin_project_lite::pin_project;
 use routes::download::handler;
 use routes::index::index;
@@ -147,7 +148,7 @@ type MyBody = MyBody3;
 #[derive(Clone, FromRef)]
 struct MyState {
     database: DatabaseConnection,
-    handlebars: Handlebars<'static>,
+    handlebars: Lazy<Handlebars<'static>>,
 }
 
 // https://handlebarsjs.com/api-reference/
@@ -382,11 +383,7 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, DbErr> {
     Ok(db)
 }
 
-fn layers(
-    app: Router<MyState, MyBody3>,
-    db: DatabaseConnection,
-    handlebars: Handlebars<'static>,
-) -> Router<(), MyBody0> {
+fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), MyBody0> {
     // layers are in reverse order
     let app: Router<MyState, MyBody2> = app.layer(SessionLayer {
         key: Key::generate(),
@@ -441,7 +438,7 @@ fn layers(
     ));
     let app: Router<(), MyBody0> = app.with_state(MyState {
         database: db,
-        handlebars,
+        handlebars: HANDLEBARS,
     });
     //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
     let app = app.layer(
@@ -457,6 +454,16 @@ fn layers(
     let app: Router<(), MyBody0> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
     app
 }
+
+static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
+    let mut handlebars = Handlebars::new();
+    handlebars.set_dev_mode(true);
+    handlebars.set_strict_mode(true);
+    handlebars
+        .register_templates_directory(".hbs", "./templates/")
+        .unwrap();
+    handlebars
+});
 
 #[tokio::main]
 async fn main() -> Result<(), DbErr> {
@@ -480,14 +487,6 @@ async fn main() -> Result<(), DbErr> {
 
     let service = ServeDir::new("frontend");
 
-    let mut handlebars = Handlebars::new();
-    handlebars.set_dev_mode(true);
-    handlebars.set_strict_mode(true);
-
-    handlebars
-        .register_templates_directory(".hbs", "./templates/")
-        .unwrap();
-
     // RUST_LOG=tower_http::trace=TRACE cargo run --bin server
     let app: Router<MyState, MyBody> = Router::new()
         .route("/", get(index))
@@ -499,7 +498,7 @@ async fn main() -> Result<(), DbErr> {
         .route("/openidconnect-redirect", get(openid_redirect))
         .fallback_service(service);
 
-    let app = layers(app, db, handlebars);
+    let app = layers(app, db);
     let mut app = app.into_make_service();
 
     loop {

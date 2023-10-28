@@ -1,10 +1,13 @@
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
-use axum::response::IntoResponse;
+use axum::response::{Html, IntoResponse};
 use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
+use serde::Serialize;
+
+use crate::HANDLEBARS;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
@@ -38,6 +41,13 @@ pub enum AppError {
     WrongCsrfToken,
 }
 
+#[derive(Serialize)]
+pub struct ErrorTemplate {
+    csrf_token: String,
+    request_id: String,
+    error: String,
+}
+
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
@@ -51,11 +61,23 @@ impl IntoResponse for AppError {
             | Self::Signing(_)
             | Self::Discovery(_)
             | Self::Oauth2Parse(_)
-            | Self::Other(_)) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Something went wrong: {err}"),
-            )
-                .into_response(),
+            | Self::Other(_)) => {
+                let result = HANDLEBARS
+                    .render(
+                        "error",
+                        &ErrorTemplate {
+                            csrf_token: "jo".to_string(),
+                            request_id: "hi".to_string(),
+                            error: "test".to_string(),
+                        },
+                    )
+                    .unwrap_or_else(|e| e.to_string());
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Html(result).into_response(),
+                )
+                    .into_response()
+            }
             err @ Self::WrongCsrfToken => {
                 (StatusCode::BAD_REQUEST, format!("{err}")).into_response()
             }
