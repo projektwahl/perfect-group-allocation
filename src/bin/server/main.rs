@@ -625,7 +625,7 @@ async fn main() -> Result<(), DbErr> {
 
         tokio::spawn(async move {
             if let Ok(stream) = acceptor.accept(stream).await {
-                let _ = protocol.serve_connection(stream, svc.await.unwrap()).await;
+                let _unused = protocol.serve_connection(stream, svc.await.unwrap()).await;
             }
         });
     }
