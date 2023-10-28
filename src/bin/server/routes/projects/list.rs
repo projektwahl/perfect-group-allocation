@@ -10,9 +10,11 @@ use html_escape::encode_safe;
 use hyper::header;
 use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
+use tokio::sync::Mutex;
 
 use crate::csrf_protection::WithCsrfToken;
 use crate::entities::project_history;
+use crate::session::Session;
 use crate::{EmptyBody, ExtractSession, TemplateProject, HANDLEBARS};
 
 #[try_stream(ok = String, error = DbErr)]
@@ -54,7 +56,9 @@ pub async fn list(
         session,
     }: ExtractSession<EmptyBody>,
 ) -> impl IntoResponse {
-    let session_id = session.lock().await.session_id();
+    let mut session_lock = session.lock().await;
+    let session_id = session_lock.session_id();
+    drop(session_lock);
     let stream = list_internal(db, session_id).map(|elem| match elem {
         Err(db_err) => Ok::<String, DbErr>(format!(
             "<h1>Error {}</h1>",
