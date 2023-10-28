@@ -34,7 +34,7 @@ use axum::extract::{FromRef, FromRequest};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Form, RequestExt, Router, TypedHeader};
+use axum::{async_trait, BoxError, Form, RequestExt, RequestPartsExt, Router, TypedHeader};
 use axum_extra::extract::cookie::Key;
 use catch_panic::CatchPanicLayer;
 use error::{AppError, AppErrorWithMetadata};
@@ -108,6 +108,7 @@ where
 
 pin_project! {
     pub struct BodyWithSession<B> {
+        // TODO FIXME store request id in here and maybe improve storage of session (so no arc exposed to user?)
         session: Arc<Mutex<Session>>,
         #[pin]
         body: B
@@ -224,7 +225,11 @@ where
         req: hyper::Request<BodyWithSession<B>>,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
-        let (parts, body) = req.into_parts();
+        let (mut parts, body) = req.into_parts();
+        let request_id = parts
+            .extract::<TypedHeader<XRequestId>>()
+            .await
+            .map_or("unknown".to_string(), |h| h.0.0);
         let mut session = body.session.lock().await;
         let expected_csrf_token = session.session_id();
         drop(session);
@@ -246,12 +251,9 @@ where
         result
             .or_else(|app_error| async {
                 // TODO FIXME store request id type-safe in body/session
-                let request_id = req
-                    .extract_parts::<TypedHeader<XRequestId>>()
-                    .await
-                    .map_or("unknown".to_string(), |h| h.0.0);
+
                 Err(AppErrorWithMetadata {
-                    csrf_token: expected_csrf_token,
+                    csrf_token: expected_csrf_token.clone(),
                     request_id,
                     app_error,
                 })
