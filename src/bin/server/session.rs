@@ -67,7 +67,13 @@ where
         ));
         Box::pin(async move {
             let response: Response = future.await?;
-            let cookies = Arc::into_inner(session).unwrap().into_inner();
+            // this may not work if you return a streaming response
+            let cookies = Arc::into_inner(session)
+                .expect(
+                    "you still seem to be holding onto the request session somewhere. maybe you \
+                     keep it inside a streaming response?",
+                )
+                .into_inner();
             Ok((cookies, response).into_response())
         })
     }

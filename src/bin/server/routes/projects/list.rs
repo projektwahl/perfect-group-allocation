@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::body::StreamBody;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -9,14 +11,26 @@ use hyper::header;
 use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
 
+use crate::csrf_protection::WithCsrfToken;
 use crate::entities::project_history::{self};
-use crate::{TemplateProject};
+use crate::session::Session;
+use crate::{CsrfSafeForm, EmptyBody, ExtractSession, TemplateProject};
 
 #[try_stream(ok = String, error = DbErr)]
-async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'static>) {
+async fn list_internal(
+    db: DatabaseConnection,
+    handlebars: Handlebars<'static>, // TODO FIXME handle WithCsrfToken inside
+    csrf_token: String,
+) {
     let stream = project_history::Entity::find().stream(&db).await.unwrap();
     yield handlebars
-        .render("main_pre", &json!({"page_title": "Projects"}))
+        .render(
+            "main_pre",
+            &WithCsrfToken {
+                csrf_token: &csrf_token,
+                inner: json!({"page_title": "Projects"}),
+            },
+        )
         .unwrap_or_else(|e| e.to_string());
     #[for_await]
     for x in stream {
@@ -41,8 +55,13 @@ async fn list_internal(db: DatabaseConnection, handlebars: Handlebars<'static>) 
 pub async fn list(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Handlebars<'static>>,
+    ExtractSession {
+        extractor: form,
+        session,
+    }: ExtractSession<EmptyBody>,
 ) -> impl IntoResponse {
-    let stream = list_internal(db, handlebars).map(|elem| match elem {
+    let session_id = session.lock().await.session_id();
+    let stream = list_internal(db, handlebars, session_id).map(|elem| match elem {
         Err(v) => Ok(format!("<h1>Error {}</h1>", encode_safe(&v.to_string()))),
         o => o,
     });
