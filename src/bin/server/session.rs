@@ -12,6 +12,7 @@ use rand::{thread_rng, Rng};
 use tokio::sync::Mutex;
 use tower::{Layer, Service};
 
+use crate::error::AppError;
 use crate::BodyWithSession;
 
 #[derive(Clone)]
@@ -114,23 +115,31 @@ impl Session {
         }
     }
 
-    pub fn set_openidconnect(&mut self, input: &(&PkceCodeVerifier, &Nonce, &oauth2::CsrfToken)) {
+    pub fn set_openidconnect(
+        &mut self,
+        input: &(&PkceCodeVerifier, &Nonce, &oauth2::CsrfToken),
+    ) -> Result<(), AppError> {
         let cookie = Cookie::build(
             Self::COOKIE_NAME_OPENIDCONNECT,
-            serde_json::to_string(input).unwrap(),
+            serde_json::to_string(input)?,
         )
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
         .secure(true)
         .finish();
         self.private_cookies = self.private_cookies.clone().add(cookie);
+        Ok(())
     }
 
     #[must_use]
-    pub fn get_openidconnect(&self) -> Option<(PkceCodeVerifier, Nonce, oauth2::CsrfToken)> {
-        self.private_cookies
+    pub fn get_openidconnect(
+        &self,
+    ) -> Result<(PkceCodeVerifier, Nonce, oauth2::CsrfToken), AppError> {
+        Ok(self
+            .private_cookies
             .get(Self::COOKIE_NAME_OPENIDCONNECT)
-            .map(|cookie| serde_json::from_str(cookie.value()).unwrap())
+            .map(|cookie| serde_json::from_str(cookie.value()))
+            .ok_or(AppError::OpenIdTokenNotFound)??)
     }
 }
 

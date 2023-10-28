@@ -60,24 +60,7 @@ pub async fn openid_redirect(
     let mut session_lock = session.lock().await;
     let expected_csrf_token = session_lock.session_id();
     let result = async {
-        let Some((pkce_verifier, nonce, openid_csrf_token)) = session_lock.get_openidconnect()
-        else {
-            let result = handlebars
-                .render(
-                    "openid_redirect",
-                    &OpenIdRedirectErrorTemplate {
-                        csrf_token: expected_csrf_token.clone(),
-                        error: "Anmeldesession abgelaufen".to_string(),
-                        error_description: "Höchstwahrscheinlich ist deine Anmeldesession \
-                                            abgelaufen und du musst es erneut versuchen. Wenn \
-                                            dies wieder auftritt, melde das Problem bitte an \
-                                            einen Serveradministrator."
-                            .to_string(),
-                    },
-                )
-                .unwrap_or_else(|e| e.to_string());
-            return Ok::<_, AppError>(Html(result).into_response());
-        };
+        let (pkce_verifier, nonce, openid_csrf_token) = session_lock.get_openidconnect()?;
         drop(session_lock);
         // Once the user has been redirected to the redirect URL, you'll have access to the
         // authorization code. For security reasons, your code should verify that the `state`
