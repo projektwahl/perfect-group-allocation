@@ -50,6 +50,10 @@ pub enum AppError {
     Template(#[from] Box<handlebars::TemplateError>),
     #[error("unknown error: {0}")]
     Other(#[from] anyhow::Error),
+    #[error("env var error: {0}")]
+    EnvVar(#[from] std::env::VarError),
+    #[error("rustls error: {0}")]
+    Rustls(#[from] tokio_rustls::rustls::Error),
     #[error("wrong csrf token")]
     WrongCsrfToken,
     #[error("no accept remaining")]
@@ -94,6 +98,8 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::Json(_)
             | AppError::Hyper(_)
             | AppError::Template(_)
+            | AppError::EnvVar(_)
+            | AppError::Rustls(_)
             | AppError::OpenIdTokenNotFound
             | AppError::NoAcceptRemaining
             | AppError::Other(_)) => {

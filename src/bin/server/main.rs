@@ -360,13 +360,12 @@ impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
 fn rustls_server_config(
     key: impl AsRef<Path>,
     cert: impl AsRef<Path>,
-) -> Result<Arc<ServerConfig>, std::io::Error> {
-    let mut key_reader = BufReader::new(File::open(key)?);
+) -> Result<Arc<ServerConfig>, AppError> {
+    let mut key = BufReader::new(File::open(key)?);
     let mut cert_reader = BufReader::new(File::open(cert)?);
 
-    let key = PrivateKey(pkcs8_private_keys(&mut key_reader).unwrap().remove(0));
-    let certs = certs(&mut cert_reader)
-        .unwrap()
+    let key = PrivateKey(pkcs8_private_keys(&mut key)?.remove(0));
+    let certs = certs(&mut cert_reader)?
         .into_iter()
         .map(Certificate)
         .collect();
@@ -374,8 +373,7 @@ fn rustls_server_config(
     let mut config = ServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth()
-        .with_single_cert(certs, key)
-        .expect("bad certificate/key");
+        .with_single_cert(certs, key)?;
 
     config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
 
@@ -448,14 +446,14 @@ async fn handle_error_test(
         // intentionally not using handlebars etc to reduce amount of potentially broken code executed here
         format!(
             "Unhandled internal error for request {}: {:?}",
-            request_id.map_or("unknown-request-id".to_owned(), |h| h.0.0),
+            request_id.map_or("unknown-request-id".to_owned(), |header| header.0.0),
             err
         ),
     )
 }
 
-pub async fn get_database_connection() -> Result<DatabaseConnection, DbErr> {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL env must be set");
+pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
+    let database_url = std::env::var("DATABASE_URL")?;
 
     let db = Database::connect(&database_url).await?;
 
@@ -484,7 +482,7 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, DbErr> {
                 {
                     // database already exists error
                 }
-                Err(err) => return Err(err),
+                Err(err) => return Err(err.into()),
                 Ok(_) => {}
             }
 
