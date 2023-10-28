@@ -10,6 +10,7 @@ use handlebars::Handlebars;
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
+use once_cell::sync::Lazy;
 use parcel_sourcemap::SourceMap;
 
 use crate::error::AppErrorWithMetadata;
@@ -17,7 +18,6 @@ use crate::{EmptyBody, ExtractSession, XRequestId};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn indexcss(
-    State(handlebars): State<Arc<Handlebars<'static>>>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     ExtractSession { session, .. }: ExtractSession<EmptyBody>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
@@ -52,7 +52,6 @@ pub async fn indexcss(
             AppErrorWithMetadata {
                 csrf_token: expected_csrf_token.clone(),
                 request_id,
-                handlebars,
                 app_error,
             }
         })

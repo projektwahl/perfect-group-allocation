@@ -3,15 +3,13 @@ use alloc::sync::Arc;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse};
 use handlebars::Handlebars;
+use once_cell::sync::Lazy;
 
-use crate::{CreateProject, EmptyBody, ExtractSession};
+use crate::{CreateProject, EmptyBody, ExtractSession, HANDLEBARS};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
-pub async fn index(
-    State(handlebars): State<Arc<Handlebars<'static>>>,
-    ExtractSession { session, .. }: ExtractSession<EmptyBody>,
-) -> impl IntoResponse {
-    let result = handlebars
+pub async fn index(ExtractSession { session, .. }: ExtractSession<EmptyBody>) -> impl IntoResponse {
+    let result = HANDLEBARS
         .render(
             "create-project",
             &CreateProject {

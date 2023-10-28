@@ -16,7 +16,7 @@ use tokio::sync::Mutex;
 use tower::{Layer, Service};
 
 use crate::error::{AppError, AppErrorWithMetadata};
-use crate::{BodyWithSession, MyState};
+use crate::{BodyWithSession, MyState, HANDLEBARS};
 
 #[derive(Clone)]
 pub struct SessionLayer {
@@ -77,22 +77,12 @@ where
             // this may not work if you return a streaming response
             match Arc::into_inner(session) {
                 Some(cookies) => Ok((cookies.into_inner(), response).into_response()),
-                None => {
-                    let handlebars = match parts
-                        .extract_with_state::<State<Arc<Handlebars<'static>>>, MyState>(state)
-                        .await
-                    {
-                        Ok(State(handlebars)) => handlebars,
-                        Err(infallible) => match infallible {},
-                    };
-                    Ok(AppErrorWithMetadata {
-                        csrf_token: "no-csrf-token".to_string(),
-                        request_id: "no-request-id".to_string(),
-                        handlebars,
-                        app_error: AppError::SessionStillHeld,
-                    }
-                    .into_response())
+                None => Ok(AppErrorWithMetadata {
+                    csrf_token: "no-csrf-token".to_string(),
+                    request_id: "no-request-id".to_string(),
+                    app_error: AppError::SessionStillHeld,
                 }
+                .into_response()),
             }
         })
     }

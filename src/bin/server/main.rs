@@ -236,7 +236,6 @@ type MyBody = MyBody3;
 #[derive(Clone, FromRef)]
 struct MyState {
     database: DatabaseConnection,
-    handlebars: Arc<Handlebars<'static>>,
 }
 
 // https://handlebarsjs.com/api-reference/
@@ -315,13 +314,6 @@ where
             .extract::<TypedHeader<XRequestId>>()
             .await
             .map_or("unknown-request-id".to_owned(), |header| header.0.0);
-        let handlebars = match parts
-            .extract_with_state::<State<Arc<Handlebars<'static>>>, MyState>(state)
-            .await
-        {
-            Ok(State(handlebars)) => handlebars,
-            Err(infallible) => match infallible {},
-        };
         let mut session = body.session.lock().await;
         let expected_csrf_token = session.session_id();
         drop(session);
@@ -347,7 +339,6 @@ where
                 Err(AppErrorWithMetadata {
                     csrf_token: expected_csrf_token.clone(),
                     request_id,
-                    handlebars,
                     app_error,
                 })
             })
@@ -548,10 +539,7 @@ fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), M
         header::CACHE_CONTROL,
         HeaderValue::from_static("no-cache, no-store, must-revalidate"),
     ));
-    let app: Router<(), MyBody0> = app.with_state(MyState {
-        database: db,
-        handlebars: HANDLEBARS,
-    });
+    let app: Router<(), MyBody0> = app.with_state(MyState { database: db });
     //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
     let app = app.layer(
         ServiceBuilder::new()

@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppErrorWithMetadata};
 use crate::openid::get_openid_client;
-use crate::{CsrfSafeExtractor, ExtractSession, XRequestId};
+use crate::{CsrfSafeExtractor, ExtractSession, XRequestId, HANDLEBARS};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -54,7 +54,6 @@ pub struct OpenIdRedirectErrorTemplate {
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
-    State(handlebars): State<Arc<Handlebars<'static>>>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     ExtractSession {
         extractor: form,
@@ -80,7 +79,7 @@ pub async fn openid_redirect(
 
         match form.0.inner {
             OpenIdRedirectInner::Error(err) => {
-                let result = handlebars
+                let result = HANDLEBARS
                     .render(
                         "openid_redirect",
                         &OpenIdRedirectErrorTemplate {
@@ -139,7 +138,6 @@ pub async fn openid_redirect(
             Err(AppErrorWithMetadata {
                 csrf_token: expected_csrf_token.clone(),
                 request_id,
-                handlebars,
                 app_error,
             })
         }

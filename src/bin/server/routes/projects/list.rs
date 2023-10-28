@@ -13,16 +13,12 @@ use serde_json::json;
 
 use crate::csrf_protection::WithCsrfToken;
 use crate::entities::project_history;
-use crate::{EmptyBody, ExtractSession, TemplateProject};
+use crate::{EmptyBody, ExtractSession, TemplateProject, HANDLEBARS};
 
 #[try_stream(ok = String, error = DbErr)]
-async fn list_internal(
-    db: DatabaseConnection,
-    handlebars: Arc<Handlebars<'static>>, // TODO FIXME handle WithCsrfToken inside
-    csrf_token: String,
-) {
+async fn list_internal(db: DatabaseConnection, csrf_token: String) {
     let stream = project_history::Entity::find().stream(&db).await?;
-    yield handlebars
+    yield HANDLEBARS
         .render(
             "main_pre",
             &WithCsrfToken {
@@ -34,7 +30,7 @@ async fn list_internal(
     #[for_await]
     for x in stream {
         let x = x?;
-        let result = handlebars
+        let result = HANDLEBARS
             .render(
                 "project",
                 &TemplateProject {
@@ -45,7 +41,7 @@ async fn list_internal(
             .unwrap_or_else(|render_error| render_error.to_string());
         yield result;
     }
-    yield handlebars
+    yield HANDLEBARS
         .render("main_post", &json!({}))
         .unwrap_or_else(|render_error| render_error.to_string());
 }
@@ -53,14 +49,13 @@ async fn list_internal(
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn list(
     State(db): State<DatabaseConnection>,
-    State(handlebars): State<Arc<Handlebars<'static>>>,
     ExtractSession {
         extractor: _form,
         session,
     }: ExtractSession<EmptyBody>,
 ) -> impl IntoResponse {
     let session_id = session.lock().await.session_id();
-    let stream = list_internal(db, handlebars, session_id).map(|elem| match elem {
+    let stream = list_internal(db, session_id).map(|elem| match elem {
         Err(db_err) => Ok::<String, DbErr>(format!(
             "<h1>Error {}</h1>",
             encode_safe(&db_err.to_string())

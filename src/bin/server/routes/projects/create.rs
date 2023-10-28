@@ -8,12 +8,13 @@ use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
 
 use crate::entities::project_history::{self, ActiveModel};
 use crate::error::AppErrorWithMetadata;
-use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, XRequestId};
+use crate::{
+    CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, XRequestId, HANDLEBARS,
+};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn create(
     State(db): State<DatabaseConnection>,
-    State(handlebars): State<Arc<Handlebars<'static>>>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     ExtractSession {
         extractor: form,
@@ -36,7 +37,7 @@ pub async fn create(
         }
 
         if title_error.is_some() || description_error.is_some() {
-            let result = handlebars
+            let result = HANDLEBARS
                 .render(
                     "create-project",
                     &CreateProject {
@@ -69,7 +70,6 @@ pub async fn create(
             Err(AppErrorWithMetadata {
                 csrf_token: expected_csrf_token.clone(),
                 request_id,
-                handlebars,
                 app_error,
             })
         }

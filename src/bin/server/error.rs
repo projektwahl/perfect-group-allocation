@@ -7,8 +7,11 @@ use handlebars::Handlebars;
 use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
+use once_cell::sync::Lazy;
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 use serde::Serialize;
+
+use crate::HANDLEBARS;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
@@ -81,7 +84,6 @@ pub struct ErrorTemplate {
 pub struct AppErrorWithMetadata {
     pub csrf_token: String,
     pub request_id: String,
-    pub handlebars: Arc<Handlebars<'static>>,
     pub app_error: AppError,
 }
 
@@ -109,8 +111,7 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::NoAcceptRemaining
             | AppError::SessionStillHeld
             | AppError::Other(_)) => {
-                let result = self
-                    .handlebars
+                let result = HANDLEBARS
                     .render(
                         "error",
                         &ErrorTemplate {
