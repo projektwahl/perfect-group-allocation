@@ -1,4 +1,9 @@
+#![forbid(unsafe_code)]
 #![warn(
+    future_incompatible,
+    let_underscore,
+    nonstandard_style,
+    unused,
     clippy::pedantic,
     clippy::nursery,
     clippy::cargo,
@@ -89,7 +94,6 @@
     clippy::module_name_repetitions
 )]
 #![feature(coroutines)]
-#![feature(never_type, unwrap_infallible)]
 
 pub mod catch_panic;
 pub mod csrf_protection;
