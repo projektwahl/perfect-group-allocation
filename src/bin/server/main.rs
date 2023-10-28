@@ -231,9 +231,8 @@ where
 
         let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
 
-        let extractor = Form::<T>::from_request(hyper::Request::from_parts(parts, body), state)
-            .await
-            .map_err(AppError::from)?;
+        let extractor =
+            Form::<T>::from_request(hyper::Request::from_parts(parts, body), state).await?;
 
         if not_get_or_head {
             let actual_csrf_token = extractor.0.csrf_token();

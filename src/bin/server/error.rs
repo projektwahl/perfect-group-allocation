@@ -7,8 +7,6 @@ use oauth2::{RequestTokenError, StandardErrorResponse};
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 use serde::Serialize;
 
-use crate::HANDLEBARS;
-
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
     #[error("form submission error: {0}")]
