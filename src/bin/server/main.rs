@@ -47,7 +47,6 @@ use hyper::server::accept::Accept;
 use hyper::server::conn::{AddrIncoming, Http};
 use hyper::{header, Method, StatusCode};
 use itertools::Itertools;
-use once_cell::sync::Lazy;
 use pin_project_lite::pin_project;
 use routes::download::handler;
 use routes::index::index;
@@ -71,7 +70,7 @@ use tower::make::MakeService;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use tower_http::request_id::{MakeRequestUuid, RequestId, SetRequestIdLayer};
+use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::timeout::{

@@ -9,12 +9,11 @@ use handlebars::Handlebars;
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
 use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
-use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppErrorWithMetadata};
 use crate::openid::get_openid_client;
-use crate::{CreateProjectPayload, CsrfSafeExtractor, CsrfSafeForm, ExtractSession, XRequestId};
+use crate::{CsrfSafeExtractor, ExtractSession, XRequestId};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 

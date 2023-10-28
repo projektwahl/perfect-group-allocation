@@ -8,7 +8,7 @@ use handlebars::Handlebars;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
 
 use crate::entities::project_history::{self};
-use crate::error::{AppError, AppErrorWithMetadata};
+use crate::error::AppErrorWithMetadata;
 use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, XRequestId};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]

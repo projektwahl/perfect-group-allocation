@@ -5,13 +5,13 @@ use axum::response::{IntoResponse, Redirect};
 use axum::TypedHeader;
 use futures_util::TryFutureExt;
 use handlebars::Handlebars;
-use oauth2::{PkceCodeChallenge, Scope};
+use oauth2::PkceCodeChallenge;
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::Nonce;
 use sea_orm::DatabaseConnection;
 use serde::Deserialize;
 
-use crate::error::{AppError, AppErrorWithMetadata};
+use crate::error::AppErrorWithMetadata;
 use crate::openid::get_openid_client;
 use crate::{CsrfSafeForm, CsrfToken, ExtractSession, XRequestId};
 

@@ -13,8 +13,7 @@ use serde_json::json;
 
 use crate::csrf_protection::WithCsrfToken;
 use crate::entities::project_history::{self};
-use crate::session::Session;
-use crate::{CsrfSafeForm, EmptyBody, ExtractSession, TemplateProject};
+use crate::{EmptyBody, ExtractSession, TemplateProject};
 
 #[try_stream(ok = String, error = DbErr)]
 async fn list_internal(
@@ -56,7 +55,7 @@ pub async fn list(
     State(db): State<DatabaseConnection>,
     State(handlebars): State<Arc<Handlebars<'static>>>,
     ExtractSession {
-        extractor: form,
+        extractor: _form,
         session,
     }: ExtractSession<EmptyBody>,
 ) -> impl IntoResponse {
