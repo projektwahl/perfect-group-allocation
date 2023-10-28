@@ -30,6 +30,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::error_handling::HandleErrorLayer;
+use axum::extract::rejection::TypedHeaderRejection;
 use axum::extract::{FromRef, FromRequest};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
@@ -345,14 +346,15 @@ impl Header for XRequestId {
 }
 
 async fn handle_error_test(
-    TypedHeader(request_id): TypedHeader<XRequestId>,
+    request_id: Result<TypedHeader<XRequestId>, TypedHeaderRejection>,
     err: Box<dyn std::error::Error + Sync + Send + 'static>,
 ) -> (StatusCode, String) {
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         format!(
             "Unhandled internal error for request {} {:?}",
-            request_id.0, err
+            request_id.map_or("unknown-request-id".to_string(), |h| h.0.0),
+            err
         ),
     )
 }
