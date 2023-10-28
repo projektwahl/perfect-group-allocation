@@ -95,6 +95,8 @@
 )]
 #![feature(coroutines)]
 
+extern crate alloc;
+
 pub mod catch_panic;
 pub mod csrf_protection;
 mod entities;
