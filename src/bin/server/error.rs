@@ -1,6 +1,7 @@
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
 use axum::response::{Html, IntoResponse};
+use handlebars::Handlebars;
 use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
@@ -46,27 +47,32 @@ pub struct ErrorTemplate {
     error: String,
 }
 
-/*
-impl IntoResponse for AppError {
+pub struct AppErrorWithMetadata {
+    csrf_token: String,
+    request_id: String,
+    app_error: AppError,
+}
+
+impl IntoResponse for AppErrorWithMetadata {
     fn into_response(self) -> axum::response::Response {
-        match self {
-            err @ (Self::FormRejection(_)
-            | Self::Multipart(_)
-            | Self::Axum(_)
-            | Self::Database(_)
-            | Self::RequestToken(_)
-            | Self::ClaimsVerification(_)
-            | Self::Signing(_)
-            | Self::Discovery(_)
-            | Self::Oauth2Parse(_)
-            | Self::Other(_)) => {
-                let result = HANDLEBARS
+        match self.app_error {
+            err @ (AppError::FormRejection(_)
+            | AppError::Multipart(_)
+            | AppError::Axum(_)
+            | AppError::Database(_)
+            | AppError::RequestToken(_)
+            | AppError::ClaimsVerification(_)
+            | AppError::Signing(_)
+            | AppError::Discovery(_)
+            | AppError::Oauth2Parse(_)
+            | AppError::Other(_)) => {
+                let result = (todo!() as Handlebars<'static>)
                     .render(
                         "error",
                         &ErrorTemplate {
-                            csrf_token: "jo".to_string(),
-                            request_id: "hi".to_string(),
-                            error: "test".to_string(),
+                            csrf_token: self.csrf_token,
+                            request_id: self.request_id,
+                            error: self.app_error.to_string(),
                         },
                     )
                     .unwrap_or_else(|e| e.to_string());
@@ -76,10 +82,9 @@ impl IntoResponse for AppError {
                 )
                     .into_response()
             }
-            err @ Self::WrongCsrfToken => {
+            err @ AppError::WrongCsrfToken => {
                 (StatusCode::BAD_REQUEST, format!("{err}")).into_response()
             }
         }
     }
 }
-*/
