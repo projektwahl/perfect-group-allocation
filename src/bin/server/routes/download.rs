@@ -1,7 +1,10 @@
-use axum::extract::BodyStream;
+use std::sync::Arc;
+
+use axum::extract::{BodyStream, State};
 use axum::response::IntoResponse;
 use axum::TypedHeader;
 use futures_util::{TryFutureExt, TryStreamExt};
+use handlebars::Handlebars;
 use hyper::header;
 use tokio_util::io::ReaderStream;
 
@@ -11,6 +14,7 @@ use crate::{EmptyBody, ExtractSession, XRequestId};
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn handler(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
+    State(handlebars): State<Arc<Handlebars<'static>>>,
     ExtractSession {
         extractor: stream,
         session,
@@ -43,6 +47,7 @@ pub async fn handler(
             Err(AppErrorWithMetadata {
                 csrf_token: expected_csrf_token.clone(),
                 request_id,
+                handlebars,
                 app_error,
             })
         })

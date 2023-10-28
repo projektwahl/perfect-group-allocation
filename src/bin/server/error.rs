@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
 use axum::response::{Html, IntoResponse};
@@ -50,6 +52,7 @@ pub struct ErrorTemplate {
 pub struct AppErrorWithMetadata {
     pub csrf_token: String,
     pub request_id: String,
+    pub handlebars: Arc<Handlebars<'static>>,
     pub app_error: AppError,
 }
 
@@ -66,13 +69,14 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::Discovery(_)
             | AppError::Oauth2Parse(_)
             | AppError::Other(_)) => {
-                let result = (todo!() as Handlebars<'static>)
+                let result = self
+                    .handlebars
                     .render(
                         "error",
                         &ErrorTemplate {
                             csrf_token: self.csrf_token,
                             request_id: self.request_id,
-                            error: self.app_error.to_string(),
+                            error: err.to_string(),
                         },
                     )
                     .unwrap_or_else(|e| e.to_string());

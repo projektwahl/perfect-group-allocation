@@ -10,6 +10,7 @@
     clippy::module_name_repetitions
 )]
 #![feature(coroutines)]
+#![feature(never_type, unwrap_infallible)]
 
 pub mod catch_panic;
 pub mod csrf_protection;
@@ -31,7 +32,7 @@ use std::time::Duration;
 
 use axum::error_handling::HandleErrorLayer;
 use axum::extract::rejection::TypedHeaderRejection;
-use axum::extract::{FromRef, FromRequest};
+use axum::extract::{FromRef, FromRequest, State};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
@@ -151,7 +152,7 @@ type MyBody = MyBody3;
 #[derive(Clone, FromRef)]
 struct MyState {
     database: DatabaseConnection,
-    handlebars: Handlebars<'static>,
+    handlebars: Arc<Handlebars<'static>>,
 }
 
 // https://handlebarsjs.com/api-reference/
@@ -212,25 +213,31 @@ pub struct CsrfSafeForm<T: CsrfToken> {
 }
 
 #[async_trait]
-impl<T, S, B> FromRequest<S, BodyWithSession<B>> for CsrfSafeForm<T>
+impl<T, B> FromRequest<MyState, BodyWithSession<B>> for CsrfSafeForm<T>
 where
     T: DeserializeOwned + CsrfToken,
     B: http_body::Body + Send + 'static,
     B::Data: Send,
     B::Error: Into<BoxError>,
-    S: Send + Sync,
 {
     type Rejection = AppErrorWithMetadata;
 
     async fn from_request(
         req: hyper::Request<BodyWithSession<B>>,
-        state: &S,
+        state: &MyState,
     ) -> Result<Self, Self::Rejection> {
         let (mut parts, body) = req.into_parts();
         let request_id = parts
             .extract::<TypedHeader<XRequestId>>()
             .await
             .map_or("unknown".to_string(), |h| h.0.0);
+        let handlebars = match parts
+            .extract_with_state::<State<Arc<Handlebars<'static>>>, MyState>(state)
+            .await
+        {
+            Ok(State(handlebars)) => handlebars,
+            Err(infallible) => match infallible {},
+        };
         let mut session = body.session.lock().await;
         let expected_csrf_token = session.session_id();
         drop(session);
@@ -256,6 +263,7 @@ where
                 Err(AppErrorWithMetadata {
                     csrf_token: expected_csrf_token.clone(),
                     request_id,
+                    handlebars,
                     app_error,
                 })
             })
@@ -351,8 +359,9 @@ async fn handle_error_test(
 ) -> (StatusCode, String) {
     (
         StatusCode::INTERNAL_SERVER_ERROR,
+        // intentionally not using handlebars etc to reduce amount of potentially broken code executed here
         format!(
-            "Unhandled internal error for request {} {:?}",
+            "Unhandled internal error for request {}: {:?}",
             request_id.map_or("unknown-request-id".to_string(), |h| h.0.0),
             err
         ),
@@ -460,7 +469,7 @@ fn layers(
     ));
     let app: Router<(), MyBody0> = app.with_state(MyState {
         database: db,
-        handlebars,
+        handlebars: Arc::new(handlebars),
     });
     //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
     let app = app.layer(

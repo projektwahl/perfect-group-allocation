@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum::TypedHeader;
@@ -12,7 +14,7 @@ use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, X
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn create(
     State(db): State<DatabaseConnection>,
-    State(handlebars): State<Handlebars<'static>>,
+    State(handlebars): State<Arc<Handlebars<'static>>>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     ExtractSession {
         extractor: form,
@@ -60,14 +62,16 @@ pub async fn create(
 
         Ok(Redirect::to("/list").into_response())
     };
-    result
-        .or_else(|app_error| async {
+    match result.await {
+        Ok(v) => Ok(v),
+        Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {
                 csrf_token: expected_csrf_token.clone(),
                 request_id,
+                handlebars,
                 app_error,
             })
-        })
-        .await
+        }
+    }
 }

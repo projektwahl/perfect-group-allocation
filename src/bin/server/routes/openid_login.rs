@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
 use axum::extract::State;
 use axum::response::{IntoResponse, Redirect};
 use axum::TypedHeader;
 use futures_util::TryFutureExt;
+use handlebars::Handlebars;
 use oauth2::{PkceCodeChallenge, Scope};
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::Nonce;
@@ -26,6 +29,7 @@ impl CsrfToken for OpenIdLoginPayload {
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_login(
     State(_db): State<DatabaseConnection>,
+    State(handlebars): State<Arc<Handlebars<'static>>>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     ExtractSession {
         extractor: _form,
@@ -65,6 +69,7 @@ pub async fn openid_login(
             Err(AppErrorWithMetadata {
                 csrf_token: expected_csrf_token.clone(),
                 request_id,
+                handlebars,
                 app_error,
             })
         })

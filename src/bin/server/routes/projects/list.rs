@@ -19,7 +19,7 @@ use crate::{CsrfSafeForm, EmptyBody, ExtractSession, TemplateProject};
 #[try_stream(ok = String, error = DbErr)]
 async fn list_internal(
     db: DatabaseConnection,
-    handlebars: Handlebars<'static>, // TODO FIXME handle WithCsrfToken inside
+    handlebars: Arc<Handlebars<'static>>, // TODO FIXME handle WithCsrfToken inside
     csrf_token: String,
 ) {
     let stream = project_history::Entity::find().stream(&db).await.unwrap();
@@ -54,7 +54,7 @@ async fn list_internal(
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn list(
     State(db): State<DatabaseConnection>,
-    State(handlebars): State<Handlebars<'static>>,
+    State(handlebars): State<Arc<Handlebars<'static>>>,
     ExtractSession {
         extractor: form,
         session,

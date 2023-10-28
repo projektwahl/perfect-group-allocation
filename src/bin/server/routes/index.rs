@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::State;
 use axum::response::{Html, IntoResponse};
 use handlebars::Handlebars;
@@ -6,7 +8,7 @@ use crate::{CreateProject, EmptyBody, ExtractSession};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn index(
-    handlebars: State<Handlebars<'static>>,
+    State(handlebars): State<Arc<Handlebars<'static>>>,
     ExtractSession {
         extractor: _,
         session,

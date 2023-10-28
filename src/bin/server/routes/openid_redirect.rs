@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
@@ -51,7 +53,7 @@ pub struct OpenIdRedirectErrorTemplate {
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
-    State(handlebars): State<Handlebars<'static>>,
+    State(handlebars): State<Arc<Handlebars<'static>>>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     ExtractSession {
         extractor: form,
@@ -85,7 +87,7 @@ pub async fn openid_redirect(
                         },
                     )
                     .unwrap_or_else(|e| e.to_string());
-                Ok(Html(result).into_response())
+                Ok::<_, AppError>(Html(result).into_response())
             }
             OpenIdRedirect::Success(ok) => {
                 let pkce_verifier = session.openid_pkce_verifier();
@@ -130,18 +132,20 @@ pub async fn openid_redirect(
                         .email()
                         .map_or("<not provided>", |email| email.as_str())
                 );
-                Ok(Redirect::to("/list").into_response())
+                Ok::<_, AppError>(Redirect::to("/list").into_response())
             }
         }
     };
-    result
-        .or_else(|app_error| async {
+    match result.await {
+        Ok(v) => Ok(v),
+        Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {
                 csrf_token: expected_csrf_token.clone(),
                 request_id,
+                handlebars,
                 app_error,
             })
-        })
-        .await
+        }
+    }
 }
