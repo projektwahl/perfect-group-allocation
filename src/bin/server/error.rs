@@ -48,7 +48,7 @@ pub struct ErrorTemplate {
     error: String,
 }
 
-// Tell axum how to convert `AppError` into a response.
+/*
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         match self {
@@ -84,3 +84,4 @@ impl IntoResponse for AppError {
         }
     }
 }
+*/
