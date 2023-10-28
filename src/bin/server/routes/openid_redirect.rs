@@ -9,7 +9,7 @@ use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 
-use crate::error::AppError;
+use crate::error::{AppError, AppErrorWithMetadata};
 use crate::openid::get_openid_client;
 use crate::{CreateProjectPayload, CsrfSafeExtractor, CsrfSafeForm, ExtractSession};
 
@@ -55,7 +55,7 @@ pub async fn openid_redirect(
         extractor: form,
         session,
     }: ExtractSession<Form<OpenIdRedirect>>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.

@@ -34,10 +34,11 @@ use axum::extract::{FromRef, FromRequest};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Form, Router, TypedHeader};
+use axum::{async_trait, BoxError, Form, RequestExt, Router, TypedHeader};
 use axum_extra::extract::cookie::Key;
 use catch_panic::CatchPanicLayer;
-use error::AppError;
+use error::{AppError, AppErrorWithMetadata};
+use futures_util::TryFutureExt;
 use handlebars::Handlebars;
 use http_body::Limited;
 use hyper::server::accept::Accept;
@@ -68,7 +69,7 @@ use tower::make::MakeService;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
+use tower_http::request_id::{MakeRequestUuid, RequestId, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::timeout::{
@@ -217,31 +218,45 @@ where
     B::Error: Into<BoxError>,
     S: Send + Sync,
 {
-    type Rejection = AppError;
+    type Rejection = AppErrorWithMetadata;
 
     async fn from_request(
         req: hyper::Request<BodyWithSession<B>>,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
-
         let mut session = body.session.lock().await;
         let expected_csrf_token = session.session_id();
         drop(session);
-
         let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
 
-        let extractor =
-            Form::<T>::from_request(hyper::Request::from_parts(parts, body), state).await?;
+        let result = async {
+            let extractor =
+                Form::<T>::from_request(hyper::Request::from_parts(parts, body), state).await?;
 
-        if not_get_or_head {
-            let actual_csrf_token = extractor.0.csrf_token();
+            if not_get_or_head {
+                let actual_csrf_token = extractor.0.csrf_token();
 
-            if expected_csrf_token != actual_csrf_token {
-                return Err(AppError::WrongCsrfToken);
+                if expected_csrf_token != actual_csrf_token {
+                    return Err(AppError::WrongCsrfToken);
+                }
             }
-        }
-        Ok(Self { value: extractor.0 })
+            Ok(Self { value: extractor.0 })
+        };
+        result
+            .or_else(|app_error| async {
+                // TODO FIXME store request id type-safe in body/session
+                let request_id = req
+                    .extract_parts::<TypedHeader<XRequestId>>()
+                    .await
+                    .map_or("unknown".to_string(), |h| h.0.0);
+                Err(AppErrorWithMetadata {
+                    csrf_token: expected_csrf_token,
+                    request_id,
+                    app_error,
+                })
+            })
+            .await
     }
 }
 
@@ -297,7 +312,7 @@ fn csrf_helper(
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
 // https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
 
-struct XRequestId(String);
+pub struct XRequestId(String);
 
 static X_REQUEST_ID_HEADER_NAME: HeaderName = http::header::HeaderName::from_static("x-request-id");
 

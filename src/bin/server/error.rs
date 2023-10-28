@@ -48,9 +48,9 @@ pub struct ErrorTemplate {
 }
 
 pub struct AppErrorWithMetadata {
-    csrf_token: String,
-    request_id: String,
-    app_error: AppError,
+    pub csrf_token: String,
+    pub request_id: String,
+    pub app_error: AppError,
 }
 
 impl IntoResponse for AppErrorWithMetadata {
