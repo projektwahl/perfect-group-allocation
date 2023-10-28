@@ -55,9 +55,7 @@ pub async fn openid_login(
             .url();
 
         let mut session = session.lock().await;
-        session.set_openid_pkce_verifier(&pkce_verifier);
-        session.set_openid_nonce(&nonce);
-        session.set_openid_csrf_token(&csrf_token);
+        session.set_openidconnect(&(&pkce_verifier, &nonce, &csrf_token));
         drop(session);
 
         Ok(Redirect::to(auth_url.as_str()).into_response())
