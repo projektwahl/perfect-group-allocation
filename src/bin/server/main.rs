@@ -557,7 +557,13 @@ fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), M
 
 static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
     let mut handlebars = Handlebars::new();
-
+    handlebars.set_dev_mode(true);
+    handlebars.set_strict_mode(true);
+    #[allow(clippy::unwrap_used)]
+    handlebars
+        .register_templates_directory(".hbs", "./templates/")
+        .map_err(Box::new)
+        .unwrap();
     handlebars
 });
 
@@ -593,12 +599,6 @@ async fn main() -> Result<(), AppError> {
         .route("/openidconnect-login", post(openid_login))
         .route("/openidconnect-redirect", get(openid_redirect))
         .fallback_service(service);
-
-    HANDLEBARS.set_dev_mode(true);
-    HANDLEBARS.set_strict_mode(true);
-    HANDLEBARS
-        .register_templates_directory(".hbs", "./templates/")
-        .map_err(Box::new)?;
 
     let app = layers(app, db);
     let mut app = app.into_make_service();

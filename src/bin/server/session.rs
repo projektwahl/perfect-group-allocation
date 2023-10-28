@@ -75,15 +75,18 @@ where
         Box::pin(async move {
             let response: Response = future.await?;
             // this may not work if you return a streaming response
-            match Arc::into_inner(session) {
-                Some(cookies) => Ok((cookies.into_inner(), response).into_response()),
-                None => Ok(AppErrorWithMetadata {
-                    csrf_token: "no-csrf-token".to_string(),
-                    request_id: "no-request-id".to_string(),
-                    app_error: AppError::SessionStillHeld,
-                }
-                .into_response()),
-            }
+            // TODO FIXME retrieve request id and csrf token from session
+            Arc::into_inner(session).map_or_else(
+                || {
+                    Ok(AppErrorWithMetadata {
+                        csrf_token: "no-csrf-token".to_owned(),
+                        request_id: "no-request-id".to_owned(),
+                        app_error: AppError::SessionStillHeld,
+                    }
+                    .into_response())
+                },
+                |cookies| Ok((cookies.into_inner(), response).into_response()),
+            )
         })
     }
 }
