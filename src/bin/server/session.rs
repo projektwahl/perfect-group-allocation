@@ -10,6 +10,7 @@ use axum_extra::extract::PrivateCookieJar;
 use chrono::{DateTime, Utc};
 use futures_util::future::BoxFuture;
 use handlebars::Handlebars;
+use miniserde::Deserialize;
 use oauth2::{PkceCodeVerifier, RefreshToken};
 use openidconnect::{EndUserEmail, Nonce};
 use rand::{thread_rng, Rng};
@@ -95,8 +96,22 @@ pub struct Session {
     private_cookies: PrivateCookieJar,
 }
 
-fn test_to_string(value: &(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>)) -> String {
-    serde_json::to_string(value).unwrap()
+#[derive(miniserde::Serialize)]
+pub struct SessionCookieStrings {
+    email: String,
+    expiration: String,
+    refresh_token: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct SessionCookie {
+    email: EndUserEmail,
+    expiration: DateTime<Utc>,
+    refresh_token: RefreshToken,
+}
+
+fn test_to_string(value: &(String, Option<SessionCookieStrings>)) -> String {
+    miniserde::json::to_string(value)
 }
 
 impl Session {
@@ -108,32 +123,36 @@ impl Session {
         Self { private_cookies }
     }
 
-    pub fn session(&mut self) -> (String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>) {
-        let cookie: Option<(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>)> = self
+    pub fn session(&mut self) -> (String, Option<SessionCookie>) {
+        let cookie: Option<(String, Option<SessionCookie>)> = self
             .private_cookies
             .get(Self::COOKIE_NAME_SESSION)
             .and_then(|cookie| serde_json::from_str(cookie.value()).ok());
         cookie.unwrap_or(self.set_session(None))
     }
 
-    pub fn set_session(
-        &mut self,
-        input: Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>,
-    ) -> (String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>) {
+    pub fn set_session(&mut self, input: Option<SessionCookie>) -> (String, Option<SessionCookie>) {
         let session_id: String = thread_rng()
             .sample_iter(&rand::distributions::Alphanumeric)
             .take(30)
             .map(char::from)
             .collect();
 
-        let value = (session_id, input);
+        let value = (
+            session_id.clone(),
+            input.map(|session_cookie| SessionCookieStrings {
+                email: session_cookie.email.to_string(),
+                expiration: session_cookie.expiration.to_string(),
+                refresh_token: session_cookie.refresh_token.secret().to_string(),
+            }),
+        );
         let cookie = Cookie::build(Self::COOKIE_NAME_SESSION, test_to_string(&value))
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Strict)
             .secure(true)
             .finish();
         self.private_cookies = self.private_cookies.clone().add(cookie);
-        value
+        (session_id, input)
     }
 
     pub fn set_openidconnect(
