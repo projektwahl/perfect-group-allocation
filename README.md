@@ -7,7 +7,16 @@
 3. Low Latency
 4. Low Resource usage on the server
 
+## Profiling
 
+https://valgrind.org/docs/manual/cl-manual.html
+Callgrind
+
+cargo build --target=x86_64-unknown-linux-gnu -Z build-std --release --bin server
+
+DATABASE_URL="sqlite:./sqlite.db?mode=rwc" valgrind --tool=callgrind --collect-atstart=no ./target/x86_64-unknown-linux-gnu/release/server 
+
+kcachegrind callgrind.out.98885
 
 TODO FIXME audit all database queries for race conditions
 or use SERIALIZABLE I think

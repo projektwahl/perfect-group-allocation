@@ -494,7 +494,7 @@ fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), M
     let app: Router<MyState, MyBody2> = app.layer(SessionLayer {
         key: Key::generate(),
     });
-    let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new());
+    //let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
     let app: Router<MyState, MyBody2> =
         app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
     let app: Router<MyState, MyBody1> =
@@ -605,6 +605,9 @@ async fn main() -> Result<(), AppError> {
 
     let app = layers(app, db);
     let mut app = app.into_make_service();
+
+    println!("started!");
+    crabgrind::callgrind::toggle_collect();
 
     loop {
         let stream = poll_fn(|cx| Pin::new(&mut listener).poll_accept(cx))
