@@ -95,7 +95,6 @@ pub struct Session {
     private_cookies: PrivateCookieJar,
 }
 
-#[no_panic::no_panic]
 fn test_to_string(value: &(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>)) -> String {
     serde_json::to_string(value).unwrap()
 }
