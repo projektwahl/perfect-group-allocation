@@ -84,7 +84,7 @@ pub async fn openid_redirect(
         match form.0.inner {
             OpenIdRedirectInner::Error(err) => {
                 let result = render(
-                    session.clone(),
+                    session.lock().unwrap(),
                     "openid_redirect",
                     &OpenIdRedirectErrorTemplate {
                         csrf_token: expected_csrf_token.clone(),

@@ -91,11 +91,6 @@ where
     }
 }
 
-#[derive(Clone)]
-pub struct Session {
-    private_cookies: PrivateCookieJar,
-}
-
 #[derive(miniserde::Serialize)]
 pub struct SessionCookieStrings {
     email: String,
@@ -114,21 +109,35 @@ fn test_to_string(value: &(String, Option<SessionCookieStrings>)) -> String {
     miniserde::json::to_string(value)
 }
 
+#[derive(Clone)]
+pub struct Session {
+    private_cookies: PrivateCookieJar,
+}
+
 impl Session {
     const COOKIE_NAME_OPENIDCONNECT: &'static str = "__Host-openidconnect";
     const COOKIE_NAME_SESSION: &'static str = "__Host-session";
 
     #[must_use]
-    pub const fn new(private_cookies: PrivateCookieJar) -> Self {
-        Self { private_cookies }
+    pub fn new(private_cookies: PrivateCookieJar) -> Self {
+        let mut session = Self { private_cookies };
+        if session.optional_session().is_none() {
+            session.set_session(None);
+        }
+        session
     }
 
-    pub fn session(&mut self) -> (String, Option<SessionCookie>) {
-        let cookie: Option<(String, Option<SessionCookie>)> = self
-            .private_cookies
+    fn optional_session(&self) -> Option<(String, Option<SessionCookie>)> {
+        self.private_cookies
             .get(Self::COOKIE_NAME_SESSION)
-            .and_then(|cookie| serde_json::from_str(cookie.value()).ok());
-        cookie.unwrap_or_else(|| self.set_session(None))
+            .and_then(|cookie| serde_json::from_str(cookie.value()).ok())
+    }
+
+    #[must_use]
+    pub fn session(&self) -> (String, Option<SessionCookie>) {
+        // constructor and all method calls ensure this is not None
+        #[allow(clippy::unwrap_used)]
+        self.optional_session().unwrap()
     }
 
     pub fn set_session(&mut self, input: Option<SessionCookie>) -> (String, Option<SessionCookie>) {

@@ -42,7 +42,7 @@ pub async fn create(
 
         if title_error.is_some() || description_error.is_some() {
             let result = render(
-                session.clone(),
+                session.lock().unwrap(),
                 "create-project",
                 &CreateProject {
                     title: Some(form.value.title.clone()),

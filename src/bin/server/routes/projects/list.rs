@@ -21,11 +21,11 @@ use crate::templating::render;
 use crate::{EmptyBody, ExtractSession, TemplateProject, XRequestId, HANDLEBARS};
 
 #[try_stream(ok = String, error = DbErr)]
-async fn list_internal(db: DatabaseConnection, session: Arc<Mutex<Session>>) {
+async fn list_internal(db: DatabaseConnection, session: Session) {
     let stream = project_history::Entity::find().stream(&db).await?;
+    let mutex = Mutex::new(session);
     yield render(
-        // TODO FIXME session kept alive inside streaming response
-        session.clone(),
+        mutex.lock().unwrap(),
         "main_pre",
         json!({"page_title": "Projects"}),
     );
@@ -58,7 +58,9 @@ pub async fn list(
     }: ExtractSession<EmptyBody>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
-        let stream = list_internal(db, session.clone()).map(|elem| match elem {
+        let session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
+        let session_clone = session_lock.clone();
+        let stream = list_internal(db, session_clone).map(|elem| match elem {
             Err(db_err) => Ok::<String, DbErr>(format!(
                 "<h1>Error {}</h1>",
                 encode_safe(&db_err.to_string())

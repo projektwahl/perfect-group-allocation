@@ -117,7 +117,7 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::SessionStillHeld
             | AppError::Other(_)) => {
                 let result = render(
-                    self.session,
+                    self.session.lock().unwrap(),
                     "error",
                     ErrorTemplate {
                         request_id: self.request_id,

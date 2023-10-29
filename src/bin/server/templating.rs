@@ -13,13 +13,11 @@ pub struct TemplateWrapper<'a, T> {
 }
 
 pub fn render<T: serde::Serialize>(
-    session: Arc<Mutex<Session>>,
+    session: std::sync::MutexGuard<'_, Session>,
     template_name: &str,
     value: T,
 ) -> String {
-    let mut session_lock = session.lock().map_err(|p| PoisonError::new(())).unwrap();
-    let session = session_lock.session();
-    drop(session_lock);
+    let session = session.session();
     println!("{:?}", session);
     HANDLEBARS
         .render(

@@ -18,7 +18,7 @@ pub async fn index(
 ) -> impl IntoResponse {
     let result = async {
         let result = render(
-            session.clone(),
+            session.lock().unwrap(),
             "create-project",
             &CreateProject {
                 title: None,
