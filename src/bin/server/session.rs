@@ -80,7 +80,7 @@ where
             Arc::into_inner(session).map_or_else(
                 || {
                     Ok(AppErrorWithMetadata {
-                        csrf_token: "no-csrf-token".to_owned(),
+                        csrf_token: None,
                         request_id: "no-request-id".to_owned(),
                         app_error: AppError::SessionStillHeld,
                     }
@@ -97,6 +97,11 @@ pub struct Session {
     private_cookies: PrivateCookieJar,
 }
 
+#[no_panic::no_panic]
+fn test_to_string(value: (String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>)) -> String {
+    serde_json::to_string(&value).unwrap()
+}
+
 impl Session {
     const COOKIE_NAME_OPENIDCONNECT: &'static str = "__Host-openidconnect";
     const COOKIE_NAME_SESSION: &'static str = "__Host-session";
@@ -106,21 +111,18 @@ impl Session {
         Self { private_cookies }
     }
 
-    pub fn session(
-        &self,
-    ) -> Result<(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>), AppError> {
-        let cookie: Option<Cookie<'static>> = self.private_cookies.get(Self::COOKIE_NAME_SESSION);
-        if let Some(cookie) = cookie {
-            Ok(serde_json::from_str(cookie.value())?)
-        } else {
-            self.set_session(None)
-        }
+    pub fn session(&self) -> (String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>) {
+        let cookie: Option<(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>)> = self
+            .private_cookies
+            .get(Self::COOKIE_NAME_SESSION)
+            .and_then(|cookie| serde_json::from_str(cookie.value()).ok());
+        cookie.unwrap_or(self.set_session(None))
     }
 
     pub fn set_session(
         &mut self,
         input: Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>,
-    ) -> Result<(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>), AppError> {
+    ) -> (String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>) {
         let session_id: String = thread_rng()
             .sample_iter(&rand::distributions::Alphanumeric)
             .take(30)
@@ -128,13 +130,13 @@ impl Session {
             .collect();
 
         let value = (session_id, input);
-        let cookie = Cookie::build(Self::COOKIE_NAME_SESSION, serde_json::to_string(&value)?)
+        let cookie = Cookie::build(Self::COOKIE_NAME_SESSION, test_to_string(value))
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Strict)
             .secure(true)
             .finish();
         self.private_cookies = self.private_cookies.clone().add(cookie);
-        Ok(value)
+        value
     }
 
     pub fn set_openidconnect(
