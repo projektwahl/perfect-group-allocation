@@ -20,7 +20,11 @@ use zed attack proxy to create some requests
 
 export DEBUGINFOD_URLS="https://debuginfod.archlinux.org"
 # https://bugs.kde.org/show_bug.cgi?id=472973
-kcachegrind callgrind.out.103225
+kcachegrind callgrind.out.110536
+
+55,300 requests
+28% client hello
+50% handlebars
 
 debuginfod-find debuginfo /lib/libc.so.6
 debuginfod-find source /lib/libc.so.6 /usr/src/debug/glibc/glibc/sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S

@@ -560,7 +560,9 @@ fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), M
 
 static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
     let mut handlebars = Handlebars::new();
-    handlebars.set_dev_mode(true);
+    if cfg!(debug_assertions) {
+        handlebars.set_dev_mode(true);
+    }
     handlebars.set_strict_mode(true);
     #[allow(clippy::unwrap_used)]
     handlebars
