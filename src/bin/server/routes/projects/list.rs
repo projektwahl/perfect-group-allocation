@@ -1,5 +1,5 @@
 use alloc::sync::Arc;
-use std::sync::PoisonError;
+use std::sync::{Mutex, PoisonError};
 
 use axum::body::StreamBody;
 use axum::extract::State;
@@ -17,20 +17,18 @@ use crate::csrf_protection::WithCsrfToken;
 use crate::entities::project_history;
 use crate::error::AppErrorWithMetadata;
 use crate::session::Session;
+use crate::templating::render;
 use crate::{EmptyBody, ExtractSession, TemplateProject, XRequestId, HANDLEBARS};
 
 #[try_stream(ok = String, error = DbErr)]
-async fn list_internal(db: DatabaseConnection, csrf_token: String) {
+async fn list_internal(db: DatabaseConnection, session: Arc<Mutex<Session>>) {
     let stream = project_history::Entity::find().stream(&db).await?;
-    yield HANDLEBARS
-        .render(
-            "main_pre",
-            &WithCsrfToken {
-                csrf_token: &csrf_token,
-                inner: json!({"page_title": "Projects"}),
-            },
-        )
-        .unwrap_or_else(|render_error| render_error.to_string());
+    yield render(
+        // TODO FIXME session kept alive inside streaming response
+        session.clone(),
+        "main_pre",
+        json!({"page_title": "Projects"}),
+    );
     #[for_await]
     for x in stream {
         let x = x?;
@@ -60,10 +58,7 @@ pub async fn list(
     }: ExtractSession<EmptyBody>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
-        let mut session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
-        let session_id = session_lock.session().0;
-        drop(session_lock);
-        let stream = list_internal(db, session_id).map(|elem| match elem {
+        let stream = list_internal(db, session.clone()).map(|elem| match elem {
             Err(db_err) => Ok::<String, DbErr>(format!(
                 "<h1>Error {}</h1>",
                 encode_safe(&db_err.to_string())
