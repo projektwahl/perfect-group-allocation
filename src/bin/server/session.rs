@@ -111,7 +111,7 @@ impl Session {
         Self { private_cookies }
     }
 
-    pub fn session(&self) -> (String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>) {
+    pub fn session(&mut self) -> (String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>) {
         let cookie: Option<(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>)> = self
             .private_cookies
             .get(Self::COOKIE_NAME_SESSION)

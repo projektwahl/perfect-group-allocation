@@ -13,7 +13,7 @@ pub async fn index(ExtractSession { session, .. }: ExtractSession<EmptyBody>) ->
         .render(
             "create-project",
             &CreateProject {
-                csrf_token: session.lock().await.session(),
+                csrf_token: session.lock().await.session().0,
                 title: None,
                 title_error: None,
                 description: None,

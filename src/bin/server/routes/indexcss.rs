@@ -22,7 +22,7 @@ pub async fn indexcss(
     ExtractSession { session, .. }: ExtractSession<EmptyBody>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let mut session = session.lock().await;
-    let expected_csrf_token = session.session();
+    let expected_csrf_token = session.session().0;
     drop(session);
     let result = async {
         // @import would produce a flash of unstyled content and also is less efficient

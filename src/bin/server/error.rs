@@ -76,13 +76,13 @@ pub enum AppError {
 
 #[derive(Serialize)]
 pub struct ErrorTemplate {
-    csrf_token: Option<String>,
+    csrf_token: String,
     request_id: String,
     error: String,
 }
 
 pub struct AppErrorWithMetadata {
-    pub csrf_token: Option<String>,
+    pub csrf_token: String,
     pub request_id: String,
     pub app_error: AppError,
 }

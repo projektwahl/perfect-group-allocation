@@ -61,7 +61,7 @@ pub async fn openid_redirect(
     }: ExtractSession<Form<OpenIdRedirect>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let mut session_lock = session.lock().await;
-    let expected_csrf_token = session_lock.session()?.0;
+    let expected_csrf_token = session_lock.session().0;
     drop(session_lock);
     let result = async {
         let session_lock2 = session.lock().await;
@@ -134,7 +134,7 @@ pub async fn openid_redirect(
                         .map_or("<not provided>", |email| email.as_str())
                 );
 
-                let session_lock3 = session.lock().await;
+                let mut session_lock3 = session.lock().await;
                 session_lock3.set_session(Some((
                     claims.email().unwrap().to_owned(),
                     claims.expiration(),
