@@ -231,8 +231,8 @@ where
 }
 
 type MyBody0 = hyper::Body;
-type MyBody1 = Limited<MyBody0>;
-type MyBody2 = TimeoutBody<MyBody1>;
+type MyBody1 = MyBody0; //Limited<MyBody0>;
+type MyBody2 = MyBody1; // TimeoutBody<MyBody1>;
 type MyBody3 = BodyWithSession<MyBody2>;
 type MyBody = MyBody3;
 
@@ -497,12 +497,12 @@ fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), M
         key: Key::generate(),
     });
     //let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
-    let app: Router<MyState, MyBody2> =
-        app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
-    let app: Router<MyState, MyBody1> =
-        app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
-    let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
-    let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
+    //let app: Router<MyState, MyBody2> =
+    //    app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
+    //let app: Router<MyState, MyBody1> =
+    //    app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
+    //let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
+    //let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
     let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
         header::CONTENT_SECURITY_POLICY,
         HeaderValue::from_static(
@@ -602,23 +602,29 @@ async fn main() -> Result<(), AppError> {
         )
         .unwrap();
     */
-
-    let config = RustlsConfig::from_pem_file(
-        ".lego/certificates/h3.selfmade4u.de.crt",
-        ".lego/certificates/h3.selfmade4u.de.key",
-    )
-    .await
-    .unwrap();
-
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8443));
-    println!("listening on {}", addr);
-    axum_server::bind_rustls(addr, config)
-        .serve(app.into_make_service())
+    /*
+        let config = RustlsConfig::from_pem_file(
+            ".lego/certificates/h3.selfmade4u.de.crt",
+            ".lego/certificates/h3.selfmade4u.de.key",
+        )
         .await
         .unwrap();
+    */
+    //let addr = SocketAddr::from(([127, 0, 0, 1], 8443));
+    //println!("listening on {}", addr);
+    /* axum_server::bind_rustls(addr, config)
+    .serve(app.into_make_service())
+    .await
+    .unwrap();*/
     /*axum_server::bind_openssl(addr, config)
     .serve(app.into_make_service())
     .await
     .unwrap();*/
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    tracing::debug!("listening on {}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
     Ok(())
 }
