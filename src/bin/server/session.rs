@@ -105,9 +105,9 @@ pub struct SessionCookieStrings {
 
 #[derive(serde::Deserialize)]
 pub struct SessionCookie {
-    email: EndUserEmail,
-    expiration: DateTime<Utc>,
-    refresh_token: RefreshToken,
+    pub email: EndUserEmail,
+    pub expiration: DateTime<Utc>,
+    pub refresh_token: RefreshToken,
 }
 
 fn test_to_string(value: &(String, Option<SessionCookieStrings>)) -> String {
@@ -128,7 +128,7 @@ impl Session {
             .private_cookies
             .get(Self::COOKIE_NAME_SESSION)
             .and_then(|cookie| serde_json::from_str(cookie.value()).ok());
-        cookie.unwrap_or(self.set_session(None))
+        cookie.unwrap_or_else(|| self.set_session(None))
     }
 
     pub fn set_session(&mut self, input: Option<SessionCookie>) -> (String, Option<SessionCookie>) {
@@ -140,7 +140,7 @@ impl Session {
 
         let value = (
             session_id.clone(),
-            input.map(|session_cookie| SessionCookieStrings {
+            input.as_ref().map(|session_cookie| SessionCookieStrings {
                 email: session_cookie.email.to_string(),
                 expiration: session_cookie.expiration.to_string(),
                 refresh_token: session_cookie.refresh_token.secret().to_string(),

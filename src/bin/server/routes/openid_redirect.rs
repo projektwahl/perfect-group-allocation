@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppErrorWithMetadata};
 use crate::openid::get_openid_client;
+use crate::session::SessionCookie;
 use crate::{CsrfSafeExtractor, ExtractSession, XRequestId, HANDLEBARS};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
@@ -135,11 +136,12 @@ pub async fn openid_redirect(
                 );
 
                 let mut session_lock3 = session.lock().await;
-                session_lock3.set_session(Some((
-                    claims.email().unwrap().to_owned(),
-                    claims.expiration(),
-                    token_response.refresh_token().unwrap().to_owned(),
-                )));
+                session_lock3.set_session(Some(SessionCookie {
+                    email: claims.email().unwrap().to_owned(),
+                    expiration: claims.expiration(),
+                    refresh_token: token_response.refresh_token().unwrap().to_owned(),
+                }));
+                drop(session_lock3);
 
                 Ok::<_, AppError>(Redirect::to("/list").into_response())
             }
