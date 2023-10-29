@@ -113,6 +113,7 @@ use core::pin::Pin;
 use core::time::Duration;
 use std::fs::File;
 use std::io::BufReader;
+use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::{Mutex, PoisonError};
 
@@ -122,8 +123,9 @@ use axum::extract::{FromRef, FromRequest, State};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Form, RequestPartsExt, Router, TypedHeader};
+use axum::{async_trait, BoxError, Form, RequestPartsExt, Router, ServiceExt, TypedHeader};
 use axum_extra::extract::cookie::Key;
+use axum_server::tls_openssl::OpenSSLConfig;
 use catch_panic::CatchPanicLayer;
 use error::{AppError, AppErrorWithMetadata};
 use futures_util::TryFutureExt;
@@ -578,19 +580,7 @@ async fn main() -> Result<(), AppError> {
 
     let db = get_database_connection().await?;
 
-    let rustls_config = rustls_server_config(
-        ".lego/certificates/h3.selfmade4u.de.key",
-        ".lego/certificates/h3.selfmade4u.de.crt",
-    )?;
-
-    let acceptor = TlsAcceptor::from(rustls_config);
-
-    let listener = TcpListener::bind("127.0.0.1:8443").await?;
-    let mut listener = AddrIncoming::from_listener(listener)?;
-
-    let http = Http::new();
-
-    let protocol = Arc::new(http);
+    // TODO FIXME seems like TLS is a performance bottleneck. maybe either let the reverse proxy handle this or switch to openssl for now?
 
     let service = ServeDir::new("frontend");
 
@@ -606,25 +596,18 @@ async fn main() -> Result<(), AppError> {
         .fallback_service(service);
 
     let app = layers(app, db);
-    let mut app = app.into_make_service();
 
-    println!("started!");
+    let config = OpenSSLConfig::from_pem_file(
+        ".lego/certificates/h3.selfmade4u.de.crt",
+        ".lego/certificates/h3.selfmade4u.de.key",
+    )
+    .unwrap();
 
-    loop {
-        let stream = poll_fn(|cx| Pin::new(&mut listener).poll_accept(cx))
-            .await
-            .ok_or(AppError::NoAcceptRemaining)??;
-
-        let acceptor = acceptor.clone();
-
-        let protocol = Arc::clone(&protocol);
-
-        let svc = MakeService::<_, hyper::Request<hyper::Body>>::make_service(&mut app, &stream);
-
-        tokio::spawn(async move {
-            if let Ok(stream) = acceptor.accept(stream).await {
-                let _unused = protocol.serve_connection(stream, svc.await.unwrap()).await;
-            }
-        });
-    }
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8443));
+    println!("listening on {}", addr);
+    axum_server::bind_openssl(addr, config)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+    Ok(())
 }
