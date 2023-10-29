@@ -1,5 +1,14 @@
 # perfect-group-allocation
 
+## Design goals
+
+1. Secure
+2. Efficient on mobile devices in regards to data comsumption and processing power
+3. Low Latency
+4. Low Resource usage on the server
+
+
+
 TODO FIXME audit all database queries for race conditions
 or use SERIALIZABLE I think
 

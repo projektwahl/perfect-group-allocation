@@ -57,7 +57,7 @@ pub async fn list(
     }: ExtractSession<EmptyBody>,
 ) -> impl IntoResponse {
     let mut session_lock = session.lock().await;
-    let session_id = session_lock.session_id();
+    let session_id = session_lock.session();
     drop(session_lock);
     let stream = list_internal(db, session_id).map(|elem| match elem {
         Err(db_err) => Ok::<String, DbErr>(format!(

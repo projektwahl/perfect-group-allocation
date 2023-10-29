@@ -35,7 +35,7 @@ pub async fn openid_login(
         session,
     }: ExtractSession<CsrfSafeForm<OpenIdLoginPayload>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
-    let expected_csrf_token = session.lock().await.session_id();
+    let expected_csrf_token = session.lock().await.session();
     let result = async {
         let client = get_openid_client().await?;
 

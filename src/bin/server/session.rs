@@ -7,10 +7,11 @@ use axum::response::{IntoResponse, IntoResponseParts, Response};
 use axum::RequestPartsExt;
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::PrivateCookieJar;
+use chrono::{DateTime, Utc};
 use futures_util::future::BoxFuture;
 use handlebars::Handlebars;
-use oauth2::PkceCodeVerifier;
-use openidconnect::Nonce;
+use oauth2::{PkceCodeVerifier, RefreshToken};
+use openidconnect::{EndUserEmail, Nonce};
 use rand::{thread_rng, Rng};
 use tokio::sync::Mutex;
 use tower::{Layer, Service};
@@ -98,32 +99,42 @@ pub struct Session {
 
 impl Session {
     const COOKIE_NAME_OPENIDCONNECT: &'static str = "__Host-openidconnect";
+    const COOKIE_NAME_SESSION: &'static str = "__Host-session";
 
     #[must_use]
     pub const fn new(private_cookies: PrivateCookieJar) -> Self {
         Self { private_cookies }
     }
 
-    pub fn session_id(&mut self) -> String {
-        const COOKIE_NAME: &str = "__Host-session_id";
-        if let Some(cookie) = self.private_cookies.get(COOKIE_NAME) {
-            cookie.value().to_owned()
+    pub fn session(
+        &self,
+    ) -> Result<(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>), AppError> {
+        let cookie: Option<Cookie<'static>> = self.private_cookies.get(Self::COOKIE_NAME_SESSION);
+        if let Some(cookie) = cookie {
+            Ok(serde_json::from_str(cookie.value())?)
         } else {
-            let rand_string: String = thread_rng()
-                .sample_iter(&rand::distributions::Alphanumeric)
-                .take(30)
-                .map(char::from)
-                .collect();
-
-            let session_id = rand_string;
-            let cookie = Cookie::build(COOKIE_NAME, session_id.clone())
-                .http_only(true)
-                .same_site(axum_extra::extract::cookie::SameSite::Strict)
-                .secure(true)
-                .finish();
-            self.private_cookies = self.private_cookies.clone().add(cookie);
-            session_id
+            self.set_session(None)
         }
+    }
+
+    pub fn set_session(
+        &mut self,
+        input: Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>,
+    ) -> Result<(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>), AppError> {
+        let session_id: String = thread_rng()
+            .sample_iter(&rand::distributions::Alphanumeric)
+            .take(30)
+            .map(char::from)
+            .collect();
+
+        let value = (session_id, input);
+        let cookie = Cookie::build(Self::COOKIE_NAME_SESSION, serde_json::to_string(&value)?)
+            .http_only(true)
+            .same_site(axum_extra::extract::cookie::SameSite::Strict)
+            .secure(true)
+            .finish();
+        self.private_cookies = self.private_cookies.clone().add(cookie);
+        Ok(value)
     }
 
     pub fn set_openidconnect(
@@ -142,14 +153,21 @@ impl Session {
         Ok(())
     }
 
-    pub fn get_openidconnect(
+    pub fn get_and_remove_openidconnect(
         &self,
     ) -> Result<(PkceCodeVerifier, Nonce, oauth2::CsrfToken), AppError> {
-        Ok(self
+        let return_value = Ok(self
             .private_cookies
             .get(Self::COOKIE_NAME_OPENIDCONNECT)
             .map(|cookie| serde_json::from_str(cookie.value()))
-            .ok_or(AppError::OpenIdTokenNotFound)??)
+            .ok_or(AppError::OpenIdTokenNotFound)??);
+        let cookie = Cookie::build(Self::COOKIE_NAME_OPENIDCONNECT, "")
+            .http_only(true)
+            .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
+            .secure(true)
+            .finish();
+        self.private_cookies.remove(cookie);
+        return_value
     }
 }
 

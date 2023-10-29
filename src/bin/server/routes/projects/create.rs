@@ -22,7 +22,7 @@ pub async fn create(
     }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let mut session = session.lock().await;
-    let expected_csrf_token = session.session_id();
+    let expected_csrf_token = session.session();
     drop(session);
     let result = async {
         let mut title_error = None;

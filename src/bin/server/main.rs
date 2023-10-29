@@ -315,7 +315,7 @@ where
             .await
             .map_or("unknown-request-id".to_owned(), |header| header.0.0);
         let mut session = body.session.lock().await;
-        let expected_csrf_token = session.session_id();
+        let expected_csrf_token = session.session();
         drop(session);
         let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
 

@@ -61,11 +61,12 @@ pub async fn openid_redirect(
     }: ExtractSession<Form<OpenIdRedirect>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let mut session_lock = session.lock().await;
-    let expected_csrf_token = session_lock.session_id();
+    let expected_csrf_token = session_lock.session()?.0;
     drop(session_lock);
     let result = async {
         let session_lock2 = session.lock().await;
-        let (pkce_verifier, nonce, openid_csrf_token) = session_lock2.get_openidconnect()?;
+        let (pkce_verifier, nonce, openid_csrf_token) =
+            session_lock2.get_and_remove_openidconnect()?;
         drop(session_lock2);
 
         if &form.0.state != openid_csrf_token.secret() {
@@ -92,6 +93,11 @@ pub async fn openid_redirect(
                 Ok::<_, AppError>(Html(result).into_response())
             }
             OpenIdRedirectInner::Success(ok) => {
+                // TODO FIXME isn't it possible to directly get the id token?
+                // maybe the other way the client also gets the data / the browser history (but I would think its encrypted)
+
+                // this way we may also be able to use the refresh token? (would be nice for mobile performance)
+
                 // Now you can exchange it for an access token and ID token.
                 let token_response = client
                     .exchange_code(AuthorizationCode::new(ok.code))
@@ -127,6 +133,14 @@ pub async fn openid_redirect(
                         .email()
                         .map_or("<not provided>", |email| email.as_str())
                 );
+
+                let session_lock3 = session.lock().await;
+                session_lock3.set_session(Some((
+                    claims.email().unwrap().to_owned(),
+                    claims.expiration(),
+                    token_response.refresh_token().unwrap().to_owned(),
+                )));
+
                 Ok::<_, AppError>(Redirect::to("/list").into_response())
             }
         }
