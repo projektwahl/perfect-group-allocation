@@ -64,7 +64,7 @@ pub async fn openid_redirect(
     let expected_csrf_token = session_lock.session().0;
     drop(session_lock);
     let result = async {
-        let session_lock2 = session.lock().await;
+        let mut session_lock2 = session.lock().await;
         let (pkce_verifier, nonce, openid_csrf_token) =
             session_lock2.get_and_remove_openidconnect()?;
         drop(session_lock2);

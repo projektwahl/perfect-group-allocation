@@ -77,17 +77,15 @@ where
             let response: Response = future.await?;
             // this may not work if you return a streaming response
             // TODO FIXME retrieve request id and csrf token from session
-            Arc::into_inner(session).map_or_else(
-                || {
-                    Ok(AppErrorWithMetadata {
-                        csrf_token: None,
-                        request_id: "no-request-id".to_owned(),
-                        app_error: AppError::SessionStillHeld,
-                    }
-                    .into_response())
-                },
-                |cookies| Ok((cookies.into_inner(), response).into_response()),
-            )
+            match Arc::try_unwrap(session) {
+                Ok(cookies) => Ok((cookies.into_inner(), response).into_response()),
+                Err(cookies) => Ok(AppErrorWithMetadata {
+                    csrf_token: cookies.lock().await.session().0,
+                    request_id: "no-request-id".to_owned(),
+                    app_error: AppError::SessionStillHeld,
+                }
+                .into_response()),
+            }
         })
     }
 }
@@ -98,8 +96,8 @@ pub struct Session {
 }
 
 #[no_panic::no_panic]
-fn test_to_string(value: (String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>)) -> String {
-    serde_json::to_string(&value).unwrap()
+fn test_to_string(value: &(String, Option<(EndUserEmail, DateTime<Utc>, RefreshToken)>)) -> String {
+    serde_json::to_string(value).unwrap()
 }
 
 impl Session {
@@ -130,7 +128,7 @@ impl Session {
             .collect();
 
         let value = (session_id, input);
-        let cookie = Cookie::build(Self::COOKIE_NAME_SESSION, test_to_string(value))
+        let cookie = Cookie::build(Self::COOKIE_NAME_SESSION, test_to_string(&value))
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Strict)
             .secure(true)
@@ -156,7 +154,7 @@ impl Session {
     }
 
     pub fn get_and_remove_openidconnect(
-        &self,
+        &mut self,
     ) -> Result<(PkceCodeVerifier, Nonce, oauth2::CsrfToken), AppError> {
         let return_value = Ok(self
             .private_cookies
@@ -168,7 +166,7 @@ impl Session {
             .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
             .secure(true)
             .finish();
-        self.private_cookies.remove(cookie);
+        self.private_cookies = self.private_cookies.clone().remove(cookie);
         return_value
     }
 }
