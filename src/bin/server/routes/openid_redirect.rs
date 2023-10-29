@@ -137,6 +137,7 @@ pub async fn openid_redirect(
                 );
 
                 let mut session_lock2 = session.lock().map_err(|p| PoisonError::new(()))?;
+                println!("set here");
                 session_lock2.set_session(Some(SessionCookie {
                     email: claims.email().unwrap().to_owned(),
                     expiration: claims.expiration(),

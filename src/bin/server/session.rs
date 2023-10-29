@@ -122,6 +122,7 @@ impl Session {
     pub fn new(private_cookies: PrivateCookieJar) -> Self {
         let mut session = Self { private_cookies };
         if session.optional_session().is_none() {
+            println!("set to none");
             session.set_session(None);
         }
         session
