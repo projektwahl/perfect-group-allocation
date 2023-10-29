@@ -8,6 +8,7 @@ use handlebars::Handlebars;
 use once_cell::sync::Lazy;
 
 use crate::error::AppErrorWithMetadata;
+use crate::templating::render;
 use crate::{CreateProject, EmptyBody, ExtractSession, XRequestId, HANDLEBARS};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
@@ -16,19 +17,16 @@ pub async fn index(
     ExtractSession { session, .. }: ExtractSession<EmptyBody>,
 ) -> impl IntoResponse {
     let result = async {
-        let mut session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
-        let result = HANDLEBARS
-            .render(
-                "create-project",
-                &CreateProject {
-                    csrf_token: session_lock.session().0,
-                    title: None,
-                    title_error: None,
-                    description: None,
-                    description_error: None,
-                },
-            )
-            .unwrap_or_else(|render_error| render_error.to_string());
+        let result = render(
+            session.clone(),
+            "create-project",
+            &CreateProject {
+                title: None,
+                title_error: None,
+                description: None,
+                description_error: None,
+            },
+        );
         Ok(Html(result))
     };
     match result.await {

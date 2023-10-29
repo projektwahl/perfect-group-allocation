@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex, PoisonError};
+
 use crate::csrf_protection::WithCsrfToken;
 use crate::session::Session;
 use crate::HANDLEBARS;
@@ -10,8 +12,15 @@ pub struct TemplateWrapper<'a, T> {
     pub inner: T,
 }
 
-pub fn render<T: serde::Serialize>(session: &mut Session, template_name: &str, value: T) {
-    let session = session.session();
+pub fn render<T: serde::Serialize>(
+    session: Arc<Mutex<Session>>,
+    template_name: &str,
+    value: T,
+) -> String {
+    let mut session_lock = session.lock().map_err(|p| PoisonError::new(())).unwrap();
+    let session = session_lock.session();
+    drop(session_lock);
+    println!("{:?}", session);
     HANDLEBARS
         .render(
             template_name,
@@ -21,5 +30,5 @@ pub fn render<T: serde::Serialize>(session: &mut Session, template_name: &str, v
                 inner: value,
             },
         )
-        .unwrap_or_else(|render_error| render_error.to_string());
+        .unwrap_or_else(|render_error| render_error.to_string())
 }

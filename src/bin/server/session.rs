@@ -103,7 +103,7 @@ pub struct SessionCookieStrings {
     refresh_token: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct SessionCookie {
     pub email: EndUserEmail,
     pub expiration: DateTime<Utc>,

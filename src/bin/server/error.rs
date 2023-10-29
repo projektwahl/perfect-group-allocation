@@ -13,6 +13,7 @@ use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 use serde::Serialize;
 
 use crate::session::Session;
+use crate::templating::render;
 use crate::HANDLEBARS;
 
 #[derive(thiserror::Error, Debug)]
@@ -80,7 +81,6 @@ pub enum AppError {
 
 #[derive(Serialize)]
 pub struct ErrorTemplate {
-    csrf_token: String,
     request_id: String,
     error: String,
 }
@@ -116,16 +116,14 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::NoAcceptRemaining
             | AppError::SessionStillHeld
             | AppError::Other(_)) => {
-                let result = HANDLEBARS
-                    .render(
-                        "error",
-                        &ErrorTemplate {
-                            csrf_token: self.session.lock().unwrap().session().0,
-                            request_id: self.request_id,
-                            error: err.to_string(),
-                        },
-                    )
-                    .unwrap_or_else(|render_error| render_error.to_string());
+                let result = render(
+                    self.session,
+                    "error",
+                    ErrorTemplate {
+                        request_id: self.request_id,
+                        error: err.to_string(),
+                    },
+                );
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Html(result).into_response(),

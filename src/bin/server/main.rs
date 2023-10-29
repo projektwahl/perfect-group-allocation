@@ -244,7 +244,6 @@ struct MyState {
 
 #[derive(Serialize)]
 pub struct CreateProject {
-    csrf_token: String,
     title: Option<String>,
     title_error: Option<String>,
     description: Option<String>,

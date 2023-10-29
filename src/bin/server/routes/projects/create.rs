@@ -9,6 +9,7 @@ use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
 
 use crate::entities::project_history::{self, ActiveModel};
 use crate::error::AppErrorWithMetadata;
+use crate::templating::render;
 use crate::{
     CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, XRequestId, HANDLEBARS,
 };
@@ -40,18 +41,16 @@ pub async fn create(
         }
 
         if title_error.is_some() || description_error.is_some() {
-            let result = HANDLEBARS
-                .render(
-                    "create-project",
-                    &CreateProject {
-                        csrf_token: expected_csrf_token.clone(),
-                        title: Some(form.value.title.clone()),
-                        title_error,
-                        description: Some(form.value.description.clone()),
-                        description_error,
-                    },
-                )
-                .unwrap_or_else(|error| error.to_string());
+            let result = render(
+                session.clone(),
+                "create-project",
+                &CreateProject {
+                    title: Some(form.value.title.clone()),
+                    title_error,
+                    description: Some(form.value.description.clone()),
+                    description_error,
+                },
+            );
             return Ok(Html(result).into_response());
         }
 

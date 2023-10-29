@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, AppErrorWithMetadata};
 use crate::openid::get_openid_client;
 use crate::session::SessionCookie;
+use crate::templating::render;
 use crate::{CsrfSafeExtractor, ExtractSession, XRequestId, HANDLEBARS};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
@@ -82,16 +83,15 @@ pub async fn openid_redirect(
 
         match form.0.inner {
             OpenIdRedirectInner::Error(err) => {
-                let result = HANDLEBARS
-                    .render(
-                        "openid_redirect",
-                        &OpenIdRedirectErrorTemplate {
-                            csrf_token: expected_csrf_token.clone(),
-                            error: err.error,
-                            error_description: err.error_description,
-                        },
-                    )
-                    .unwrap_or_else(|render_error| render_error.to_string());
+                let result = render(
+                    session.clone(),
+                    "openid_redirect",
+                    &OpenIdRedirectErrorTemplate {
+                        csrf_token: expected_csrf_token.clone(),
+                        error: err.error,
+                        error_description: err.error_description,
+                    },
+                );
                 Ok::<_, AppError>(Html(result).into_response())
             }
             OpenIdRedirectInner::Success(ok) => {
