@@ -125,7 +125,6 @@ use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Form, RequestPartsExt, Router, ServiceExt, TypedHeader};
 use axum_extra::extract::cookie::Key;
-use axum_server::tls_openssl::OpenSSLConfig;
 use axum_server::tls_rustls::RustlsConfig;
 use catch_panic::CatchPanicLayer;
 use error::{AppError, AppErrorWithMetadata};
