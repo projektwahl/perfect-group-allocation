@@ -607,7 +607,6 @@ async fn main() -> Result<(), AppError> {
     let mut app = app.into_make_service();
 
     println!("started!");
-    crabgrind::callgrind::toggle_collect();
 
     loop {
         let stream = poll_fn(|cx| Pin::new(&mut listener).poll_accept(cx))

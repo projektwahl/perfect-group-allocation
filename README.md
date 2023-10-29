@@ -14,9 +14,16 @@ Callgrind
 
 cargo build --target=x86_64-unknown-linux-gnu -Z build-std --release --bin server
 
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" valgrind --tool=callgrind --collect-atstart=no ./target/x86_64-unknown-linux-gnu/release/server 
+DATABASE_URL="sqlite:./sqlite.db?mode=rwc" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release/server 
 
-kcachegrind callgrind.out.98885
+use zed attack proxy to create some requests
+
+export DEBUGINFOD_URLS="https://debuginfod.archlinux.org"
+# https://bugs.kde.org/show_bug.cgi?id=472973
+kcachegrind callgrind.out.103225
+
+debuginfod-find debuginfo /lib/libc.so.6
+debuginfod-find source /lib/libc.so.6 /usr/src/debug/glibc/glibc/sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S
 
 TODO FIXME audit all database queries for race conditions
 or use SERIALIZABLE I think
