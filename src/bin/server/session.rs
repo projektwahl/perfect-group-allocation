@@ -79,7 +79,7 @@ where
             // this may not work if you return a streaming response
             // TODO FIXME retrieve request id and csrf token from session
             match Arc::try_unwrap(session) {
-                Ok(cookies) => Ok((cookies.into_inner(), response).into_response()),
+                Ok(cookies) => Ok((cookies.into_inner().unwrap(), response).into_response()),
                 Err(cookies) => Ok(AppErrorWithMetadata {
                     session: cookies,
                     request_id: "no-request-id".to_owned(),

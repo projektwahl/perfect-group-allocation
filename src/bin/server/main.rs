@@ -316,17 +316,19 @@ where
             .await
             .map_or("unknown-request-id".to_owned(), |header| header.0.0);
         let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
+        let session = body.session.clone();
 
         let result = async {
+            let expected_csrf_token = {
+                let mut session_lock = body.session.lock().map_err(|p| PoisonError::new(()))?;
+                session_lock.session().0
+            };
+
             let extractor =
                 Form::<T>::from_request(hyper::Request::from_parts(parts, body), state).await?;
 
             if not_get_or_head {
                 let actual_csrf_token = extractor.0.csrf_token();
-
-                let mut session_lock = body.session.lock().map_err(|p| PoisonError::new(()))?;
-                let expected_csrf_token = session_lock.session().0;
-                drop(session_lock);
 
                 if expected_csrf_token != actual_csrf_token {
                     return Err(AppError::WrongCsrfToken);
@@ -339,7 +341,7 @@ where
                 // TODO FIXME store request id type-safe in body/session
 
                 Err(AppErrorWithMetadata {
-                    session: body.session,
+                    session,
                     request_id,
                     app_error,
                 })
