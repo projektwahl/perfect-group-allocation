@@ -103,6 +103,7 @@ mod error;
 mod openid;
 pub mod routes;
 pub mod session;
+pub mod templating;
 
 use alloc::borrow::Cow;
 use alloc::sync::Arc;
@@ -113,6 +114,7 @@ use core::time::Duration;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::sync::Mutex;
 
 use axum::error_handling::HandleErrorLayer;
 use axum::extract::rejection::TypedHeaderRejection;
@@ -148,7 +150,6 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::{Session, SessionLayer};
 use tokio::net::TcpListener;
-use tokio::sync::Mutex;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tower::make::MakeService;

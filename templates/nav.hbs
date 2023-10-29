@@ -16,11 +16,19 @@
             <a href="/list">Projects</a>
         </li>
         <li>
+            {{#if @root.email}}
+            <form method="post" action="/openidconnect-logout" enctype="application/x-www-form-urlencoded">
+                <input type="hidden" name="csrf_token" value="{{@root.csrf_token}}">
+
+                <button class="submit-link" type="submit">Logout {{@root.email}}</button>
+            </form>
+            {{else}}
             <form method="post" action="/openidconnect-login" enctype="application/x-www-form-urlencoded">
                 <input type="hidden" name="csrf_token" value="{{@root.csrf_token}}">
 
                 <button class="submit-link" type="submit">Login</button>
             </form>
+            {{/if}}
         </li>
     </ul>
 </nav>

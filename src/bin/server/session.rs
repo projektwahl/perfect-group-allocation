@@ -14,7 +14,6 @@ use miniserde::Deserialize;
 use oauth2::{PkceCodeVerifier, RefreshToken};
 use openidconnect::{EndUserEmail, Nonce};
 use rand::{thread_rng, Rng};
-use tokio::sync::Mutex;
 use tower::{Layer, Service};
 
 use crate::error::{AppError, AppErrorWithMetadata};

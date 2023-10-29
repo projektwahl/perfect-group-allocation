@@ -1,4 +1,5 @@
 use alloc::sync::Arc;
+use std::sync::PoisonError;
 
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
@@ -21,10 +22,12 @@ pub async fn create(
         session,
     }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
-    let mut session = session.lock().await;
-    let expected_csrf_token = session.session().0;
-    drop(session);
     let result = async {
+        let expected_csrf_token = {
+            let mut session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
+            session_lock.session().0
+        };
+
         let mut title_error = None;
         let mut description_error = None;
 
@@ -68,7 +71,7 @@ pub async fn create(
         Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {
-                csrf_token: expected_csrf_token.clone(),
+                session,
                 request_id,
                 app_error,
             })

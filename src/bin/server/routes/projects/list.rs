@@ -10,7 +10,6 @@ use html_escape::encode_safe;
 use hyper::header;
 use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
-use tokio::sync::Mutex;
 
 use crate::csrf_protection::WithCsrfToken;
 use crate::entities::project_history;

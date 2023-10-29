@@ -1,4 +1,5 @@
 use alloc::sync::Arc;
+use std::sync::Mutex;
 
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
@@ -11,6 +12,7 @@ use once_cell::sync::Lazy;
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 use serde::Serialize;
 
+use crate::session::Session;
 use crate::HANDLEBARS;
 
 #[derive(thiserror::Error, Debug)]
@@ -57,6 +59,8 @@ pub enum AppError {
     EnvVar(#[from] std::env::VarError),
     #[error("rustls error: {0}")]
     Rustls(#[from] tokio_rustls::rustls::Error),
+    #[error("poison error: {0}")]
+    Poison(#[from] std::sync::PoisonError<()>),
     #[error("wrong csrf token")]
     WrongCsrfToken,
     #[error("no accept remaining")]
@@ -82,7 +86,7 @@ pub struct ErrorTemplate {
 }
 
 pub struct AppErrorWithMetadata {
-    pub csrf_token: String,
+    pub session: Arc<Mutex<Session>>,
     pub request_id: String,
     pub app_error: AppError,
 }
