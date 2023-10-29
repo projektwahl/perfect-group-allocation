@@ -158,7 +158,7 @@ impl Session {
         );
         let cookie = Cookie::build(Self::COOKIE_NAME_SESSION, test_to_string(&value))
             .http_only(true)
-            .same_site(axum_extra::extract::cookie::SameSite::Strict)
+            .same_site(axum_extra::extract::cookie::SameSite::Lax) // openid-redirect is a cross-site-redirect
             .secure(true)
             .finish();
         self.private_cookies = self.private_cookies.clone().add(cookie);
