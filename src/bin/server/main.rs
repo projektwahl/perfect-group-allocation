@@ -114,7 +114,7 @@ use core::time::Duration;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, PoisonError};
 
 use axum::error_handling::HandleErrorLayer;
 use axum::extract::rejection::TypedHeaderRejection;
@@ -315,9 +315,6 @@ where
             .extract::<TypedHeader<XRequestId>>()
             .await
             .map_or("unknown-request-id".to_owned(), |header| header.0.0);
-        let mut session = body.session.lock().await;
-        let expected_csrf_token = session.session().0;
-        drop(session);
         let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
 
         let result = async {
@@ -326,6 +323,10 @@ where
 
             if not_get_or_head {
                 let actual_csrf_token = extractor.0.csrf_token();
+
+                let mut session_lock = body.session.lock().map_err(|p| PoisonError::new(()))?;
+                let expected_csrf_token = session_lock.session().0;
+                drop(session_lock);
 
                 if expected_csrf_token != actual_csrf_token {
                     return Err(AppError::WrongCsrfToken);
@@ -338,7 +339,7 @@ where
                 // TODO FIXME store request id type-safe in body/session
 
                 Err(AppErrorWithMetadata {
-                    csrf_token: expected_csrf_token.clone(),
+                    session: body.session,
                     request_id,
                     app_error,
                 })

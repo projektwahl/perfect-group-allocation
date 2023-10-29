@@ -1,4 +1,5 @@
 use alloc::sync::Arc;
+use std::sync::PoisonError;
 
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -20,9 +21,6 @@ pub async fn handler(
         session,
     }: ExtractSession<EmptyBody>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
-    let mut session_lock = session.lock()?;
-    let expected_csrf_token = session_lock.session().0;
-    drop(session_lock);
     let result = async {
         let file =
             tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
@@ -40,14 +38,15 @@ pub async fn handler(
 
         Ok((headers, hyper::Response::new(body)))
     };
-    result
-        .or_else(|app_error| async {
+    match result.await {
+        Ok(ok) => Ok(ok),
+        Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {
                 session,
                 request_id,
                 app_error,
             })
-        })
-        .await
+        }
+    }
 }

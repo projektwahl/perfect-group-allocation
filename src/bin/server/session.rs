@@ -1,6 +1,7 @@
 use alloc::sync::Arc;
 use core::convert::Infallible;
 use core::task::Poll;
+use std::sync::Mutex;
 
 use axum::extract::State;
 use axum::response::{IntoResponse, IntoResponseParts, Response};
@@ -80,7 +81,7 @@ where
             match Arc::try_unwrap(session) {
                 Ok(cookies) => Ok((cookies.into_inner(), response).into_response()),
                 Err(cookies) => Ok(AppErrorWithMetadata {
-                    csrf_token: cookies.lock().await.session().0,
+                    session: cookies,
                     request_id: "no-request-id".to_owned(),
                     app_error: AppError::SessionStillHeld,
                 }

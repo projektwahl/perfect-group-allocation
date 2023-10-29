@@ -1,5 +1,6 @@
 use alloc::sync::Arc;
 use std::path::Path;
+use std::sync::PoisonError;
 
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -21,9 +22,6 @@ pub async fn indexcss(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     ExtractSession { session, .. }: ExtractSession<EmptyBody>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
-    let mut session = session.lock().await;
-    let expected_csrf_token = session.session().0;
-    drop(session);
     let result = async {
         // @import would produce a flash of unstyled content and also is less efficient
         let fs = FileProvider::new();
@@ -46,14 +44,15 @@ pub async fn indexcss(
             })?
             .code))
     };
-    result
-        .map_err(|app_error| {
+    match result.await {
+        Ok(ok) => Ok(ok),
+        Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
-            AppErrorWithMetadata {
-                csrf_token: expected_csrf_token.clone(),
+            Err(AppErrorWithMetadata {
+                session,
                 request_id,
                 app_error,
-            }
-        })
-        .await
+            })
+        }
+    }
 }

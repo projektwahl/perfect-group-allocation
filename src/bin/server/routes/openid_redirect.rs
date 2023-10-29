@@ -1,4 +1,5 @@
 use alloc::sync::Arc;
+use std::sync::PoisonError;
 
 use anyhow::anyhow;
 use axum::extract::State;
@@ -61,14 +62,14 @@ pub async fn openid_redirect(
         session,
     }: ExtractSession<Form<OpenIdRedirect>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
-    let mut session_lock = session.lock().await;
-    let expected_csrf_token = session_lock.session().0;
-    drop(session_lock);
     let result = async {
-        let mut session_lock2 = session.lock().await;
-        let (pkce_verifier, nonce, openid_csrf_token) =
-            session_lock2.get_and_remove_openidconnect()?;
-        drop(session_lock2);
+        let (expected_csrf_token, (pkce_verifier, nonce, openid_csrf_token)) = {
+            let mut session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
+            (
+                session_lock.session().0,
+                session_lock.get_and_remove_openidconnect()?,
+            )
+        };
 
         if &form.0.state != openid_csrf_token.secret() {
             return Err(AppError::WrongCsrfToken);
@@ -135,24 +136,24 @@ pub async fn openid_redirect(
                         .map_or("<not provided>", |email| email.as_str())
                 );
 
-                let mut session_lock3 = session.lock().await;
-                session_lock3.set_session(Some(SessionCookie {
+                let mut session_lock2 = session.lock().map_err(|p| PoisonError::new(()))?;
+                session_lock2.set_session(Some(SessionCookie {
                     email: claims.email().unwrap().to_owned(),
                     expiration: claims.expiration(),
                     refresh_token: token_response.refresh_token().unwrap().to_owned(),
                 }));
-                drop(session_lock3);
+                drop(session_lock2);
 
                 Ok::<_, AppError>(Redirect::to("/list").into_response())
             }
         }
     };
     match result.await {
-        Ok(response) => Ok(response),
+        Ok(ok) => Ok(ok),
         Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {
-                csrf_token: expected_csrf_token.clone(),
+                session,
                 request_id,
                 app_error,
             })

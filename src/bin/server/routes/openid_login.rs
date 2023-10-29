@@ -1,4 +1,5 @@
 use alloc::sync::Arc;
+use std::sync::PoisonError;
 
 use axum::extract::State;
 use axum::response::{IntoResponse, Redirect};
@@ -35,7 +36,6 @@ pub async fn openid_login(
         session,
     }: ExtractSession<CsrfSafeForm<OpenIdLoginPayload>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
-    let expected_csrf_token = session.lock().await.session().0;
     let result = async {
         let client = get_openid_client().await?;
 
@@ -53,20 +53,21 @@ pub async fn openid_login(
             .set_pkce_challenge(pkce_challenge)
             .url();
 
-        let mut session = session.lock().await;
-        session.set_openidconnect(&(&pkce_verifier, &nonce, &csrf_token))?;
-        drop(session);
+        let mut session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
+        session_lock.set_openidconnect(&(&pkce_verifier, &nonce, &csrf_token))?;
+        drop(session_lock);
 
         Ok(Redirect::to(auth_url.as_str()).into_response())
     };
-    result
-        .map_err(|app_error| {
+    match result.await {
+        Ok(ok) => Ok(ok),
+        Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
-            AppErrorWithMetadata {
-                csrf_token: expected_csrf_token.clone(),
+            Err(AppErrorWithMetadata {
+                session,
                 request_id,
                 app_error,
-            }
-        })
-        .await
+            })
+        }
+    }
 }

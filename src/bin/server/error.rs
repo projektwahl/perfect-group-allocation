@@ -111,6 +111,7 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::Template(_)
             | AppError::EnvVar(_)
             | AppError::Rustls(_)
+            | AppError::Poison(_)
             | AppError::OpenIdTokenNotFound
             | AppError::NoAcceptRemaining
             | AppError::SessionStillHeld
@@ -119,7 +120,7 @@ impl IntoResponse for AppErrorWithMetadata {
                     .render(
                         "error",
                         &ErrorTemplate {
-                            csrf_token: self.csrf_token,
+                            csrf_token: self.session.lock().unwrap().session().0,
                             request_id: self.request_id,
                             error: err.to_string(),
                         },
