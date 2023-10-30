@@ -189,7 +189,7 @@ where
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
-        let session = body.session;
+        let session = body.session.clone();
         let extractor = T::from_request(hyper::Request::from_parts(parts, body), state).await?;
         Ok(Self { extractor, session })
     }

@@ -71,20 +71,7 @@ where
                 parts,
                 BodyWithSession { session, body },
             ));
-        Box::pin(async move {
-            let response: Response = future.await?;
-            // this may not work if you return a streaming response
-            // TODO FIXME retrieve request id and csrf token from session
-            match Arc::try_unwrap(session) {
-                Ok(cookies) => Ok((cookies.into_inner().unwrap(), response).into_response()),
-                Err(cookies) => Ok(AppErrorWithMetadata {
-                    session: cookies,
-                    request_id: "no-request-id".to_owned(),
-                    app_error: AppError::SessionStillHeld,
-                }
-                .into_response()),
-            }
-        })
+        Box::pin(async move { Ok(future.await?.into_response()) })
     }
 }
 
