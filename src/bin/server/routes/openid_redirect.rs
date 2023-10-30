@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppErrorWithMetadata};
 use crate::openid::get_openid_client;
-use crate::session::SessionCookie;
+use crate::session::{Session, SessionCookie};
 use crate::templating::render;
 use crate::{CsrfSafeExtractor, ExtractSession, XRequestId, HANDLEBARS};
 
@@ -60,17 +60,12 @@ pub async fn openid_redirect(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     ExtractSession {
         extractor: form,
-        session,
+        mut session,
     }: ExtractSession<Form<OpenIdRedirect>>,
-) -> Result<impl IntoResponse, AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
-        let (expected_csrf_token, (pkce_verifier, nonce, openid_csrf_token)) = {
-            let mut session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
-            (
-                session_lock.session().0,
-                session_lock.get_and_remove_openidconnect()?,
-            )
-        };
+        let (expected_csrf_token, (pkce_verifier, nonce, openid_csrf_token)) =
+            (session.session().0, session.get_and_remove_openidconnect()?);
 
         if &form.0.state != openid_csrf_token.secret() {
             return Err(AppError::WrongCsrfToken);
@@ -84,7 +79,7 @@ pub async fn openid_redirect(
         match form.0.inner {
             OpenIdRedirectInner::Error(err) => {
                 let result = render(
-                    session.lock().unwrap(),
+                    &session,
                     "openid_redirect",
                     &OpenIdRedirectErrorTemplate {
                         csrf_token: expected_csrf_token.clone(),
@@ -136,21 +131,19 @@ pub async fn openid_redirect(
                         .map_or("<not provided>", |email| email.as_str())
                 );
 
-                let mut session_lock2 = session.lock().map_err(|p| PoisonError::new(()))?;
                 println!("set here");
-                session_lock2.set_session(Some(SessionCookie {
+                session.set_session(Some(SessionCookie {
                     email: claims.email().unwrap().to_owned(),
                     expiration: claims.expiration(),
                     refresh_token: token_response.refresh_token().unwrap().to_owned(),
                 }));
-                drop(session_lock2);
 
                 Ok::<_, AppError>(Redirect::to("/list").into_response())
             }
         }
     };
     match result.await {
-        Ok(ok) => Ok(ok),
+        Ok(ok) => Ok((session, ok)),
         Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {

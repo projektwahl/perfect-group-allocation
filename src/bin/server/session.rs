@@ -66,14 +66,11 @@ where
             &parts.headers,
             self.key.clone(),
         ));
-        let session = Arc::new(Mutex::new(session));
-        let future = self.inner.call(hyper::Request::from_parts(
-            parts,
-            BodyWithSession {
-                session: Arc::clone(&session),
-                body,
-            },
-        ));
+        let future: <S as Service<hyper::Request<BodyWithSession<ReqBody>>>>::Future =
+            self.inner.call(hyper::Request::from_parts(
+                parts,
+                BodyWithSession { session, body },
+            ));
         Box::pin(async move {
             let response: Response = future.await?;
             // this may not work if you return a streaming response

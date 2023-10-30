@@ -24,10 +24,7 @@ pub async fn create(
     }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
-        let expected_csrf_token = {
-            let mut session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
-            session_lock.session().0
-        };
+        let expected_csrf_token = session.session().0;
 
         let mut title_error = None;
         let mut description_error = None;
@@ -42,7 +39,7 @@ pub async fn create(
 
         if title_error.is_some() || description_error.is_some() {
             let result = render(
-                session.lock().unwrap(),
+                &session,
                 "create-project",
                 &CreateProject {
                     title: Some(form.value.title.clone()),

@@ -14,6 +14,7 @@ use serde::Deserialize;
 
 use crate::error::AppErrorWithMetadata;
 use crate::openid::get_openid_client;
+use crate::session::Session;
 use crate::{CsrfSafeForm, CsrfToken, ExtractSession, XRequestId};
 
 #[derive(Deserialize)]
@@ -33,9 +34,9 @@ pub async fn openid_login(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     ExtractSession {
         extractor: _form,
-        session,
+        mut session,
     }: ExtractSession<CsrfSafeForm<OpenIdLoginPayload>>,
-) -> Result<impl IntoResponse, AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
         let client = get_openid_client().await?;
 
@@ -53,14 +54,12 @@ pub async fn openid_login(
             .set_pkce_challenge(pkce_challenge)
             .url();
 
-        let mut session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
-        session_lock.set_openidconnect(&(&pkce_verifier, &nonce, &csrf_token))?;
-        drop(session_lock);
+        session.set_openidconnect(&(&pkce_verifier, &nonce, &csrf_token))?;
 
         Ok(Redirect::to(auth_url.as_str()).into_response())
     };
     match result.await {
-        Ok(ok) => Ok(ok),
+        Ok(ok) => Ok((session, ok)),
         Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {

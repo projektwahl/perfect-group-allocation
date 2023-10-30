@@ -86,7 +86,7 @@ pub struct ErrorTemplate {
 }
 
 pub struct AppErrorWithMetadata {
-    pub session: Arc<Mutex<Session>>,
+    pub session: Session,
     pub request_id: String,
     pub app_error: AppError,
 }
@@ -117,7 +117,7 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::SessionStillHeld
             | AppError::Other(_)) => {
                 let result = render(
-                    self.session.lock().unwrap(),
+                    &self.session,
                     "error",
                     ErrorTemplate {
                         request_id: self.request_id,

@@ -12,11 +12,7 @@ pub struct TemplateWrapper<'a, T> {
     pub inner: T,
 }
 
-pub fn render<T: serde::Serialize>(
-    session: std::sync::MutexGuard<'_, Session>,
-    template_name: &str,
-    value: T,
-) -> String {
+pub fn render<T: serde::Serialize>(session: &Session, template_name: &str, value: T) -> String {
     let session = session.session();
     println!("{:?}", session);
     HANDLEBARS

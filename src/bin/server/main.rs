@@ -172,7 +172,7 @@ pub trait CsrfSafeExtractor {}
 
 pub struct ExtractSession<E: CsrfSafeExtractor> {
     extractor: E,
-    session: Arc<Mutex<Session>>,
+    session: Session,
 }
 
 #[async_trait]
@@ -189,7 +189,7 @@ where
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let (parts, body) = req.into_parts();
-        let session = Arc::clone(&body.session);
+        let session = body.session;
         let extractor = T::from_request(hyper::Request::from_parts(parts, body), state).await?;
         Ok(Self { extractor, session })
     }
@@ -198,7 +198,7 @@ where
 pin_project! {
     pub struct BodyWithSession<B> {
         // TODO FIXME store request id in here and maybe improve storage of session (so no arc exposed to user?)
-        session: Arc<Mutex<Session>>,
+        session: Session,
         #[pin]
         body: B
     }
@@ -320,10 +320,7 @@ where
         let session = body.session.clone();
 
         let result = async {
-            let expected_csrf_token = {
-                let mut session_lock = body.session.lock().map_err(|p| PoisonError::new(()))?;
-                session_lock.session().0
-            };
+            let expected_csrf_token = body.session.session().0;
 
             let extractor =
                 Form::<T>::from_request(hyper::Request::from_parts(parts, body), state).await?;

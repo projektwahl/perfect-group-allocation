@@ -23,29 +23,21 @@ use crate::{EmptyBody, ExtractSession, TemplateProject, XRequestId, HANDLEBARS};
 #[try_stream(ok = String, error = DbErr)]
 async fn list_internal(db: DatabaseConnection, session: Session) {
     let stream = project_history::Entity::find().stream(&db).await?;
-    let mutex = Mutex::new(session);
-    yield render(
-        mutex.lock().unwrap(),
-        "main_pre",
-        json!({"page_title": "Projects"}),
-    );
+    yield render(&session, "main_pre", json!({"page_title": "Projects"}));
     #[for_await]
     for x in stream {
         let x = x?;
-        let result = HANDLEBARS
-            .render(
-                "project",
-                &TemplateProject {
-                    title: x.title,
-                    description: x.description,
-                },
-            )
-            .unwrap_or_else(|render_error| render_error.to_string());
+        let result = render(
+            &session,
+            "project",
+            &TemplateProject {
+                title: x.title,
+                description: x.description,
+            },
+        );
         yield result;
     }
-    yield HANDLEBARS
-        .render("main_post", &json!({}))
-        .unwrap_or_else(|render_error| render_error.to_string());
+    yield render(&session, "main_post", &json!({}));
 }
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
@@ -56,31 +48,20 @@ pub async fn list(
         extractor: _form,
         session,
     }: ExtractSession<EmptyBody>,
-) -> Result<impl IntoResponse, AppErrorWithMetadata> {
-    let result = async {
-        let session_lock = session.lock().map_err(|p| PoisonError::new(()))?;
-        let session_clone = session_lock.clone();
-        let stream = list_internal(db, session_clone).map(|elem| match elem {
-            Err(db_err) => Ok::<String, DbErr>(format!(
-                "<h1>Error {}</h1>",
-                encode_safe(&db_err.to_string())
-            )),
-            Ok::<String, DbErr>(ok) => Ok(ok),
-        });
-        Ok((
+) -> (Session, impl IntoResponse) {
+    let stream = list_internal(db, session.clone()).map(|elem| match elem {
+        Err(db_err) => Ok::<String, DbErr>(format!(
+            // TODO FIXME use template here
+            "<h1>Error {}</h1>",
+            encode_safe(&db_err.to_string())
+        )),
+        Ok::<String, DbErr>(ok) => Ok(ok),
+    });
+    (
+        session,
+        (
             [(header::CONTENT_TYPE, "text/html")],
             StreamBody::new(stream),
-        ))
-    };
-    match result.await {
-        Ok(ok) => Ok(ok),
-        Err(app_error) => {
-            // TODO FIXME store request id type-safe in body/session
-            Err(AppErrorWithMetadata {
-                session,
-                request_id,
-                app_error,
-            })
-        }
-    }
+        ),
+    )
 }
