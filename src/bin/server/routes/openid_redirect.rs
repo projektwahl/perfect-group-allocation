@@ -57,14 +57,20 @@ pub async fn openid_redirect(
     session: Session,
     form: axum::Form<OpenIdRedirect>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
+    // TODO FIXME errors also need to return the session?
+
     let expected_csrf_token = session.session().0;
-    let (mut session, (pkce_verifier, nonce, openid_csrf_token)) = session
-        .get_and_remove_openidconnect()
-        .map_err(|app_error| AppErrorWithMetadata {
-            session,
-            request_id,
-            app_error,
-        })?;
+    let (mut session, (pkce_verifier, nonce, openid_csrf_token)) =
+        match session.get_and_remove_openidconnect() {
+            (session, Ok(value)) => (session, value),
+            (session, Err(app_error)) => {
+                return Err(AppErrorWithMetadata {
+                    session,
+                    request_id,
+                    app_error,
+                });
+            }
+        };
 
     if &form.0.state != openid_csrf_token.secret() {
         return Err(AppError::WrongCsrfToken).map_err(|app_error| AppErrorWithMetadata {

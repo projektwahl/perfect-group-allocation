@@ -122,19 +122,27 @@ impl Session {
 
     pub fn get_and_remove_openidconnect(
         mut self,
-    ) -> Result<(Self, (PkceCodeVerifier, Nonce, oauth2::CsrfToken)), AppError> {
-        let return_value = self
+    ) -> (
+        Self,
+        Result<(PkceCodeVerifier, Nonce, oauth2::CsrfToken), AppError>,
+    ) {
+        let return_value = match self
             .private_cookies
             .get(Self::COOKIE_NAME_OPENIDCONNECT)
             .map(|cookie| serde_json::from_str(cookie.value()))
-            .ok_or(AppError::OpenIdTokenNotFound)??;
+            .ok_or(AppError::OpenIdTokenNotFound)
+        {
+            Ok(Ok(value)) => value,
+            Ok(Err(error)) => return (self, Err(error.into())),
+            Err(error) => return (self, Err(error.into())),
+        };
         let cookie = Cookie::build(Self::COOKIE_NAME_OPENIDCONNECT, "")
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
             .secure(true)
             .finish();
         self.private_cookies = self.private_cookies.remove(cookie);
-        Ok((self, return_value))
+        (self, Ok(return_value))
     }
 }
 

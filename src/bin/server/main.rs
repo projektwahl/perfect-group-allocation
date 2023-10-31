@@ -478,6 +478,9 @@ async fn main() -> Result<(), AppError> {
     let service = ServeDir::new("frontend");
 
     // RUST_LOG=tower_http::trace=TRACE cargo run --bin server
+
+    // TODO FIXME use services here so we can specify the error type
+    // and then we can build a layer around it
     let app: Router<MyState, hyper::Body> = Router::new()
         .route("/", get(index))
         .route("/", post(create))
