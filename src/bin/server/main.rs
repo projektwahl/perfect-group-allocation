@@ -109,6 +109,7 @@ pub mod templating;
 use alloc::borrow::Cow;
 use core::convert::Infallible;
 use std::net::SocketAddr;
+use std::time::Duration;
 
 use axum::extract::{FromRef, FromRequest};
 use axum::headers::{self, Header};
@@ -137,6 +138,8 @@ use session::Session;
 use tower::service_fn;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
+
+use crate::routes::openid_redirect::openid_redirect;
 
 type MyBody = hyper::Body;
 
@@ -471,6 +474,51 @@ static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
 async fn main() -> Result<(), AppError> {
     console_subscriber::init();
 
+    let monitor = tokio_metrics::TaskMonitor::new();
+    let monitor_root = tokio_metrics::TaskMonitor::new();
+    let monitor_root_create = tokio_metrics::TaskMonitor::new();
+    let monitor_index_css = tokio_metrics::TaskMonitor::new();
+    let monitor_list = tokio_metrics::TaskMonitor::new();
+    let monitor_download = tokio_metrics::TaskMonitor::new();
+    let monitor_openidconnect_login = tokio_metrics::TaskMonitor::new();
+    let monitor_openidconnect_redirect = tokio_metrics::TaskMonitor::new();
+
+    let handle = tokio::runtime::Handle::current();
+    let runtime_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
+
+    // print task metrics every 500ms
+    {
+        let metrics_monitor = monitor_index_css.clone();
+        tokio::spawn(async move {
+            for interval in metrics_monitor.intervals() {
+                // pretty-print the metric interval
+                println!(
+                    "{:?} {:?} {:?}",
+                    interval.mean_poll_duration(),
+                    interval.slow_poll_ratio(),
+                    interval.mean_slow_poll_duration()
+                );
+                // wait 500ms
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+        });
+    }
+
+    // print runtime metrics every 500ms
+    {
+        tokio::spawn(async move {
+            for interval in runtime_monitor.intervals() {
+                // pretty-print the metric interval
+                println!(
+                    "{:?} {:?}",
+                    interval.mean_poll_duration, interval.mean_poll_duration_worker_max
+                );
+                // wait 500ms
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+        });
+    }
+
     //tracing_subscriber::fmt::init();
 
     let db = get_database_connection().await?;
@@ -484,9 +532,15 @@ async fn main() -> Result<(), AppError> {
     // TODO FIXME use services here so we can specify the error type
     // and then we can build a layer around it
     let app: Router<MyState, hyper::Body> = Router::new()
-        .route("/", get(index))
+        .route(
+            "/",
+            get(move |first, second| monitor_root.instrument(index(first, second))),
+        )
         .route("/", post(create))
-        .route("/index.css", get(indexcss))
+        .route(
+            "/index.css",
+            get(move |first, second| monitor_index_css.instrument(indexcss(first, second))),
+        )
         .route("/list", get(list))
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))
@@ -499,7 +553,7 @@ async fn main() -> Result<(), AppError> {
                 Ok::<_, Infallible>(res)
             }),
         )
-        // .route("/openidconnect-redirect", get(openid_redirect))
+        .route("/openidconnect-redirect", get(openid_redirect))
         .fallback_service(service);
 
     let app = layers(app, db);

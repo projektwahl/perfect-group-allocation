@@ -21,6 +21,14 @@ TODO https://docs.rs/tracing-timing/latest/tracing_timing/ per request
 
 TODO https://github.com/tokio-rs/tokio-metrics
 
+maybe https://github.com/tokio-rs/async-backtrace
+
+https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html contains example for axum
+
+https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html#why-are-my-tasks-slow
+
+awesome help for performance issues
+
 ## Profiling
 
 https://valgrind.org/docs/manual/cl-manual.html
