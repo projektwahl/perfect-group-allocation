@@ -20,61 +20,6 @@ use tower::{Layer, Service};
 use crate::error::{AppError, AppErrorWithMetadata};
 use crate::{BodyWithSession, MyState, HANDLEBARS};
 
-#[derive(Clone)]
-pub struct SessionLayer {
-    pub key: Key,
-}
-
-impl<S> Layer<S> for SessionLayer {
-    type Service = SessionMiddleware<S>;
-
-    fn layer(&self, inner: S) -> Self::Service {
-        SessionMiddleware {
-            inner,
-            key: self.key.clone(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct SessionMiddleware<S> {
-    inner: S,
-    key: Key,
-}
-
-impl<S, ReqBody> Service<hyper::Request<ReqBody>> for SessionMiddleware<S>
-where
-    S: Service<
-            hyper::Request<BodyWithSession<ReqBody>>,
-            Response = axum::response::Response,
-            Error = Infallible,
-        > + Send
-        + 'static,
-    S::Future: Send + 'static,
-{
-    type Error = Infallible;
-    type Future = BoxFuture<'static, Result<Self::Response, Infallible>>;
-    type Response = S::Response;
-
-    fn poll_ready(&mut self, cx: &mut core::task::Context<'_>) -> Poll<Result<(), Infallible>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, request: hyper::Request<ReqBody>) -> Self::Future {
-        let (parts, body) = request.into_parts();
-        let session = Session::new(PrivateCookieJar::from_headers(
-            &parts.headers,
-            self.key.clone(),
-        ));
-        let future: <S as Service<hyper::Request<BodyWithSession<ReqBody>>>>::Future =
-            self.inner.call(hyper::Request::from_parts(
-                parts,
-                BodyWithSession { session, body },
-            ));
-        Box::pin(async move { Ok(future.await?.into_response()) })
-    }
-}
-
 #[derive(miniserde::Serialize)]
 pub struct SessionCookieStrings {
     email: String,

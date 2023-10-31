@@ -96,7 +96,6 @@
 
 extern crate alloc;
 
-pub mod catch_panic;
 pub mod csrf_protection;
 mod entities;
 mod error;
@@ -150,7 +149,7 @@ use sea_orm::{
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use session::{Session, SessionLayer};
+use session::Session;
 use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
@@ -165,6 +164,8 @@ use tower_http::timeout::{
     RequestBodyTimeoutLayer, ResponseBodyTimeoutLayer, TimeoutBody, TimeoutLayer,
 };
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
+
+type MyBody = hyper::Body;
 
 const DB_NAME: &str = "postgres";
 
@@ -230,15 +231,10 @@ where
     }
 }
 
-type MyBody0 = hyper::Body;
-type MyBody1 = MyBody0; //Limited<MyBody0>;
-type MyBody2 = MyBody1; // TimeoutBody<MyBody1>;
-type MyBody3 = BodyWithSession<MyBody2>;
-type MyBody = MyBody3;
-
 #[derive(Clone, FromRef)]
 struct MyState {
     database: DatabaseConnection,
+    key: Key,
 }
 
 // https://handlebarsjs.com/api-reference/
@@ -488,11 +484,8 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
     Ok(db)
 }
 
-fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), MyBody0> {
+fn layers(app: Router<MyState, hyper::Body>, db: DatabaseConnection) -> Router<(), hyper::Body> {
     // layers are in reverse order
-    let app: Router<MyState, MyBody2> = app.layer(SessionLayer {
-        key: Key::generate(),
-    });
     //let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
     //let app: Router<MyState, MyBody2> =
     //    app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
@@ -500,7 +493,7 @@ fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), M
     //    app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
     //let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
     //let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    /*let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
         header::CONTENT_SECURITY_POLICY,
         HeaderValue::from_static(
             "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
@@ -541,7 +534,11 @@ fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), M
         header::CACHE_CONTROL,
         HeaderValue::from_static("no-cache, no-store, must-revalidate"),
     ));
-    let app: Router<(), MyBody0> = app.with_state(MyState { database: db });
+    */
+    let app: Router<(), hyper::Body> = app.with_state(MyState {
+        database: db,
+        key: Key::generate(),
+    });
     //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
     let app = app.layer(
         ServiceBuilder::new()
@@ -553,7 +550,7 @@ fn layers(app: Router<MyState, MyBody3>, db: DatabaseConnection) -> Router<(), M
             )
             .layer(CatchPanicLayer),
     );
-    let app: Router<(), MyBody0> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
+    let app: Router<(), hyper::Body> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
     app
 }
 
@@ -582,7 +579,7 @@ async fn main() -> Result<(), AppError> {
     let service = ServeDir::new("frontend");
 
     // RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-    let app: Router<MyState, MyBody> = Router::new()
+    let app: Router<MyState, hyper::Body> = Router::new()
         .route("/", get(index))
         .route("/", post(create))
         .route("/index.css", get(indexcss))
