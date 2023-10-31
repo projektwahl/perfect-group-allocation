@@ -10,7 +10,7 @@ use crate::error::{AppError, AppErrorWithMetadata};
 use crate::openid::get_openid_client;
 use crate::session::{Session, SessionCookie};
 use crate::templating::render;
-use crate::{CsrfSafeExtractor, XRequestId};
+use crate::XRequestId;
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -40,9 +40,6 @@ pub enum OpenIdRedirectInner {
     Error(OpenIdRedirectError),
 }
 
-// THIS IS DANGEROUS
-impl CsrfSafeExtractor for Form<OpenIdRedirect> {}
-
 #[derive(Deserialize, Serialize)]
 pub struct OpenIdRedirectErrorTemplate {
     csrf_token: String,
@@ -50,15 +47,19 @@ pub struct OpenIdRedirectErrorTemplate {
     error_description: String,
 }
 
+#[expect(
+    clippy::disallowed_types,
+    reason = "csrf protection done here explicitly"
+)]
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session,
-    form: Form<OpenIdRedirect>,
+    form: axum::Form<OpenIdRedirect>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
-        let (expected_csrf_token, (pkce_verifier, nonce, openid_csrf_token)) =
-            (session.session().0, session.get_and_remove_openidconnect()?);
+        let expected_csrf_token = session.session().0;
+        let (pkce_verifier, nonce, openid_csrf_token) = session.get_and_remove_openidconnect()?;
 
         if &form.0.state != openid_csrf_token.secret() {
             return Err(AppError::WrongCsrfToken);
@@ -114,10 +115,19 @@ pub async fn openid_redirect(
                     }
                 }
 
+                let Some(email) = claims.email() else {
+                    return Err(anyhow!("No email address received by SSO").into());
+                };
+
+                // TODO FIXME our application should work without refresh token
+                let Some(refresh_token) = token_response.refresh_token() else {
+                    return Err(anyhow!("No refresh token received by SSO").into());
+                };
+
                 session.set_session(Some(SessionCookie {
-                    email: claims.email().unwrap().to_owned(),
+                    email: email.to_owned(),
                     expiration: claims.expiration(),
-                    refresh_token: token_response.refresh_token().unwrap().to_owned(),
+                    refresh_token: refresh_token.to_owned(),
                 }));
 
                 Ok::<_, AppError>(Redirect::to("/list").into_response())
