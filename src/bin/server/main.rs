@@ -469,7 +469,9 @@ static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    tracing_subscriber::fmt::init();
+    console_subscriber::init();
+
+    //tracing_subscriber::fmt::init();
 
     let db = get_database_connection().await?;
 

@@ -7,6 +7,20 @@
 3. Low Latency
 4. Low Resource usage on the server
 
+## Async profiling
+
+https://github.com/tokio-rs/console
+
+DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -w src -x 'run --bin server'
+
+cargo install --locked tokio-console
+
+tokio-console
+
+TODO https://docs.rs/tracing-timing/latest/tracing_timing/ per request
+
+TODO https://github.com/tokio-rs/tokio-metrics
+
 ## Profiling
 
 https://valgrind.org/docs/manual/cl-manual.html
