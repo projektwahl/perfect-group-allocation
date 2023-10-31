@@ -16,9 +16,9 @@ pub async fn render<T: serde::Serialize + Send + 'static>(
     session: &Session,
     template_name: &'static str,
     value: T,
-) -> Result<String, AppError> {
+) -> String {
     let session = session.session();
-    Ok(spawn_blocking(move || {
+    spawn_blocking(move || {
         HANDLEBARS
             .render(
                 template_name,
@@ -33,5 +33,6 @@ pub async fn render<T: serde::Serialize + Send + 'static>(
             )
             .unwrap_or_else(|render_error| render_error.to_string())
     })
-    .await?)
+    .await
+    .unwrap()
 }

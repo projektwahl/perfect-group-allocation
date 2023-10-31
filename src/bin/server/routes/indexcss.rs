@@ -9,7 +9,7 @@ use lightningcss::targets::Targets;
 use parcel_sourcemap::SourceMap;
 use tokio::task::spawn_blocking;
 
-use crate::error::AppErrorWithMetadata;
+use crate::error::to_error_result;
 use crate::session::Session;
 use crate::XRequestId;
 
@@ -17,7 +17,7 @@ use crate::XRequestId;
 pub async fn indexcss(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
-) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let result = async {
         // @import would produce a flash of unstyled content and also is less efficient
         spawn_blocking(|| {
@@ -45,13 +45,6 @@ pub async fn indexcss(
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => {
-            // TODO FIXME store request id type-safe in body/session
-            Err(AppErrorWithMetadata {
-                session,
-                request_id,
-                app_error,
-            })
-        }
+        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
     }
 }

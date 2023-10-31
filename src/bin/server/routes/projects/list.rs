@@ -10,7 +10,7 @@ use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
 
 use crate::entities::project_history;
-use crate::error::{AppError, AppErrorWithMetadata};
+use crate::error::AppError;
 use crate::session::Session;
 use crate::templating::render;
 use crate::{TemplateProject, XRequestId};
@@ -18,7 +18,7 @@ use crate::{TemplateProject, XRequestId};
 #[try_stream(ok = String, error = AppError)]
 async fn list_internal(db: DatabaseConnection, session: Session) {
     let stream = project_history::Entity::find().stream(&db).await?;
-    yield render(&session, "main_pre", json!({"page_title": "Projects"})).await?;
+    yield render(&session, "main_pre", json!({"page_title": "Projects"})).await;
     #[for_await]
     for x in stream {
         let x = x?;
@@ -30,10 +30,10 @@ async fn list_internal(db: DatabaseConnection, session: Session) {
                 description: x.description,
             },
         )
-        .await?;
+        .await;
         yield result;
     }
-    yield render(&session, "main_post", json!({})).await?;
+    yield render(&session, "main_post", json!({})).await;
 }
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
@@ -41,7 +41,7 @@ pub async fn list(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
-) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let stream = list_internal(db, session.clone()).map(|elem| match elem {
         Err(app_error) => Ok::<String, AppError>(format!(
             // TODO FIXME use template here

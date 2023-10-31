@@ -117,7 +117,7 @@ use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
 use axum::{async_trait, BoxError, RequestExt, Router, TypedHeader};
 use axum_extra::extract::cookie::Key;
-use error::{AppError, AppErrorWithMetadata};
+use error::{to_error_result, AppError};
 use futures_util::TryFutureExt;
 use handlebars::Handlebars;
 use hyper::Method;
@@ -218,7 +218,7 @@ where
     B::Data: Send,
     B::Error: Into<BoxError>,
 {
-    type Rejection = AppErrorWithMetadata;
+    type Rejection = (Session, impl IntoResponse);
 
     async fn from_request(
         mut req: hyper::Request<B>,
@@ -251,15 +251,10 @@ where
             }
             Ok(Self { value: extractor.0 })
         };
-        result
-            .or_else(|app_error| async {
-                Err(AppErrorWithMetadata {
-                    session,
-                    request_id,
-                    app_error,
-                })
-            })
-            .await
+        match result.await {
+            Ok(ok) => Ok(ok),
+            Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
+        }
     }
 }
 

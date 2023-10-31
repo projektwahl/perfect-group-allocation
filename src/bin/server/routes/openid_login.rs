@@ -7,7 +7,7 @@ use openidconnect::Nonce;
 use sea_orm::DatabaseConnection;
 use serde::Deserialize;
 
-use crate::error::AppErrorWithMetadata;
+use crate::error::to_error_result;
 use crate::openid::get_openid_client;
 use crate::session::Session;
 use crate::{CsrfSafeForm, CsrfToken, XRequestId};
@@ -29,7 +29,7 @@ pub async fn openid_login(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session,
     _form: CsrfSafeForm<OpenIdLoginPayload>,
-) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let result = async {
         let client = get_openid_client().await?;
 
@@ -53,13 +53,6 @@ pub async fn openid_login(
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => {
-            // TODO FIXME store request id type-safe in body/session
-            Err(AppErrorWithMetadata {
-                session,
-                request_id,
-                app_error,
-            })
-        }
+        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
     }
 }

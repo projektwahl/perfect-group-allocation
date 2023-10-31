@@ -81,56 +81,56 @@ pub struct ErrorTemplate {
     error: String,
 }
 
-pub struct AppErrorWithMetadata {
-    pub session: Session,
-    pub request_id: String,
-    pub app_error: AppError,
-}
-
-impl IntoResponse for AppErrorWithMetadata {
-    fn into_response(self) -> axum::response::Response {
-        match self.app_error {
-            err @ (AppError::FormRejection(_)
-            | AppError::Multipart(_)
-            | AppError::Axum(_)
-            | AppError::Database(_)
-            | AppError::RequestToken(_)
-            | AppError::ClaimsVerification(_)
-            | AppError::Signing(_)
-            | AppError::Discovery(_)
-            | AppError::Oauth2Parse(_)
-            | AppError::File(_)
-            | AppError::Bundling(_)
-            | AppError::Bundling2(_)
-            | AppError::Json(_)
-            | AppError::Hyper(_)
-            | AppError::Template(_)
-            | AppError::EnvVar(_)
-            | AppError::Rustls(_)
-            | AppError::Poison(_)
-            | AppError::Join(_)
-            | AppError::OpenIdTokenNotFound
-            | AppError::NoAcceptRemaining
-            | AppError::SessionStillHeld
-            | AppError::Other(_)) => {
-                let result = render(
-                    &self.session,
-                    "error",
-                    ErrorTemplate {
-                        request_id: self.request_id,
-                        error: err.to_string(),
-                    },
-                )
-                .await?;
+pub async fn to_error_result(
+    session: Session,
+    request_id: String,
+    app_error: AppError,
+) -> (Session, impl IntoResponse) {
+    match app_error {
+        err @ (AppError::FormRejection(_)
+        | AppError::Multipart(_)
+        | AppError::Axum(_)
+        | AppError::Database(_)
+        | AppError::RequestToken(_)
+        | AppError::ClaimsVerification(_)
+        | AppError::Signing(_)
+        | AppError::Discovery(_)
+        | AppError::Oauth2Parse(_)
+        | AppError::File(_)
+        | AppError::Bundling(_)
+        | AppError::Bundling2(_)
+        | AppError::Json(_)
+        | AppError::Hyper(_)
+        | AppError::Template(_)
+        | AppError::EnvVar(_)
+        | AppError::Rustls(_)
+        | AppError::Poison(_)
+        | AppError::Join(_)
+        | AppError::OpenIdTokenNotFound
+        | AppError::NoAcceptRemaining
+        | AppError::SessionStillHeld
+        | AppError::Other(_)) => {
+            let result = render(
+                &session,
+                "error",
+                ErrorTemplate {
+                    request_id,
+                    error: err.to_string(),
+                },
+            )
+            .await;
+            (
+                session,
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Html(result).into_response(),
                 )
-                    .into_response()
-            }
-            err @ AppError::WrongCsrfToken => {
-                (StatusCode::BAD_REQUEST, format!("{err}")).into_response()
-            }
+                    .into_response(),
+            )
         }
+        err @ AppError::WrongCsrfToken => (
+            session,
+            (StatusCode::BAD_REQUEST, format!("{err}")).into_response(),
+        ),
     }
 }

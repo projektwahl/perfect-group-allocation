@@ -1,7 +1,7 @@
 use axum::response::{Html, IntoResponse};
 use axum::TypedHeader;
 
-use crate::error::AppErrorWithMetadata;
+use crate::error::to_error_result;
 use crate::session::Session;
 use crate::templating::render;
 use crate::{CreateProject, XRequestId};
@@ -10,7 +10,7 @@ use crate::{CreateProject, XRequestId};
 pub async fn index(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
-) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let result = async {
         let result = render(
             &session,
@@ -22,18 +22,11 @@ pub async fn index(
                 description_error: None,
             },
         )
-        .await?;
+        .await;
         Ok(Html(result))
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => {
-            // TODO FIXME store request id type-safe in body/session
-            Err(AppErrorWithMetadata {
-                session,
-                request_id,
-                app_error,
-            })
-        }
+        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
     }
 }

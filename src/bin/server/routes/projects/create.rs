@@ -4,7 +4,7 @@ use axum::TypedHeader;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
 
 use crate::entities::project_history::{self, ActiveModel};
-use crate::error::AppErrorWithMetadata;
+use crate::error::to_error_result;
 use crate::session::Session;
 use crate::templating::render;
 use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, XRequestId};
@@ -15,7 +15,7 @@ pub async fn create(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
-) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let result = async {
         let mut title_error = None;
         let mut description_error = None;
@@ -39,7 +39,7 @@ pub async fn create(
                     description_error,
                 },
             )
-            .await?;
+            .await;
             return Ok(Html(result).into_response());
         }
 
@@ -56,13 +56,6 @@ pub async fn create(
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => {
-            // TODO FIXME store request id type-safe in body/session
-            Err(AppErrorWithMetadata {
-                session,
-                request_id,
-                app_error,
-            })
-        }
+        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
     }
 }

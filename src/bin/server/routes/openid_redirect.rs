@@ -6,7 +6,7 @@ use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
 use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
 use serde::{Deserialize, Serialize};
 
-use crate::error::{AppError, AppErrorWithMetadata};
+use crate::error::{to_error_result, AppError};
 use crate::openid::get_openid_client;
 use crate::session::{Session, SessionCookie};
 use crate::templating::render;
@@ -56,7 +56,7 @@ pub async fn openid_redirect(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session, // what if this here could be a reference?
     form: axum::Form<OpenIdRedirect>,
-) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let session_ref = &mut session;
     let result = async {
         // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
@@ -86,7 +86,7 @@ pub async fn openid_redirect(
                         error_description: err.error_description,
                     },
                 )
-                .await?;
+                .await;
                 Ok(Html(result).into_response())
             }
             OpenIdRedirectInner::Success(ok) => {
@@ -142,13 +142,6 @@ pub async fn openid_redirect(
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => {
-            // TODO FIXME store request id type-safe in body/session
-            Err(AppErrorWithMetadata {
-                session,
-                request_id,
-                app_error,
-            })
-        }
+        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
     }
 }
