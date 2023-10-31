@@ -201,6 +201,7 @@ pub trait CsrfToken {
     fn csrf_token(&self) -> String;
 }
 
+// TODO FIXME also provide session and request id through this so there is no duplicate extraction
 #[derive(Deserialize)]
 pub struct CsrfSafeForm<T: CsrfToken> {
     value: T,
