@@ -110,7 +110,6 @@ use alloc::borrow::Cow;
 use core::convert::Infallible;
 use std::net::SocketAddr;
 
-use axum::extract::rejection::TypedHeaderRejection;
 use axum::extract::{FromRef, FromRequest};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
@@ -120,7 +119,7 @@ use axum_extra::extract::cookie::Key;
 use error::{AppError, AppErrorWithMetadata};
 use futures_util::TryFutureExt;
 use handlebars::Handlebars;
-use hyper::{Method, StatusCode};
+use hyper::Method;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use routes::download::handler;
@@ -230,7 +229,7 @@ where
             .extract_parts_with_state::<Session, MyState>(state)
             .await
         {
-            Ok(v) => v,
+            Ok(session) => session,
             Err(infallible) => match infallible {},
         };
         let expected_csrf_token = session.session().0;
@@ -313,12 +312,14 @@ impl Header for XRequestId {
     where
         E: Extend<HeaderValue>,
     {
+        #[expect(clippy::unwrap_used, reason = "decode ensures this is unreachable")]
         let value = HeaderValue::from_str(&self.0).unwrap();
 
         values.extend(core::iter::once(value));
     }
 }
 
+/*
 async fn handle_error_test(
     request_id: Result<TypedHeader<XRequestId>, TypedHeaderRejection>,
     err: Box<dyn std::error::Error + Sync + Send + 'static>,
@@ -333,6 +334,7 @@ async fn handle_error_test(
         ),
     )
 }
+*/
 
 pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
     let database_url = std::env::var("DATABASE_URL")?;
@@ -453,7 +455,10 @@ static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
         handlebars.set_dev_mode(true);
     }
     handlebars.set_strict_mode(true);
-    #[expect(clippy::unwrap_used)]
+    #[expect(
+        clippy::unwrap_used,
+        reason = "we don't want to handle this weird failure case here"
+    )]
     handlebars
         .register_templates_directory(".hbs", "./templates/")
         .map_err(Box::new)
@@ -511,7 +516,6 @@ async fn main() -> Result<(), AppError> {
     tracing::debug!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
-        .await
-        .unwrap();
+        .await?;
     Ok(())
 }
