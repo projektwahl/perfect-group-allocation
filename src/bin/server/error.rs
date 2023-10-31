@@ -120,7 +120,8 @@ impl IntoResponse for AppErrorWithMetadata {
                         request_id: self.request_id,
                         error: err.to_string(),
                     },
-                );
+                )
+                .await?;
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Html(result).into_response(),

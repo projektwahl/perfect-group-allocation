@@ -85,7 +85,8 @@ pub async fn openid_redirect(
                         error: err.error,
                         error_description: err.error_description,
                     },
-                );
+                )
+                .await?;
                 Ok(Html(result).into_response())
             }
             OpenIdRedirectInner::Success(ok) => {

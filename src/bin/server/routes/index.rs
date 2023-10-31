@@ -21,7 +21,8 @@ pub async fn index(
                 description: None,
                 description_error: None,
             },
-        );
+        )
+        .await?;
         Ok(Html(result))
     };
     match result.await {

@@ -38,7 +38,8 @@ pub async fn create(
                     description: Some(form.value.description.clone()),
                     description_error,
                 },
-            );
+            )
+            .await?;
             return Ok(Html(result).into_response());
         }
 
