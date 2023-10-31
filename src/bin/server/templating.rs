@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex, PoisonError};
+use alloc::sync::Arc;
+use std::sync::{Mutex, PoisonError};
 
 use crate::csrf_protection::WithCsrfToken;
 use crate::session::Session;
