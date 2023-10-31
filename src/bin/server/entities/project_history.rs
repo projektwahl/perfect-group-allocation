@@ -16,7 +16,7 @@ pub struct Model {
     pub description: String,
 }
 
-#[expect(clippy::empty_enum)]
+#[expect(clippy::empty_enum, reason = "generated code")]
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
 

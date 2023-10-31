@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use axum::response::{Html, IntoResponse, Redirect};
-use axum::{Form, TypedHeader};
+use axum::TypedHeader;
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
 use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
@@ -114,17 +114,6 @@ pub async fn openid_redirect(
                     }
                 }
 
-                // The authenticated user's identity is now available. See the IdTokenClaims struct for a
-                // complete listing of the available claims.
-                println!(
-                    "User {} with e-mail address {} has authenticated successfully",
-                    claims.subject().as_str(),
-                    claims
-                        .email()
-                        .map_or("<not provided>", |email| email.as_str())
-                );
-
-                println!("set here");
                 session.set_session(Some(SessionCookie {
                     email: claims.email().unwrap().to_owned(),
                     expiration: claims.expiration(),

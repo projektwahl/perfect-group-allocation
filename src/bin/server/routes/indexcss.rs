@@ -3,7 +3,6 @@ use std::path::Path;
 use axum::response::IntoResponse;
 use axum::TypedHeader;
 use axum_extra::response::Css;
-use futures_util::TryFutureExt;
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;

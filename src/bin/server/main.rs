@@ -90,7 +90,8 @@
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
-    clippy::module_name_repetitions
+    clippy::module_name_repetitions,
+    reason = "not yet ready for that"
 )]
 #![feature(coroutines)]
 #![feature(lint_reasons)]
@@ -106,19 +107,15 @@ pub mod session;
 pub mod templating;
 
 use alloc::borrow::Cow;
-use alloc::sync::Arc;
 use core::convert::Infallible;
-use std::fs::File;
-use std::io::BufReader;
 use std::net::SocketAddr;
-use std::path::Path;
 
 use axum::extract::rejection::TypedHeaderRejection;
 use axum::extract::{FromRef, FromRequest};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Form, RequestExt, Router, ServiceExt, TypedHeader};
+use axum::{async_trait, BoxError, RequestExt, Router, TypedHeader};
 use axum_extra::extract::cookie::Key;
 use error::{AppError, AppErrorWithMetadata};
 use futures_util::TryFutureExt;
@@ -133,14 +130,12 @@ use routes::openid_login::openid_login;
 use routes::openid_redirect::openid_redirect;
 use routes::projects::create::create;
 use routes::projects::list::list;
-use rustls_pemfile::{certs, pkcs8_private_keys};
 use sea_orm::{
     ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, RuntimeErr, Statement,
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
-use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 
@@ -241,11 +236,8 @@ where
         let expected_csrf_token = session.session().0;
 
         let result = async {
-            #[expect(
-                clippy::disallowed_typesclippy,
-                reason = "this is the csrf safe wrapper"
-            )]
-            let extractor = Form::<T>::from_request(req, state).await?;
+            #[expect(clippy::disallowed_types, reason = "this is the csrf safe wrapper")]
+            let extractor = axum::Form::<T>::from_request(req, state).await?;
 
             if not_get_or_head {
                 let actual_csrf_token = extractor.0.csrf_token();
@@ -269,30 +261,6 @@ where
 }
 
 impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
-
-// TODO rtt0
-fn rustls_server_config(
-    key: impl AsRef<Path>,
-    cert: impl AsRef<Path>,
-) -> Result<Arc<ServerConfig>, AppError> {
-    let mut key = BufReader::new(File::open(key)?);
-    let mut cert_reader = BufReader::new(File::open(cert)?);
-
-    let key = PrivateKey(pkcs8_private_keys(&mut key)?.remove(0));
-    let certs = certs(&mut cert_reader)?
-        .into_iter()
-        .map(Certificate)
-        .collect();
-
-    let mut config = ServerConfig::builder()
-        .with_safe_defaults()
-        .with_no_client_auth()
-        .with_single_cert(certs, key)?;
-
-    config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
-
-    Ok(Arc::new(config))
-}
 
 // maybe not per request csrf but per form a different csrf token that is only valid for the form as defense in depth.
 /*

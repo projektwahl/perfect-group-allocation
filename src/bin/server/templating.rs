@@ -11,13 +11,15 @@ pub struct TemplateWrapper<'a, T> {
 
 pub fn render<T: serde::Serialize>(session: &Session, template_name: &str, value: T) -> String {
     let session = session.session();
-    println!("{session:?}");
     HANDLEBARS
         .render(
             template_name,
             &TemplateWrapper {
                 csrf_token: &session.0,
-                email: session.1.as_ref().map(|s| s.email.as_str()),
+                email: session
+                    .1
+                    .as_ref()
+                    .map(|session_cookie| session_cookie.email.as_str()),
                 inner: value,
             },
         )
