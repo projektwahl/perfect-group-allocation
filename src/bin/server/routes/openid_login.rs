@@ -1,12 +1,6 @@
-use alloc::sync::Arc;
-use std::sync::PoisonError;
-
 use axum::extract::State;
 use axum::response::{IntoResponse, Redirect};
 use axum::TypedHeader;
-use axum_extra::extract::PrivateCookieJar;
-use futures_util::TryFutureExt;
-use handlebars::Handlebars;
 use oauth2::PkceCodeChallenge;
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::Nonce;
@@ -34,7 +28,7 @@ pub async fn openid_login(
     State(_db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session,
-    form: CsrfSafeForm<OpenIdLoginPayload>,
+    _form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
         let client = get_openid_client().await?;

@@ -1,7 +1,3 @@
-use alloc::sync::Arc;
-use std::sync::{Mutex, PoisonError};
-
-use crate::csrf_protection::WithCsrfToken;
 use crate::session::Session;
 use crate::HANDLEBARS;
 
@@ -15,7 +11,7 @@ pub struct TemplateWrapper<'a, T> {
 
 pub fn render<T: serde::Serialize>(session: &Session, template_name: &str, value: T) -> String {
     let session = session.session();
-    println!("{:?}", session);
+    println!("{session:?}");
     HANDLEBARS
         .render(
             template_name,

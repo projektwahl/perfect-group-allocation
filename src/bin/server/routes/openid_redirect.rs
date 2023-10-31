@@ -1,12 +1,6 @@
-use alloc::sync::Arc;
-use std::sync::PoisonError;
-
 use anyhow::anyhow;
-use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum::{Form, TypedHeader};
-use axum_extra::extract::PrivateCookieJar;
-use handlebars::Handlebars;
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
 use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
@@ -16,7 +10,7 @@ use crate::error::{AppError, AppErrorWithMetadata};
 use crate::openid::get_openid_client;
 use crate::session::{Session, SessionCookie};
 use crate::templating::render;
-use crate::{CsrfSafeExtractor, XRequestId, HANDLEBARS};
+use crate::{CsrfSafeExtractor, XRequestId};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -80,7 +74,7 @@ pub async fn openid_redirect(
                 let result = render(
                     &session,
                     "openid_redirect",
-                    &OpenIdRedirectErrorTemplate {
+                    OpenIdRedirectErrorTemplate {
                         csrf_token: expected_csrf_token.clone(),
                         error: err.error,
                         error_description: err.error_description,

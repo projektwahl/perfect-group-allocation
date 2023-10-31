@@ -1,19 +1,11 @@
-use alloc::sync::Arc;
-use std::sync::PoisonError;
-
-use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::TypedHeader;
-use axum_extra::extract::PrivateCookieJar;
-use futures_util::TryFutureExt;
-use handlebars::Handlebars;
 use hyper::header;
-use once_cell::sync::Lazy;
 use tokio_util::io::ReaderStream;
 
 use crate::error::AppErrorWithMetadata;
 use crate::session::Session;
-use crate::{EmptyBody, XRequestId};
+use crate::XRequestId;
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn handler(

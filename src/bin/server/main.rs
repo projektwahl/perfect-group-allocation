@@ -108,36 +108,24 @@ pub mod templating;
 use alloc::borrow::Cow;
 use alloc::sync::Arc;
 use core::convert::Infallible;
-use core::future::poll_fn;
-use core::pin::Pin;
-use core::time::Duration;
 use std::fs::File;
 use std::io::BufReader;
 use std::net::SocketAddr;
 use std::path::Path;
-use std::sync::{Mutex, PoisonError};
 
-use axum::error_handling::HandleErrorLayer;
 use axum::extract::rejection::TypedHeaderRejection;
-use axum::extract::{FromRef, FromRequest, State};
+use axum::extract::{FromRef, FromRequest};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
-use axum::{
-    async_trait, BoxError, Form, RequestExt, RequestPartsExt, Router, ServiceExt, TypedHeader,
-};
+use axum::{async_trait, BoxError, Form, RequestExt, Router, ServiceExt, TypedHeader};
 use axum_extra::extract::cookie::Key;
-use axum_server::tls_rustls::RustlsConfig;
 use error::{AppError, AppErrorWithMetadata};
 use futures_util::TryFutureExt;
 use handlebars::Handlebars;
-use http_body::Limited;
-use hyper::server::accept::Accept;
-use hyper::server::conn::{AddrIncoming, Http};
-use hyper::{header, Method, StatusCode};
+use hyper::{Method, StatusCode};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
-use pin_project_lite::pin_project;
 use routes::download::handler;
 use routes::index::index;
 use routes::indexcss::indexcss;
@@ -152,21 +140,9 @@ use sea_orm::{
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
-use tokio::net::TcpListener;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
-use tokio_rustls::TlsAcceptor;
-use tower::make::MakeService;
-use tower::ServiceBuilder;
-use tower_http::catch_panic::CatchPanicLayer;
-use tower_http::compression::CompressionLayer;
-use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
-use tower_http::set_header::SetResponseHeaderLayer;
-use tower_http::timeout::{
-    RequestBodyTimeoutLayer, ResponseBodyTimeoutLayer, TimeoutBody, TimeoutLayer,
-};
-use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 
 type MyBody = hyper::Body;
 
@@ -509,7 +485,7 @@ static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
         handlebars.set_dev_mode(true);
     }
     handlebars.set_strict_mode(true);
-    #[allow(clippy::unwrap_used)]
+    #[expect(clippy::unwrap_used)]
     handlebars
         .register_templates_directory(".hbs", "./templates/")
         .map_err(Box::new)

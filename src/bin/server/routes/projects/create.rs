@@ -1,18 +1,13 @@
-use alloc::sync::Arc;
-use std::sync::PoisonError;
-
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum::TypedHeader;
-use axum_extra::extract::PrivateCookieJar;
-use handlebars::Handlebars;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
 
 use crate::entities::project_history::{self, ActiveModel};
 use crate::error::AppErrorWithMetadata;
 use crate::session::Session;
 use crate::templating::render;
-use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, XRequestId, HANDLEBARS};
+use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, XRequestId};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn create(
@@ -22,7 +17,7 @@ pub async fn create(
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
-        let expected_csrf_token = session.session().0;
+        let _expected_csrf_token = session.session().0;
 
         let mut title_error = None;
         let mut description_error = None;
@@ -39,7 +34,7 @@ pub async fn create(
             let result = render(
                 &session,
                 "create-project",
-                &CreateProject {
+                CreateProject {
                     title: Some(form.value.title.clone()),
                     title_error,
                     description: Some(form.value.description.clone()),

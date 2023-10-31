@@ -1,25 +1,16 @@
-use alloc::sync::Arc;
 use core::convert::Infallible;
-use core::task::Poll;
-use std::sync::Mutex;
 
-use axum::extract::{FromRequestParts, State};
-use axum::response::{IntoResponse, IntoResponseParts, Response};
+use axum::extract::FromRequestParts;
+use axum::response::IntoResponseParts;
 use axum::{async_trait, RequestPartsExt};
-use axum_extra::extract::cookie::{Cookie, Key};
+use axum_extra::extract::cookie::Cookie;
 use axum_extra::extract::PrivateCookieJar;
 use chrono::{DateTime, Utc};
-use futures_util::future::BoxFuture;
-use handlebars::Handlebars;
-use http::StatusCode;
-use miniserde::Deserialize;
 use oauth2::{PkceCodeVerifier, RefreshToken};
 use openidconnect::{EndUserEmail, Nonce};
 use rand::{thread_rng, Rng};
-use tower::{Layer, Service};
 
-use crate::error::{AppError, AppErrorWithMetadata};
-use crate::{MyState, HANDLEBARS};
+use crate::error::AppError;
 
 #[derive(miniserde::Serialize)]
 pub struct SessionCookieStrings {
@@ -56,7 +47,7 @@ where
         parts: &mut http::request::Parts,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
-        Ok(Session::new(
+        Ok(Self::new(
             parts
                 .extract_with_state::<PrivateCookieJar, S>(state)
                 .await?,
@@ -87,7 +78,7 @@ impl Session {
     #[must_use]
     pub fn session(&self) -> (String, Option<SessionCookie>) {
         // constructor and all method calls ensure this is not None
-        #[allow(clippy::unwrap_used)]
+        #[expect(clippy::unwrap_used)]
         self.optional_session().unwrap()
     }
 

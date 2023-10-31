@@ -1,17 +1,10 @@
-use alloc::sync::Arc;
-use std::sync::PoisonError;
-
-use axum::extract::State;
 use axum::response::{Html, IntoResponse};
 use axum::TypedHeader;
-use axum_extra::extract::PrivateCookieJar;
-use handlebars::Handlebars;
-use once_cell::sync::Lazy;
 
 use crate::error::AppErrorWithMetadata;
 use crate::session::Session;
 use crate::templating::render;
-use crate::{CreateProject, EmptyBody, XRequestId, HANDLEBARS};
+use crate::{CreateProject, XRequestId};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn index(

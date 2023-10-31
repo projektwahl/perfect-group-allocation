@@ -1,25 +1,18 @@
-use alloc::sync::Arc;
-use std::sync::{Mutex, PoisonError};
-
 use axum::body::StreamBody;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::TypedHeader;
-use axum_extra::extract::PrivateCookieJar;
 use futures_async_stream::try_stream;
 use futures_util::StreamExt;
-use handlebars::Handlebars;
 use html_escape::encode_safe;
 use hyper::header;
 use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
 
-use crate::csrf_protection::WithCsrfToken;
 use crate::entities::project_history;
-use crate::error::AppErrorWithMetadata;
 use crate::session::Session;
 use crate::templating::render;
-use crate::{EmptyBody, TemplateProject, XRequestId, HANDLEBARS};
+use crate::{TemplateProject, XRequestId};
 
 #[try_stream(ok = String, error = DbErr)]
 async fn list_internal(db: DatabaseConnection, session: Session) {
@@ -31,7 +24,7 @@ async fn list_internal(db: DatabaseConnection, session: Session) {
         let result = render(
             &session,
             "project",
-            &TemplateProject {
+            TemplateProject {
                 title: x.title,
                 description: x.description,
             },
@@ -44,7 +37,7 @@ async fn list_internal(db: DatabaseConnection, session: Session) {
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn list(
     State(db): State<DatabaseConnection>,
-    TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
+    TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
 ) -> (Session, impl IntoResponse) {
     let stream = list_internal(db, session.clone()).map(|elem| match elem {

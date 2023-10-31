@@ -1,20 +1,14 @@
-use alloc::sync::Arc;
-use std::sync::Mutex;
-
 use axum::extract::multipart::MultipartError;
 use axum::extract::rejection::FormRejection;
 use axum::response::{Html, IntoResponse};
-use handlebars::Handlebars;
 use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
-use once_cell::sync::Lazy;
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 use serde::Serialize;
 
 use crate::session::Session;
 use crate::templating::render;
-use crate::HANDLEBARS;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
