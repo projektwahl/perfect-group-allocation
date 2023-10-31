@@ -488,19 +488,28 @@ async fn main() -> Result<(), AppError> {
 
     // print task metrics every 500ms
     {
-        let metrics_monitor = monitor_index_css.clone();
+        let monitor_index_css = monitor_index_css.clone();
+        let monitor_root = monitor_root.clone();
         tokio::spawn(async move {
-            for interval in metrics_monitor.intervals() {
+            for (interval_index_css, interval_root) in
+                monitor_index_css.intervals().zip(monitor_root.intervals())
+            {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
                 println!(
-                    "{:?} {:?} {:?}",
-                    interval.mean_poll_duration(),
-                    interval.slow_poll_ratio(),
-                    interval.mean_slow_poll_duration()
+                    "GET /index.css {:?} {:?} {:?}",
+                    interval_index_css.mean_poll_duration(),
+                    interval_index_css.slow_poll_ratio(),
+                    interval_index_css.mean_slow_poll_duration()
+                );
+                println!(
+                    "GET / {:?} {:?} {:?}",
+                    interval_root.mean_poll_duration(),
+                    interval_root.slow_poll_ratio(),
+                    interval_root.mean_slow_poll_duration()
                 );
                 // wait 500ms
-                tokio::time::sleep(Duration::from_millis(500)).await;
+                tokio::time::sleep(Duration::from_millis(5000)).await;
             }
         });
     }
