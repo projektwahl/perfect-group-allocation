@@ -21,7 +21,7 @@ use crate::{EmptyBody, ExtractSession, XRequestId};
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn indexcss(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    session: PrivateCookieJar,
+    cookies: Session,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
         // @import would produce a flash of unstyled content and also is less efficient

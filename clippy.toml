@@ -8,3 +8,7 @@ enforced-import-renames = [
     { path = "oauth2::TokenResponse", rename = "OAuth2TokenResponse" },
     { path = "openidconnect::TokenResponse", rename = "OpenIdTokenResponse" },
 ]
+disallowed-types = [
+    { path = "axum::form::Form", reason = "use CsrfSafeForm" },
+    { path = "axum_extra::extract::Form", reason = "use CsrfSafeForm" },
+]

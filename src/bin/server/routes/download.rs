@@ -17,7 +17,7 @@ use crate::{EmptyBody, ExtractSession, XRequestId};
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn handler(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    cookies: PrivateCookieJar,
+    cookies: Session,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
         let file =

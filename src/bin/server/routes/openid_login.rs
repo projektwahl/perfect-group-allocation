@@ -33,7 +33,7 @@ impl CsrfToken for OpenIdLoginPayload {
 pub async fn openid_login(
     State(_db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    session: PrivateCookieJar,
+    cookies: Session,
     form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {

@@ -15,7 +15,7 @@ use crate::{CreateProject, EmptyBody, ExtractSession, XRequestId, HANDLEBARS};
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn index(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    session: PrivateCookieJar,
+    cookies: Session,
 ) -> impl IntoResponse {
     let result = async {
         let result = render(

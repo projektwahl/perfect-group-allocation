@@ -10,6 +10,7 @@ use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
 
 use crate::entities::project_history::{self, ActiveModel};
 use crate::error::AppErrorWithMetadata;
+use crate::session::Session;
 use crate::templating::render;
 use crate::{
     CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, XRequestId, HANDLEBARS,
@@ -19,7 +20,7 @@ use crate::{
 pub async fn create(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    cookies: PrivateCookieJar,
+    cookies: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {

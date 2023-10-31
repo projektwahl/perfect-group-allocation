@@ -59,7 +59,7 @@ pub struct OpenIdRedirectErrorTemplate {
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    session: PrivateCookieJar,
+    cookies: Session,
     form: Form<OpenIdRedirect>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {

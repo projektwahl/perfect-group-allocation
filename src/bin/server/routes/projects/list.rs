@@ -45,7 +45,7 @@ async fn list_internal(db: DatabaseConnection, session: Session) {
 pub async fn list(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    session: PrivateCookieJar,
+    cookies: Session,
 ) -> (Session, impl IntoResponse) {
     let stream = list_internal(db, session.clone()).map(|elem| match elem {
         Err(db_err) => Ok::<String, DbErr>(format!(

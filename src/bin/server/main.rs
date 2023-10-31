@@ -171,66 +171,6 @@ const DB_NAME: &str = "postgres";
 
 pub trait CsrfSafeExtractor {}
 
-pub struct ExtractSession<E: CsrfSafeExtractor> {
-    extractor: E,
-    session: Session,
-}
-
-#[async_trait]
-impl<S, B, T> FromRequest<S, BodyWithSession<B>> for ExtractSession<T>
-where
-    B: Send + 'static,
-    S: Send + Sync,
-    T: CsrfSafeExtractor + FromRequest<S, BodyWithSession<B>>,
-{
-    type Rejection = T::Rejection;
-
-    async fn from_request(
-        req: hyper::Request<BodyWithSession<B>>,
-        state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        let (parts, body) = req.into_parts();
-        let session = body.session.clone();
-        let extractor = T::from_request(hyper::Request::from_parts(parts, body), state).await?;
-        Ok(Self { extractor, session })
-    }
-}
-
-pin_project! {
-    pub struct BodyWithSession<B> {
-        // TODO FIXME store request id in here and maybe improve storage of session (so no arc exposed to user?)
-        session: Session,
-        #[pin]
-        body: B
-    }
-}
-
-impl<B> http_body::Body for BodyWithSession<B>
-where
-    B: http_body::Body,
-{
-    type Data = B::Data;
-    type Error = B::Error;
-
-    fn poll_data(
-        self: Pin<&mut Self>,
-        cx: &mut core::task::Context<'_>,
-    ) -> core::task::Poll<Option<Result<Self::Data, Self::Error>>> {
-        let this = self.project();
-
-        this.body.poll_data(cx)
-    }
-
-    fn poll_trailers(
-        self: Pin<&mut Self>,
-        cx: &mut core::task::Context<'_>,
-    ) -> core::task::Poll<Result<Option<hyper::HeaderMap>, Self::Error>> {
-        let this = self.project();
-
-        this.body.poll_trailers(cx)
-    }
-}
-
 #[derive(Clone, FromRef)]
 struct MyState {
     database: DatabaseConnection,
@@ -294,7 +234,7 @@ pub struct CsrfSafeForm<T: CsrfToken> {
 }
 
 #[async_trait]
-impl<T, B> FromRequest<MyState, BodyWithSession<B>> for CsrfSafeForm<T>
+impl<T, B> FromRequest<MyState, B> for CsrfSafeForm<T>
 where
     T: DeserializeOwned + CsrfToken,
     B: http_body::Body + Send + 'static,
@@ -304,7 +244,7 @@ where
     type Rejection = AppErrorWithMetadata;
 
     async fn from_request(
-        req: hyper::Request<BodyWithSession<B>>,
+        req: hyper::Request<B>,
         state: &MyState,
     ) -> Result<Self, Self::Rejection> {
         let (mut parts, body) = req.into_parts();
