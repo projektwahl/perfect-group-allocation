@@ -492,6 +492,7 @@ async fn main() -> Result<(), AppError> {
         tokio::spawn(async move {
             for interval in metrics_monitor.intervals() {
                 // pretty-print the metric interval
+                // these metrics seem to work (tested using index.css spawn_blocking)
                 println!(
                     "{:?} {:?} {:?}",
                     interval.mean_poll_duration(),
@@ -509,10 +510,7 @@ async fn main() -> Result<(), AppError> {
         tokio::spawn(async move {
             for interval in runtime_monitor.intervals() {
                 // pretty-print the metric interval
-                println!(
-                    "{:?} {:?}",
-                    interval.mean_poll_duration, interval.mean_poll_duration_worker_max
-                );
+
                 // wait 500ms
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
