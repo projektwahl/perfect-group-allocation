@@ -11,7 +11,7 @@ use crate::XRequestId;
 pub async fn handler(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
-) -> Result<impl IntoResponse, AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
         let file =
             tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
@@ -30,7 +30,7 @@ pub async fn handler(
         Ok((headers, hyper::Response::new(body)))
     };
     match result.await {
-        Ok(ok) => Ok(ok),
+        Ok(ok) => Ok((session, ok)),
         Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {

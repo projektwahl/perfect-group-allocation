@@ -10,6 +10,7 @@ use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
 
 use crate::entities::project_history;
+use crate::error::AppErrorWithMetadata;
 use crate::session::Session;
 use crate::templating::render;
 use crate::{TemplateProject, XRequestId};
@@ -39,7 +40,7 @@ pub async fn list(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
-) -> (Session, impl IntoResponse) {
+) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let stream = list_internal(db, session.clone()).map(|elem| match elem {
         Err(db_err) => Ok::<String, DbErr>(format!(
             // TODO FIXME use template here
@@ -48,11 +49,11 @@ pub async fn list(
         )),
         Ok::<String, DbErr>(ok) => Ok(ok),
     });
-    (
+    Ok((
         session,
         (
             [(header::CONTENT_TYPE, "text/html")],
             StreamBody::new(stream),
         ),
-    )
+    ))
 }

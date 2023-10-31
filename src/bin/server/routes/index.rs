@@ -10,7 +10,7 @@ use crate::{CreateProject, XRequestId};
 pub async fn index(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
-) -> impl IntoResponse {
+) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
         let result = render(
             &session,
@@ -25,7 +25,7 @@ pub async fn index(
         Ok(Html(result))
     };
     match result.await {
-        Ok(ok) => Ok(ok),
+        Ok(ok) => Ok((session, ok)),
         Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {

@@ -15,7 +15,7 @@ pub async fn create(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
-) -> Result<impl IntoResponse, AppErrorWithMetadata> {
+) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
         let _expected_csrf_token = session.session().0;
 
@@ -56,7 +56,7 @@ pub async fn create(
         Ok(Redirect::to("/list").into_response())
     };
     match result.await {
-        Ok(ok) => Ok(ok),
+        Ok(ok) => Ok((session, ok)),
         Err(app_error) => {
             // TODO FIXME store request id type-safe in body/session
             Err(AppErrorWithMetadata {

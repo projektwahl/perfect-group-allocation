@@ -31,6 +31,7 @@ fn test_to_string(value: &(String, Option<SessionCookieStrings>)) -> String {
 }
 
 #[derive(Clone)]
+#[must_use]
 pub struct Session {
     private_cookies: PrivateCookieJar,
 }
@@ -59,7 +60,6 @@ impl Session {
     const COOKIE_NAME_OPENIDCONNECT: &'static str = "__Host-openidconnect";
     const COOKIE_NAME_SESSION: &'static str = "__Host-session";
 
-    #[must_use]
     pub fn new(private_cookies: PrivateCookieJar) -> Self {
         let mut session = Self { private_cookies };
         if session.optional_session().is_none() {
@@ -76,7 +76,6 @@ impl Session {
 
     #[must_use]
     pub fn session(&self) -> (String, Option<SessionCookie>) {
-        // constructor and all method calls ensure this is not None
         #[expect(clippy::unwrap_used, reason = "set in constructor so has to exist")]
         self.optional_session().unwrap()
     }
@@ -122,20 +121,20 @@ impl Session {
     }
 
     pub fn get_and_remove_openidconnect(
-        &mut self,
-    ) -> Result<(PkceCodeVerifier, Nonce, oauth2::CsrfToken), AppError> {
-        let return_value = Ok(self
+        mut self,
+    ) -> Result<(Self, (PkceCodeVerifier, Nonce, oauth2::CsrfToken)), AppError> {
+        let return_value = self
             .private_cookies
             .get(Self::COOKIE_NAME_OPENIDCONNECT)
             .map(|cookie| serde_json::from_str(cookie.value()))
-            .ok_or(AppError::OpenIdTokenNotFound)??);
+            .ok_or(AppError::OpenIdTokenNotFound)??;
         let cookie = Cookie::build(Self::COOKIE_NAME_OPENIDCONNECT, "")
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
             .secure(true)
             .finish();
-        self.private_cookies = self.private_cookies.clone().remove(cookie);
-        return_value
+        self.private_cookies = self.private_cookies.remove(cookie);
+        Ok((self, return_value))
     }
 }
 
