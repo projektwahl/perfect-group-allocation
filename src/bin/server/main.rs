@@ -93,6 +93,7 @@
     clippy::module_name_repetitions
 )]
 #![feature(coroutines)]
+#![feature(lint_reasons)]
 
 extern crate alloc;
 
@@ -264,6 +265,10 @@ where
         let expected_csrf_token = session.session().0;
 
         let result = async {
+            #[expect(
+                clippy::disallowed_typesclippy,
+                reason = "this is the csrf safe wrapper"
+            )]
             let extractor = Form::<T>::from_request(req, state).await?;
 
             if not_get_or_head {
