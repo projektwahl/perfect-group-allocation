@@ -122,7 +122,9 @@ use axum::extract::{FromRef, FromRequest, State};
 use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, Form, RequestPartsExt, Router, ServiceExt, TypedHeader};
+use axum::{
+    async_trait, BoxError, Form, RequestExt, RequestPartsExt, Router, ServiceExt, TypedHeader,
+};
 use axum_extra::extract::cookie::Key;
 use axum_server::tls_rustls::RustlsConfig;
 use error::{AppError, AppErrorWithMetadata};
@@ -244,22 +246,25 @@ where
     type Rejection = AppErrorWithMetadata;
 
     async fn from_request(
-        req: hyper::Request<B>,
+        mut req: hyper::Request<B>,
         state: &MyState,
     ) -> Result<Self, Self::Rejection> {
-        let (mut parts, body) = req.into_parts();
-        let request_id = parts
-            .extract::<TypedHeader<XRequestId>>()
+        let request_id = req
+            .extract_parts::<TypedHeader<XRequestId>>()
             .await
             .map_or("unknown-request-id".to_owned(), |header| header.0.0);
-        let not_get_or_head = !(parts.method == Method::GET || parts.method == Method::HEAD);
-        let session = body.session.clone();
+        let not_get_or_head = !(req.method() == Method::GET || req.method() == Method::HEAD);
+        let session = match req
+            .extract_parts_with_state::<Session, MyState>(state)
+            .await
+        {
+            Ok(v) => v,
+            Err(infallible) => match infallible {},
+        };
+        let expected_csrf_token = session.session().0;
 
         let result = async {
-            let expected_csrf_token = body.session.session().0;
-
-            let extractor =
-                Form::<T>::from_request(hyper::Request::from_parts(parts, body), state).await?;
+            let extractor = Form::<T>::from_request(req, state).await?;
 
             if not_get_or_head {
                 let actual_csrf_token = extractor.0.csrf_token();
@@ -272,8 +277,6 @@ where
         };
         result
             .or_else(|app_error| async {
-                // TODO FIXME store request id type-safe in body/session
-
                 Err(AppErrorWithMetadata {
                     session,
                     request_id,
@@ -480,7 +483,8 @@ fn layers(app: Router<MyState, hyper::Body>, db: DatabaseConnection) -> Router<(
         key: Key::generate(),
     });
     //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
-    let app = app.layer(
+    // TODO FIXME
+    /*let app = app.layer(
         ServiceBuilder::new()
             .layer(HandleErrorLayer::new(handle_error_test))
             .layer(
@@ -489,7 +493,7 @@ fn layers(app: Router<MyState, hyper::Body>, db: DatabaseConnection) -> Router<(
                     .on_response(DefaultOnResponse::default().include_headers(true)),
             )
             .layer(CatchPanicLayer::new()),
-    );
+    );*/
     let app: Router<(), hyper::Body> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
     app
 }

@@ -48,6 +48,7 @@ pub struct Session {
 impl<S> FromRequestParts<S> for Session
 where
     S: Send + Sync,
+    axum_extra::extract::cookie::Key: axum::extract::FromRef<S>,
 {
     type Rejection = Infallible;
 
@@ -56,7 +57,9 @@ where
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         Ok(Session::new(
-            parts.extract_with_state::<PrivateCookieJar>(state),
+            parts
+                .extract_with_state::<PrivateCookieJar, S>(state)
+                .await?,
         ))
     }
 }
