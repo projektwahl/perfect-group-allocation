@@ -4,6 +4,7 @@ use std::sync::PoisonError;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum::TypedHeader;
+use axum_extra::extract::PrivateCookieJar;
 use handlebars::Handlebars;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
 
@@ -18,10 +19,8 @@ use crate::{
 pub async fn create(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    ExtractSession {
-        extractor: form,
-        session,
-    }: ExtractSession<CsrfSafeForm<CreateProjectPayload>>,
+    cookies: PrivateCookieJar,
+    form: CsrfSafeForm<CreateProjectPayload>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
         let expected_csrf_token = session.session().0;

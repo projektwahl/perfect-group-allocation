@@ -125,7 +125,6 @@ use axum::routing::{get, post};
 use axum::{async_trait, BoxError, Form, RequestPartsExt, Router, ServiceExt, TypedHeader};
 use axum_extra::extract::cookie::Key;
 use axum_server::tls_rustls::RustlsConfig;
-use catch_panic::CatchPanicLayer;
 use error::{AppError, AppErrorWithMetadata};
 use futures_util::TryFutureExt;
 use handlebars::Handlebars;
@@ -155,6 +154,7 @@ use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
 use tower::make::MakeService;
 use tower::ServiceBuilder;
+use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
@@ -548,7 +548,7 @@ fn layers(app: Router<MyState, hyper::Body>, db: DatabaseConnection) -> Router<(
                     .make_span_with(DefaultMakeSpan::default().include_headers(true))
                     .on_response(DefaultOnResponse::default().include_headers(true)),
             )
-            .layer(CatchPanicLayer),
+            .layer(CatchPanicLayer::new()),
     );
     let app: Router<(), hyper::Body> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
     app

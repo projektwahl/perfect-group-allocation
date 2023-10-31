@@ -5,6 +5,7 @@ use std::sync::PoisonError;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::TypedHeader;
+use axum_extra::extract::PrivateCookieJar;
 use axum_extra::response::Css;
 use futures_util::TryFutureExt;
 use handlebars::Handlebars;
@@ -20,7 +21,7 @@ use crate::{EmptyBody, ExtractSession, XRequestId};
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn indexcss(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    ExtractSession { session, .. }: ExtractSession<EmptyBody>,
+    session: PrivateCookieJar,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
         // @import would produce a flash of unstyled content and also is less efficient

@@ -5,6 +5,7 @@ use axum::body::StreamBody;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::TypedHeader;
+use axum_extra::extract::PrivateCookieJar;
 use futures_async_stream::try_stream;
 use futures_util::StreamExt;
 use handlebars::Handlebars;
@@ -44,10 +45,7 @@ async fn list_internal(db: DatabaseConnection, session: Session) {
 pub async fn list(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    ExtractSession {
-        extractor: _form,
-        session,
-    }: ExtractSession<EmptyBody>,
+    session: PrivateCookieJar,
 ) -> (Session, impl IntoResponse) {
     let stream = list_internal(db, session.clone()).map(|elem| match elem {
         Err(db_err) => Ok::<String, DbErr>(format!(

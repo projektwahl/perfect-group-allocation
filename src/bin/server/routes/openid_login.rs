@@ -4,6 +4,7 @@ use std::sync::PoisonError;
 use axum::extract::State;
 use axum::response::{IntoResponse, Redirect};
 use axum::TypedHeader;
+use axum_extra::extract::PrivateCookieJar;
 use futures_util::TryFutureExt;
 use handlebars::Handlebars;
 use oauth2::PkceCodeChallenge;
@@ -32,10 +33,8 @@ impl CsrfToken for OpenIdLoginPayload {
 pub async fn openid_login(
     State(_db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    ExtractSession {
-        extractor: _form,
-        mut session,
-    }: ExtractSession<CsrfSafeForm<OpenIdLoginPayload>>,
+    session: PrivateCookieJar,
+    form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
         let client = get_openid_client().await?;

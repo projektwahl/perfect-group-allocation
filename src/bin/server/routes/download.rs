@@ -4,6 +4,7 @@ use std::sync::PoisonError;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::TypedHeader;
+use axum_extra::extract::PrivateCookieJar;
 use futures_util::TryFutureExt;
 use handlebars::Handlebars;
 use hyper::header;
@@ -16,10 +17,7 @@ use crate::{EmptyBody, ExtractSession, XRequestId};
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn handler(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    ExtractSession {
-        extractor: _stream,
-        session,
-    }: ExtractSession<EmptyBody>,
+    cookies: PrivateCookieJar,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
         let file =

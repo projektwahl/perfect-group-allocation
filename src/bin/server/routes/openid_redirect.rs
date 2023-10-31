@@ -5,6 +5,7 @@ use anyhow::anyhow;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum::{Form, TypedHeader};
+use axum_extra::extract::PrivateCookieJar;
 use handlebars::Handlebars;
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
@@ -58,10 +59,8 @@ pub struct OpenIdRedirectErrorTemplate {
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    ExtractSession {
-        extractor: form,
-        mut session,
-    }: ExtractSession<Form<OpenIdRedirect>>,
+    session: PrivateCookieJar,
+    form: Form<OpenIdRedirect>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
         let (expected_csrf_token, (pkce_verifier, nonce, openid_csrf_token)) =
