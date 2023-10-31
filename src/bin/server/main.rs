@@ -134,6 +134,7 @@ use sea_orm::{
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
+use tower::service_fn;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 
@@ -487,6 +488,15 @@ async fn main() -> Result<(), AppError> {
         .route("/list", get(list))
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))
+        .route_service(
+            "/test",
+            service_fn(|req: http::Request<hyper::Body>| async move {
+                let body = hyper::Body::from(format!("Hi from `{} /foo`", req.method()));
+                let body = axum::body::boxed(body);
+                let res = http::Response::new(body);
+                Ok::<_, Infallible>(res)
+            }),
+        )
         // .route("/openidconnect-redirect", get(openid_redirect))
         .fallback_service(service);
 
