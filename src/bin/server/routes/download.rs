@@ -12,12 +12,13 @@ use once_cell::sync::Lazy;
 use tokio_util::io::ReaderStream;
 
 use crate::error::AppErrorWithMetadata;
-use crate::{EmptyBody, ExtractSession, XRequestId};
+use crate::session::Session;
+use crate::{EmptyBody, XRequestId};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn handler(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    cookies: Session,
+    session: Session,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
         let file =

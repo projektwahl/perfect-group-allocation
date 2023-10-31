@@ -9,13 +9,14 @@ use handlebars::Handlebars;
 use once_cell::sync::Lazy;
 
 use crate::error::AppErrorWithMetadata;
+use crate::session::Session;
 use crate::templating::render;
-use crate::{CreateProject, EmptyBody, ExtractSession, XRequestId, HANDLEBARS};
+use crate::{CreateProject, EmptyBody, XRequestId, HANDLEBARS};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn index(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    cookies: Session,
+    session: Session,
 ) -> impl IntoResponse {
     let result = async {
         let result = render(

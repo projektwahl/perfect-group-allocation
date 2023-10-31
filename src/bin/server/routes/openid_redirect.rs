@@ -16,7 +16,7 @@ use crate::error::{AppError, AppErrorWithMetadata};
 use crate::openid::get_openid_client;
 use crate::session::{Session, SessionCookie};
 use crate::templating::render;
-use crate::{CsrfSafeExtractor, ExtractSession, XRequestId, HANDLEBARS};
+use crate::{CsrfSafeExtractor, XRequestId, HANDLEBARS};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -59,7 +59,7 @@ pub struct OpenIdRedirectErrorTemplate {
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    cookies: Session,
+    mut session: Session,
     form: Form<OpenIdRedirect>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {

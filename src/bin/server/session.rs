@@ -3,14 +3,15 @@ use core::convert::Infallible;
 use core::task::Poll;
 use std::sync::Mutex;
 
-use axum::extract::State;
+use axum::extract::{FromRequestParts, State};
 use axum::response::{IntoResponse, IntoResponseParts, Response};
-use axum::RequestPartsExt;
+use axum::{async_trait, RequestPartsExt};
 use axum_extra::extract::cookie::{Cookie, Key};
 use axum_extra::extract::PrivateCookieJar;
 use chrono::{DateTime, Utc};
 use futures_util::future::BoxFuture;
 use handlebars::Handlebars;
+use http::StatusCode;
 use miniserde::Deserialize;
 use oauth2::{PkceCodeVerifier, RefreshToken};
 use openidconnect::{EndUserEmail, Nonce};
@@ -18,7 +19,7 @@ use rand::{thread_rng, Rng};
 use tower::{Layer, Service};
 
 use crate::error::{AppError, AppErrorWithMetadata};
-use crate::{BodyWithSession, MyState, HANDLEBARS};
+use crate::{MyState, HANDLEBARS};
 
 #[derive(miniserde::Serialize)]
 pub struct SessionCookieStrings {
@@ -41,6 +42,23 @@ fn test_to_string(value: &(String, Option<SessionCookieStrings>)) -> String {
 #[derive(Clone)]
 pub struct Session {
     private_cookies: PrivateCookieJar,
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for Session
+where
+    S: Send + Sync,
+{
+    type Rejection = Infallible;
+
+    async fn from_request_parts(
+        parts: &mut http::request::Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        Ok(Session::new(
+            parts.extract_with_state::<PrivateCookieJar>(state),
+        ))
+    }
 }
 
 impl Session {

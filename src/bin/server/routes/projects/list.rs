@@ -19,7 +19,7 @@ use crate::entities::project_history;
 use crate::error::AppErrorWithMetadata;
 use crate::session::Session;
 use crate::templating::render;
-use crate::{EmptyBody, ExtractSession, TemplateProject, XRequestId, HANDLEBARS};
+use crate::{EmptyBody, TemplateProject, XRequestId, HANDLEBARS};
 
 #[try_stream(ok = String, error = DbErr)]
 async fn list_internal(db: DatabaseConnection, session: Session) {
@@ -45,7 +45,7 @@ async fn list_internal(db: DatabaseConnection, session: Session) {
 pub async fn list(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    cookies: Session,
+    session: Session,
 ) -> (Session, impl IntoResponse) {
     let stream = list_internal(db, session.clone()).map(|elem| match elem {
         Err(db_err) => Ok::<String, DbErr>(format!(

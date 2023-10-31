@@ -16,7 +16,7 @@ use serde::Deserialize;
 use crate::error::AppErrorWithMetadata;
 use crate::openid::get_openid_client;
 use crate::session::Session;
-use crate::{CsrfSafeForm, CsrfToken, ExtractSession, XRequestId};
+use crate::{CsrfSafeForm, CsrfToken, XRequestId};
 
 #[derive(Deserialize)]
 pub struct OpenIdLoginPayload {
@@ -33,7 +33,7 @@ impl CsrfToken for OpenIdLoginPayload {
 pub async fn openid_login(
     State(_db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    cookies: Session,
+    mut session: Session,
     form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {

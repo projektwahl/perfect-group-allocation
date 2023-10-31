@@ -12,15 +12,13 @@ use crate::entities::project_history::{self, ActiveModel};
 use crate::error::AppErrorWithMetadata;
 use crate::session::Session;
 use crate::templating::render;
-use crate::{
-    CreateProject, CreateProjectPayload, CsrfSafeForm, ExtractSession, XRequestId, HANDLEBARS,
-};
+use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, XRequestId, HANDLEBARS};
 
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn create(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    cookies: Session,
+    session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> Result<impl IntoResponse, AppErrorWithMetadata> {
     let result = async {
