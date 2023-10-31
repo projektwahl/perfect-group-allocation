@@ -41,7 +41,7 @@ pub async fn list(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
-) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
+) -> (Session, impl IntoResponse) {
     let stream = list_internal(db, session.clone()).map(|elem| match elem {
         Err(app_error) => Ok::<String, AppError>(format!(
             // TODO FIXME use template here
@@ -50,11 +50,11 @@ pub async fn list(
         )),
         Ok::<String, AppError>(ok) => Ok(ok),
     });
-    Ok((
+    (
         session,
         (
             [(header::CONTENT_TYPE, "text/html")],
             StreamBody::new(stream),
         ),
-    ))
+    )
 }

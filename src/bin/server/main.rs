@@ -120,6 +120,7 @@ use axum_extra::extract::cookie::Key;
 use error::{to_error_result, AppError};
 use futures_util::TryFutureExt;
 use handlebars::Handlebars;
+use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
@@ -213,12 +214,12 @@ pub struct CsrfSafeForm<T: CsrfToken> {
 #[async_trait]
 impl<T, B> FromRequest<MyState, B> for CsrfSafeForm<T>
 where
-    T: DeserializeOwned + CsrfToken,
+    T: DeserializeOwned + CsrfToken + Send,
     B: http_body::Body + Send + 'static,
     B::Data: Send,
     B::Error: Into<BoxError>,
 {
-    type Rejection = (Session, impl IntoResponse);
+    type Rejection = (Session, (StatusCode, axum::response::Response));
 
     async fn from_request(
         mut req: hyper::Request<B>,

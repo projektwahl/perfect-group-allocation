@@ -85,7 +85,7 @@ pub async fn to_error_result(
     session: Session,
     request_id: String,
     app_error: AppError,
-) -> (Session, impl IntoResponse) {
+) -> (Session, (StatusCode, axum::response::Response)) {
     match app_error {
         err @ (AppError::FormRejection(_)
         | AppError::Multipart(_)
@@ -124,13 +124,12 @@ pub async fn to_error_result(
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Html(result).into_response(),
-                )
-                    .into_response(),
+                ),
             )
         }
         err @ AppError::WrongCsrfToken => (
             session,
-            (StatusCode::BAD_REQUEST, format!("{err}")).into_response(),
+            (StatusCode::BAD_REQUEST, format!("{err}").into_response()),
         ),
     }
 }
