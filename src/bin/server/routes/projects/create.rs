@@ -17,8 +17,6 @@ pub async fn create(
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
     let result = async {
-        let _expected_csrf_token = session.session().0;
-
         let mut title_error = None;
         let mut description_error = None;
 

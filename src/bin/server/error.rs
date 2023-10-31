@@ -56,6 +56,8 @@ pub enum AppError {
     Rustls(#[from] tokio_rustls::rustls::Error),
     #[error("poison error: {0}")]
     Poison(#[from] std::sync::PoisonError<()>),
+    #[error("join error: {0}")]
+    Join(#[from] tokio::task::JoinError),
     #[error("wrong csrf token")]
     WrongCsrfToken,
     #[error("no accept remaining")]
@@ -106,6 +108,7 @@ impl IntoResponse for AppErrorWithMetadata {
             | AppError::EnvVar(_)
             | AppError::Rustls(_)
             | AppError::Poison(_)
+            | AppError::Join(_)
             | AppError::OpenIdTokenNotFound
             | AppError::NoAcceptRemaining
             | AppError::SessionStillHeld
