@@ -126,7 +126,6 @@ use routes::download::handler;
 use routes::index::index;
 use routes::indexcss::indexcss;
 use routes::openid_login::openid_login;
-use routes::openid_redirect::openid_redirect;
 use routes::projects::create::create;
 use routes::projects::list::list;
 use sea_orm::{
@@ -488,7 +487,7 @@ async fn main() -> Result<(), AppError> {
         .route("/list", get(list))
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))
-        .route("/openidconnect-redirect", get(openid_redirect))
+        // .route("/openidconnect-redirect", get(openid_redirect))
         .fallback_service(service);
 
     let app = layers(app, db);

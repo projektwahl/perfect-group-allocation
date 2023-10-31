@@ -54,9 +54,10 @@ pub struct OpenIdRedirectErrorTemplate {
 #[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
 pub async fn openid_redirect(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
-    session: Session,
+    session: Session, // what if this here could be a reference?
     form: axum::Form<OpenIdRedirect>,
 ) -> Result<(Session, impl IntoResponse), AppErrorWithMetadata> {
+    // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
     // TODO FIXME errors also need to return the session?
 
     let expected_csrf_token = session.session().0;
