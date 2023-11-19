@@ -57,6 +57,7 @@ crabgrind = "0.1"
 http = "0.2.9"
 console-subscriber = "0.2.0"
 tokio-metrics = { version = "0.3" }
+zero-cost-templating = { path = "../zero-cost-templating/zero-cost-templating" }
 
 [profile.release]
 debug = 1
