@@ -19,22 +19,22 @@ use crate::templating::render;
 use crate::{TemplateProject, XRequestId};
 
 #[template_stream("templates/list.html.hbs")]
-pub async fn test2() {
+pub async fn test2(db: DatabaseConnection, session: Session) {
     let template = initial0!();
     let template = template0!(template);
-    let page_title = "the>t&it<l\"e";
+    let page_title = "Projects";
     let template = page_title1!(template, page_title);
-    let csrf_token = "the>t&ok<e\"n";
+    let csrf_token = session.session().0;
     let mut template = csrf_token2!(template, csrf_token);
-    let articles = get_articles_stream();
+    let stream = project_history::Entity::find().stream(&db).await.unwrap();
     #[for_await]
-    for article in articles {
+    for x in stream {
+        let x = x.unwrap();
         let inner_template = template3!(template);
-        let inner_template = title4!(inner_template, article);
-        template = text5!(inner_template, "twdhfewfe>et&ieft<l\"e");
+        let inner_template = title4!(inner_template, x.title);
+        template = description5!(inner_template, x.description);
     }
-    let template = template6!(template);
-    copyright_year7!(template, "errhj>et&t<l\"e");
+    template6!(template);
 }
 
 #[try_stream(ok = String, error = AppError)]
@@ -64,14 +64,14 @@ pub async fn list(
     TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
 ) -> (Session, impl IntoResponse) {
-    let stream = list_internal(db, session.clone()).map(|elem| match elem {
-        Err(app_error) => Ok::<String, AppError>(format!(
-            // TODO FIXME use template here
-            "<h1>Error {}</h1>",
-            encode_safe(&app_error.to_string())
-        )),
-        Ok::<String, AppError>(ok) => Ok(ok),
-    });
+    let stream = test2(db, session.clone()).map(|elem| Ok::<String, AppError>(elem.to_string())); /*.map(|elem| match elem {
+    Err(app_error) => Ok::<String, AppError>(format!(
+    // TODO FIXME use template here
+    "<h1>Error {}</h1>",
+    encode_safe(&app_error.to_string())
+    )),
+    Ok::<String, AppError>(ok) => Ok(ok),
+    });*/
     (
         session,
         (
