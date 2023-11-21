@@ -37,6 +37,7 @@ Callgrind
 cargo build --target=x86_64-unknown-linux-gnu -Z build-std --release --bin server
 
 DATABASE_URL="sqlite:./sqlite.db?mode=rwc" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release/server 
+DATABASE_URL="postgres://postgres:password@localhost" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release/server
 
 use zed attack proxy to create some requests
 
