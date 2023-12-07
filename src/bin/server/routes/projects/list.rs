@@ -18,7 +18,13 @@ use crate::session::Session;
 use crate::templating::render;
 use crate::{TemplateProject, XRequestId};
 
-#[template_stream("templates/list.html.hbs")]
+#[template_stream(
+    "templates/list.html.hbs",
+    "templates/main.html.hbs",
+    "templates/main_pre.html.hbs",
+    "templates/main_post.html.hbs",
+    "templates/nav.html.hbs"
+)]
 pub async fn test2(db: DatabaseConnection, session: Session) {
     let template = list_initial0!();
     let template = list_template0!(template);
