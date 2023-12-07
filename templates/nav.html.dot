@@ -1,7 +1,0 @@
-digraph {
-    0 [ label = "0: Other" ]
-    1 [ label = "1: Other" ]
-    2 [ label = "2: Other" ]
-    0 -> 1 [ label = "0: <nav>\l    <span>PGA</span>\l    <input id=\"open-nav\" type=\"checkbox\" checked />\l    <label for=\"open-nav\" class=\"hamb\">\l        <svg viewBox=\"0 0 100 100\">\l            <rect y=\"10\" width=\"100\" height=\"20\"></rect>\l            <rect y=\"40\" width=\"100\" height=\"20\"></rect>\l            <rect y=\"70\" width=\"100\" height=\"20\"></rect>\l        </svg>\l    </label>\l    <ul>\l        <li>\l            <a href=\"/\">Home</a>\l        </li>\l        <li>\l            <a href=\"/list\">Projects</a>\l        </li>\l        <li>\l            <form method=\"post\" action=\"/openidconnect-login\" enctype=\"application/x-www-form-urlencoded\">\l                <input type=\"hidden\" name=\"csrf_token\" value=\"" ]
-    1 -> 2 [ label = "1: {{csrf_token:attr}}\">\l\l                <button class=\"submit-link\" type=\"submit\">Login</button>\l            </form>\l        </li>\l    </ul>\l</nav>" ]
-}
