@@ -21,15 +21,13 @@ use crate::{TemplateProject, XRequestId};
 #[template_stream(
     "templates/list.html.hbs",
     "templates/main.html.hbs",
-    "templates/main_pre.html.hbs",
-    "templates/main_post.html.hbs",
     "templates/nav.html.hbs"
 )]
 pub async fn test2(db: DatabaseConnection, session: Session) {
     let template = list_initial0!();
     let template = list_template0!(template);
     let page_title = "Projects";
-    let template = list_page_title1!(template, page_title);
+    let template = main_page_title1!(template, page_title);
     let csrf_token = session.session().0;
     let mut template = list_csrf_token2!(template, csrf_token);
     let stream = project_history::Entity::find().stream(&db).await.unwrap();
