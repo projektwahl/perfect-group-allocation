@@ -4,7 +4,6 @@ use axum::response::IntoResponse;
 use axum::TypedHeader;
 use futures_async_stream::try_stream;
 use futures_util::StreamExt;
-use html_escape::encode_safe;
 use hyper::header;
 use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::json;
