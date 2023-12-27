@@ -1,6 +1,6 @@
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
-use axum::TypedHeader;
+use axum_extra::TypedHeader;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
 
 use crate::entities::project_history::{self, ActiveModel};
@@ -9,7 +9,7 @@ use crate::session::Session;
 use crate::templating::render;
 use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, XRequestId};
 
-#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
+#[axum::debug_handler(state=crate::MyState)]
 pub async fn create(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,

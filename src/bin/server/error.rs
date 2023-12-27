@@ -46,8 +46,6 @@ pub enum AppError {
     Json(#[from] serde_json::Error),
     #[error("webserver error: {0}")]
     Hyper(#[from] hyper::Error),
-    #[error("template error: {0}")]
-    Template(#[from] Box<handlebars::TemplateError>),
     #[error("unknown error: {0}")]
     Other(#[from] anyhow::Error),
     #[error("env var error: {0}")]
@@ -101,7 +99,6 @@ pub async fn to_error_result(
         | AppError::Bundling2(_)
         | AppError::Json(_)
         | AppError::Hyper(_)
-        | AppError::Template(_)
         | AppError::EnvVar(_)
         | AppError::Rustls(_)
         | AppError::Poison(_)

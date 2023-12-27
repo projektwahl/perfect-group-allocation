@@ -1,12 +1,12 @@
 use axum::response::{Html, IntoResponse};
-use axum::TypedHeader;
+use axum_extra::TypedHeader;
 
 use crate::error::to_error_result;
 use crate::session::Session;
 use crate::templating::render;
 use crate::{CreateProject, XRequestId};
 
-#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
+#[axum::debug_handler(state=crate::MyState)]
 pub async fn index(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,

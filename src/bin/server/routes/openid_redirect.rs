@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use axum::response::{Html, IntoResponse, Redirect};
-use axum::TypedHeader;
+use axum_extra::TypedHeader;
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
 use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
@@ -51,7 +51,7 @@ pub struct OpenIdRedirectErrorTemplate {
     clippy::disallowed_types,
     reason = "csrf protection done here explicitly"
 )]
-#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
+#[axum::debug_handler(state=crate::MyState)]
 pub async fn openid_redirect(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session, // what if this here could be a reference?

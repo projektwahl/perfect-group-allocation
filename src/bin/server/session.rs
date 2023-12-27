@@ -95,7 +95,7 @@ impl Session {
                 refresh_token: session_cookie.refresh_token.secret().to_string(),
             }),
         );
-        let cookie = Cookie::build(Self::COOKIE_NAME_SESSION, test_to_string(&value))
+        let cookie = Cookie::build((Self::COOKIE_NAME_SESSION, test_to_string(&value)))
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Lax) // openid-redirect is a cross-site-redirect
             .secure(true)
@@ -108,10 +108,10 @@ impl Session {
         &mut self,
         input: &(&PkceCodeVerifier, &Nonce, &oauth2::CsrfToken),
     ) -> Result<(), AppError> {
-        let cookie = Cookie::build(
+        let cookie = Cookie::build((
             Self::COOKIE_NAME_OPENIDCONNECT,
             serde_json::to_string(input)?,
-        )
+        ))
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
         .secure(true)
@@ -133,7 +133,7 @@ impl Session {
             Ok(Err(error)) => return Err(error.into()),
             Err(error) => return Err(error),
         };
-        let cookie = Cookie::build(Self::COOKIE_NAME_OPENIDCONNECT, "")
+        let cookie = Cookie::build((Self::COOKIE_NAME_OPENIDCONNECT, ""))
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
             .secure(true)

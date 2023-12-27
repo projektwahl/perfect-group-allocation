@@ -1,6 +1,6 @@
 use axum::extract::State;
 use axum::response::{IntoResponse, Redirect};
-use axum::TypedHeader;
+use axum_extra::TypedHeader;
 use oauth2::PkceCodeChallenge;
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::Nonce;
@@ -23,7 +23,7 @@ impl CsrfToken for OpenIdLoginPayload {
     }
 }
 
-#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
+#[axum::debug_handler(state=crate::MyState)]
 pub async fn openid_login(
     State(_db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
