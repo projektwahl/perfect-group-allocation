@@ -1,3 +1,4 @@
+#![feature(gen_blocks)]
 #![forbid(unsafe_code)]
 #![warn(
     future_incompatible,
