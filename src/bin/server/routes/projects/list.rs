@@ -5,6 +5,7 @@ use futures_util::StreamExt;
 use hyper::header;
 use sea_orm::{DatabaseConnection, EntityTrait};
 use serde_json::json;
+use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 
 use crate::entities::project_history;
 use crate::error::AppError;
@@ -37,7 +38,7 @@ pub async fn list(
     TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
 ) -> (Session, impl IntoResponse) {
-    let stream = list_internal(db, session.clone()).map(|elem| match elem {
+    let stream = AsyncIteratorStream(list_internal(db, session.clone())).map(|elem| match elem {
         Err(app_error) => Ok::<String, AppError>(format!(
             // TODO FIXME use template here
             "<h1>Error {}</h1>",
@@ -45,5 +46,11 @@ pub async fn list(
         )),
         Ok::<String, AppError>(ok) => Ok(ok),
     });
-    (session, ([(header::CONTENT_TYPE, "text/html")], stream))
+    (
+        session,
+        (
+            [(header::CONTENT_TYPE, "text/html")],
+            axum::body::Body::from_stream(stream),
+        ),
+    )
 }
