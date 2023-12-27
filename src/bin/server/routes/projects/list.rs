@@ -4,7 +4,6 @@ use axum::body::StreamBody;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::TypedHeader;
-use futures_async_stream::try_stream;
 use futures_util::StreamExt;
 use html_escape::encode_safe;
 use hyper::header;
@@ -18,31 +17,12 @@ use crate::session::Session;
 use crate::templating::render;
 use crate::{TemplateProject, XRequestId};
 
-#[template_stream(
-    "templates/list.html.hbs",
-    "templates/main.html.hbs",
-    "templates/nav.html.hbs"
-)]
+#[template_stream("templates")]
 pub async fn test2(db: DatabaseConnection, session: Session) {
-    let template = list_initial0!();
-    let template = list_template0!(template);
-    let page_title = "Projects";
-    let template = main_page_title1!(template, page_title);
-    let csrf_token = session.session().0;
-    let mut template = list_csrf_token2!(template, csrf_token);
-    let stream = project_history::Entity::find().stream(&db).await.unwrap();
-    #[for_await]
-    for x in stream {
-        let x = x.unwrap();
-        let inner_template = list_template3!(template);
-        let inner_template = list_title4!(inner_template, x.title);
-        template = list_description5!(inner_template, x.description);
-    }
-    list_template6!(template);
+    let template = list_initial0();
 }
 
-#[try_stream(ok = String, error = AppError)]
-async fn list_internal(db: DatabaseConnection, session: Session) {
+async gen fn list_internal(db: DatabaseConnection, session: Session) -> Result<String, AppError> {
     let stream = project_history::Entity::find().stream(&db).await?;
     yield render(&session, "main_pre", json!({"page_title": "Projects"})).await;
     #[for_await]

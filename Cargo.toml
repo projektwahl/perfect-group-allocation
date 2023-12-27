@@ -1,3 +1,5 @@
+#cargo-features = ["edition2024"]
+
 [package]
 name = "perfect-group-allocation"
 version = "0.1.0"
@@ -22,23 +24,22 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 futures = "0.3"
 sea-orm = { version = "0.12", features = [ "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "runtime-tokio-rustls", "macros" ] }
 sea-orm-migration = "0.12"
-axum = { version = "0.6", features = [ "http2", "macros", "multipart", "tracing", "headers" ] }
-axum-server = { version = "0.5", features = ["tls-rustls"] }
-rustls-pemfile = "1"
-tokio-rustls = "0.24"
-hyper = { version = "0.14", features = ["full"] }
+axum = { version = "0.7", features = [ "http2", "macros", "multipart", "tracing" ] }
+axum-server = { version = "0.6", features = ["tls-rustls"] }
+rustls-pemfile = "2"
+tokio-rustls = "0.25"
+hyper = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.4", features = ["full"] }
-http-body = "0.4"
+tower-http = { version = "0.5", features = ["full"] }
+http-body = "1"
 tokio-util = { version = "0.7", features = ["io"] }
 anyhow = "1"
-futures-async-stream = "0.2"
 html-escape = "0.2"
 sqlx = "0.7"
 handlebars = { version = "4", features = ["dir_source"] }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
-axum-extra = { version = "0.8", features = ["cookie", "cookie-private", "cookie-signed"] }
+axum-extra = { version = "0.9", features = ["cookie", "cookie-private", "cookie-signed"] }
 pin-project-lite = "0.2"
 rand = "0.8"
 ring = "0.17"
@@ -53,11 +54,11 @@ once_cell = "1"
 chrono = "0.4"
 no-panic = "0.1"
 miniserde = "0.1"
-crabgrind = "=0.1.9"
-http = "0.2"
+crabgrind = "0.1"
+http = "1"
 console-subscriber = "0.2"
 tokio-metrics = { version = "0.3" }
-zero-cost-templating = { path = "../zero-cost-templating/zero-cost-templating" }
+#zero-cost-templating = { path = "../zero-cost-templating/zero-cost-templating" }
 
 [profile.release]
 debug = 1
