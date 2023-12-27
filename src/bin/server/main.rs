@@ -92,6 +92,7 @@
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
     clippy::module_name_repetitions,
+    clippy::print_stdout,
     reason = "not yet ready for that"
 )]
 #![feature(coroutines)]
@@ -140,8 +141,6 @@ use tower_http::services::ServeDir;
 
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
-
-type MyBody = axum::body::Body;
 
 const DB_NAME: &str = "postgres";
 
@@ -434,14 +433,14 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 async fn main() -> Result<(), AppError> {
     console_subscriber::init();
 
-    let monitor = tokio_metrics::TaskMonitor::new();
+    let _monitor = tokio_metrics::TaskMonitor::new();
     let monitor_root = tokio_metrics::TaskMonitor::new();
-    let monitor_root_create = tokio_metrics::TaskMonitor::new();
+    let _monitor_root_create = tokio_metrics::TaskMonitor::new();
     let monitor_index_css = tokio_metrics::TaskMonitor::new();
-    let monitor_list = tokio_metrics::TaskMonitor::new();
-    let monitor_download = tokio_metrics::TaskMonitor::new();
-    let monitor_openidconnect_login = tokio_metrics::TaskMonitor::new();
-    let monitor_openidconnect_redirect = tokio_metrics::TaskMonitor::new();
+    let _monitor_list = tokio_metrics::TaskMonitor::new();
+    let _monitor_download = tokio_metrics::TaskMonitor::new();
+    let _monitor_openidconnect_login = tokio_metrics::TaskMonitor::new();
+    let _monitor_openidconnect_redirect = tokio_metrics::TaskMonitor::new();
 
     let handle = tokio::runtime::Handle::current();
     let runtime_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
@@ -477,7 +476,7 @@ async fn main() -> Result<(), AppError> {
     // print runtime metrics every 500ms
     {
         tokio::spawn(async move {
-            for interval in runtime_monitor.intervals() {
+            for _ in runtime_monitor.intervals() {
                 // pretty-print the metric interval
 
                 // wait 500ms
