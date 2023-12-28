@@ -35,7 +35,9 @@ Callgrind
 # rebuild std to get debug symbols and same settings?
 cargo build --target=x86_64-unknown-linux-gnu -Z build-std --profile=release-with-debug --bin server
 
-DATABASE_URL="postgres://postgres:password@localhost" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release-with-debug/server
+# https://github.com/launchbadge/sqlx/blob/929af41745a9434ae83417dcf2571685cecca6f0/sqlx-postgres/src/options/mod.rs#L15
+# WARNING: Only connect without ssl over localhost. This makes the profiling better as there is not countless ssl stuff in there.
+DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release-with-debug/server
 
 use zed attack proxy to create some requests
 

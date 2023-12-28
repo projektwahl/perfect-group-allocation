@@ -320,30 +320,6 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
 
     let db = Database::connect(&database_url).await?;
 
-    let db = match db.get_database_backend() {
-        DbBackend::Postgres => {
-            let err_already_exists = db
-                .execute(Statement::from_string(
-                    db.get_database_backend(),
-                    format!("CREATE DATABASE \"{DB_NAME}\";"),
-                ))
-                .await;
-
-            match err_already_exists {
-                Err(DbErr::Exec(RuntimeErr::SqlxError(sqlx::Error::Database(err))))
-                    if err.code() == Some(Cow::Borrowed("42P04")) =>
-                {
-                    // database already exists error
-                }
-                Err(err) => return Err(err.into()),
-                Ok(_) => {}
-            }
-
-            let url = format!("{database_url}/{DB_NAME}");
-            Database::connect(&url).await?
-        }
-        _ => unreachable!(),
-    };
     Ok(db)
 }
 
