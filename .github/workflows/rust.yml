@@ -16,7 +16,6 @@ jobs:
       matrix:
         toolchain:
           - nightly
-          - beta
     steps:
       - run: sudo apt install -y coinor-libcbc-dev
       - run: rustup toolchain install ${{ matrix.toolchain }} --component rustfmt --component clippy && rustup default ${{ matrix.toolchain }}
