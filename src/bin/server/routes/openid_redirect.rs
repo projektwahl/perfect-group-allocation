@@ -1,7 +1,7 @@
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 
 use anyhow::anyhow;
-use axum::response::{Html, IntoResponse, Redirect};
+use axum::response::{IntoResponse, Redirect};
 use axum_extra::TypedHeader;
 use bytes::Bytes;
 use futures_util::StreamExt;

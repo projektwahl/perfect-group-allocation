@@ -18,9 +18,9 @@ mod openid;
 pub mod routes;
 pub mod session;
 
-use alloc::borrow::Cow;
+
 use core::convert::Infallible;
-use std::time::Duration;
+use core::time::Duration;
 
 use axum::extract::{FromRef, FromRequest};
 use axum::http::{self, HeaderName, HeaderValue};
@@ -40,7 +40,7 @@ use routes::indexcss::{indexcss, initialize_index_css};
 use routes::openid_login::openid_login;
 use routes::projects::create::create;
 use sea_orm::{
-    ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, RuntimeErr, Statement,
+    Database, DatabaseConnection,
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -410,7 +410,7 @@ async fn main() -> Result<(), AppError> {
         )
         .route(
             "/favicon.ico",
-            get(move |first, second, third| favicon_ico(first, second, third)),
+            get(favicon_ico),
         )
         .route(
             "/list",

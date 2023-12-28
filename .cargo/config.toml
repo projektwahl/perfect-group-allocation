@@ -1,2 +1,2 @@
 [build]
-rustflags = ["-Zthreads=8", "-Zcodegen-backend=cranelift", "--cfg", "tokio_unstable"]
+rustflags = ["-Zthreads=8", "--cfg", "tokio_unstable"]

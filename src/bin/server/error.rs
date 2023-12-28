@@ -80,11 +80,11 @@ pub struct ErrorTemplate {
 
 pub async fn to_error_result(
     session: Session,
-    request_id: String,
+    _request_id: String,
     app_error: AppError,
 ) -> (Session, (StatusCode, axum::response::Response)) {
     match app_error {
-        err @ (AppError::FormRejection(_)
+        _err @ (AppError::FormRejection(_)
         | AppError::Multipart(_)
         | AppError::Axum(_)
         | AppError::Database(_)

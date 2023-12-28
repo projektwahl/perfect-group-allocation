@@ -1,6 +1,6 @@
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 
-use axum::response::{Html, IntoResponse};
+use axum::response::{IntoResponse};
 use axum_extra::TypedHeader;
 use bytes::Bytes;
 use futures_util::StreamExt;
@@ -8,13 +8,13 @@ use http::header;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
 
-use crate::error::{to_error_result, AppError};
+use crate::error::{AppError};
 use crate::routes::projects::list::create_project;
 use crate::session::Session;
-use crate::{CreateProject, XRequestId};
+use crate::{XRequestId};
 
 pub async fn index(
-    TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
+    TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
 ) -> (Session, impl IntoResponse) {
     let session_clone = session.clone();
