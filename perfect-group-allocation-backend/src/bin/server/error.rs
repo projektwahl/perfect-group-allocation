@@ -70,6 +70,8 @@ pub enum AppError {
          Serveradministrator."
     )]
     OpenIdTokenNotFound,
+    #[error("Der Serveradministrator hat OpenID nicht konfiguriert.")]
+    OpenIdNotConfigured,
 }
 
 #[derive(Serialize)]
@@ -102,6 +104,7 @@ pub async fn to_error_result(
         | AppError::Poison(_)
         | AppError::Join(_)
         | AppError::OpenIdTokenNotFound
+        | AppError::OpenIdNotConfigured
         | AppError::NoAcceptRemaining
         | AppError::SessionStillHeld
         | AppError::Other(_)) => {

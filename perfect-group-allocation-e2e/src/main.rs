@@ -7,7 +7,6 @@ use tokio::process::Command;
 fn main() -> WebDriverResult<()> {
     let mut manager = get_manager_by_browser("firefox".to_owned()).unwrap();
     let result = manager.setup().unwrap();
-    println!("{:?}", result);
 
     // workaround because https://github.com/SeleniumHQ/selenium/blob/3f9b606c8444832df27425dc379ee092d52b42b2/rust/src/downloads.rs#L30 starts it's own runtime
     async_main(result)

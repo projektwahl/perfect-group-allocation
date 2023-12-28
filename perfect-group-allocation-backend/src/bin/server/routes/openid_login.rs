@@ -6,8 +6,8 @@ use openidconnect::Nonce;
 use sea_orm::DatabaseConnection;
 use serde::Deserialize;
 
-use crate::error::to_error_result;
-use crate::openid::get_openid_client;
+use crate::error::{to_error_result, AppError};
+use crate::openid::OPENID_CLIENT;
 use crate::session::Session;
 use crate::CsrfToken;
 
@@ -29,7 +29,10 @@ pub async fn openid_login(
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let result = async {
-        let client = get_openid_client().await?;
+        let client = match OPENID_CLIENT.get().unwrap() {
+            Ok(client) => client,
+            Err(_error) => return Err(AppError::OpenIdNotConfigured),
+        };
 
         // TODO FIXME check csrf token?
 
