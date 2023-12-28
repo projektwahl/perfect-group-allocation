@@ -16,10 +16,17 @@ https://rust-lang.github.io/rfcs/3424-cargo-script.html
 parallel rust frontend
 
 rustup component add rustc-codegen-cranelift-preview --toolchain nightly
-RUSTFLAGS="-Zcodegen-backend=cranelift" cargo +nightly build
 
 warning blocks in rustdoc
 <div class="warning">A big warning!</div>
+
+## Dev
+
+```bash
+export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
+RUST_BACKTRACE=1 RUST_LOG=tower_http::trace=TRACE cargo run --bin server
+RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
+```
 
 ## Async profiling
 

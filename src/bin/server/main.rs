@@ -308,6 +308,7 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     console_subscriber::init();
+    //tracing_subscriber::fmt::init();
 
     let _monitor = tokio_metrics::TaskMonitor::new();
     let monitor_root = tokio_metrics::TaskMonitor::new();
@@ -370,8 +371,9 @@ async fn main() -> Result<(), AppError> {
     // print runtime metrics every 500ms
     {
         tokio::spawn(async move {
-            for _ in runtime_monitor.intervals() {
+            for interval_runtime in runtime_monitor.intervals() {
                 // pretty-print the metric interval
+                println!("runtime {:?}", interval_runtime.busy_ratio());
 
                 // wait 500ms
                 tokio::time::sleep(Duration::from_millis(500)).await;
@@ -379,11 +381,7 @@ async fn main() -> Result<(), AppError> {
         });
     }
 
-    //tracing_subscriber::fmt::init();
-
     let db = get_database_connection().await?;
-
-    // TODO FIXME seems like TLS is a performance bottleneck. maybe either let the reverse proxy handle this or switch to openssl for now?
 
     let service = ServeDir::new("frontend");
 
