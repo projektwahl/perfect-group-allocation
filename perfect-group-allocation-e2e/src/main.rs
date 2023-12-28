@@ -1,9 +1,32 @@
+use std::path::PathBuf;
+
+use selenium_manager::get_manager_by_browser;
 use thirtyfour::prelude::*;
+use tokio::process::Command;
+
+fn main() -> WebDriverResult<()> {
+    let mut manager = get_manager_by_browser("firefox".to_owned()).unwrap();
+    let result = manager.setup().unwrap();
+    println!("{:?}", result);
+
+    // workaround because https://github.com/SeleniumHQ/selenium/blob/3f9b606c8444832df27425dc379ee092d52b42b2/rust/src/downloads.rs#L30 starts it's own runtime
+    async_main(result)
+}
 
 #[tokio::main]
-async fn main() -> WebDriverResult<()> {
-    let caps = DesiredCapabilities::chrome();
-    let driver = WebDriver::new("http://localhost:9515", caps).await?;
+async fn async_main(path: PathBuf) -> WebDriverResult<()> {
+    let mut command = Command::new(path).kill_on_drop(true).spawn().unwrap();
+
+    let result = work().await;
+
+    command.kill().await?;
+
+    result
+}
+
+async fn work() -> WebDriverResult<()> {
+    let caps = DesiredCapabilities::firefox();
+    let driver = WebDriver::new("http://localhost:4444", caps).await?;
 
     // Navigate to https://wikipedia.org.
     driver.goto("https://wikipedia.org").await?;
