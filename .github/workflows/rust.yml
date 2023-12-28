@@ -15,7 +15,6 @@ jobs:
     strategy:
       matrix:
         toolchain:
-          - beta
           - nightly
     steps:
       - run: sudo apt install -y coinor-libcbc-dev
