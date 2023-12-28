@@ -310,6 +310,7 @@ async fn main() -> Result<(), AppError> {
 
     opentelemetry::global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
     let tracer = opentelemetry_jaeger::new_agent_pipeline()
+        .with_service_name("perfect-group-allocation")
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;
 
     // Create a tracing layer with the configured tracer
