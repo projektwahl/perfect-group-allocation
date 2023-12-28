@@ -31,6 +31,7 @@ use error::{to_error_result, AppError};
 use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
+use opentelemetry::trace::TracerProvider;
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
@@ -45,6 +46,9 @@ use tokio::net::TcpListener;
 use tower::service_fn;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
+use tracing::{error, span};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::Registry;
 
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
@@ -303,7 +307,26 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     //console_subscriber::init(); // drags in old axum version
-    //tracing_subscriber::fmt::init();
+
+    opentelemetry::global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
+    let tracer = opentelemetry_jaeger::new_agent_pipeline()
+        .install_batch(opentelemetry_sdk::runtime::Tokio)?;
+
+    // Create a tracing layer with the configured tracer
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    // Use the tracing subscriber `Registry`, or any other subscriber
+    // that impls `LookupSpan`
+    let subscriber = Registry::default().with(telemetry);
+
+    // Trace executed code
+    tracing::subscriber::with_default(subscriber, || {
+        // Spans will be sent to the configured OpenTelemetry exporter
+        let root = span!(tracing::Level::TRACE, "app_start", work_units = 2);
+        let _enter = root.enter();
+
+        error!("This event will be logged in the root span.");
+    });
 
     initialize_index_css();
     initialize_favicon_ico().await;
@@ -445,5 +468,6 @@ async fn main() -> Result<(), AppError> {
     .unwrap();*/
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
     axum::serve(listener, app.into_make_service()).await?;
+    opentelemetry::global::shutdown_tracer_provider(); // sending remaining spans
     Ok(())
 }

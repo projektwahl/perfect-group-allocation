@@ -25,13 +25,20 @@ warning blocks in rustdoc
 
 ```bash
 export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
-RUST_BACKTRACE=1 RUST_LOG=tower_http::trace=TRACE cargo run --bin server
+RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
 
 tokio-console
 ```
 
 https://datatracker.ietf.org/doc/html/rfc9204
+
+## Tracing
+
+```
+podman run -d -p6831:6831/udp -p6832:6832/udp -p16686:16686 -p14268:14268 docker.io/jaegertracing/all-in-one:latest
+firefox http://localhost:16686/
+```
 
 ## Async profiling
 

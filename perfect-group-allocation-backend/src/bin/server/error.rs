@@ -5,6 +5,7 @@ use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
+use opentelemetry::trace::TraceError;
 use serde::Serialize;
 
 use crate::session::Session;
@@ -55,6 +56,8 @@ pub enum AppError {
     Poison(#[from] std::sync::PoisonError<()>),
     #[error("join error: {0}")]
     Join(#[from] tokio::task::JoinError),
+    #[error("trace error: {0}")]
+    Trace(#[from] TraceError),
     #[error("wrong csrf token")]
     WrongCsrfToken,
     #[error("no accept remaining")]
@@ -103,6 +106,7 @@ pub async fn to_error_result(
         | AppError::Rustls(_)
         | AppError::Poison(_)
         | AppError::Join(_)
+        | AppError::Trace(_)
         | AppError::OpenIdTokenNotFound
         | AppError::OpenIdNotConfigured
         | AppError::NoAcceptRemaining
