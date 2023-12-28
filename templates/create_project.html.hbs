@@ -1,7 +1,7 @@
 {{#>main}}
 <h1 class="center">Create project</h1>
 <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
-    <input type="hidden" name="csrf_token" value="{{@root.csrf_token}}">
+    <input type="hidden" name="csrf_token" value="{{csrf_token}}">
 
     <label for="title">Title:</label>
     <input {{#if title_error}} class="error" {{/if}} id="title" name="title" type="text" {{#if title}} value="{{title}}"

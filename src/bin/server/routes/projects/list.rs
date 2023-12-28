@@ -30,6 +30,7 @@ async gen fn list_internal(db: DatabaseConnection, session: Session) -> Result<S
         .await;
         yield Ok(result);
     }
+
     yield Ok(render(&session, "main_post", json!({})).await);
 }
 
