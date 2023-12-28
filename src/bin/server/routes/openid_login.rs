@@ -1,6 +1,6 @@
 use axum::extract::State;
 use axum::response::{IntoResponse, Redirect};
-use axum_extra::TypedHeader;
+
 use oauth2::PkceCodeChallenge;
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::Nonce;
@@ -10,7 +10,7 @@ use serde::Deserialize;
 use crate::error::to_error_result;
 use crate::openid::get_openid_client;
 use crate::session::Session;
-use crate::{CsrfSafeForm, CsrfToken, XRequestId};
+use crate::{CsrfSafeForm, CsrfToken};
 
 #[derive(Deserialize)]
 pub struct OpenIdLoginPayload {

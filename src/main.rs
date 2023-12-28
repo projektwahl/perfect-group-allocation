@@ -1,6 +1,8 @@
 #![feature(lint_reasons)]
 #![allow(clippy::too_many_lines, reason = "not yet ready for that")]
 
+extern crate alloc;
+
 use std::collections::BTreeMap;
 
 use good_lp::solvers::ObjectiveDirection::Maximisation;

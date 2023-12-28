@@ -1,11 +1,11 @@
 use axum::response::IntoResponse;
-use axum_extra::TypedHeader;
+
 use hyper::header;
 use tokio_util::io::ReaderStream;
 
 use crate::error::to_error_result;
 use crate::session::Session;
-use crate::XRequestId;
+
 
 #[axum::debug_handler(state=crate::MyState)]
 pub async fn handler(
