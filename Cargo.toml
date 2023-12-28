@@ -46,7 +46,7 @@ once_cell = "1"
 chrono = "0.4"
 miniserde = "0.1"
 http = "1"
-console-subscriber = "0.2"
+#console-subscriber = "0.2"
 tokio-metrics = { version = "0.3" }
 zero-cost-templating = { git = "https://github.com/mohe2015/zero-cost-templating.git", branch = "work" }
 bytes = "1"

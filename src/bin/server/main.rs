@@ -302,7 +302,7 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    console_subscriber::init();
+    //console_subscriber::init(); // drags in old axum version
     //tracing_subscriber::fmt::init();
 
     initialize_index_css();
