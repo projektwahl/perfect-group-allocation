@@ -106,15 +106,7 @@ pub async fn to_error_result(
         | AppError::NoAcceptRemaining
         | AppError::SessionStillHeld
         | AppError::Other(_)) => {
-            let result = render(
-                &session,
-                "error",
-                ErrorTemplate {
-                    request_id,
-                    error: err.to_string(),
-                },
-            )
-            .await;
+            let result = "TODO FIXME";
             (
                 session,
                 (
