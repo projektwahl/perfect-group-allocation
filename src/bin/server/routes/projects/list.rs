@@ -26,7 +26,7 @@ async gen fn list_internal(
     let template = yieldokv!(template.page_title("Projects"));
     let template = yieldoki!(template.next());
     let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next_false());
+    let template = yieldoki!(template.next_email_false());
     let template = yieldokv!(template.csrf_token("TODO"));
     let template = yieldoki!(template.next());
     let template = yieldoki!(template.next());

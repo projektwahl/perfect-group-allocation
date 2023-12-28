@@ -1,12 +1,18 @@
+use std::borrow::Cow;
+
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum_extra::TypedHeader;
+use bytes::Bytes;
+use futures_util::StreamExt;
+use http::header;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
+use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{template_stream, yieldoki, yieldokv};
 
 use super::list::create_project;
 use crate::entities::project_history::{self, ActiveModel};
-use crate::error::to_error_result;
+use crate::error::{to_error_result, AppError};
 use crate::session::Session;
 use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, XRequestId};
 
@@ -15,7 +21,7 @@ pub async fn create(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
-) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
+) -> (Session, impl IntoResponse) {
     let result = async gen {
         let template = yieldoki!(create_project());
         let template = yieldoki!(template.next());
@@ -23,7 +29,7 @@ pub async fn create(
         let template = yieldokv!(template.page_title("Create Project"));
         let template = yieldoki!(template.next());
         let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next_false());
+        let template = yieldoki!(template.next_email_false());
         let template = yieldokv!(template.csrf_token("TODO"));
         let template = yieldoki!(template.next());
         let template = yieldoki!(template.next());
@@ -35,21 +41,21 @@ pub async fn create(
         let has_errors = false;
         let template = if form.value.title.is_empty() {
             has_errors = true;
-            let template = yieldoki!(template.next_true());
+            let template = yieldoki!(template.next_title_error_true());
             let template = yieldokv!(template.title_error("title must not be empty"));
             yieldoki!(template.next())
         } else {
-            yieldoki!(template.next_false())
+            yieldoki!(template.next_title_error_false())
         };
         let template = yieldokv!(template.description(form.value.description));
         let template = yieldoki!(template.next());
         let template = if form.value.description.is_empty() {
             has_errors = true;
-            let template = yieldoki!(template.next_true());
+            let template = yieldoki!(template.next_description_error_true());
             let template = yieldokv!(template.description_error("description must not be empty"));
             yieldoki!(template.next())
         } else {
-            yieldoki!(template.next_false())
+            yieldoki!(template.next_description_error_false())
         };
 
         if has_errors {
@@ -62,13 +68,27 @@ pub async fn create(
             description: ActiveValue::Set(form.value.description.clone()),
             ..Default::default()
         };
-        let _unused: InsertResult<ActiveModel> =
-            project_history::Entity::insert(project).exec(&db).await?;
+        if let Err(err) = project_history::Entity::insert(project).exec(&db).await {
+            yield Err::<Cow<'static, str>, AppError>(err.into())
+        };
 
-        Ok(Redirect::to("/list").into_response())
+        // we can't stream the response and then redirect so probably add a button or so and use javascript? or maybe don't stream this page?
+        //Ok(Redirect::to("/list").into_response())
     };
-    match result.await {
-        Ok(ok) => Ok((session, ok)),
-        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
-    }
+    let stream = AsyncIteratorStream(result).map(|elem| match elem {
+        Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
+            // TODO FIXME use template here
+            "<h1>Error {}</h1>",
+            &app_error.to_string()
+        ))),
+        Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
+        Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
+    });
+    (
+        session,
+        (
+            [(header::CONTENT_TYPE, "text/html")],
+            axum::body::Body::from_stream(stream),
+        ),
+    )
 }
