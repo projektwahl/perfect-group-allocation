@@ -22,7 +22,7 @@ pub async fn create(
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> (Session, impl IntoResponse) {
-    let result = async gen {
+    let result = async gen move {
         let template = yieldoki!(create_project());
         let template = yieldoki!(template.next());
         let template = yieldoki!(template.next());
@@ -36,29 +36,29 @@ pub async fn create(
         let template = yieldoki!(template.next());
         let template = yieldokv!(template.csrf_token("TODO"));
         let template = yieldoki!(template.next());
-        let template = yieldokv!(template.title(form.value.title));
+        let template = yieldokv!(template.title(form.value.title.clone()));
         let template = yieldoki!(template.next());
-        let has_errors = false;
-        let template = if form.value.title.is_empty() {
-            has_errors = true;
+        let empty_title = form.value.title.is_empty();
+        let template = if empty_title {
             let template = yieldoki!(template.next_title_error_true());
             let template = yieldokv!(template.title_error("title must not be empty"));
             yieldoki!(template.next())
         } else {
             yieldoki!(template.next_title_error_false())
         };
-        let template = yieldokv!(template.description(form.value.description));
+        let template = yieldokv!(template.description(form.value.description.clone()));
         let template = yieldoki!(template.next());
-        let template = if form.value.description.is_empty() {
-            has_errors = true;
+        let empty_description = form.value.description.is_empty();
+        let template = if empty_description {
             let template = yieldoki!(template.next_description_error_true());
             let template = yieldokv!(template.description_error("description must not be empty"));
             yieldoki!(template.next())
         } else {
             yieldoki!(template.next_description_error_false())
         };
+        yieldoki!(template.next());
 
-        if has_errors {
+        if empty_title || empty_description {
             return;
         }
 
