@@ -14,7 +14,7 @@ CREATE TABLE project_history (
     visibility INTEGER NOT NULL, -- 0 lowest, 1 no voters, 2 no helpers, 3 no admins
     title TEXT NOT NULL,
     PRIMARY KEY (id, changed)
-) WITHOUT ROWID; -- https://www.sqlite.org/withoutrowid.html
+) WITHOUT ROWID;
 
 -- https://github.com/SeaQL/sea-query/pull/478
 -- as long as we support mariadb and don't get performance issues we should keep this simple. but later that may be a nice way to optimize

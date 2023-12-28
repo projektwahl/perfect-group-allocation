@@ -1,5 +1,5 @@
 use axum::response::IntoResponse;
-use axum::TypedHeader;
+use axum_extra::TypedHeader;
 use hyper::header;
 use tokio_util::io::ReaderStream;
 
@@ -7,7 +7,7 @@ use crate::error::to_error_result;
 use crate::session::Session;
 use crate::XRequestId;
 
-#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
+#[axum::debug_handler(state=crate::MyState)]
 pub async fn handler(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
@@ -17,7 +17,7 @@ pub async fn handler(
             tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
                 .await?;
         let stream = ReaderStream::new(file);
-        let body = hyper::Body::wrap_stream(stream);
+        let body = axum::body::Body::from_stream(stream);
 
         let headers = [
             (header::CONTENT_TYPE, "application/octet-stream"),
@@ -27,7 +27,7 @@ pub async fn handler(
             ),
         ];
 
-        Ok((headers, hyper::Response::new(body)))
+        Ok((headers, body))
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),

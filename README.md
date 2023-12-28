@@ -11,8 +11,6 @@
 
 https://github.com/tokio-rs/console
 
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -w src -x 'run --bin server'
-
 cargo install --locked tokio-console
 
 tokio-console
@@ -34,9 +32,12 @@ awesome help for performance issues
 https://valgrind.org/docs/manual/cl-manual.html
 Callgrind
 
-cargo build --target=x86_64-unknown-linux-gnu -Z build-std --release --bin server
+# rebuild std to get debug symbols and same settings?
+cargo build --target=x86_64-unknown-linux-gnu -Z build-std --profile=release-with-debug --bin server
 
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release/server 
+# https://github.com/launchbadge/sqlx/blob/929af41745a9434ae83417dcf2571685cecca6f0/sqlx-postgres/src/options/mod.rs#L15
+# WARNING: Only connect without ssl over localhost. This makes the profiling better as there is not countless ssl stuff in there.
+DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release-with-debug/server
 
 use zed attack proxy to create some requests
 
@@ -65,10 +66,6 @@ Add GitHub as identity provider for demo
 
 Identity Providers -> Manage display order
 
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" sea-orm-cli migrate refresh
-sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -w src -x 'run --bin server'
-
 https://lightningcss.dev/docs.html
 
 # maybe create a local k3s in docker setup?
@@ -94,8 +91,6 @@ https://github.com/sunng87/handlebars-rust (slow?, really popular, seems to esca
 
 https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#synchronizer-token-pattern
 
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo watch -w src -x 'run --bin server'
-
 
 # I think http3 needs the low ports anyways
 sudo caddy run --watch # does it send the Early-Data header?
@@ -106,11 +101,6 @@ https://github.com/abiosoft/caddy-json-schema
 
 xcaddy build --with github.com/abiosoft/caddy-json-schema
 ~/Documents/xcaddy/caddy json-schema --vscode # only needed for the json schema
-
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" sea-orm-cli migrate refresh
-sea-orm-cli generate entity -u sqlite:./sqlite.db?mode=rwc -o src/bin/server/entities
-DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo run --release --bin server
-
 
 podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
 psql postgres://postgres:password@localhost

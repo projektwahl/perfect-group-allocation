@@ -4,10 +4,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ page_title }}</title>
+    <title>{{page_title}}</title>
     <link rel="stylesheet" href="index.css" />
 </head>
 
 <body>
-    {{> nav }}
+    {{#>nav}}{{/nav}}
     <main>
+        {{>@partial-block}}
+    </main>
+</body>
+
+</html>

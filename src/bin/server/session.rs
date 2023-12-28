@@ -57,8 +57,10 @@ where
 }
 
 impl Session {
-    const COOKIE_NAME_OPENIDCONNECT: &'static str = "__Host-openidconnect";
-    const COOKIE_NAME_SESSION: &'static str = "__Host-session";
+    //const COOKIE_NAME_OPENIDCONNECT: &'static str = "__Host-openidconnect";
+    //const COOKIE_NAME_SESSION: &'static str = "__Host-session";
+    const COOKIE_NAME_OPENIDCONNECT: &'static str = "openidconnect";
+    const COOKIE_NAME_SESSION: &'static str = "session";
 
     pub fn new(private_cookies: PrivateCookieJar) -> Self {
         let mut session = Self { private_cookies };
@@ -95,11 +97,10 @@ impl Session {
                 refresh_token: session_cookie.refresh_token.secret().to_string(),
             }),
         );
-        let cookie = Cookie::build(Self::COOKIE_NAME_SESSION, test_to_string(&value))
+        let cookie = Cookie::build((Self::COOKIE_NAME_SESSION, test_to_string(&value)))
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Lax) // openid-redirect is a cross-site-redirect
-            .secure(true)
-            .finish();
+            /*.secure(true) */;
         self.private_cookies = self.private_cookies.clone().add(cookie);
         (session_id, input)
     }
@@ -108,14 +109,13 @@ impl Session {
         &mut self,
         input: &(&PkceCodeVerifier, &Nonce, &oauth2::CsrfToken),
     ) -> Result<(), AppError> {
-        let cookie = Cookie::build(
+        let cookie = Cookie::build((
             Self::COOKIE_NAME_OPENIDCONNECT,
             serde_json::to_string(input)?,
-        )
+        ))
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
-        .secure(true)
-        .finish();
+            /*.secure(true) */;
         self.private_cookies = self.private_cookies.clone().add(cookie);
         Ok(())
     }
@@ -133,11 +133,10 @@ impl Session {
             Ok(Err(error)) => return Err(error.into()),
             Err(error) => return Err(error),
         };
-        let cookie = Cookie::build(Self::COOKIE_NAME_OPENIDCONNECT, "")
+        let cookie = Cookie::build((Self::COOKIE_NAME_OPENIDCONNECT, ""))
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
-            .secure(true)
-            .finish();
+            /*.secure(true) */;
         self.private_cookies = self.private_cookies.clone().remove(cookie);
         Ok(return_value)
     }

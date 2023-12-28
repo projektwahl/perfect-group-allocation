@@ -1,3 +1,4 @@
+#![feature(gen_blocks)]
 #![forbid(unsafe_code)]
 #![warn(
     future_incompatible,
@@ -91,6 +92,7 @@
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
     clippy::module_name_repetitions,
+    clippy::print_stdout,
     reason = "not yet ready for that"
 )]
 #![feature(coroutines)]
@@ -104,45 +106,40 @@ mod error;
 mod openid;
 pub mod routes;
 pub mod session;
-pub mod templating;
 
 use alloc::borrow::Cow;
 use core::convert::Infallible;
-use std::net::SocketAddr;
 use std::time::Duration;
 
 use axum::extract::{FromRef, FromRequest};
-use axum::headers::{self, Header};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
-use axum::{async_trait, BoxError, RequestExt, Router, TypedHeader};
+use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
+use axum_extra::headers::Header;
+use axum_extra::TypedHeader;
 use error::{to_error_result, AppError};
-use futures_util::TryFutureExt;
-use handlebars::Handlebars;
 use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
-use once_cell::sync::Lazy;
 use routes::download::handler;
 use routes::index::index;
 use routes::indexcss::indexcss;
 use routes::openid_login::openid_login;
 use routes::projects::create::create;
-use routes::projects::list::list;
 use sea_orm::{
     ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, RuntimeErr, Statement,
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
+use tokio::net::TcpListener;
 use tower::service_fn;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 
 use crate::routes::openid_redirect::openid_redirect;
-
-type MyBody = hyper::Body;
+use crate::routes::projects::list::list;
 
 const DB_NAME: &str = "postgres";
 
@@ -171,23 +168,6 @@ pub struct TemplateProject {
     description: String,
 }
 
-pub struct EmptyBody;
-
-#[async_trait]
-impl<S, B> FromRequest<S, B> for EmptyBody
-where
-    B: Send + 'static,
-    S: Send + Sync,
-{
-    type Rejection = Infallible;
-
-    async fn from_request(_req: hyper::Request<B>, _state: &S) -> Result<Self, Self::Rejection> {
-        Ok(Self)
-    }
-}
-
-impl CsrfSafeExtractor for EmptyBody {}
-
 #[derive(Deserialize)]
 pub struct CreateProjectPayload {
     csrf_token: String,
@@ -212,17 +192,14 @@ pub struct CsrfSafeForm<T: CsrfToken> {
 }
 
 #[async_trait]
-impl<T, B> FromRequest<MyState, B> for CsrfSafeForm<T>
+impl<T> FromRequest<MyState> for CsrfSafeForm<T>
 where
     T: DeserializeOwned + CsrfToken + Send,
-    B: http_body::Body + Send + 'static,
-    B::Data: Send,
-    B::Error: Into<BoxError>,
 {
     type Rejection = (Session, (StatusCode, axum::response::Response));
 
     async fn from_request(
-        mut req: hyper::Request<B>,
+        mut req: axum::extract::Request,
         state: &MyState,
     ) -> Result<Self, Self::Rejection> {
         let request_id = req
@@ -297,14 +274,16 @@ impl Header for XRequestId {
         &X_REQUEST_ID_HEADER_NAME
     }
 
-    fn decode<'i, I>(values: &mut I) -> Result<Self, headers::Error>
+    fn decode<'i, I>(values: &mut I) -> Result<Self, axum_extra::headers::Error>
     where
         I: Iterator<Item = &'i HeaderValue>,
     {
         let value = values
             .exactly_one()
-            .map_err(|_e| headers::Error::invalid())?;
-        let value = value.to_str().map_err(|_e| headers::Error::invalid())?;
+            .map_err(|_e| axum_extra::headers::Error::invalid())?;
+        let value = value
+            .to_str()
+            .map_err(|_e| axum_extra::headers::Error::invalid())?;
         Ok(Self(value.to_owned()))
     }
 
@@ -341,44 +320,10 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
 
     let db = Database::connect(&database_url).await?;
 
-    let db = match db.get_database_backend() {
-        DbBackend::MySql => {
-            db.execute(Statement::from_string(
-                db.get_database_backend(),
-                format!("CREATE DATABASE IF NOT EXISTS `{DB_NAME}`;"),
-            ))
-            .await?;
-
-            let url = format!("{database_url}/{DB_NAME}");
-            Database::connect(&url).await?
-        }
-        DbBackend::Postgres => {
-            let err_already_exists = db
-                .execute(Statement::from_string(
-                    db.get_database_backend(),
-                    format!("CREATE DATABASE \"{DB_NAME}\";"),
-                ))
-                .await;
-
-            match err_already_exists {
-                Err(DbErr::Exec(RuntimeErr::SqlxError(sqlx::Error::Database(err))))
-                    if err.code() == Some(Cow::Borrowed("42P04")) =>
-                {
-                    // database already exists error
-                }
-                Err(err) => return Err(err.into()),
-                Ok(_) => {}
-            }
-
-            let url = format!("{database_url}/{DB_NAME}");
-            Database::connect(&url).await?
-        }
-        DbBackend::Sqlite => db,
-    };
     Ok(db)
 }
 
-fn layers(app: Router<MyState, hyper::Body>, db: DatabaseConnection) -> Router<(), hyper::Body> {
+fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
     // layers are in reverse order
     //let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
     //let app: Router<MyState, MyBody2> =
@@ -429,7 +374,7 @@ fn layers(app: Router<MyState, hyper::Body>, db: DatabaseConnection) -> Router<(
         HeaderValue::from_static("no-cache, no-store, must-revalidate"),
     ));
     */
-    let app: Router<(), hyper::Body> = app.with_state(MyState {
+    let app: Router<()> = app.with_state(MyState {
         database: db,
         key: Key::generate(),
     });
@@ -445,39 +390,22 @@ fn layers(app: Router<MyState, hyper::Body>, db: DatabaseConnection) -> Router<(
             )
             .layer(CatchPanicLayer::new()),
     );*/
-    let app: Router<(), hyper::Body> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
+    let app: Router<()> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
     app
 }
-
-static HANDLEBARS: Lazy<Handlebars<'static>> = Lazy::new(|| {
-    let mut handlebars = Handlebars::new();
-    if cfg!(debug_assertions) {
-        handlebars.set_dev_mode(true);
-    }
-    handlebars.set_strict_mode(true);
-    #[expect(
-        clippy::unwrap_used,
-        reason = "we don't want to handle this weird failure case here"
-    )]
-    handlebars
-        .register_templates_directory(".hbs", "./templates/")
-        .map_err(Box::new)
-        .unwrap();
-    handlebars
-});
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     console_subscriber::init();
 
-    let monitor = tokio_metrics::TaskMonitor::new();
+    let _monitor = tokio_metrics::TaskMonitor::new();
     let monitor_root = tokio_metrics::TaskMonitor::new();
     let monitor_root_create = tokio_metrics::TaskMonitor::new();
     let monitor_index_css = tokio_metrics::TaskMonitor::new();
     let monitor_list = tokio_metrics::TaskMonitor::new();
-    let monitor_download = tokio_metrics::TaskMonitor::new();
-    let monitor_openidconnect_login = tokio_metrics::TaskMonitor::new();
-    let monitor_openidconnect_redirect = tokio_metrics::TaskMonitor::new();
+    let _monitor_download = tokio_metrics::TaskMonitor::new();
+    let _monitor_openidconnect_login = tokio_metrics::TaskMonitor::new();
+    let _monitor_openidconnect_redirect = tokio_metrics::TaskMonitor::new();
 
     let handle = tokio::runtime::Handle::current();
     let runtime_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
@@ -486,9 +414,15 @@ async fn main() -> Result<(), AppError> {
     {
         let monitor_index_css = monitor_index_css.clone();
         let monitor_root = monitor_root.clone();
+        let monitor_root_create = monitor_root_create.clone();
+        let monitor_list = monitor_list.clone();
         tokio::spawn(async move {
-            for (interval_index_css, interval_root) in
-                monitor_index_css.intervals().zip(monitor_root.intervals())
+            for (((interval_index_css, interval_root), interval_create), interval_list) in
+                monitor_index_css
+                    .intervals()
+                    .zip(monitor_root.intervals())
+                    .zip(monitor_root_create.intervals())
+                    .zip(monitor_list.intervals())
             {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
@@ -504,6 +438,18 @@ async fn main() -> Result<(), AppError> {
                     interval_root.slow_poll_ratio(),
                     interval_root.mean_slow_poll_duration()
                 );
+                println!(
+                    "POST /create {:?} {:?} {:?}",
+                    interval_create.mean_poll_duration(),
+                    interval_create.slow_poll_ratio(),
+                    interval_create.mean_slow_poll_duration()
+                );
+                println!(
+                    "GET /list {:?} {:?} {:?}",
+                    interval_list.mean_poll_duration(),
+                    interval_list.slow_poll_ratio(),
+                    interval_list.mean_slow_poll_duration()
+                );
                 // wait 500ms
                 tokio::time::sleep(Duration::from_millis(5000)).await;
             }
@@ -513,7 +459,7 @@ async fn main() -> Result<(), AppError> {
     // print runtime metrics every 500ms
     {
         tokio::spawn(async move {
-            for interval in runtime_monitor.intervals() {
+            for _ in runtime_monitor.intervals() {
                 // pretty-print the metric interval
 
                 // wait 500ms
@@ -534,24 +480,29 @@ async fn main() -> Result<(), AppError> {
 
     // TODO FIXME use services here so we can specify the error type
     // and then we can build a layer around it
-    let app: Router<MyState, hyper::Body> = Router::new()
+    let app: Router<MyState> = Router::new()
         .route(
             "/",
             get(move |first, second| monitor_root.instrument(index(first, second))),
         )
-        .route("/", post(create))
+        .route(
+            "/",
+            post(move |a, b, c, d| monitor_root_create.instrument(create(a, b, c, d))),
+        )
         .route(
             "/index.css",
             get(move |first, second| monitor_index_css.instrument(indexcss(first, second))),
         )
-        .route("/list", get(list))
+        .route(
+            "/list",
+            get(move |a, b, c| monitor_list.instrument(list(a, b, c))),
+        )
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))
         .route_service(
             "/test",
-            service_fn(|req: http::Request<hyper::Body>| async move {
-                let body = hyper::Body::from(format!("Hi from `{} /foo`", req.method()));
-                let body = axum::body::boxed(body);
+            service_fn(|req: http::Request<axum::body::Body>| async move {
+                let body = axum::body::Body::from(format!("Hi from `{} /foo`", req.method()));
                 let res = http::Response::new(body);
                 Ok::<_, Infallible>(res)
             }),
@@ -584,10 +535,7 @@ async fn main() -> Result<(), AppError> {
     .serve(app.into_make_service())
     .await
     .unwrap();*/
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    tracing::debug!("listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
+    axum::serve(listener, app.into_make_service()).await?;
     Ok(())
 }

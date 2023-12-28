@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use axum::response::IntoResponse;
-use axum::TypedHeader;
 use axum_extra::response::Css;
+use axum_extra::TypedHeader;
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
@@ -13,7 +13,7 @@ use crate::error::to_error_result;
 use crate::session::Session;
 use crate::XRequestId;
 
-#[axum::debug_handler(body=crate::MyBody, state=crate::MyState)]
+#[axum::debug_handler(state=crate::MyState)]
 pub async fn indexcss(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
