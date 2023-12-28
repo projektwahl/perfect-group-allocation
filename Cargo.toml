@@ -1,9 +1,17 @@
 [workspace]
 resolver = "2"
-
 members = [
     "perfect-group-allocation-backend",
 ]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/projektwahl/perfect-group-allocation"
+description = "Allocate people to groups according to their preferences while honoring specified restrictions."
+keywords = ["web", "management", "service"]
+categories = ["web-programming"]
 
 [profile.release-with-debug]
 inherits = "release"
