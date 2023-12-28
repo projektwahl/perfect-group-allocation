@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use crate::error::{to_error_result, AppError};
 use crate::openid::get_openid_client;
 use crate::session::{Session, SessionCookie};
-use crate::templating::render;
 use crate::XRequestId;
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted

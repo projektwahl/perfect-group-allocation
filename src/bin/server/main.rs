@@ -106,7 +106,6 @@ mod error;
 mod openid;
 pub mod routes;
 pub mod session;
-pub mod templating;
 
 use alloc::borrow::Cow;
 use core::convert::Infallible;

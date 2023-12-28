@@ -6,7 +6,6 @@ use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
 use crate::entities::project_history::{self, ActiveModel};
 use crate::error::to_error_result;
 use crate::session::Session;
-use crate::templating::render;
 use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, XRequestId};
 
 #[axum::debug_handler(state=crate::MyState)]

@@ -8,7 +8,6 @@ use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 use serde::Serialize;
 
 use crate::session::Session;
-use crate::templating::render;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
