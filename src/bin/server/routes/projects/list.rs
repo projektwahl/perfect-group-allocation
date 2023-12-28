@@ -1,17 +1,19 @@
+use std::borrow::Cow;
+
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::TypedHeader;
+use bytes::Bytes;
 use futures_util::StreamExt;
 use hyper::header;
 use sea_orm::{DatabaseConnection, EntityTrait};
-use serde_json::json;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{template_stream, yieldi, yieldoki, yieldokv, yieldv};
+use zero_cost_templating::{template_stream, yieldoki, yieldokv};
 
 use crate::entities::project_history;
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{TemplateProject, XRequestId};
+use crate::XRequestId;
 
 #[template_stream("templates")]
 async gen fn list_internal(
@@ -28,15 +30,15 @@ async gen fn list_internal(
     let template = yieldokv!(template.csrf_token("TODO"));
     let template = yieldoki!(template.next());
     let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next());
+    let mut template = yieldoki!(template.next());
     let mut stream = project_history::Entity::find().stream(&db).await.unwrap();
     while let Some(x) = stream.next().await {
-        let template = yieldoki!(template.next_enter_loop());
+        let inner_template = yieldoki!(template.next_enter_loop());
         let x = x.unwrap();
-        let template = yieldokv!(template.title(x.title));
-        let template = yieldoki!(template.next());
-        let template = yieldokv!(template.description(x.description));
-        let template = yieldoki!(template.next());
+        let inner_template = yieldokv!(inner_template.title(x.title));
+        let inner_template = yieldoki!(inner_template.next());
+        let inner_template = yieldokv!(inner_template.description(x.description));
+        template = yieldoki!(inner_template.next());
     }
     let template = yieldoki!(template.next_end_loop());
     yieldoki!(template.next());
@@ -49,12 +51,13 @@ pub async fn list(
     session: Session,
 ) -> (Session, impl IntoResponse) {
     let stream = AsyncIteratorStream(list_internal(db, session.clone())).map(|elem| match elem {
-        Err(app_error) => Ok::<String, AppError>(format!(
+        Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
             // TODO FIXME use template here
             "<h1>Error {}</h1>",
             &app_error.to_string()
-        )),
-        Ok::<String, AppError>(ok) => Ok(ok),
+        ))),
+        Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
+        Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
     });
     (
         session,
