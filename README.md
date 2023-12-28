@@ -25,7 +25,7 @@ warning blocks in rustdoc
 
 ```bash
 export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
-RUST_BACKTRACE=1 cargo run --bin server
+RUST_LOG=trace,tokio=debug RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
 
 tokio-console
@@ -39,6 +39,13 @@ https://datatracker.ietf.org/doc/html/rfc9204
 podman run -d -p6831:6831/udp -p6832:6832/udp -p16686:16686 -p14268:14268 docker.io/jaegertracing/all-in-one:latest
 firefox http://localhost:16686/
 RUST_LOG=tower_http=debug RUST_BACKTRACE=1 cargo run --bin server
+```
+
+## Metrics
+
+```
+podman run -p 9090:9090 -v ./prometheus.yml:/prometheus/prometheus.yml docker.io/prom/prometheus --enable-feature=otlp-write-receiver
+firefox http://localhost:9090/
 ```
 
 ## Async profiling

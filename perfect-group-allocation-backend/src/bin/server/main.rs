@@ -32,7 +32,10 @@ use error::{to_error_result, AppError};
 use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
+use opentelemetry::metrics::MeterProvider as _;
 use opentelemetry::trace::TracerProvider;
+use opentelemetry::KeyValue;
+use opentelemetry_sdk::metrics::MeterProvider;
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
@@ -312,19 +315,18 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 async fn main() -> Result<(), AppError> {
     //console_subscriber::init(); // drags in old axum version
     //tracing_subscriber::fmt::init();
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .install_batch(opentelemetry_sdk::runtime::Tokio)?;
+
+    let meter = opentelemetry_otlp::new_pipeline()
+        .metrics(opentelemetry_sdk::runtime::Tokio)
+        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .build()
+        .unwrap();
 
     // maybe dont use tracing here in this library but opentelemetry directly?
-
-    // https://github.com/prometheus/client_rust
-    // https://crates.io/crates/poston
-
-    opentelemetry::global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
-    // Warning: Note that the exporter component from this crate will be deprecated in the future.
-    // Users are advised to move to opentelemetry_otlp instead as Jaeger supports accepting data in the OTLP protocol.
-    // See the Jaeger Docs for details about Jaeger and deployment information.
-    let tracer = opentelemetry_jaeger::new_agent_pipeline()
-        .with_service_name("perfect-group-allocation")
-        .install_batch(opentelemetry_sdk::runtime::Tokio)?;
 
     // Create a tracing layer with the configured tracer
     let telemetry = tracing_opentelemetry::layer()
@@ -345,6 +347,20 @@ async fn main() -> Result<(), AppError> {
 
     error!("This event will be logged in the root span.");
     trace!("This event will be logged in the root span.");
+
+    let meter = meter.meter("perfect-group-allocation");
+
+    // Use two instruments
+    let counter = meter
+        .u64_counter("a.counter")
+        .with_description("Counts things")
+        .init();
+    let histogram = meter
+        .i64_histogram("a.histogram")
+        .with_description("Records values")
+        .init();
+
+    counter.add(100, &[KeyValue::new("key", "value")]);
 
     initialize_index_css();
     initialize_favicon_ico().await;
@@ -377,6 +393,18 @@ async fn main() -> Result<(), AppError> {
             {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
+                histogram.record(
+                    100,
+                    &[KeyValue::new(
+                        "index_css_mean_slow_poll_duration",
+                        interval_index_css
+                            .mean_slow_poll_duration()
+                            .as_nanos()
+                            .to_string()
+                            + "ns",
+                    )],
+                );
+
                 /*println!(
                     "GET /index.css {:?} {:?} {:?}",
                     interval_index_css.mean_poll_duration(),
