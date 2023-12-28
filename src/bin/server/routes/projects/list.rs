@@ -18,7 +18,6 @@ async gen fn list_internal(
     db: DatabaseConnection,
     session: Session,
 ) -> Result<std::borrow::Cow<'static, str>, AppError> {
-    let mut stream = project_history::Entity::find().stream(&db).await.unwrap();
     let template = yieldoki!(list_projects());
     let template = yieldoki!(template.next());
     let template = yieldoki!(template.next());
@@ -28,22 +27,19 @@ async gen fn list_internal(
     let template = yieldoki!(template.next_false());
     let template = yieldokv!(template.csrf_token("TODO"));
     let template = yieldoki!(template.next());
-
+    let template = yieldoki!(template.next());
+    let template = yieldoki!(template.next());
+    let mut stream = project_history::Entity::find().stream(&db).await.unwrap();
     while let Some(x) = stream.next().await {
+        let template = yieldoki!(template.next_enter_loop());
         let x = x.unwrap();
-        /*let result = render(
-            &session,
-            "project",
-            TemplateProject {
-                title: x.title,
-                description: x.description,
-            },
-        )
-        .await;*/
-        //yield Ok(result);
+        let template = yieldokv!(template.title(x.title));
+        let template = yieldoki!(template.next());
+        let template = yieldokv!(template.description(x.description));
+        let template = yieldoki!(template.next());
     }
-
-    //yield Ok(render(&session, "main_post", json!({})).await);
+    let template = yieldoki!(template.next_end_loop());
+    yieldoki!(template.next());
 }
 
 #[axum::debug_handler(state=crate::MyState)]
