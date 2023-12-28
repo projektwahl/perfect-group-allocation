@@ -24,3 +24,6 @@ unsafe_code = "forbid"
 pedantic = "warn"
 nursery = "warn"
 cargo = "warn"
+
+[patch.crates-io]
+proc-macro-crate = { git = "https://github.com/westy92/proc-macro-crate", rev = "89166accf43a380a7a8e66c2eea20ce4fd9dae8f" }
