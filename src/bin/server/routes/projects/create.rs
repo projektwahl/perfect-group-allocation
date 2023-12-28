@@ -2,44 +2,58 @@ use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum_extra::TypedHeader;
 use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
+use zero_cost_templating::{template_stream, yieldoki, yieldokv};
 
+use super::list::create_project;
 use crate::entities::project_history::{self, ActiveModel};
 use crate::error::to_error_result;
 use crate::session::Session;
 use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, XRequestId};
 
-#[axum::debug_handler(state=crate::MyState)]
 pub async fn create(
     State(db): State<DatabaseConnection>,
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
-    let result = async {
-        let mut title_error = None;
-        let mut description_error = None;
+    let result = async gen {
+        let template = yieldoki!(create_project());
+        let template = yieldoki!(template.next());
+        let template = yieldoki!(template.next());
+        let template = yieldokv!(template.page_title("Create Project"));
+        let template = yieldoki!(template.next());
+        let template = yieldoki!(template.next());
+        let template = yieldoki!(template.next_false());
+        let template = yieldokv!(template.csrf_token("TODO"));
+        let template = yieldoki!(template.next());
+        let template = yieldoki!(template.next());
+        let template = yieldoki!(template.next());
+        let template = yieldokv!(template.csrf_token("TODO"));
+        let template = yieldoki!(template.next());
+        let template = yieldokv!(template.title(form.value.title));
+        let template = yieldoki!(template.next());
+        let has_errors = false;
+        let template = if form.value.title.is_empty() {
+            has_errors = true;
+            let template = yieldoki!(template.next_true());
+            let template = yieldokv!(template.title_error("title must not be empty"));
+            yieldoki!(template.next())
+        } else {
+            yieldoki!(template.next_false())
+        };
+        let template = yieldokv!(template.description(form.value.description));
+        let template = yieldoki!(template.next());
+        let template = if form.value.description.is_empty() {
+            has_errors = true;
+            let template = yieldoki!(template.next_true());
+            let template = yieldokv!(template.description_error("description must not be empty"));
+            yieldoki!(template.next())
+        } else {
+            yieldoki!(template.next_false())
+        };
 
-        if form.value.title.is_empty() {
-            title_error = Some("title must not be empty".to_owned());
-        }
-
-        if form.value.description.is_empty() {
-            description_error = Some("description must not be empty".to_owned());
-        }
-
-        if title_error.is_some() || description_error.is_some() {
-            let result = render(
-                &session,
-                "create-project",
-                CreateProject {
-                    title: Some(form.value.title.clone()),
-                    title_error,
-                    description: Some(form.value.description.clone()),
-                    description_error,
-                },
-            )
-            .await;
-            return Ok(Html(result).into_response());
+        if has_errors {
+            return;
         }
 
         let project = project_history::ActiveModel {
