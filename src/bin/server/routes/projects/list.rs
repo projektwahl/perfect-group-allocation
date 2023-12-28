@@ -6,7 +6,7 @@ use hyper::header;
 use sea_orm::{DatabaseConnection, EntityTrait};
 use serde_json::json;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::template_stream;
+use zero_cost_templating::{template_stream, yieldi, yieldoki, yieldokv, yieldv};
 
 use crate::entities::project_history;
 use crate::error::AppError;
@@ -14,12 +14,24 @@ use crate::session::Session;
 use crate::{TemplateProject, XRequestId};
 
 #[template_stream("templates")]
-async gen fn list_internal(db: DatabaseConnection, session: Session) -> Result<String, AppError> {
+async gen fn list_internal(
+    db: DatabaseConnection,
+    session: Session,
+) -> Result<std::borrow::Cow<'static, str>, AppError> {
     let mut stream = project_history::Entity::find().stream(&db).await.unwrap();
-    yield Ok(render(&session, "main_pre", json!({"page_title": "Projects"})).await);
+    let template = yieldoki!(list_projects());
+    let template = yieldoki!(template.next());
+    let template = yieldoki!(template.next());
+    let template = yieldokv!(template.page_title("Projects"));
+    let template = yieldoki!(template.next());
+    let template = yieldoki!(template.next());
+    let template = yieldoki!(template.next_false());
+    let template = yieldokv!(template.csrf_token("TODO"));
+    let template = yieldoki!(template.next());
+
     while let Some(x) = stream.next().await {
         let x = x.unwrap();
-        let result = render(
+        /*let result = render(
             &session,
             "project",
             TemplateProject {
@@ -27,11 +39,11 @@ async gen fn list_internal(db: DatabaseConnection, session: Session) -> Result<S
                 description: x.description,
             },
         )
-        .await;
-        yield Ok(result);
+        .await;*/
+        //yield Ok(result);
     }
 
-    yield Ok(render(&session, "main_post", json!({})).await);
+    //yield Ok(render(&session, "main_post", json!({})).await);
 }
 
 #[axum::debug_handler(state=crate::MyState)]
