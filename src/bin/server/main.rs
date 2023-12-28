@@ -5,7 +5,6 @@
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
     clippy::module_name_repetitions,
-    clippy::print_stdout,
     clippy::too_many_lines,
     reason = "not yet ready for that"
 )]
