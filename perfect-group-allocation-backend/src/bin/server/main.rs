@@ -52,7 +52,7 @@ use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{error, span, trace, Level};
 use tracing_subscriber::fmt::SubscriberBuilder;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::{FmtSubscriber, Registry};
+use tracing_subscriber::{FmtSubscriber, Layer, Registry};
 
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
@@ -311,6 +311,7 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     //console_subscriber::init(); // drags in old axum version
+    //tracing_subscriber::fmt::init();
 
     // maybe dont use tracing here in this library but opentelemetry directly?
 
@@ -326,18 +327,21 @@ async fn main() -> Result<(), AppError> {
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;
 
     // Create a tracing layer with the configured tracer
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    let telemetry = tracing_opentelemetry::layer()
+        .with_tracer(tracer)
+        .with_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the `axum::rejection`
+                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                "example_tracing_aka_logging=debug,tower_http=debug,axum::rejection=trace".into()
+            }),
+        );
 
     // Use the tracing subscriber `Registry`, or any other subscriber
     // that impls `LookupSpan`
     let subscriber = Registry::default().with(telemetry);
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
-
-    // Trace executed code
-    // Spans will be sent to the configured OpenTelemetry exporter
-    let root = span!(tracing::Level::TRACE, "app_start", work_units = 2);
-    let _enter = root.enter();
 
     error!("This event will be logged in the root span.");
     trace!("This event will be logged in the root span.");

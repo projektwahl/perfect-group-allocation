@@ -19,7 +19,7 @@ workspace = true
 futures-util = "0.3"
 good_lp = { default-features = false, version = "1", features = [ "coin_cbc" ] }
 itertools = { default-features = false, version = "0.12", features = [ "use_alloc", "use_std" ] }
-tokio = { version = "1", features = ["full", "tracing"] }
+tokio = { version = "1", features = ["full"] }
 log = { version = "0.4", features = ["release_max_level_off"] }
 sea-orm = { version = "0.12", features = [ "sqlx-postgres", "runtime-tokio-rustls", "macros" ] }
 sea-orm-migration = "0.12"

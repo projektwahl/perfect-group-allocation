@@ -38,6 +38,7 @@ https://datatracker.ietf.org/doc/html/rfc9204
 ```
 podman run -d -p6831:6831/udp -p6832:6832/udp -p16686:16686 -p14268:14268 docker.io/jaegertracing/all-in-one:latest
 firefox http://localhost:16686/
+RUST_LOG=tower_http=debug RUST_BACKTRACE=1 cargo run --bin server
 ```
 
 ## Async profiling
