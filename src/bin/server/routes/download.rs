@@ -9,7 +9,6 @@ use crate::XRequestId;
 
 #[axum::debug_handler(state=crate::MyState)]
 pub async fn handler(
-    TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     session: Session,
 ) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let result = async {
@@ -31,6 +30,6 @@ pub async fn handler(
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
+        Err(app_error) => Err(to_error_result(session, app_error).await),
     }
 }

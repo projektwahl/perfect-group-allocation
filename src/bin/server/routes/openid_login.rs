@@ -26,7 +26,6 @@ impl CsrfToken for OpenIdLoginPayload {
 #[axum::debug_handler(state=crate::MyState)]
 pub async fn openid_login(
     State(_db): State<DatabaseConnection>,
-    TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session,
     _form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
@@ -53,6 +52,6 @@ pub async fn openid_login(
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
+        Err(app_error) => Err(to_error_result(session, app_error).await),
     }
 }

@@ -2,7 +2,7 @@ use alloc::borrow::Cow;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::extract::State;
-use axum::response::{IntoResponse};
+use axum::response::IntoResponse;
 use axum_extra::TypedHeader;
 use bytes::Bytes;
 use futures_util::StreamExt;
@@ -12,8 +12,8 @@ use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
 
 use super::list::create_project;
-use crate::entities::project_history::{self};
-use crate::error::{AppError};
+use crate::entities::project_history;
+use crate::error::AppError;
 use crate::session::Session;
 use crate::{CreateProjectPayload, CsrfSafeForm, XRequestId};
 

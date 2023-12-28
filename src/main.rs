@@ -1,3 +1,6 @@
+#![feature(lint_reasons)]
+#![allow(clippy::too_many_lines, reason = "not yet ready for that")]
+
 use std::collections::BTreeMap;
 
 use good_lp::solvers::ObjectiveDirection::Maximisation;
@@ -11,16 +14,18 @@ use crate::examples::workshops::{
 
 pub mod examples;
 
-#[allow(unused)]
-fn group_pairs<A, B, I>(v: I) -> BTreeMap<A, Vec<B>>
+#[expect(unused, reason = "tmp")]
+fn group_pairs<A, B, I>(items: I) -> BTreeMap<A, Vec<B>>
 where
     A: Ord,
     I: IntoIterator<Item = (A, B)>,
 {
-    v.into_iter().fold(BTreeMap::new(), |mut acc, (a, b)| {
-        acc.entry(a).or_default().push(b);
-        acc
-    })
+    items
+        .into_iter()
+        .fold(BTreeMap::new(), |mut acc, (key, value)| {
+            acc.entry(key).or_default().push(value);
+            acc
+        })
 }
 
 fn main() {
@@ -29,36 +34,36 @@ fn main() {
     let mut variables = ProblemVariables::new();
 
     let requirement_outside = Requirement {
-        identifier: "Outside".to_string(),
+        identifier: "Outside".to_owned(),
     };
     let requirement_computer_pool = Requirement {
-        identifier: "Computer-Pool".to_string(),
+        identifier: "Computer-Pool".to_owned(),
     };
     let _requirements: Vec<&Requirement> = vec![&requirement_outside, &requirement_computer_pool];
 
     let timeslot_morgens = Timeslot {
-        identifier: "morgens".to_string(),
+        identifier: "morgens".to_owned(),
     };
     let timeslot_mittags = Timeslot {
-        identifier: "mittags".to_string(),
+        identifier: "mittags".to_owned(),
     };
     let timeslot_abends = Timeslot {
-        identifier: "abends".to_string(),
+        identifier: "abends".to_owned(),
     };
     let timeslots: Vec<&Timeslot> = vec![&timeslot_morgens, &timeslot_mittags, &timeslot_abends];
 
     let room_cpool = Room {
-        identifier: "C-Pool".to_string(),
+        identifier: "C-Pool".to_owned(),
         requirements: vec![&requirement_computer_pool],
         max_size: RoomSize(128),
     };
     let room_bosch = Room {
-        identifier: "Bosch".to_string(),
+        identifier: "Bosch".to_owned(),
         requirements: vec![],
         max_size: RoomSize(75),
     };
     let room_draussen = Room {
-        identifier: "draussen".to_string(),
+        identifier: "draussen".to_owned(),
         requirements: vec![&requirement_outside],
         max_size: RoomSize(200),
     };
@@ -73,7 +78,7 @@ fn main() {
         .collect();
 
     let workshop_topic_linux = WorkshopTopic {
-        identifier: "linux-lernen".to_string(),
+        identifier: "linux-lernen".to_owned(),
         requirements: vec![&requirement_computer_pool],
         max_size: WorkshopTopicSize(50),
     };
@@ -85,7 +90,7 @@ fn main() {
     }];
 
     let participant_moritz = Participant {
-        identifier: "moritz".to_string(),
+        identifier: "moritz".to_owned(),
     };
     let _participants: Vec<&Participant> = vec![&participant_moritz];
 
@@ -110,11 +115,14 @@ fn main() {
 
     let grouped_by_timeslot = rooms_in_timeslot
         .into_iter()
-        .merge_join_by(workshops_in_timeslot, |l, r| l.0.cmp(r.0))
+        .merge_join_by(workshops_in_timeslot, |left, right| left.0.cmp(right.0))
         .map(|value| {
             (
-                value.clone().map_any(|v| v.0, |v| v.0).reduce(|l, _r| l),
-                value.map_any(|v| v.1, |v| v.1).or_default(),
+                value
+                    .clone()
+                    .map_any(|val| val.0, |val| val.0)
+                    .reduce(|left, _right| left),
+                value.map_any(|val| val.1, |val| val.1).or_default(),
             )
         });
 
@@ -152,7 +160,7 @@ fn main() {
 
     let solution = problem
         .using(default_solver)
-        .with(test << 3)
+        .with(test << 3_i32)
         .solve()
         .unwrap();
 

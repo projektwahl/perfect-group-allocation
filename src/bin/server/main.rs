@@ -6,6 +6,7 @@
     clippy::missing_panics_doc,
     clippy::module_name_repetitions,
     clippy::print_stdout,
+    clippy::too_many_lines,
     reason = "not yet ready for that"
 )]
 
@@ -17,7 +18,6 @@ mod error;
 mod openid;
 pub mod routes;
 pub mod session;
-
 
 use core::convert::Infallible;
 use core::time::Duration;
@@ -39,9 +39,7 @@ use routes::index::index;
 use routes::indexcss::{indexcss, initialize_index_css};
 use routes::openid_login::openid_login;
 use routes::projects::create::create;
-use sea_orm::{
-    Database, DatabaseConnection,
-};
+use sea_orm::{Database, DatabaseConnection};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
@@ -52,8 +50,6 @@ use tower_http::services::ServeDir;
 
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
-
-const DB_NAME: &str = "postgres";
 
 pub trait CsrfSafeExtractor {}
 
@@ -114,10 +110,10 @@ where
         mut req: axum::extract::Request,
         state: &MyState,
     ) -> Result<Self, Self::Rejection> {
-        let request_id = req
-            .extract_parts::<TypedHeader<XRequestId>>()
-            .await
-            .map_or("unknown-request-id".to_owned(), |header| header.0.0);
+        /*let request_id = req
+        .extract_parts::<TypedHeader<XRequestId>>()
+        .await
+        .map_or("unknown-request-id".to_owned(), |header| header.0.0);*/
         let not_get_or_head = !(req.method() == Method::GET || req.method() == Method::HEAD);
         let session = match req
             .extract_parts_with_state::<Session, MyState>(state)
@@ -143,7 +139,7 @@ where
         };
         match result.await {
             Ok(ok) => Ok(ok),
-            Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
+            Err(app_error) => Err(to_error_result(session, app_error).await),
         }
     }
 }
@@ -396,25 +392,20 @@ async fn main() -> Result<(), AppError> {
     let app: Router<MyState> = Router::new()
         .route(
             "/",
-            get(move |first, second| monitor_root.instrument(index(first, second))),
+            get(move |p1, p2| monitor_root.instrument(index(p1, p2))),
         )
         .route(
             "/",
-            post(move |a, b, c, d| monitor_root_create.instrument(create(a, b, c, d))),
+            post(move |p1, p2, p3, p4| monitor_root_create.instrument(create(p1, p2, p3, p4))),
         )
         .route(
             "/index.css",
-            get(move |first, second, third| {
-                monitor_index_css.instrument(indexcss(first, second, third))
-            }),
+            get(move |p1, p2, p3| monitor_index_css.instrument(indexcss(p1, p2, p3))),
         )
-        .route(
-            "/favicon.ico",
-            get(favicon_ico),
-        )
+        .route("/favicon.ico", get(favicon_ico))
         .route(
             "/list",
-            get(move |a, b, c| monitor_list.instrument(list(a, b, c))),
+            get(move |p1, p2, p3| monitor_list.instrument(list(p1, p2, p3))),
         )
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))

@@ -58,7 +58,6 @@ pub struct OpenIdRedirectErrorTemplate {
     reason = "csrf protection done here explicitly"
 )]
 pub async fn openid_redirect(
-    TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session, // what if this here could be a reference?
     form: axum::Form<OpenIdRedirect>,
 ) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
@@ -171,6 +170,6 @@ pub async fn openid_redirect(
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
+        Err(app_error) => Err(to_error_result(session, app_error).await),
     }
 }

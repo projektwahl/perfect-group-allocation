@@ -80,7 +80,6 @@ pub struct ErrorTemplate {
 
 pub async fn to_error_result(
     session: Session,
-    _request_id: String,
     app_error: AppError,
 ) -> (Session, (StatusCode, axum::response::Response)) {
     match app_error {
