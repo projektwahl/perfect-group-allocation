@@ -321,16 +321,6 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
     let db = Database::connect(&database_url).await?;
 
     let db = match db.get_database_backend() {
-        DbBackend::MySql => {
-            db.execute(Statement::from_string(
-                db.get_database_backend(),
-                format!("CREATE DATABASE IF NOT EXISTS `{DB_NAME}`;"),
-            ))
-            .await?;
-
-            let url = format!("{database_url}/{DB_NAME}");
-            Database::connect(&url).await?
-        }
         DbBackend::Postgres => {
             let err_already_exists = db
                 .execute(Statement::from_string(
@@ -352,7 +342,7 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
             let url = format!("{database_url}/{DB_NAME}");
             Database::connect(&url).await?
         }
-        DbBackend::Sqlite => db,
+        _ => unreachable!(),
     };
     Ok(db)
 }

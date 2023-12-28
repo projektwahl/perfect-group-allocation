@@ -72,7 +72,6 @@ podman run --network=host docker.io/shekyan/slowhttptest:latest -u https://h3.se
 (isn't there also an automatic mode?)
 
 ulimit -S -n 65536
-RUST_LOG=trace DATABASE_URL="sqlite:./sqlite.db?mode=rwc" cargo run --release --bin server
 
 https://github.com/rapid7/metasploit-framework/blob/master//modules/auxiliary/dos/http/slowloris.py
 
