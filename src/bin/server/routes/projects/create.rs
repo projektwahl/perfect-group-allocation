@@ -22,6 +22,7 @@ pub async fn create(
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> (Session, impl IntoResponse) {
+    let session_clone = session.clone();
     let result = async gen move {
         let template = yieldoki!(create_project());
         let template = yieldoki!(template.next());
@@ -30,11 +31,11 @@ pub async fn create(
         let template = yieldoki!(template.next());
         let template = yieldoki!(template.next());
         let template = yieldoki!(template.next_email_false());
-        let template = yieldokv!(template.csrf_token("TODO"));
+        let template = yieldokv!(template.csrf_token(session_clone.session().0));
         let template = yieldoki!(template.next());
         let template = yieldoki!(template.next());
         let template = yieldoki!(template.next());
-        let template = yieldokv!(template.csrf_token("TODO"));
+        let template = yieldokv!(template.csrf_token(session_clone.session().0));
         let template = yieldoki!(template.next());
         let template = yieldokv!(template.title(form.value.title.clone()));
         let template = yieldoki!(template.next());

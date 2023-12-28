@@ -27,7 +27,7 @@ async gen fn list_internal(
     let template = yieldoki!(template.next());
     let template = yieldoki!(template.next());
     let template = yieldoki!(template.next_email_false());
-    let template = yieldokv!(template.csrf_token("TODO"));
+    let template = yieldokv!(template.csrf_token(session.session().0));
     let template = yieldoki!(template.next());
     let template = yieldoki!(template.next());
     let mut template = yieldoki!(template.next());
