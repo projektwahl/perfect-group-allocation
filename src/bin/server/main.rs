@@ -35,7 +35,7 @@ use hyper::Method;
 use itertools::Itertools;
 use routes::download::handler;
 use routes::index::index;
-use routes::indexcss::indexcss;
+use routes::indexcss::{indexcss, initialize_index_css};
 use routes::openid_login::openid_login;
 use routes::projects::create::create;
 use sea_orm::{
@@ -309,6 +309,8 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 async fn main() -> Result<(), AppError> {
     console_subscriber::init();
     //tracing_subscriber::fmt::init();
+
+    initialize_index_css();
 
     let _monitor = tokio_metrics::TaskMonitor::new();
     let monitor_root = tokio_metrics::TaskMonitor::new();
