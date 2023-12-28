@@ -128,7 +128,7 @@ fn main() {
             )
         });
 
-    println!("{:#?}", grouped_by_timeslot);
+    println!("{grouped_by_timeslot:#?}");
 
     grouped_by_timeslot.for_each(|(timeslot, (rooms_in_timeslot, workshops_in_timeslot))| {
         let combinations = rooms_in_timeslot
