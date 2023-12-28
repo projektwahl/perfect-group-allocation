@@ -20,7 +20,7 @@ jobs:
     steps:
       - run: sudo apt install -y coinor-libcbc-dev
       - uses: actions/checkout@v3
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - run: rustup toolchain install ${{ matrix.toolchain }} --component rustc-codegen-cranelift-preview && rustup default ${{ matrix.toolchain }}
       - run: cargo build --verbose
       - run: cargo test --verbose
       - run: cargo clippy --all-targets --all-features -- -D warnings
