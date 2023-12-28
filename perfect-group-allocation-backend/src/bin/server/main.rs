@@ -35,6 +35,7 @@ use itertools::Itertools;
 use opentelemetry::metrics::MeterProvider as _;
 use opentelemetry::trace::TracerProvider;
 use opentelemetry::KeyValue;
+use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::metrics::MeterProvider;
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
@@ -317,12 +318,20 @@ async fn main() -> Result<(), AppError> {
     //tracing_subscriber::fmt::init();
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()
-        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint("http://localhost:4317"),
+        )
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;
 
     let meter = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint("http://localhost:9090"),
+        )
         .build()
         .unwrap();
 
@@ -404,6 +413,7 @@ async fn main() -> Result<(), AppError> {
                             + "ns",
                     )],
                 );
+                println!("test");
 
                 /*println!(
                     "GET /index.css {:?} {:?} {:?}",
