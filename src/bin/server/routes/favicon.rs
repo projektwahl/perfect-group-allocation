@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::path::Path;
 use std::sync::{Once, OnceLock};
 
@@ -16,44 +17,16 @@ use crate::error::to_error_result;
 use crate::session::Session;
 use crate::XRequestId;
 
-// add watcher and then use websocket to hot reload on client?
-// or for dev simply enforce unbundled development where chrome directly modifies the files
-// so maybe simply don't implement watcher at all
+static FAVICON_ICO: OnceLock<Vec<u8>> = OnceLock::new();
 
-static INDEX_CSS: OnceLock<String> = OnceLock::new();
-
-pub fn initialize_index_css() {
-    // @import would produce a flash of unstyled content and also is less efficient
-    let fs = FileProvider::new();
-    let mut bundler = Bundler::new(&fs, None, ParserOptions::default());
-    let stylesheet = bundler
-        .bundle(Path::new("frontend/index.css"))
-        .map_err(|error| lightningcss::error::Error {
-            kind: error.kind.to_string(),
-            loc: error.loc,
-        })
+pub async fn initialize_favicon_ico() {
+    FAVICON_ICO
+        .set(tokio::fs::read("frontend/favicon.ico").await.unwrap())
         .unwrap();
-    let mut source_map = SourceMap::new(".");
-
-    INDEX_CSS
-        .set(
-            stylesheet
-                .to_css(PrinterOptions {
-                    minify: true,
-                    source_map: Some(&mut source_map),
-                    project_root: None,
-                    targets: Targets::default(),
-                    analyze_dependencies: None,
-                    pseudo_classes: None,
-                })
-                .unwrap()
-                .code,
-        )
-        .unwrap()
 }
 
 // Etag and cache busting
-pub async fn indexcss(
+pub async fn favicon_ico(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     if_none_match: TypedHeader<headers::IfNoneMatch>,
     session: Session,
@@ -61,6 +34,7 @@ pub async fn indexcss(
     let etag_string = "\"xyzzy\"";
     let etag = etag_string.parse::<headers::ETag>().unwrap();
     println!("{:?}", if_none_match);
+
     if if_none_match.precondition_passes(&etag) {
         (
             session,
@@ -68,8 +42,9 @@ pub async fn indexcss(
                 [
                     (header::ETAG, etag_string),
                     (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
+                    (header::CONTENT_TYPE, "image/x-icon"),
                 ],
-                Css(INDEX_CSS.get().unwrap().as_str()),
+                (&**FAVICON_ICO.get().unwrap()),
             )
                 .into_response(),
         )

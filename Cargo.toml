@@ -60,8 +60,10 @@ unsafe_code = "forbid"
 let_underscore = "warn"
 nonstandard_style = "warn"
 unused = "warn"
+unused_must_use = "deny"
 
 [lints.clippy]
+too_many_lines = "allow"
 pedantic = "warn"
 nursery = "warn"
 cargo = "warn"

@@ -1,18 +1,4 @@
 {
     "editor.formatOnSave": true,
     "rust-analyzer.check.command": "clippy",
-    "json.schemas": [
-        {
-            "fileMatch": [
-                "*caddy*.json"
-            ],
-            "url": ".vscode/caddy_schema.json"
-        }
-    ],
-    "yaml.schemas": {
-        ".vscode/caddy_schema.json": [
-            "*caddy*.yaml",
-            "*caddy*.yml"
-        ]
-    }
 }

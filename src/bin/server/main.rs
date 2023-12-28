@@ -1,6 +1,6 @@
 #![feature(gen_blocks)]
-#![feature(coroutines)]
 #![feature(lint_reasons)]
+#![feature(let_chains)]
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
@@ -34,6 +34,7 @@ use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
 use routes::download::handler;
+use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
 use routes::indexcss::{indexcss, initialize_index_css};
 use routes::openid_login::openid_login;
@@ -311,6 +312,7 @@ async fn main() -> Result<(), AppError> {
     //tracing_subscriber::fmt::init();
 
     initialize_index_css();
+    initialize_favicon_ico().await;
 
     let _monitor = tokio_metrics::TaskMonitor::new();
     let monitor_root = tokio_metrics::TaskMonitor::new();
@@ -402,7 +404,13 @@ async fn main() -> Result<(), AppError> {
         )
         .route(
             "/index.css",
-            get(move |first, second| monitor_index_css.instrument(indexcss(first, second))),
+            get(move |first, second, third| {
+                monitor_index_css.instrument(indexcss(first, second, third))
+            }),
+        )
+        .route(
+            "/favicon.ico",
+            get(move |first, second, third| favicon_ico(first, second, third)),
         )
         .route(
             "/list",
