@@ -28,7 +28,6 @@ use axum::routing::{get, post};
 use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
 use axum_extra::headers::Header;
-
 use error::{to_error_result, AppError};
 use http::StatusCode;
 use hyper::Method;

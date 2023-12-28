@@ -2,7 +2,6 @@ use alloc::borrow::Cow;
 
 use anyhow::anyhow;
 use axum::response::{IntoResponse, Redirect};
-
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;
@@ -16,7 +15,6 @@ use zero_cost_templating::{yieldoki, yieldokv};
 use crate::error::{to_error_result, AppError};
 use crate::openid::get_openid_client;
 use crate::session::{Session, SessionCookie};
-
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
