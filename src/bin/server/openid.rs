@@ -14,6 +14,7 @@ use openidconnect::{EmptyAdditionalClaims, IdTokenFields, IssuerUrl};
 
 use crate::error::AppError;
 
+// TODO FIXME do this at startup only for higher performance
 pub async fn get_openid_client() -> Result<
     openidconnect::Client<
         EmptyAdditionalClaims,
