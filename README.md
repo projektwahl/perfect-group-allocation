@@ -7,6 +7,32 @@
 3. Low Latency
 4. Low Resource usage on the server
 
+## Interesting (unstable) features
+
+https://doc.rust-lang.org/nightly/unstable-book/
+https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
+https://doc.rust-lang.org/rustdoc/unstable-features.html
+https://rust-lang.github.io/rfcs/3424-cargo-script.html
+parallel rust frontend
+https://doc.rust-lang.org/cargo/reference/manifest.html#the-lints-section
+
+rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+
+warning blocks in rustdoc
+<div class="warning">A big warning!</div>
+
+## Dev
+
+```bash
+export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
+RUST_BACKTRACE=1 RUST_LOG=tower_http::trace=TRACE cargo run --bin server
+RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
+
+tokio-console
+```
+
+https://datatracker.ietf.org/doc/html/rfc9204
+
 ## Async profiling
 
 https://github.com/tokio-rs/console

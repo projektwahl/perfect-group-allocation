@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -19,7 +19,7 @@ use crate::XRequestId;
 async gen fn list_internal(
     db: DatabaseConnection,
     session: Session,
-) -> Result<std::borrow::Cow<'static, str>, AppError> {
+) -> Result<alloc::borrow::Cow<'static, str>, AppError> {
     let template = yieldoki!(list_projects());
     let template = yieldoki!(template.next());
     let template = yieldoki!(template.next());

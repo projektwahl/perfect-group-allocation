@@ -1,0 +1,26 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env: 
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+          - nightly
+    steps:
+      - run: sudo apt install -y coinor-libcbc-dev
+      - run: rustup toolchain install ${{ matrix.toolchain }} --component rustfmt --component clippy && rustup default ${{ matrix.toolchain }}
+      - uses: actions/checkout@v3
+      - run: cargo build
+      - run: cargo test
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings

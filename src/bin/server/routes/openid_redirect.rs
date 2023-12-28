@@ -1,8 +1,7 @@
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 
 use anyhow::anyhow;
-use axum::response::{Html, IntoResponse, Redirect};
-use axum_extra::TypedHeader;
+use axum::response::{IntoResponse, Redirect};
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;
@@ -16,7 +15,6 @@ use zero_cost_templating::{yieldoki, yieldokv};
 use crate::error::{to_error_result, AppError};
 use crate::openid::get_openid_client;
 use crate::session::{Session, SessionCookie};
-use crate::XRequestId;
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -58,7 +56,6 @@ pub struct OpenIdRedirectErrorTemplate {
     reason = "csrf protection done here explicitly"
 )]
 pub async fn openid_redirect(
-    TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session, // what if this here could be a reference?
     form: axum::Form<OpenIdRedirect>,
 ) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
@@ -171,6 +168,6 @@ pub async fn openid_redirect(
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
+        Err(app_error) => Err(to_error_result(session, app_error).await),
     }
 }

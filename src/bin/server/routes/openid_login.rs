@@ -1,6 +1,5 @@
 use axum::extract::State;
 use axum::response::{IntoResponse, Redirect};
-use axum_extra::TypedHeader;
 use oauth2::PkceCodeChallenge;
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::Nonce;
@@ -10,7 +9,7 @@ use serde::Deserialize;
 use crate::error::to_error_result;
 use crate::openid::get_openid_client;
 use crate::session::Session;
-use crate::{CsrfSafeForm, CsrfToken, XRequestId};
+use crate::CsrfToken;
 
 #[derive(Deserialize)]
 pub struct OpenIdLoginPayload {
@@ -26,12 +25,13 @@ impl CsrfToken for OpenIdLoginPayload {
 #[axum::debug_handler(state=crate::MyState)]
 pub async fn openid_login(
     State(_db): State<DatabaseConnection>,
-    TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session,
-    _form: CsrfSafeForm<OpenIdLoginPayload>,
+    //_form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let result = async {
         let client = get_openid_client().await?;
+
+        // TODO FIXME check csrf token?
 
         // Generate a PKCE challenge.
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -53,6 +53,6 @@ pub async fn openid_login(
     };
     match result.await {
         Ok(ok) => Ok((session, ok)),
-        Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
+        Err(app_error) => Err(to_error_result(session, app_error).await),
     }
 }

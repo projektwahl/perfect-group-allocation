@@ -1,25 +1,25 @@
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::extract::State;
-use axum::response::{Html, IntoResponse, Redirect};
+use axum::response::IntoResponse;
 use axum_extra::TypedHeader;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;
-use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait, InsertResult};
+use sea_orm::{ActiveValue, DatabaseConnection, EntityTrait};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{template_stream, yieldoki, yieldokv};
+use zero_cost_templating::{yieldoki, yieldokv};
 
 use super::list::create_project;
-use crate::entities::project_history::{self, ActiveModel};
-use crate::error::{to_error_result, AppError};
+use crate::entities::project_history;
+use crate::error::AppError;
 use crate::session::Session;
-use crate::{CreateProject, CreateProjectPayload, CsrfSafeForm, XRequestId};
+use crate::{CreateProjectPayload, CsrfSafeForm, XRequestId};
 
 pub async fn create(
     State(db): State<DatabaseConnection>,
-    TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
+    TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> (Session, impl IntoResponse) {
@@ -78,7 +78,7 @@ pub async fn create(
             ..Default::default()
         };
         if let Err(err) = project_history::Entity::insert(project).exec(&db).await {
-            yield Err::<Cow<'static, str>, AppError>(err.into())
+            yield Err::<Cow<'static, str>, AppError>(err.into());
         };
 
         // we can't stream the response and then redirect so probably add a button or so and use javascript? or maybe don't stream this page?

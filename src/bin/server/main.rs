@@ -1,102 +1,13 @@
 #![feature(gen_blocks)]
-#![forbid(unsafe_code)]
-#![warn(
-    future_incompatible,
-    let_underscore,
-    nonstandard_style,
-    unused,
-    clippy::pedantic,
-    clippy::nursery,
-    clippy::cargo,
-    clippy::alloc_instead_of_core,
-    clippy::allow_attributes,
-    clippy::allow_attributes_without_reason,
-    clippy::arithmetic_side_effects,
-    clippy::as_conversions,
-    clippy::as_underscore,
-    clippy::assertions_on_result_states,
-    clippy::clone_on_ref_ptr,
-    clippy::create_dir,
-    clippy::dbg_macro,
-    clippy::decimal_literal_representation,
-    clippy::default_numeric_fallback,
-    clippy::deref_by_slicing,
-    clippy::disallowed_script_idents,
-    clippy::else_if_without_else,
-    clippy::empty_drop,
-    clippy::empty_structs_with_brackets,
-    clippy::error_impl_error,
-    clippy::exit,
-    clippy::expect_used,
-    clippy::filetype_is_file,
-    clippy::float_arithmetic,
-    clippy::float_cmp_const,
-    clippy::fn_to_numeric_cast_any,
-    clippy::format_push_string,
-    clippy::if_then_some_else_none,
-    clippy::impl_trait_in_params,
-    clippy::indexing_slicing,
-    clippy::integer_division,
-    clippy::large_include_file,
-    clippy::let_underscore_must_use,
-    clippy::let_underscore_untyped,
-    clippy::lossy_float_literal,
-    clippy::map_err_ignore,
-    clippy::mem_forget,
-    clippy::min_ident_chars,
-    clippy::missing_assert_message,
-    clippy::missing_asserts_for_indexing,
-    clippy::mixed_read_write_in_expression,
-    clippy::mod_module_files,
-    clippy::modulo_arithmetic,
-    clippy::multiple_inherent_impl,
-    clippy::multiple_unsafe_ops_per_block,
-    clippy::mutex_atomic,
-    clippy::needless_raw_strings,
-    clippy::panic,
-    clippy::panic_in_result_fn,
-    clippy::partial_pub_fields,
-    clippy::pattern_type_mismatch,
-    clippy::print_stderr,
-    clippy::print_stdout,
-    clippy::rc_buffer,
-    clippy::rc_mutex,
-    clippy::redundant_type_annotations,
-    clippy::ref_patterns,
-    clippy::rest_pat_in_fully_bound_structs,
-    clippy::same_name_method,
-    clippy::semicolon_inside_block,
-    clippy::shadow_unrelated,
-    clippy::std_instead_of_alloc,
-    clippy::std_instead_of_core,
-    clippy::str_to_string,
-    clippy::string_lit_chars_any,
-    clippy::string_slice,
-    clippy::string_to_string,
-    clippy::suspicious_xor_used_as_pow,
-    clippy::tests_outside_test_module,
-    clippy::todo,
-    clippy::try_err,
-    clippy::unimplemented,
-    clippy::unnecessary_self_imports,
-    clippy::unneeded_field_pattern,
-    clippy::unreachable,
-    clippy::unseparated_literal_suffix,
-    clippy::unwrap_in_result,
-    clippy::unwrap_used,
-    clippy::use_debug,
-    clippy::verbose_file_reads,
-    clippy::wildcard_enum_match_arm
-)]
+#![feature(lint_reasons)]
+#![feature(let_chains)]
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
     clippy::module_name_repetitions,
-    clippy::print_stdout,
+    clippy::too_many_lines,
     reason = "not yet ready for that"
 )]
-#![feature(coroutines)]
-#![feature(lint_reasons)]
 
 extern crate alloc;
 
@@ -107,9 +18,8 @@ mod openid;
 pub mod routes;
 pub mod session;
 
-use alloc::borrow::Cow;
 use core::convert::Infallible;
-use std::time::Duration;
+use core::time::Duration;
 
 use axum::extract::{FromRef, FromRequest};
 use axum::http::{self, HeaderName, HeaderValue};
@@ -117,19 +27,17 @@ use axum::routing::{get, post};
 use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
 use axum_extra::headers::Header;
-use axum_extra::TypedHeader;
 use error::{to_error_result, AppError};
 use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
 use routes::download::handler;
+use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
-use routes::indexcss::indexcss;
+use routes::indexcss::{indexcss, initialize_index_css};
 use routes::openid_login::openid_login;
 use routes::projects::create::create;
-use sea_orm::{
-    ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, RuntimeErr, Statement,
-};
+use sea_orm::{Database, DatabaseConnection};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
@@ -140,8 +48,6 @@ use tower_http::services::ServeDir;
 
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
-
-const DB_NAME: &str = "postgres";
 
 pub trait CsrfSafeExtractor {}
 
@@ -202,10 +108,10 @@ where
         mut req: axum::extract::Request,
         state: &MyState,
     ) -> Result<Self, Self::Rejection> {
-        let request_id = req
-            .extract_parts::<TypedHeader<XRequestId>>()
-            .await
-            .map_or("unknown-request-id".to_owned(), |header| header.0.0);
+        /*let request_id = req
+        .extract_parts::<TypedHeader<XRequestId>>()
+        .await
+        .map_or("unknown-request-id".to_owned(), |header| header.0.0);*/
         let not_get_or_head = !(req.method() == Method::GET || req.method() == Method::HEAD);
         let session = match req
             .extract_parts_with_state::<Session, MyState>(state)
@@ -231,7 +137,7 @@ where
         };
         match result.await {
             Ok(ok) => Ok(ok),
-            Err(app_error) => Err(to_error_result(session, request_id, app_error).await),
+            Err(app_error) => Err(to_error_result(session, app_error).await),
         }
     }
 }
@@ -397,6 +303,10 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     console_subscriber::init();
+    //tracing_subscriber::fmt::init();
+
+    initialize_index_css();
+    initialize_favicon_ico().await;
 
     let _monitor = tokio_metrics::TaskMonitor::new();
     let monitor_root = tokio_metrics::TaskMonitor::new();
@@ -459,8 +369,9 @@ async fn main() -> Result<(), AppError> {
     // print runtime metrics every 500ms
     {
         tokio::spawn(async move {
-            for _ in runtime_monitor.intervals() {
+            for interval_runtime in runtime_monitor.intervals() {
                 // pretty-print the metric interval
+                println!("runtime {:?}", interval_runtime.busy_ratio());
 
                 // wait 500ms
                 tokio::time::sleep(Duration::from_millis(500)).await;
@@ -468,11 +379,7 @@ async fn main() -> Result<(), AppError> {
         });
     }
 
-    //tracing_subscriber::fmt::init();
-
     let db = get_database_connection().await?;
-
-    // TODO FIXME seems like TLS is a performance bottleneck. maybe either let the reverse proxy handle this or switch to openssl for now?
 
     let service = ServeDir::new("frontend");
 
@@ -483,19 +390,20 @@ async fn main() -> Result<(), AppError> {
     let app: Router<MyState> = Router::new()
         .route(
             "/",
-            get(move |first, second| monitor_root.instrument(index(first, second))),
+            get(move |p1, p2| monitor_root.instrument(index(p1, p2))),
         )
         .route(
             "/",
-            post(move |a, b, c, d| monitor_root_create.instrument(create(a, b, c, d))),
+            post(move |p1, p2, p3, p4| monitor_root_create.instrument(create(p1, p2, p3, p4))),
         )
         .route(
             "/index.css",
-            get(move |first, second| monitor_index_css.instrument(indexcss(first, second))),
+            get(move |p1, p2, p3| monitor_index_css.instrument(indexcss(p1, p2, p3))),
         )
+        .route("/favicon.ico", get(favicon_ico))
         .route(
             "/list",
-            get(move |a, b, c| monitor_list.instrument(list(a, b, c))),
+            get(move |p1, p2, p3| monitor_list.instrument(list(p1, p2, p3))),
         )
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))

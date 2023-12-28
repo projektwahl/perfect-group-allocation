@@ -48,9 +48,17 @@ miniserde = "0.1"
 http = "1"
 console-subscriber = "0.2"
 tokio-metrics = { version = "0.3" }
-zero-cost-templating = { path = "../zero-cost-templating/zero-cost-templating" }
+zero-cost-templating = { git = "https://github.com/mohe2015/zero-cost-templating.git", branch = "work" }
 bytes = "1"
 
 [profile.release-with-debug]
 inherits = "release"
 debug = true
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = "warn"
+nursery = "warn"
+cargo = "warn"
