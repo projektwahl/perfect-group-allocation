@@ -312,7 +312,15 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 async fn main() -> Result<(), AppError> {
     //console_subscriber::init(); // drags in old axum version
 
+    // maybe dont use tracing here in this library but opentelemetry directly?
+
+    // https://github.com/prometheus/client_rust
+    // https://crates.io/crates/poston
+
     opentelemetry::global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
+    // Warning: Note that the exporter component from this crate will be deprecated in the future.
+    // Users are advised to move to opentelemetry_otlp instead as Jaeger supports accepting data in the OTLP protocol.
+    // See the Jaeger Docs for details about Jaeger and deployment information.
     let tracer = opentelemetry_jaeger::new_agent_pipeline()
         .with_service_name("perfect-group-allocation")
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;
