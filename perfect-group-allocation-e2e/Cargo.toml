@@ -16,3 +16,6 @@ categories.workspace = true
 workspace = true
 
 [dependencies]
+thirtyfour = "0.31"
+selenium-manager = { git = "https://github.com/SeleniumHQ/selenium", rev = "9a700e219999c5d6436d7ec7c30010ed639ef9b8" }
+tokio = { version = "1", features = ["full"] }
