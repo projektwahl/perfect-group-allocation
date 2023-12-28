@@ -14,6 +14,7 @@ https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
 https://doc.rust-lang.org/rustdoc/unstable-features.html
 https://rust-lang.github.io/rfcs/3424-cargo-script.html
 parallel rust frontend
+https://doc.rust-lang.org/cargo/reference/manifest.html#the-lints-section
 
 rustup component add rustc-codegen-cranelift-preview --toolchain nightly
 
