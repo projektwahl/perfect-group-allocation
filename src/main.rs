@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-use std::collections::BTreeMap;
+use alloc::collections::BTreeMap;
 
 use good_lp::solvers::ObjectiveDirection::Maximisation;
 use good_lp::{default_solver, variable, Expression, ProblemVariables, Solution, SolverModel};
