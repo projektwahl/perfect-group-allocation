@@ -1,0 +1,18 @@
+cargo-features = ["edition2024"]
+
+[package]
+name = "perfect-group-allocation-e2e"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lints]
+workspace = true
+
+[dependencies]
