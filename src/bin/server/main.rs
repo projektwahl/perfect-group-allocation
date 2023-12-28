@@ -434,9 +434,9 @@ async fn main() -> Result<(), AppError> {
 
     let _monitor = tokio_metrics::TaskMonitor::new();
     let monitor_root = tokio_metrics::TaskMonitor::new();
-    let _monitor_root_create = tokio_metrics::TaskMonitor::new();
+    let monitor_root_create = tokio_metrics::TaskMonitor::new();
     let monitor_index_css = tokio_metrics::TaskMonitor::new();
-    let _monitor_list = tokio_metrics::TaskMonitor::new();
+    let monitor_list = tokio_metrics::TaskMonitor::new();
     let _monitor_download = tokio_metrics::TaskMonitor::new();
     let _monitor_openidconnect_login = tokio_metrics::TaskMonitor::new();
     let _monitor_openidconnect_redirect = tokio_metrics::TaskMonitor::new();
@@ -448,9 +448,15 @@ async fn main() -> Result<(), AppError> {
     {
         let monitor_index_css = monitor_index_css.clone();
         let monitor_root = monitor_root.clone();
+        let monitor_root_create = monitor_root_create.clone();
+        let monitor_list = monitor_list.clone();
         tokio::spawn(async move {
-            for (interval_index_css, interval_root) in
-                monitor_index_css.intervals().zip(monitor_root.intervals())
+            for (((interval_index_css, interval_root), interval_create), interval_list) in
+                monitor_index_css
+                    .intervals()
+                    .zip(monitor_root.intervals())
+                    .zip(monitor_root_create.intervals())
+                    .zip(monitor_list.intervals())
             {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
@@ -465,6 +471,18 @@ async fn main() -> Result<(), AppError> {
                     interval_root.mean_poll_duration(),
                     interval_root.slow_poll_ratio(),
                     interval_root.mean_slow_poll_duration()
+                );
+                println!(
+                    "POST /create {:?} {:?} {:?}",
+                    interval_create.mean_poll_duration(),
+                    interval_create.slow_poll_ratio(),
+                    interval_create.mean_slow_poll_duration()
+                );
+                println!(
+                    "GET /list {:?} {:?} {:?}",
+                    interval_list.mean_poll_duration(),
+                    interval_list.slow_poll_ratio(),
+                    interval_list.mean_slow_poll_duration()
                 );
                 // wait 500ms
                 tokio::time::sleep(Duration::from_millis(5000)).await;
@@ -501,12 +519,18 @@ async fn main() -> Result<(), AppError> {
             "/",
             get(move |first, second| monitor_root.instrument(index(first, second))),
         )
-        .route("/", post(create))
+        .route(
+            "/",
+            post(move |a, b, c, d| monitor_root_create.instrument(create(a, b, c, d))),
+        )
         .route(
             "/index.css",
             get(move |first, second| monitor_index_css.instrument(indexcss(first, second))),
         )
-        .route("/list", get(list))
+        .route(
+            "/list",
+            get(move |a, b, c| monitor_list.instrument(list(a, b, c))),
+        )
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))
         .route_service(

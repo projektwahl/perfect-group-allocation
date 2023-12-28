@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::extract::State;
 use axum::response::{Html, IntoResponse, Redirect};
@@ -64,7 +65,14 @@ pub async fn create(
         }
 
         let project = project_history::ActiveModel {
-            id: ActiveValue::Set(1_i32),
+            id: ActiveValue::Set(
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .subsec_nanos()
+                    .try_into()
+                    .unwrap(),
+            ), // TODO FIXME
             title: ActiveValue::Set(form.value.title.clone()),
             description: ActiveValue::Set(form.value.description.clone()),
             ..Default::default()
