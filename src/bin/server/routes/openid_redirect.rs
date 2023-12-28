@@ -1,10 +1,17 @@
+use std::borrow::Cow;
+
 use anyhow::anyhow;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum_extra::TypedHeader;
+use bytes::Bytes;
+use futures_util::StreamExt;
+use http::header;
 use oauth2::reqwest::async_http_client;
 use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
 use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
 use serde::{Deserialize, Serialize};
+use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
+use zero_cost_templating::{yieldoki, yieldokv};
 
 use crate::error::{to_error_result, AppError};
 use crate::openid::get_openid_client;
@@ -50,7 +57,6 @@ pub struct OpenIdRedirectErrorTemplate {
     clippy::disallowed_types,
     reason = "csrf protection done here explicitly"
 )]
-#[axum::debug_handler(state=crate::MyState)]
 pub async fn openid_redirect(
     TypedHeader(XRequestId(request_id)): TypedHeader<XRequestId>,
     mut session: Session, // what if this here could be a reference?
@@ -76,17 +82,41 @@ pub async fn openid_redirect(
 
         match form.0.inner {
             OpenIdRedirectInner::Error(err) => {
-                let result = render(
-                    session_ref,
-                    "openid_redirect",
-                    OpenIdRedirectErrorTemplate {
-                        csrf_token: expected_csrf_token.clone(),
-                        error: err.error,
-                        error_description: err.error_description,
-                    },
+                let result = async gen move {
+                    let template = yieldoki!(crate::routes::projects::list::openid_redirect());
+                    let template = yieldoki!(template.next());
+                    let template = yieldoki!(template.next());
+                    let template = yieldokv!(template.page_title("Create Project"));
+                    let template = yieldoki!(template.next());
+                    let template = yieldoki!(template.next());
+                    let template = yieldoki!(template.next_email_false());
+                    let template = yieldokv!(template.csrf_token(expected_csrf_token));
+                    let template = yieldoki!(template.next());
+                    let template = yieldoki!(template.next());
+                    let template = yieldoki!(template.next());
+                    let template = yieldokv!(template.error(err.error));
+                    let template = yieldoki!(template.next());
+                    let template = yieldokv!(template.error_description(err.error_description));
+                    let template = yieldoki!(template.next());
+                    yieldoki!(template.next());
+                };
+                let stream =
+                    AsyncIteratorStream(result).map(|elem: Result<Cow<'static, str>, AppError>| {
+                        match elem {
+                            Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
+                                // TODO FIXME use template here
+                                "<h1>Error {}</h1>",
+                                &app_error.to_string()
+                            ))),
+                            Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
+                            Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
+                        }
+                    });
+                Ok((
+                    [(header::CONTENT_TYPE, "text/html")],
+                    axum::body::Body::from_stream(stream),
                 )
-                .await;
-                Ok(Html(result).into_response())
+                    .into_response())
             }
             OpenIdRedirectInner::Success(ok) => {
                 // TODO FIXME isn't it possible to directly get the id token?
