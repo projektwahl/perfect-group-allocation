@@ -21,6 +21,7 @@ pub mod session;
 use core::convert::Infallible;
 use core::time::Duration;
 
+use axum::error_handling::HandleErrorLayer;
 use axum::extract::{FromRef, FromRequest};
 use axum::http::{self, HeaderName, HeaderValue};
 use axum::routing::{get, post};
@@ -43,12 +44,15 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use tokio::net::TcpListener;
-use tower::service_fn;
+use tower::{service_fn, ServiceBuilder};
+use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
-use tracing::{error, span};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
+use tracing::{error, span, trace, Level};
+use tracing_subscriber::fmt::SubscriberBuilder;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::Registry;
+use tracing_subscriber::{FmtSubscriber, Registry};
 
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
@@ -290,16 +294,16 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
     });
     //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
     // TODO FIXME
-    /*let app = app.layer(
+    let app = app.layer(
         ServiceBuilder::new()
-            .layer(HandleErrorLayer::new(handle_error_test))
+            //.layer(HandleErrorLayer::new(handle_error_test))
             .layer(
                 TraceLayer::new_for_http()
                     .make_span_with(DefaultMakeSpan::default().include_headers(true))
                     .on_response(DefaultOnResponse::default().include_headers(true)),
             )
             .layer(CatchPanicLayer::new()),
-    );*/
+    );
     let app: Router<()> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
     app
 }
@@ -320,14 +324,15 @@ async fn main() -> Result<(), AppError> {
     // that impls `LookupSpan`
     let subscriber = Registry::default().with(telemetry);
 
-    // Trace executed code
-    tracing::subscriber::with_default(subscriber, || {
-        // Spans will be sent to the configured OpenTelemetry exporter
-        let root = span!(tracing::Level::TRACE, "app_start", work_units = 2);
-        let _enter = root.enter();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 
-        error!("This event will be logged in the root span.");
-    });
+    // Trace executed code
+    // Spans will be sent to the configured OpenTelemetry exporter
+    let root = span!(tracing::Level::TRACE, "app_start", work_units = 2);
+    let _enter = root.enter();
+
+    error!("This event will be logged in the root span.");
+    trace!("This event will be logged in the root span.");
 
     initialize_index_css();
     initialize_favicon_ico().await;
@@ -360,7 +365,7 @@ async fn main() -> Result<(), AppError> {
             {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
-                println!(
+                /*println!(
                     "GET /index.css {:?} {:?} {:?}",
                     interval_index_css.mean_poll_duration(),
                     interval_index_css.slow_poll_ratio(),
@@ -383,7 +388,7 @@ async fn main() -> Result<(), AppError> {
                     interval_list.mean_poll_duration(),
                     interval_list.slow_poll_ratio(),
                     interval_list.mean_slow_poll_duration()
-                );
+                );*/
                 // wait 500ms
                 tokio::time::sleep(Duration::from_millis(5000)).await;
             }
@@ -395,7 +400,7 @@ async fn main() -> Result<(), AppError> {
         tokio::spawn(async move {
             for interval_runtime in runtime_monitor.intervals() {
                 // pretty-print the metric interval
-                println!("runtime {:?}", interval_runtime.busy_ratio());
+                //println!("runtime {:?}", interval_runtime.busy_ratio());
 
                 // wait 500ms
                 tokio::time::sleep(Duration::from_millis(500)).await;
