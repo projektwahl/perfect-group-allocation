@@ -32,9 +32,10 @@ awesome help for performance issues
 https://valgrind.org/docs/manual/cl-manual.html
 Callgrind
 
-cargo build --target=x86_64-unknown-linux-gnu -Z build-std --release --bin server
+# rebuild std to get debug symbols and same settings?
+cargo build --target=x86_64-unknown-linux-gnu -Z build-std --profile=release-with-debug --bin server
 
-DATABASE_URL="postgres://postgres:password@localhost" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release/server
+DATABASE_URL="postgres://postgres:password@localhost" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release-with-debug/server
 
 use zed attack proxy to create some requests
 

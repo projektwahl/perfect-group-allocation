@@ -51,5 +51,6 @@ tokio-metrics = { version = "0.3" }
 zero-cost-templating = { path = "../zero-cost-templating/zero-cost-templating" }
 bytes = "1"
 
-[profile.release]
-debug = 1
+[profile.release-with-debug]
+inherits = "release"
+debug = true
