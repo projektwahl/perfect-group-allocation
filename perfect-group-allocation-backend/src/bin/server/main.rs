@@ -31,6 +31,8 @@ use error::{to_error_result, AppError};
 use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
+use opentelemetry::metrics::MeterProvider as _;
+use opentelemetry_otlp::WithExportConfig;
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
@@ -42,10 +44,16 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use tokio::net::TcpListener;
-use tower::service_fn;
+use tower::{service_fn, ServiceBuilder};
+use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
+use tracing::{error, trace};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::{Layer, Registry};
 
+use crate::openid::initialize_openid_client;
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
 
@@ -286,27 +294,82 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
     });
     //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
     // TODO FIXME
-    /*let app = app.layer(
+    let app = app.layer(
         ServiceBuilder::new()
-            .layer(HandleErrorLayer::new(handle_error_test))
+            //.layer(HandleErrorLayer::new(handle_error_test))
             .layer(
                 TraceLayer::new_for_http()
                     .make_span_with(DefaultMakeSpan::default().include_headers(true))
                     .on_response(DefaultOnResponse::default().include_headers(true)),
             )
             .layer(CatchPanicLayer::new()),
-    );*/
+    );
     let app: Router<()> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
     app
 }
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    console_subscriber::init();
+    //console_subscriber::init(); // drags in old axum version
     //tracing_subscriber::fmt::init();
 
-    initialize_index_css();
+    // TODO FIXME add opentelemetry logs feature
+    // https://github.com/open-telemetry/opentelemetry-rust/tree/5aa0311de87442604598c1c9b81b045bae58aea1/opentelemetry-otlp/examples
+
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint("http://localhost:4317"),
+        )
+        .install_batch(opentelemetry_sdk::runtime::Tokio)?;
+
+    let meter_provider = opentelemetry_otlp::new_pipeline()
+        .metrics(opentelemetry_sdk::runtime::Tokio)
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .http()
+                .with_endpoint("http://localhost:9090/api/v1/otlp"),
+        )
+        .build()
+        .unwrap();
+
+    // maybe dont use tracing here in this library but opentelemetry directly?
+
+    // Create a tracing layer with the configured tracer
+    let telemetry = tracing_opentelemetry::layer()
+        .with_tracer(tracer)
+        .with_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the `axum::rejection`
+                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                "example_tracing_aka_logging=debug,tower_http=debug,axum::rejection=trace".into()
+            }),
+        );
+
+    // Use the tracing subscriber `Registry`, or any other subscriber
+    // that impls `LookupSpan`
+    let subscriber = Registry::default().with(telemetry);
+
+    tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    error!("This event will be logged in the root span.");
+    trace!("This event will be logged in the root span.");
+
+    let meter = meter_provider.meter("perfect-group-allocation");
+
+    let histogram = meter
+        .u64_histogram("index.mean_poll_duration")
+        .with_description("Records values")
+        .init();
+
+    //opentelemetry::global::set_meter_provider(meter_provider.clone());
+    //opentelemetry::global::set_tracer_provider(tracer.clone());
+
     initialize_favicon_ico().await;
+    initialize_index_css();
+    initialize_openid_client().await;
 
     let _monitor = tokio_metrics::TaskMonitor::new();
     let monitor_root = tokio_metrics::TaskMonitor::new();
@@ -327,7 +390,7 @@ async fn main() -> Result<(), AppError> {
         let monitor_root_create = monitor_root_create.clone();
         let monitor_list = monitor_list.clone();
         tokio::spawn(async move {
-            for (((interval_index_css, interval_root), interval_create), interval_list) in
+            for (((_interval_index_css, interval_root), _interval_create), _interval_list) in
                 monitor_index_css
                     .intervals()
                     .zip(monitor_root.intervals())
@@ -336,7 +399,12 @@ async fn main() -> Result<(), AppError> {
             {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
-                println!(
+                histogram.record(
+                    interval_root.mean_poll_duration().subsec_nanos().into(),
+                    &[],
+                );
+
+                /*println!(
                     "GET /index.css {:?} {:?} {:?}",
                     interval_index_css.mean_poll_duration(),
                     interval_index_css.slow_poll_ratio(),
@@ -359,9 +427,9 @@ async fn main() -> Result<(), AppError> {
                     interval_list.mean_poll_duration(),
                     interval_list.slow_poll_ratio(),
                     interval_list.mean_slow_poll_duration()
-                );
+                );*/
                 // wait 500ms
-                tokio::time::sleep(Duration::from_millis(5000)).await;
+                tokio::time::sleep(Duration::from_millis(500)).await;
             }
         });
     }
@@ -369,9 +437,9 @@ async fn main() -> Result<(), AppError> {
     // print runtime metrics every 500ms
     {
         tokio::spawn(async move {
-            for interval_runtime in runtime_monitor.intervals() {
+            for _interval_runtime in runtime_monitor.intervals() {
                 // pretty-print the metric interval
-                println!("runtime {:?}", interval_runtime.busy_ratio());
+                //println!("runtime {:?}", interval_runtime.busy_ratio());
 
                 // wait 500ms
                 tokio::time::sleep(Duration::from_millis(500)).await;
@@ -445,5 +513,6 @@ async fn main() -> Result<(), AppError> {
     .unwrap();*/
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
     axum::serve(listener, app.into_make_service()).await?;
+    opentelemetry::global::shutdown_tracer_provider(); // sending remaining spans
     Ok(())
 }

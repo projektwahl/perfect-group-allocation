@@ -1,0 +1,22 @@
+cargo-features = ["edition2024"]
+
+[package]
+name = "perfect-group-allocation-e2e"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lints]
+workspace = true
+
+[dependencies]
+thirtyfour = "0.31"
+selenium-manager = { git = "https://github.com/SeleniumHQ/selenium", rev = "9a700e219999c5d6436d7ec7c30010ed639ef9b8" }
+tokio = { version = "1", features = ["full"] }

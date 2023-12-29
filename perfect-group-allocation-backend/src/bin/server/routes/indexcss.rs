@@ -57,7 +57,6 @@ pub async fn indexcss(
 ) -> (Session, impl IntoResponse) {
     let etag_string = "\"xyzzy\"";
     let etag = etag_string.parse::<headers::ETag>().unwrap();
-    println!("{if_none_match:?}");
     if if_none_match.precondition_passes(&etag) {
         (
             session,

@@ -18,9 +18,12 @@ jobs:
           - nightly
     steps:
       - run: sudo apt install -y coinor-libcbc-dev
-      - run: rustup toolchain install ${{ matrix.toolchain }} --component rustfmt --component clippy && rustup default ${{ matrix.toolchain }}
+      - run: rustup toolchain install ${{ matrix.toolchain }} --component rustfmt --component clippy
+      - run: rustup default ${{ matrix.toolchain }}
+      - run: cargo install --locked cargo-deny
       - uses: actions/checkout@v3
       - run: cargo build
       - run: cargo test
       - run: cargo fmt --check
       - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo deny check

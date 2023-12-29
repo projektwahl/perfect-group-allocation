@@ -13,7 +13,7 @@ use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
 
 use crate::error::{to_error_result, AppError};
-use crate::openid::get_openid_client;
+use crate::openid::OPENID_CLIENT;
 use crate::session::{Session, SessionCookie};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
@@ -75,7 +75,10 @@ pub async fn openid_redirect(
         // Once the user has been redirected to the redirect URL, you'll have access to the
         // authorization code. For security reasons, your code should verify that the `state`
         // parameter returned by the server matches `csrf_state`.
-        let client = get_openid_client().await?;
+        let client = match OPENID_CLIENT.get().unwrap() {
+            Ok(client) => client,
+            Err(_error) => return Err(AppError::OpenIdNotConfigured),
+        };
 
         match form.0.inner {
             OpenIdRedirectInner::Error(err) => {
