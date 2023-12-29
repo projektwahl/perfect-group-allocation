@@ -320,17 +320,23 @@ fn tracer_from_exporter<S: Subscriber + for<'span> LookupSpan<'span>>(
         .tracing()
         .with_exporter(exporter)
         .with_trace_config(opentelemetry_sdk::trace::config().with_resource(
-            opentelemetry_sdk::Resource::new(vec![KeyValue::new(
-                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-                "perfect-group-allocation",
-            )]),
+            opentelemetry_sdk::Resource::new(vec![
+                KeyValue::new(
+                    opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+                    "perfect-group-allocation",
+                ),
+                KeyValue::new(
+                    opentelemetry_semantic_conventions::trace::EVENT_NAME,
+                    "fallback",
+                ),
+            ]),
         ))
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;
     let telemetry = tracing_opentelemetry::layer::<S>()
         .with_tracer(tracer)
         .with_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "trace,tokio=debug,h2=debug".into()),
+                .unwrap_or_else(|_| "debug,tokio=debug,h2=debug".into()),
         );
     Ok(telemetry)
 }
@@ -353,7 +359,13 @@ async fn main() -> Result<(), AppError> {
         .build()
         .unwrap();
 
-    // maybe dont use tracing here in this library but opentelemetry directly?
+    // https://github.com/opensearch-project/data-prepper/blob/f19de03d5418925935e019837fc4824fb250820c/data-prepper-api/src/main/java/org/opensearch/dataprepper/model/trace/DefaultSpanEvent.java#L31
+    // https://docs.rs/tracing/latest/tracing/index.html#using-the-macros
+    // maybe it doesn't always set an event name:
+
+    // https://github.com/open-telemetry/opentelemetry-rust/issues/1349
+    // https://github.com/open-telemetry/opentelemetry-rust/pull/1346
+    // https://github.com/tokio-rs/tracing/pull/2699
 
     // Create a tracing layer with the configured tracer
 
