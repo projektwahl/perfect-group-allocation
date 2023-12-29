@@ -32,7 +32,8 @@ use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
 use opentelemetry::metrics::MeterProvider as _;
-use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+use opentelemetry_sdk::trace::Tracer;
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
@@ -49,9 +50,12 @@ use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{error, trace};
+use tracing::{error, trace, Subscriber};
+use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::filter::Filtered;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::{Layer, Registry};
+use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::{EnvFilter, Layer, Registry};
 
 use crate::openid::initialize_openid_client;
 use crate::routes::openid_redirect::openid_redirect;
@@ -308,6 +312,22 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
     app
 }
 
+fn tracer_from_exporter<S: Subscriber + for<'span> LookupSpan<'span>>(
+    exporter: TonicExporterBuilder,
+) -> Result<Filtered<OpenTelemetryLayer<S, Tracer>, EnvFilter, S>, AppError> {
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(exporter)
+        .install_batch(opentelemetry_sdk::runtime::Tokio)?;
+    let telemetry = tracing_opentelemetry::layer::<S>()
+        .with_tracer(tracer)
+        .with_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "trace,tokio=debug,h2=debug".into()),
+        );
+    Ok(telemetry)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     //console_subscriber::init(); // drags in old axum version
@@ -315,15 +335,6 @@ async fn main() -> Result<(), AppError> {
 
     // TODO FIXME add opentelemetry logs feature
     // https://github.com/open-telemetry/opentelemetry-rust/tree/5aa0311de87442604598c1c9b81b045bae58aea1/opentelemetry-otlp/examples
-
-    let tracer = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint("http://localhost:4317"),
-        )
-        .install_batch(opentelemetry_sdk::runtime::Tokio)?;
 
     let meter_provider = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
@@ -338,19 +349,26 @@ async fn main() -> Result<(), AppError> {
     // maybe dont use tracing here in this library but opentelemetry directly?
 
     // Create a tracing layer with the configured tracer
-    let telemetry = tracing_opentelemetry::layer()
-        .with_tracer(tracer)
-        .with_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                // axum logs rejections from built-in extractors with the `axum::rejection`
-                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
-                "example_tracing_aka_logging=debug,tower_http=debug,axum::rejection=trace".into()
-            }),
-        );
 
     // Use the tracing subscriber `Registry`, or any other subscriber
     // that impls `LookupSpan`
-    let subscriber = Registry::default().with(telemetry);
+    let subscriber = Registry::default()
+        /*.with(
+            tracer_from_exporter(
+                opentelemetry_otlp::new_exporter()
+                    .tonic()
+                    .with_endpoint("http://localhost:4317"),
+            )
+            .unwrap(),
+        )*/
+        .with(
+            tracer_from_exporter(
+                opentelemetry_otlp::new_exporter()
+                    .tonic()
+                    .with_endpoint("http://localhost:21890"),
+            )
+            .unwrap(),
+        );
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 

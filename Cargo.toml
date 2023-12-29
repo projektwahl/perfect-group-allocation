@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "perfect-group-allocation-backend", "perfect-group-allocation-e2e",
+    "perfect-group-allocation-backend", "perfect-group-allocation-e2e", "migration"
 ]
 
 [workspace.package]

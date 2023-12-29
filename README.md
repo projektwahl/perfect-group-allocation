@@ -24,6 +24,14 @@ warning blocks in rustdoc
 ## Dev
 
 ```bash
+
+podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
+psql postgres://postgres:password@localhost
+DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
+sea-orm-cli generate entity -u postgres://postgres:password@localhost/postgres -o src/bin/server/entities
+DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
+
+
 export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
 OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_LOG=trace,tokio=debug,h2=debug RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
@@ -189,12 +197,6 @@ https://github.com/abiosoft/caddy-json-schema
 
 xcaddy build --with github.com/abiosoft/caddy-json-schema
 ~/Documents/xcaddy/caddy json-schema --vscode # only needed for the json schema
-
-podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
-psql postgres://postgres:password@localhost
-DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
-sea-orm-cli generate entity -u postgres://postgres:password@localhost/postgres -o src/bin/server/entities
-DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
 
 
 curl --header "Accept-Encoding: deflate" -O https://h3.selfmade4u.de:8443/download
