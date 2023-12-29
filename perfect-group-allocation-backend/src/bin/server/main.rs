@@ -316,6 +316,10 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 async fn main() -> Result<(), AppError> {
     //console_subscriber::init(); // drags in old axum version
     //tracing_subscriber::fmt::init();
+
+    // TODO FIXME add opentelemetry logs feature
+    // https://github.com/open-telemetry/opentelemetry-rust/tree/5aa0311de87442604598c1c9b81b045bae58aea1/opentelemetry-otlp/examples
+
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(
@@ -325,12 +329,12 @@ async fn main() -> Result<(), AppError> {
         )
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;
 
-    let meter = opentelemetry_otlp::new_pipeline()
+    let meter_provider = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
         .with_exporter(
             opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint("http://localhost:9090"),
+                .http()
+                .with_endpoint("http://localhost:9090/api/v1/otlp"),
         )
         .build()
         .unwrap();
@@ -357,7 +361,7 @@ async fn main() -> Result<(), AppError> {
     error!("This event will be logged in the root span.");
     trace!("This event will be logged in the root span.");
 
-    let meter = meter.meter("perfect-group-allocation");
+    let meter = meter_provider.meter("perfect-group-allocation");
 
     // Use two instruments
     let counter = meter
@@ -370,6 +374,11 @@ async fn main() -> Result<(), AppError> {
         .init();
 
     counter.add(100, &[KeyValue::new("key", "value")]);
+
+    //opentelemetry::global::set_meter_provider(meter_provider.clone());
+    //opentelemetry::global::set_tracer_provider(tracer.clone());
+
+    meter_provider.force_flush().unwrap();
 
     initialize_index_css();
     initialize_favicon_ico().await;
@@ -413,6 +422,7 @@ async fn main() -> Result<(), AppError> {
                             + "ns",
                     )],
                 );
+                meter_provider.force_flush().unwrap();
                 println!("test");
 
                 /*println!(
