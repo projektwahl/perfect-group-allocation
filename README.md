@@ -24,6 +24,7 @@ warning blocks in rustdoc
 ## Dev
 
 ```bash
+pipx install https://github.com/containers/podman-compose/archive/devel.tar.gz # profile support not yet in 1.0.6
 
 podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
 psql postgres://postgres:password@localhost
@@ -33,7 +34,7 @@ DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin 
 
 
 export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
-OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_LOG=trace,tokio=debug,h2=debug RUST_BACKTRACE=1 cargo run --bin server
+OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_LOG=tokio=debug,h2=debug,trace RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
 
 tokio-console
@@ -44,6 +45,11 @@ https://datatracker.ietf.org/doc/html/rfc9204
 ## Tracing
 
 ```
+https://opentelemetry.io/docs/collector/
+
+http://localhost:55679/debug/tracez
+
+
 podman run --rm --name jaeger \
   -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
   -p 6831:6831/udp \

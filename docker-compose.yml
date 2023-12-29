@@ -26,6 +26,7 @@ services:
       - 9600:9600 # Performance Analyzer
     networks:
       - opensearch-net # All of the containers will join the same Docker bridge network
+    profiles: ["opensearch"]
   opensearch-node2:
     image: opensearchproject/opensearch:latest
     container_name: opensearch-node2
@@ -49,6 +50,7 @@ services:
       - opensearch-data2:/usr/share/opensearch/data # Creates volume called opensearch-data2 and mounts it to the container
     networks:
       - opensearch-net # All of the containers will join the same Docker bridge network
+    profiles: ["opensearch"]
   opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:latest
     container_name: opensearch-dashboards
@@ -61,6 +63,7 @@ services:
       - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true" # disables security dashboards plugin in OpenSearch Dashboards
     networks:
       - opensearch-net
+    profiles: ["opensearch"]
   opensearch-data-prepper:
     image: docker.io/opensearchproject/data-prepper:latest
     container_name: opensearch-data-prepper
@@ -78,6 +81,17 @@ services:
       - ./pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml
     networks:
       - opensearch-net
+    profiles: ["opensearch"]
+  opentelemetry-collector:
+    image: docker.io/otel/opentelemetry-collector
+    container_name: opentelemetry-collector
+    volumes:
+      - ./opentelemetry-collector-config.yaml:/etc/otelcol/config.yaml
+    ports:
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
+      - 55679:55679 # zpages extension
+
 
 volumes:
   opensearch-data1:

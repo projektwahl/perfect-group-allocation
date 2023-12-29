@@ -56,6 +56,7 @@ use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::filter::Filtered;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Layer, Registry};
 
 use crate::openid::initialize_openid_client;
@@ -313,38 +314,66 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
     app
 }
 
-fn tracer_from_exporter<S: Subscriber + for<'span> LookupSpan<'span>>(
+fn otlp_layer<S: Subscriber + for<'span> LookupSpan<'span>>(
     exporter: TonicExporterBuilder,
-) -> Result<Filtered<OpenTelemetryLayer<S, Tracer>, EnvFilter, S>, AppError> {
+) -> OpenTelemetryLayer<S, Tracer> {
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(exporter)
         .with_trace_config(opentelemetry_sdk::trace::config().with_resource(
-            opentelemetry_sdk::Resource::new(vec![
-                KeyValue::new(
-                    opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-                    "perfect-group-allocation",
-                ),
-                KeyValue::new(
-                    opentelemetry_semantic_conventions::trace::EVENT_NAME,
-                    "fallback",
-                ),
-            ]),
+            opentelemetry_sdk::Resource::new(vec![KeyValue::new(
+                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+                "perfect-group-allocation",
+            )]),
         ))
-        .install_batch(opentelemetry_sdk::runtime::Tokio)?;
-    let telemetry = tracing_opentelemetry::layer::<S>()
-        .with_tracer(tracer)
-        .with_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "debug,tokio=debug,h2=debug".into()),
-        );
-    Ok(telemetry)
+        .install_batch(opentelemetry_sdk::runtime::Tokio)
+        .unwrap();
+    tracing_opentelemetry::layer::<S>().with_tracer(tracer)
 }
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     //console_subscriber::init(); // drags in old axum version
-    //tracing_subscriber::fmt::init();
+
+    const DEFAULT_LOG_LEVEL: &str = "trace,tokio=debug,h2=debug,runtime=debug,hyper=info,\
+                                     reqwest=info,tower=info,tonic=info,tower_http=trace";
+
+    let stdout_log = tracing_subscriber::fmt::layer().pretty();
+
+    // TODO use docker run -p 4317:4317 otel/opentelemetry-collector-dev:latest
+    let otlp = otlp_layer(
+        opentelemetry_otlp::new_exporter()
+            .tonic()
+            .with_endpoint("http://localhost:4317"),
+    );
+
+    let otlp2 = otlp_layer(
+        opentelemetry_otlp::new_exporter()
+            .tonic()
+            .with_endpoint("http://localhost:21890"),
+    );
+
+    tracing_subscriber::registry()
+        .with(console_subscriber::spawn())
+        .with(
+            stdout_log.with_filter(
+                tracing_subscriber::EnvFilter::try_from_default_env()
+                    .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.into()),
+            ),
+        )
+        .with(
+            otlp.with_filter(
+                tracing_subscriber::EnvFilter::try_from_default_env()
+                    .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.into()),
+            ),
+        )
+        .with(
+            otlp2.with_filter(
+                tracing_subscriber::EnvFilter::try_from_default_env()
+                    .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.into()),
+            ),
+        )
+        .init();
 
     // TODO FIXME add opentelemetry logs feature
     // https://github.com/open-telemetry/opentelemetry-rust/tree/5aa0311de87442604598c1c9b81b045bae58aea1/opentelemetry-otlp/examples
@@ -366,33 +395,6 @@ async fn main() -> Result<(), AppError> {
     // https://github.com/open-telemetry/opentelemetry-rust/issues/1349
     // https://github.com/open-telemetry/opentelemetry-rust/pull/1346
     // https://github.com/tokio-rs/tracing/pull/2699
-
-    // Create a tracing layer with the configured tracer
-
-    // Use the tracing subscriber `Registry`, or any other subscriber
-    // that impls `LookupSpan`
-    let subscriber = Registry::default()
-        /*.with(
-            tracer_from_exporter(
-                opentelemetry_otlp::new_exporter()
-                    .tonic()
-                    .with_endpoint("http://localhost:4317"),
-            )
-            .unwrap(),
-        )*/
-        .with(
-            tracer_from_exporter(
-                opentelemetry_otlp::new_exporter()
-                    .tonic()
-                    .with_endpoint("http://localhost:21890"),
-            )
-            .unwrap(),
-        );
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
-
-    error!("This event will be logged in the root span.");
-    trace!("This event will be logged in the root span.");
 
     let meter = meter_provider.meter("perfect-group-allocation");
 
