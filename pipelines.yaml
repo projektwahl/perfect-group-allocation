@@ -25,7 +25,6 @@ raw-pipeline:
   sink:
     - opensearch:
         hosts: ["http://opensearch-node1:9200"]
-        insecure: true
         username: admin
         password: admin
         index_type: trace-analytics-raw
@@ -43,7 +42,6 @@ service-map-pipeline:
   sink:
     - opensearch:
         hosts: ["http://opensearch-node1:9200"]
-        insecure: true
         username: admin
         password: admin
         index_type: trace-analytics-service-map
@@ -55,7 +53,6 @@ metrics-pipeline:
   sink:
     - opensearch:
       hosts: ["http://opensearch-node1:9200"]
-      insecure: true
       username: admin
       password: admin
 log-pipeline:
@@ -64,6 +61,5 @@ log-pipeline:
   sink:
     - opensearch:
       hosts: ["http://opensearch-node1:9200"]
-      insecure: true
       username: admin
       password: admin
