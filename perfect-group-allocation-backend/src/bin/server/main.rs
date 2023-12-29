@@ -347,12 +347,6 @@ async fn main() -> Result<(), AppError> {
             .with_endpoint("http://localhost:4317"),
     );
 
-    let otlp2 = otlp_layer(
-        opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_endpoint("http://localhost:21890"),
-    );
-
     tracing_subscriber::registry()
         .with(console_subscriber::spawn())
         .with(
@@ -363,12 +357,6 @@ async fn main() -> Result<(), AppError> {
         )
         .with(
             otlp.with_filter(
-                tracing_subscriber::EnvFilter::try_from_default_env()
-                    .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.into()),
-            ),
-        )
-        .with(
-            otlp2.with_filter(
                 tracing_subscriber::EnvFilter::try_from_default_env()
                     .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.into()),
             ),

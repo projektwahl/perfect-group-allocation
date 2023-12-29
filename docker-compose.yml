@@ -69,9 +69,6 @@ services:
     container_name: opensearch-data-prepper
     ports:
       - 4900:4900
-      - 21890:21890
-      - 21891:21891
-      - 21892:21892
     expose:
       - "4900"
       - "21890" # otel trace
@@ -82,16 +79,28 @@ services:
     networks:
       - opensearch-net
     profiles: ["opensearch"]
+  jaeger:
+    image: docker.io/jaegertracing/all-in-one
+    container_name: jaeger
+    expose:
+      - "4317" # OTLP gRPC receiver
+      - "4318" # OTLP HTTP receiver
+    ports:
+      - 16686:16686 # web interface
+    networks:
+      - opensearch-net
   opentelemetry-collector:
     image: docker.io/otel/opentelemetry-collector
     container_name: opentelemetry-collector
     volumes:
       - ./opentelemetry-collector-config.yaml:/etc/otelcol/config.yaml
+    expose:
+      "4317" # OTLP gRPC receiver
     ports:
       - 4317:4317 # OTLP gRPC receiver
-      - 4318:4318 # OTLP http receiver
       - 55679:55679 # zpages extension
-
+    networks:
+      - opensearch-net
 
 volumes:
   opensearch-data1:

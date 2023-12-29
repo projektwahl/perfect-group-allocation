@@ -8,8 +8,8 @@ processors:
   batch:
 
 exporters:
-  otlp:
-    endpoint: otelcol:4317
+  otlphttp:
+    endpoint: http://jaeger:4318
 
 extensions:
   health_check:
@@ -22,12 +22,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [otlphttp]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [otlphttp]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp]
+      exporters: [otlphttp]
