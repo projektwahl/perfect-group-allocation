@@ -38,7 +38,7 @@ service-map-pipeline:
       buffer_size: 10240
       batch_size: 160
   processor:
-    - service_map_stateful:
+    - service_map:
   sink:
     - opensearch:
         hosts: ["http://opensearch-node1:9200"]

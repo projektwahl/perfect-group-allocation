@@ -32,6 +32,7 @@ use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
 use opentelemetry::metrics::MeterProvider as _;
+use opentelemetry::KeyValue;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::trace::Tracer;
 use routes::download::handler;
@@ -318,6 +319,12 @@ fn tracer_from_exporter<S: Subscriber + for<'span> LookupSpan<'span>>(
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(exporter)
+        .with_trace_config(opentelemetry_sdk::trace::config().with_resource(
+            opentelemetry_sdk::Resource::new(vec![KeyValue::new(
+                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+                "perfect-group-allocation",
+            )]),
+        ))
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;
     let telemetry = tracing_opentelemetry::layer::<S>()
         .with_tracer(tracer)
