@@ -25,7 +25,7 @@ warning blocks in rustdoc
 
 ```bash
 export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
-RUST_LOG=trace,tokio=debug,h2=debug RUST_BACKTRACE=1 cargo run --bin server
+OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_LOG=trace,tokio=debug,h2=debug RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
 
 tokio-console

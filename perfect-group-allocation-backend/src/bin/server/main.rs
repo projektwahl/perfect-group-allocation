@@ -363,22 +363,13 @@ async fn main() -> Result<(), AppError> {
 
     let meter = meter_provider.meter("perfect-group-allocation");
 
-    // Use two instruments
-    let counter = meter
-        .u64_counter("a.counter")
-        .with_description("Counts things")
-        .init();
     let histogram = meter
-        .i64_histogram("a.histogram")
+        .u64_histogram("index.mean_slow_poll_duration")
         .with_description("Records values")
         .init();
 
-    counter.add(100, &[KeyValue::new("key", "value")]);
-
     //opentelemetry::global::set_meter_provider(meter_provider.clone());
     //opentelemetry::global::set_tracer_provider(tracer.clone());
-
-    meter_provider.force_flush().unwrap();
 
     initialize_index_css();
     initialize_favicon_ico().await;
@@ -412,18 +403,12 @@ async fn main() -> Result<(), AppError> {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
                 histogram.record(
-                    100,
-                    &[KeyValue::new(
-                        "index_css_mean_slow_poll_duration",
-                        interval_index_css
-                            .mean_slow_poll_duration()
-                            .as_nanos()
-                            .to_string()
-                            + "ns",
-                    )],
+                    interval_root
+                        .mean_slow_poll_duration()
+                        .subsec_nanos()
+                        .into(),
+                    &[],
                 );
-                meter_provider.force_flush().unwrap();
-                println!("test");
 
                 /*println!(
                     "GET /index.css {:?} {:?} {:?}",
