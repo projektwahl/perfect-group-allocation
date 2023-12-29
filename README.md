@@ -63,8 +63,30 @@ firefox http://localhost:9090/
 ## OpenSearch
 
 ```
+# Edit the sysctl config file
+sudo nano /etc/sysctl.conf
+
+# Add a line to define the desired value
+# or change the value if the key exists,
+# and then save your changes.
+vm.max_map_count=262144
+
+# Reload the kernel parameters using sysctl
+sudo sysctl -p
+
+# Verify that the change was applied by checking the value
+cat /proc/sys/vm/max_map_count
+
 podman compose up
 
+http://localhost:5601/
+
+admin:admin
+
+# port 21892
+
+https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/#sample-docker-compose-file-for-development
+would be without security plugin
 ```
 
 ## Grafana

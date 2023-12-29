@@ -8,8 +8,8 @@ services:
       - node.name=opensearch-node1 # Name the node that will run in this container
       - discovery.seed_hosts=opensearch-node1 # Nodes to look for when discovering the cluster
       - cluster.initial_cluster_manager_nodes=opensearch-node1 # Nodes eligible to serve as cluster manager
-      - bootstrap.memory_lock=true # Disable JVM heap memory swapping
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # Set min and max JVM heap sizes to at least 50% of system RAM
+      - bootstrap.memory_lock=false # unprivileged containers don't work otherwise
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m -Dopensearch.experimental.feature.telemetry.enabled=true" # Set min and max JVM heap sizes to at least 50% of system RAM
     ulimits:
       memlock:
         soft: -1 # Set memlock to unlimited (no soft or hard limit)
@@ -33,6 +33,19 @@ services:
       - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
     environment:
       OPENSEARCH_HOSTS: '["https://opensearch-node1:9200"]' # Define the OpenSearch nodes that OpenSearch Dashboards will query
+    networks:
+      - opensearch-net
+  opensearch-data-prepper:
+    image: docker.io/opensearchproject/data-prepper:latest
+    container_name: opensearch-data-prepper
+    ports:
+      - 4900:4900
+      - 21892:21892
+    expose:
+      - "4900"
+      - "21892" # otel metrics
+    volumes:
+      - ./pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml
     networks:
       - opensearch-net
 
