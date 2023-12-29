@@ -60,6 +60,19 @@ podman run -p 9090:9090 -v ./prometheus.yml:/prometheus/prometheus.yml docker.io
 firefox http://localhost:9090/
 ```
 
+## OpenSearch
+
+```
+podman compose up
+
+```
+
+## Grafana
+
+```
+podman run -d --name=grafana -p 3000:3000 docker.io/grafana/grafana
+```
+
 ## Async profiling
 
 https://github.com/tokio-rs/console

@@ -12,6 +12,7 @@ repository = "https://github.com/projektwahl/perfect-group-allocation"
 description = "Allocate people to groups according to their preferences while honoring specified restrictions."
 keywords = ["web", "management", "service"]
 categories = ["web-programming"]
+readme = "README.md"
 
 [profile.release-with-debug]
 inherits = "release"

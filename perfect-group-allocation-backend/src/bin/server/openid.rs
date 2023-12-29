@@ -16,40 +16,37 @@ use openidconnect::{EmptyAdditionalClaims, IdTokenFields, IssuerUrl};
 
 use crate::error::AppError;
 
-pub static OPENID_CLIENT: OnceLock<
-    Result<
-        openidconnect::Client<
+type OpenIdConnectClientType = openidconnect::Client<
+    EmptyAdditionalClaims,
+    CoreAuthDisplay,
+    CoreGenderClaim,
+    CoreJweContentEncryptionAlgorithm,
+    CoreJwsSigningAlgorithm,
+    CoreJsonWebKeyType,
+    CoreJsonWebKeyUse,
+    CoreJsonWebKey,
+    CoreAuthPrompt,
+    StandardErrorResponse<BasicErrorResponseType>,
+    StandardTokenResponse<
+        IdTokenFields<
             EmptyAdditionalClaims,
-            CoreAuthDisplay,
+            EmptyExtraTokenFields,
             CoreGenderClaim,
             CoreJweContentEncryptionAlgorithm,
             CoreJwsSigningAlgorithm,
             CoreJsonWebKeyType,
-            CoreJsonWebKeyUse,
-            CoreJsonWebKey,
-            CoreAuthPrompt,
-            StandardErrorResponse<BasicErrorResponseType>,
-            StandardTokenResponse<
-                IdTokenFields<
-                    EmptyAdditionalClaims,
-                    EmptyExtraTokenFields,
-                    CoreGenderClaim,
-                    CoreJweContentEncryptionAlgorithm,
-                    CoreJwsSigningAlgorithm,
-                    CoreJsonWebKeyType,
-                >,
-                BasicTokenType,
-            >,
-            BasicTokenType,
-            StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
-            StandardRevocableToken,
-            StandardErrorResponse<RevocationErrorResponseType>,
         >,
-        AppError,
+        BasicTokenType,
     >,
-> = OnceLock::new();
+    BasicTokenType,
+    StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
+    StandardRevocableToken,
+    StandardErrorResponse<RevocationErrorResponseType>,
+>;
 
-pub async fn initialize_favicon_ico() {
+pub static OPENID_CLIENT: OnceLock<Result<OpenIdConnectClientType, AppError>> = OnceLock::new();
+
+pub async fn initialize_openid_client() {
     let client = async {
         let provider_metadata = CoreProviderMetadata::discover_async(
             IssuerUrl::new("http://localhost:8080/realms/pga".to_owned())?,
