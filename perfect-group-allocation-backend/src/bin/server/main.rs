@@ -364,7 +364,7 @@ async fn main() -> Result<(), AppError> {
     let meter = meter_provider.meter("perfect-group-allocation");
 
     let histogram = meter
-        .u64_histogram("index.mean_slow_poll_duration")
+        .u64_histogram("index.mean_poll_duration")
         .with_description("Records values")
         .init();
 
@@ -403,10 +403,7 @@ async fn main() -> Result<(), AppError> {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
                 histogram.record(
-                    interval_root
-                        .mean_slow_poll_duration()
-                        .subsec_nanos()
-                        .into(),
+                    interval_root.mean_poll_duration().subsec_nanos().into(),
                     &[],
                 );
 
@@ -435,7 +432,7 @@ async fn main() -> Result<(), AppError> {
                     interval_list.mean_slow_poll_duration()
                 );*/
                 // wait 500ms
-                tokio::time::sleep(Duration::from_millis(5000)).await;
+                tokio::time::sleep(Duration::from_millis(500)).await;
             }
         });
     }
