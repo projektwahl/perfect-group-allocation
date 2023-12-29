@@ -20,8 +20,6 @@ raw-pipeline:
     bounded_blocking:
       buffer_size: 10240
       batch_size: 160
-  processor:
-    - otel_trace_raw:
   sink:
     - opensearch:
         hosts: ["http://opensearch-node1:9200"]
@@ -48,6 +46,7 @@ service-map-pipeline:
 metrics-pipeline:
   source:
     otel_metrics_source:
+      ssl: false
   processor:
     - otel_metrics_raw_processor:
   sink:
@@ -58,6 +57,7 @@ metrics-pipeline:
 log-pipeline:
   source:
     otel_logs_source:
+      ssl: false
   sink:
     - opensearch:
       hosts: ["http://opensearch-node1:9200"]
