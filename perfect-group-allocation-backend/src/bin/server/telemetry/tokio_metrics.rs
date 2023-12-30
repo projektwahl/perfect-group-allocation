@@ -11,6 +11,7 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use axum::extract::{MatchedPath, Request};
+use opentelemetry::metrics::Unit;
 use opentelemetry::KeyValue;
 use pin_project::pin_project;
 use tokio::time::Sleep;
@@ -66,25 +67,54 @@ where
             let meter = opentelemetry::global::meter("perfect-group-allocation");
             let interval_root = std::sync::Mutex::new(new_task_monitor.intervals());
             let path = Arc::new(path);
+
+            let mean_poll_duration = Arc::new(
+                meter
+                    .u64_observable_gauge("tokio.task_monitor.mean_poll_duration")
+                    .with_unit(Unit::new("ns"))
+                    .init(),
+            );
+            let slow_poll_ratio = Arc::new(
+                meter
+                    .f64_observable_gauge("tokio.task_monitor.slow_poll_ratio")
+                    .init(),
+            );
+
             meter
-                .u64_observable_gauge("tokio.task_monitor.mean_poll_duration")
-                .with_callback(move |gauge| {
-                    gauge.observe(
-                        interval_root
-                            .lock()
-                            .unwrap()
-                            .next()
-                            .unwrap()
-                            .mean_poll_duration()
-                            .subsec_nanos()
-                            .into(),
-                        &[KeyValue::new(
-                            opentelemetry_semantic_conventions::trace::URL_PATH,
-                            path.deref().clone(),
-                        )],
-                    );
-                })
-                .init();
+                .register_callback(
+                    &[mean_poll_duration.clone(), slow_poll_ratio.clone()],
+                    move |observer| {
+                        observer.observe_u64(
+                            &*mean_poll_duration,
+                            interval_root
+                                .lock()
+                                .unwrap()
+                                .next()
+                                .unwrap()
+                                .mean_poll_duration()
+                                .subsec_nanos()
+                                .into(),
+                            &[KeyValue::new(
+                                opentelemetry_semantic_conventions::trace::URL_PATH,
+                                path.deref().clone(),
+                            )],
+                        );
+                        observer.observe_f64(
+                            &*slow_poll_ratio,
+                            interval_root
+                                .lock()
+                                .unwrap()
+                                .next()
+                                .unwrap()
+                                .slow_poll_ratio(),
+                            &[KeyValue::new(
+                                opentelemetry_semantic_conventions::trace::URL_PATH,
+                                path.deref().clone(),
+                            )],
+                        );
+                    },
+                )
+                .unwrap();
 
             new_task_monitor
         };
