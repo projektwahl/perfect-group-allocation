@@ -121,6 +121,27 @@ services:
       - 3001:3001
     networks:
       - opensearch-net
+  # https://grafana.com/docs/agent/latest/flow/setup/install/docker/
+  #docker run \
+  #-e AGENT_MODE=flow \
+  #-v CONFIG_FILE_PATH:/etc/agent/config.river \
+  #-p 12345:12345 \
+  #grafana/agent:latest \
+  #  run --server.http.listen-addr=0.0.0.0:12345 /etc/agent/config.river
+  # https://grafana.com/docs/mimir/latest/configure/configure-otel-collector/
+  # so install mimir?
+  # https://grafana.com/docs/mimir/latest/get-started/
+  # also shows how to add mimir to grafana
+  grafana-mimir:
+    image: grafana/mimir:latest
+    container_name: mimir
+    command: --config.file=/etc/mimir/demo.yaml
+    ports:
+      - 9009:9009
+    volumes:
+      - ./grafana-mimir.yaml:/etc/mimir/demo.yaml
+    networks:
+      - opensearch-net
 
 volumes:
   opensearch-data1:
