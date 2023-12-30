@@ -10,10 +10,10 @@ processors:
 exporters:
   otlphttp/jaeger:
     endpoint: http://jaeger:4318
-  otlphttp/opensearch:
-    traces_endpoint: http://opensearch-data-prepper:21890
-    metrics_endpoint: http://opensearch-data-prepper:21890
-    logs_endpoint: http://opensearch-data-prepper:21890
+  otlp/opensearch:
+    endpoint: opensearch-data-prepper:21890
+    tls:
+      insecure: true
 
 service:
   pipelines:
@@ -22,16 +22,16 @@ service:
       processors: [batch]
       exporters:
         - otlphttp/jaeger
-        - otlphttp/opensearch
+        - otlp/opensearch
     metrics:
       receivers: [otlp]
       processors: [batch]
       exporters:
         - otlphttp/jaeger
-        - otlphttp/opensearch
+        - otlp/opensearch
     logs:
       receivers: [otlp]
       processors: [batch]
       exporters:
         - otlphttp/jaeger
-        - otlphttp/opensearch
+        - otlp/opensearch

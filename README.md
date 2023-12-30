@@ -27,6 +27,8 @@ warning blocks in rustdoc
 pipx install https://github.com/containers/podman-compose/archive/devel.tar.gz # profile support not yet in 1.0.6
 clear && podman compose --profile opensearch up
 
+# jaeger http://localhost:16686
+# opensearch http://localhost:5601
 
 podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
 psql postgres://postgres:password@localhost
