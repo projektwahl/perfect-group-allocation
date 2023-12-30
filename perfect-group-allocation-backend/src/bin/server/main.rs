@@ -331,8 +331,6 @@ async fn main() -> Result<(), AppError> {
 async fn program() -> Result<(), AppError> {
     let meter = opentelemetry::global::meter("perfect-group-allocation");
 
-    let metric_mean_poll_duration = meter.u64_gauge("gauge.mean_poll_duration").init();
-
     initialize_favicon_ico().await;
     initialize_index_css();
     initialize_openid_client().await;
@@ -346,61 +344,26 @@ async fn program() -> Result<(), AppError> {
     let _monitor_openidconnect_login = tokio_metrics::TaskMonitor::new();
     let _monitor_openidconnect_redirect = tokio_metrics::TaskMonitor::new();
 
+    let interval_root = std::sync::Mutex::new(monitor_root.intervals());
+    meter
+        .u64_observable_gauge("mutexgauge.mean_poll_duration")
+        .with_callback(move |gauge| {
+            gauge.observe(
+                interval_root
+                    .lock()
+                    .unwrap()
+                    .next()
+                    .unwrap()
+                    .mean_poll_duration()
+                    .subsec_nanos()
+                    .into(),
+                &[],
+            );
+        })
+        .init();
+
     let handle = tokio::runtime::Handle::current();
     let runtime_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
-
-    // print task metrics every 500ms
-    {
-        let monitor_index_css = monitor_index_css.clone();
-        let monitor_root = monitor_root.clone();
-        let monitor_root_create = monitor_root_create.clone();
-        let monitor_list = monitor_list.clone();
-        tokio::spawn(async move {
-            for (((_interval_index_css, interval_root), _interval_create), _interval_list) in
-                monitor_index_css
-                    .intervals()
-                    .zip(monitor_root.intervals())
-                    .zip(monitor_root_create.intervals())
-                    .zip(monitor_list.intervals())
-            {
-                // pretty-print the metric interval
-                // these metrics seem to work (tested using index.css spawn_blocking)
-
-                // we can actually do this using the observable one with .intervals()
-                metric_mean_poll_duration.record(
-                    interval_root.mean_poll_duration().subsec_nanos().into(),
-                    &[],
-                );
-
-                /*println!(
-                    "GET /index.css {:?} {:?} {:?}",
-                    interval_index_css.mean_poll_duration(),
-                    interval_index_css.slow_poll_ratio(),
-                    interval_index_css.mean_slow_poll_duration()
-                );
-                println!(
-                    "GET / {:?} {:?} {:?}",
-                    interval_root.mean_poll_duration(),
-                    interval_root.slow_poll_ratio(),
-                    interval_root.mean_slow_poll_duration()
-                );
-                println!(
-                    "POST /create {:?} {:?} {:?}",
-                    interval_create.mean_poll_duration(),
-                    interval_create.slow_poll_ratio(),
-                    interval_create.mean_slow_poll_duration()
-                );
-                println!(
-                    "GET /list {:?} {:?} {:?}",
-                    interval_list.mean_poll_duration(),
-                    interval_list.slow_poll_ratio(),
-                    interval_list.mean_slow_poll_duration()
-                );*/
-                // wait 500ms
-                tokio::time::sleep(Duration::from_millis(1000)).await;
-            }
-        });
-    }
 
     // print runtime metrics every 500ms
     {

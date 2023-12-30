@@ -36,7 +36,7 @@ podman compose logs opentelemetry-collector
 # opensearch http://localhost:5601
 # prometheus http://localhost:9090
 # grafana http://localhost:3001
-# add prometheus source to grafana: http://prometheus:9090
+# add prometheus source to grafana: http://prometheus:9090, SET INTERVAL TO THE SAME AS OTEL_METRIC_EXPORT_INTERVAL in seconds
 
 # otel-v1-apm-span-*
 
