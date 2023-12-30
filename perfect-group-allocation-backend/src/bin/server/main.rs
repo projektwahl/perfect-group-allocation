@@ -321,17 +321,10 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
+    // avoid putting more code here as this is outside of all spans so doesn't get traced
     let _guard = setup_telemetry();
 
-    let result = program().await;
-
-    // this is outside of the span so it doesnt get logged?
-
-    //_guard.shutdown();
-
-    //tokio::time::sleep(Duration::from_secs(5)).await;
-
-    result
+    program().await
 }
 
 #[tracing::instrument]

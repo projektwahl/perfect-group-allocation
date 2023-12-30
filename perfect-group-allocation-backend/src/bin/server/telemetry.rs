@@ -12,17 +12,11 @@ use tracing_subscriber::Layer;
 
 pub struct OpenTelemetryGuard {
     meter_provider: SdkMeterProvider,
-    tracing_provider: opentelemetry_sdk::trace::TracerProvider,
 }
 
 impl Drop for OpenTelemetryGuard {
     fn drop(&mut self) {
         println!("flushing telemetry on drop");
-        for result in self.tracing_provider.force_flush() {
-            if let Err(err) = result {
-                eprintln!("{err:?}");
-            }
-        }
         global::shutdown_tracer_provider();
         global::shutdown_logger_provider();
         if let Err(err) = self.meter_provider.shutdown() {
@@ -56,7 +50,7 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
         .install_batch(opentelemetry_sdk::runtime::Tokio)
         .unwrap();
 
-    let tracing_layer = tracing_opentelemetry::layer().with_tracer(tracing_provider.clone());
+    let tracing_layer = tracing_opentelemetry::layer().with_tracer(tracing_provider);
 
     let meter_provider = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
@@ -87,7 +81,7 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
         .with(opentelemetry_metrics)
         .init();
 
-    let logger = opentelemetry_otlp::new_pipeline()
+    let _logger = opentelemetry_otlp::new_pipeline()
         .logging()
         .with_exporter(
             opentelemetry_otlp::new_exporter()
@@ -101,8 +95,5 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
     let logger_provider = logger_provider();
     OpenTelemetryTracingBridge::new(&logger_provider);
 
-    OpenTelemetryGuard {
-        meter_provider,
-        tracing_provider: tracing_provider.provider().unwrap(),
-    }
+    OpenTelemetryGuard { meter_provider }
 }
