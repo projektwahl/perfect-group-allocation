@@ -30,6 +30,8 @@ clear && podman compose --profile opensearch up
 # jaeger http://localhost:16686
 # opensearch http://localhost:5601
 
+# otel-v1-apm-span-*
+
 podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
 psql postgres://postgres:password@localhost
 DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
