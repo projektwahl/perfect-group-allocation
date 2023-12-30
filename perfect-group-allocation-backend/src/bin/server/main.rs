@@ -317,7 +317,7 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
             .layer(CatchPanicLayer::new()),
     );
     let app: Router<()> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
-    app.layer(TokioTaskMetricsLayer)
+    app.layer(TokioTaskMetricsLayer::new())
 }
 
 #[tokio::main]

@@ -6,7 +6,7 @@ use std::fmt;
 use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock, Weak};
 use std::task::{Context, Poll};
 use std::time::Duration;
 
@@ -20,30 +20,33 @@ use tower::{Layer, Service};
 use tracing::{debug, error};
 
 #[derive(Clone)]
-pub struct TokioTaskMetricsLayer;
+pub struct TokioTaskMetricsLayer {
+    task_monitors: Arc<RwLock<HashMap<String, TaskMonitor>>>,
+}
+
+impl TokioTaskMetricsLayer {
+    pub fn new() -> Self {
+        Self {
+            task_monitors: Default::default(),
+        }
+    }
+}
 
 impl<S> Layer<S> for TokioTaskMetricsLayer {
     type Service = TokioTaskMetrics<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        error!("lol");
-        TokioTaskMetrics::new(inner)
+        TokioTaskMetrics {
+            inner,
+            task_monitors: Arc::downgrade(&self.task_monitors),
+        }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct TokioTaskMetrics<S> {
     inner: S,
-    task_monitors: HashMap<String, TaskMonitor>,
-}
-
-impl<S> TokioTaskMetrics<S> {
-    fn new(inner: S) -> Self {
-        TokioTaskMetrics {
-            inner,
-            task_monitors: Default::default(),
-        }
-    }
+    task_monitors: Weak<RwLock<HashMap<String, TaskMonitor>>>,
 }
 
 impl<S> Service<Request> for TokioTaskMetrics<S>
@@ -60,52 +63,58 @@ where
 
     fn call(&mut self, request: Request) -> Self::Future {
         let path = request.extensions().get::<MatchedPath>().unwrap().as_str();
-        let task_monitor = if let Some(task_monitor) = self.task_monitors.get(path) {
-            task_monitor
-        } else {
-            let path = path.to_owned();
-            let entry = self.task_monitors.entry(path.clone());
-            let new_task_monitor = entry.or_default();
-            let meter = opentelemetry::global::meter("perfect-group-allocation");
-            let interval_root = std::sync::Mutex::new(new_task_monitor.intervals());
-            let path = Arc::new(path);
 
-            let mean_poll_duration = meter
-                .u64_observable_gauge("tokio.task_monitor.mean_poll_duration")
-                .with_unit(Unit::new("ns"))
-                .init();
-            let slow_poll_ratio = meter
-                .f64_observable_gauge("tokio.task_monitor.slow_poll_ratio")
-                .init();
+        let task_monitor = {
+            let arc = self.task_monitors.upgrade().unwrap();
+            let lock = arc.read().unwrap();
+            if let Some(task_monitor) = lock.get(path) {
+                task_monitor.clone()
+            } else {
+                drop(lock);
+                let path = path.to_owned();
+                let entry = arc.write().unwrap().entry(path.clone());
+                let new_task_monitor = entry.or_default();
+                let meter = opentelemetry::global::meter("perfect-group-allocation");
+                let interval_root = std::sync::Mutex::new(new_task_monitor.intervals());
+                let path = Arc::new(path);
 
-            meter
-                .register_callback(
-                    &[mean_poll_duration.as_any(), slow_poll_ratio.as_any()],
-                    move |observer| {
-                        // TODO FIXME get and post?
-                        debug!("metrics for {}", path);
-                        let task_metrics = interval_root.lock().unwrap().next().unwrap();
-                        observer.observe_u64(
-                            &mean_poll_duration,
-                            task_metrics.mean_poll_duration().subsec_nanos().into(),
-                            &[KeyValue::new(
-                                opentelemetry_semantic_conventions::trace::URL_PATH,
-                                path.deref().clone(),
-                            )],
-                        );
-                        observer.observe_f64(
-                            &slow_poll_ratio,
-                            task_metrics.slow_poll_ratio(),
-                            &[KeyValue::new(
-                                opentelemetry_semantic_conventions::trace::URL_PATH,
-                                path.deref().clone(),
-                            )],
-                        );
-                    },
-                )
-                .unwrap();
+                let mean_poll_duration = meter
+                    .u64_observable_gauge("tokio.task_monitor.mean_poll_duration")
+                    .with_unit(Unit::new("ns"))
+                    .init();
+                let slow_poll_ratio = meter
+                    .f64_observable_gauge("tokio.task_monitor.slow_poll_ratio")
+                    .init();
 
-            new_task_monitor
+                meter
+                    .register_callback(
+                        &[mean_poll_duration.as_any(), slow_poll_ratio.as_any()],
+                        move |observer| {
+                            // TODO FIXME get and post?
+                            debug!("metrics for {}", path);
+                            let task_metrics = interval_root.lock().unwrap().next().unwrap();
+                            observer.observe_u64(
+                                &mean_poll_duration,
+                                task_metrics.mean_poll_duration().subsec_nanos().into(),
+                                &[KeyValue::new(
+                                    opentelemetry_semantic_conventions::trace::URL_PATH,
+                                    path.deref().clone(),
+                                )],
+                            );
+                            observer.observe_f64(
+                                &slow_poll_ratio,
+                                task_metrics.slow_poll_ratio(),
+                                &[KeyValue::new(
+                                    opentelemetry_semantic_conventions::trace::URL_PATH,
+                                    path.deref().clone(),
+                                )],
+                            );
+                        },
+                    )
+                    .unwrap();
+
+                new_task_monitor.clone()
+            }
         };
 
         let response_future = task_monitor.instrument(self.inner.call(request));
