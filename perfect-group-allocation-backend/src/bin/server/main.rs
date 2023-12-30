@@ -50,6 +50,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use telemetry::setup_telemetry;
+use telemetry::tokio_metrics::TokioTaskMetricsLayer;
 use tokio::net::TcpListener;
 use tower::{service_fn, ServiceBuilder};
 use tower_http::catch_panic::CatchPanicLayer;
@@ -316,7 +317,7 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
             .layer(CatchPanicLayer::new()),
     );
     let app: Router<()> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
-    app
+    app.layer(TokioTaskMetricsLayer)
 }
 
 #[tokio::main]
@@ -329,38 +330,9 @@ async fn main() -> Result<(), AppError> {
 
 #[tracing::instrument]
 async fn program() -> Result<(), AppError> {
-    let meter = opentelemetry::global::meter("perfect-group-allocation");
-
     initialize_favicon_ico().await;
     initialize_index_css();
     initialize_openid_client().await;
-
-    let _monitor = tokio_metrics::TaskMonitor::new();
-    let monitor_root = tokio_metrics::TaskMonitor::new();
-    let monitor_root_create = tokio_metrics::TaskMonitor::new();
-    let monitor_index_css = tokio_metrics::TaskMonitor::new();
-    let monitor_list = tokio_metrics::TaskMonitor::new();
-    let _monitor_download = tokio_metrics::TaskMonitor::new();
-    let _monitor_openidconnect_login = tokio_metrics::TaskMonitor::new();
-    let _monitor_openidconnect_redirect = tokio_metrics::TaskMonitor::new();
-
-    let interval_root = std::sync::Mutex::new(monitor_root.intervals());
-    meter
-        .u64_observable_gauge("mutexgauge.mean_poll_duration")
-        .with_callback(move |gauge| {
-            gauge.observe(
-                interval_root
-                    .lock()
-                    .unwrap()
-                    .next()
-                    .unwrap()
-                    .mean_poll_duration()
-                    .subsec_nanos()
-                    .into(),
-                &[],
-            );
-        })
-        .init();
 
     let handle = tokio::runtime::Handle::current();
     let runtime_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
@@ -387,23 +359,11 @@ async fn program() -> Result<(), AppError> {
     // TODO FIXME use services here so we can specify the error type
     // and then we can build a layer around it
     let app: Router<MyState> = Router::new()
-        .route(
-            "/",
-            get(move |p1, p2| monitor_root.instrument(index(p1, p2))),
-        )
-        .route(
-            "/",
-            post(move |p1, p2, p3, p4| monitor_root_create.instrument(create(p1, p2, p3, p4))),
-        )
-        .route(
-            "/index.css",
-            get(move |p1, p2, p3| monitor_index_css.instrument(indexcss(p1, p2, p3))),
-        )
+        .route("/", get(index))
+        .route("/", post(create))
+        .route("/index.css", get(indexcss))
         .route("/favicon.ico", get(favicon_ico))
-        .route(
-            "/list",
-            get(move |p1, p2, p3| monitor_list.instrument(list(p1, p2, p3))),
-        )
+        .route("/list", get(list))
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))
         .route_service(
