@@ -1,3 +1,5 @@
+pub mod tokio_metrics;
+
 use opentelemetry::global::{self, logger_provider};
 use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;

@@ -38,6 +38,8 @@ podman compose logs opentelemetry-collector
 # grafana http://localhost:3001
 # add prometheus source to grafana: http://prometheus:9090, SET INTERVAL TO THE SAME AS OTEL_METRIC_EXPORT_INTERVAL in seconds
 
+https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html
+
 # otel-v1-apm-span-*
 
 podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
