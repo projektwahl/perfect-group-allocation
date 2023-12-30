@@ -321,8 +321,8 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 async fn main() -> Result<(), AppError> {
     //console_subscriber::init(); // drags in old axum
 
-    const DEFAULT_LOG_LEVEL: &str = "trace,tokio=debug,h2=debug,runtime=debug,hyper=info,\
-                                     reqwest=info,tower=info,tonic=info,tower_http=trace";
+    const DEFAULT_LOG_LEVEL: &str = "trace,tokio=debug,runtime=debug,hyper=info,reqwest=info,\
+                                     h2=info,tower=info,tonic=info,tower_http=trace";
 
     let resource = opentelemetry_sdk::Resource::new(vec![KeyValue::new(
         opentelemetry_semantic_conventions::resource::SERVICE_NAME,
