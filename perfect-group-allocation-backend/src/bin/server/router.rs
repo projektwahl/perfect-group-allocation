@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use axum::handler::Handler;
 use axum::routing::MethodRouter;
 use axum::Router;
 use opentelemetry::metrics::Unit;
@@ -13,7 +14,13 @@ use crate::MyState;
 #[derive(Default)]
 pub struct MyRouter {
     router: Router<MyState>,
-    task_monitors: HashMap<String, TaskMonitor>,
+    task_monitors: HashMap<(Method, String), TaskMonitor>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Method {
+    Get,
+    Post,
 }
 
 impl MyRouter {
@@ -23,7 +30,12 @@ impl MyRouter {
 
     #[track_caller]
     #[must_use]
-    pub fn route(mut self, path: &'static str, method_router: MethodRouter<MyState>) -> Self {
+    pub fn route<T: 'static, H: Handler<T, MyState>>(
+        mut self,
+        path: &'static str,
+        method: Method,
+        handler: H,
+    ) -> Self {
         let meter = opentelemetry::global::meter("perfect-group-allocation");
         let new_task_monitor = TaskMonitor::default();
 
@@ -41,16 +53,21 @@ impl MyRouter {
             .register_callback(
                 &[mean_poll_duration.as_any(), slow_poll_ratio.as_any()],
                 move |observer| {
-                    // TODO FIXME get and post?
                     debug!("metrics for {}", path);
                     let task_metrics = interval_root.lock().unwrap().next().unwrap();
                     observer.observe_u64(
                         &mean_poll_duration,
                         task_metrics.mean_poll_duration().subsec_nanos().into(),
-                        &[KeyValue::new(
-                            opentelemetry_semantic_conventions::trace::URL_PATH,
-                            path,
-                        )],
+                        &[
+                            KeyValue::new(
+                                opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD,
+                                path,
+                            ),
+                            KeyValue::new(
+                                opentelemetry_semantic_conventions::trace::URL_PATH,
+                                path,
+                            ),
+                        ],
                     );
                     observer.observe_f64(
                         &slow_poll_ratio,
@@ -63,9 +80,13 @@ impl MyRouter {
                 },
             )
             .unwrap();
-        self.task_monitors.insert(path.to_owned(), new_task_monitor);
+        assert!(
+            self.task_monitors
+                .insert(path.to_owned(), new_task_monitor)
+                .is_none()
+        );
         Self {
-            router: self.router.route(&path, method_router),
+            router: self.router.route(path, method_router),
             task_monitors: self.task_monitors,
         }
     }
