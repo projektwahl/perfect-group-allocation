@@ -1,17 +1,40 @@
-use opentelemetry::global::logger_provider;
+use opentelemetry::global::{self, logger_provider};
 use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::Resource;
+use opentelemetry_sdk::metrics::SdkMeterProvider;
+use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;
 
 // https://github.com/open-telemetry/opentelemetry-rust/commit/897e70a0936f11efcc05cfc9c342891fb2976f35
 
-fn setup_tracing(resource: Resource) {
+pub struct OpenTelemetryGuard {
+    meter_provider: SdkMeterProvider,
+}
+
+impl Drop for OpenTelemetryGuard {
+    fn drop(&mut self) {
+        println!("flushing telemetry on drop");
+        global::shutdown_tracer_provider();
+        global::shutdown_logger_provider();
+        if let Err(err) = self.meter_provider.shutdown() {
+            eprintln!("{err:?}");
+        }
+        println!("flushed telemetry on drop");
+    }
+}
+
+#[must_use]
+pub fn setup_telemetry() -> OpenTelemetryGuard {
     const DEFAULT_LOG_LEVEL: &str = "trace,tokio=debug,runtime=debug,hyper=info,reqwest=info,\
                                      h2=info,tower=info,tonic=info,tower_http=trace";
+
+    let resource = opentelemetry_sdk::Resource::new(vec![KeyValue::new(
+        opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+        "perfect-group-allocation",
+    )]);
 
     // will also redirect log events to trace events
     let stdout_log = tracing_subscriber::fmt::layer().pretty();
@@ -24,10 +47,22 @@ fn setup_tracing(resource: Resource) {
                     .tonic()
                     .with_endpoint("http://localhost:4317"),
             )
-            .with_trace_config(opentelemetry_sdk::trace::config().with_resource(resource))
+            .with_trace_config(opentelemetry_sdk::trace::config().with_resource(resource.clone()))
             .install_batch(opentelemetry_sdk::runtime::Tokio)
             .unwrap(),
     );
+
+    let meter_provider = opentelemetry_otlp::new_pipeline()
+        .metrics(opentelemetry_sdk::runtime::Tokio)
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint("http://localhost:4317"),
+        )
+        .with_resource(resource.clone())
+        .build()
+        .unwrap();
+    let opentelemetry_metrics = MetricsLayer::new(meter_provider.clone());
 
     tracing_subscriber::registry()
         .with(console_subscriber::spawn())
@@ -43,10 +78,9 @@ fn setup_tracing(resource: Resource) {
                     .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.into()),
             ),
         )
+        .with(opentelemetry_metrics)
         .init();
-}
 
-fn setup_logging(resource: Resource) {
     let logger = opentelemetry_otlp::new_pipeline()
         .logging()
         .with_exporter(
@@ -60,28 +94,6 @@ fn setup_logging(resource: Resource) {
 
     let logger_provider = logger_provider();
     OpenTelemetryTracingBridge::new(&logger_provider);
-}
 
-fn setup_metrics(resource: Resource) {
-    let meter_provider = opentelemetry_otlp::new_pipeline()
-        .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint("http://localhost:4317"),
-        )
-        .with_resource(resource)
-        .build()
-        .unwrap();
-}
-
-pub fn setup_telemetry() {
-    let resource = opentelemetry_sdk::Resource::new(vec![KeyValue::new(
-        opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-        "perfect-group-allocation",
-    )]);
-
-    setup_tracing(resource.clone());
-    setup_logging(resource.clone());
-    setup_metrics(resource);
+    OpenTelemetryGuard { meter_provider }
 }

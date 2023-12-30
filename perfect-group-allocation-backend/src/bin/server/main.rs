@@ -321,14 +321,11 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    setup_telemetry();
+    let _guard = setup_telemetry();
 
     let meter = opentelemetry::global::meter("perfect-group-allocation");
 
     let metric_mean_poll_duration = meter.u64_gauge("gauge.mean_poll_duration").init();
-
-    //opentelemetry::global::set_meter_provider(meter_provider.clone());
-    //opentelemetry::global::set_tracer_provider(tracer.clone());
 
     initialize_favicon_ico().await;
     initialize_index_css();
@@ -363,6 +360,7 @@ async fn main() -> Result<(), AppError> {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
 
+                // we can actually do this using the observable one with .intervals()
                 metric_mean_poll_duration.record(
                     interval_root.mean_poll_duration().subsec_nanos().into(),
                     &[],
@@ -476,7 +474,33 @@ async fn main() -> Result<(), AppError> {
     .await
     .unwrap();*/
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
-    axum::serve(listener, app.into_make_service()).await?;
-    opentelemetry::global::shutdown_tracer_provider(); // sending remaining spans
+    axum::serve(listener, app.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
     Ok(())
+}
+
+#[allow(clippy::redundant_pub_crate)]
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
+    }
 }
