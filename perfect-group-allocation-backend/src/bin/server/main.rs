@@ -56,7 +56,7 @@ use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{error, trace, Subscriber};
+use tracing::{error, trace, warn, Subscriber};
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::filter::Filtered;
 use tracing_subscriber::layer::SubscriberExt;
@@ -323,6 +323,19 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 async fn main() -> Result<(), AppError> {
     let _guard = setup_telemetry();
 
+    let result = program().await;
+
+    // this is outside of the span so it doesnt get logged?
+
+    //_guard.shutdown();
+
+    //tokio::time::sleep(Duration::from_secs(5)).await;
+
+    result
+}
+
+#[tracing::instrument]
+async fn program() -> Result<(), AppError> {
     let meter = opentelemetry::global::meter("perfect-group-allocation");
 
     let metric_mean_poll_duration = meter.u64_gauge("gauge.mean_poll_duration").init();
@@ -474,9 +487,11 @@ async fn main() -> Result<(), AppError> {
     .await
     .unwrap();*/
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
+
     axum::serve(listener, app.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await?;
+    warn!("SHUTDOWN");
     Ok(())
 }
 

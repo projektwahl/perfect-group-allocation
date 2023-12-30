@@ -12,11 +12,17 @@ use tracing_subscriber::Layer;
 
 pub struct OpenTelemetryGuard {
     meter_provider: SdkMeterProvider,
+    tracing_provider: opentelemetry_sdk::trace::TracerProvider,
 }
 
 impl Drop for OpenTelemetryGuard {
     fn drop(&mut self) {
         println!("flushing telemetry on drop");
+        for result in self.tracing_provider.force_flush() {
+            if let Err(err) = result {
+                eprintln!("{err:?}");
+            }
+        }
         global::shutdown_tracer_provider();
         global::shutdown_logger_provider();
         if let Err(err) = self.meter_provider.shutdown() {
@@ -39,18 +45,18 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
     // will also redirect log events to trace events
     let stdout_log = tracing_subscriber::fmt::layer().pretty();
 
-    let tracing_layer = tracing_opentelemetry::layer().with_tracer(
-        opentelemetry_otlp::new_pipeline()
-            .tracing()
-            .with_exporter(
-                opentelemetry_otlp::new_exporter()
-                    .tonic()
-                    .with_endpoint("http://localhost:4317"),
-            )
-            .with_trace_config(opentelemetry_sdk::trace::config().with_resource(resource.clone()))
-            .install_batch(opentelemetry_sdk::runtime::Tokio)
-            .unwrap(),
-    );
+    let tracing_provider = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint("http://localhost:4317"),
+        )
+        .with_trace_config(opentelemetry_sdk::trace::config().with_resource(resource.clone()))
+        .install_batch(opentelemetry_sdk::runtime::Tokio)
+        .unwrap();
+
+    let tracing_layer = tracing_opentelemetry::layer().with_tracer(tracing_provider.clone());
 
     let meter_provider = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
@@ -95,5 +101,8 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
     let logger_provider = logger_provider();
     OpenTelemetryTracingBridge::new(&logger_provider);
 
-    OpenTelemetryGuard { meter_provider }
+    OpenTelemetryGuard {
+        meter_provider,
+        tracing_provider: tracing_provider.provider().unwrap(),
+    }
 }
