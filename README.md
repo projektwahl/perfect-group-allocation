@@ -63,7 +63,6 @@ RUST_LOG=tower_http=debug RUST_BACKTRACE=1 cargo run --bin server
 ## Metrics
 
 ```
-podman run -p 9090:9090 -v ./prometheus.yml:/prometheus/prometheus.yml docker.io/prom/prometheus --enable-feature=otlp-write-receiver
 firefox http://localhost:9090/
 ```
 
@@ -97,9 +96,8 @@ would be without security plugin
 ```
 
 ## Grafana
-
+https://grafana.com/docs/agent/latest/flow/reference/components/otelcol.receiver.otlp/
 ```
-podman run -d --name=grafana -p 3000:3000 docker.io/grafana/grafana
 ```
 
 ## Async profiling

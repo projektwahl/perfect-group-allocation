@@ -95,9 +95,28 @@ services:
     volumes:
       - ./opentelemetry-collector-config.yaml:/etc/otelcol/config.yaml
     expose:
-      "4317" # OTLP gRPC receiver
+      - "4317" # OTLP gRPC receiver
     ports:
       - 4317:4317 # OTLP gRPC receiver
+    networks:
+      - opensearch-net
+  prometheus:
+    image: docker.io/prom/prometheus
+    command: --enable-feature=otlp-write-receiver
+    container_name: prometheus
+    expose:
+      - "9090"
+    ports:
+      - 9090:9090
+    volumes:
+      ./prometheus.yml:/prometheus/prometheus.yml
+    networks:
+      - opensearch-net
+  grafana:
+    image: docker.io/grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
     networks:
       - opensearch-net
 

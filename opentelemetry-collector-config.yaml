@@ -14,6 +14,8 @@ exporters:
     endpoint: opensearch-data-prepper:21890
     tls:
       insecure: true
+  otlphttp/prometheus:
+    endpoint: http://localhost:9090/api/v1/otlp
 
 service:
   pipelines:
@@ -23,15 +25,18 @@ service:
       exporters:
         - otlphttp/jaeger
         - otlp/opensearch
+        - otlphttp/prometheus
     metrics:
       receivers: [otlp]
       processors: [batch]
       exporters:
         - otlphttp/jaeger
         - otlp/opensearch
+        - otlphttp/prometheus
     logs:
       receivers: [otlp]
       processors: [batch]
       exporters:
         - otlphttp/jaeger
         - otlp/opensearch
+        - otlphttp/prometheus
