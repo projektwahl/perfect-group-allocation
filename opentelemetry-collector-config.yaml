@@ -8,26 +8,30 @@ processors:
   batch:
 
 exporters:
-  otlphttp:
+  otlphttp/jaeger:
     endpoint: http://jaeger:4318
-
-extensions:
-  health_check:
-  pprof:
-  zpages:
+  otlphttp/opensearch:
+    traces_endpoint: http://opensearch-data-prepper:21890
+    metrics_endpoint: http://opensearch-data-prepper:21890
+    logs_endpoint: http://opensearch-data-prepper:21890
 
 service:
-  extensions: [health_check, pprof, zpages]
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlphttp]
+      exporters:
+        - otlphttp/jaeger
+        - otlphttp/opensearch
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlphttp]
+      exporters:
+        - otlphttp/jaeger
+        - otlphttp/opensearch
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlphttp]
+      exporters:
+        - otlphttp/jaeger
+        - otlphttp/opensearch
