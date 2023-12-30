@@ -53,6 +53,7 @@ tokio-metrics = { version = "0.3" }
 zero-cost-templating = { git = "https://github.com/mohe2015/zero-cost-templating.git", branch = "work" }
 bytes = "1"
 pin-project = "1"
+crossbeam = "0.8"
 
 # https://github.com/open-telemetry/opentelemetry-rust/pull/1410
 opentelemetry = { version = "0.21", features = ["metrics"] }

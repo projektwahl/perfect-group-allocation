@@ -11,6 +11,7 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use axum::extract::{MatchedPath, Request};
+use crossbeam::atomic::AtomicCell;
 use opentelemetry::metrics::Unit;
 use opentelemetry::KeyValue;
 use pin_project::pin_project;
@@ -19,9 +20,11 @@ use tokio_metrics::TaskMonitor;
 use tower::{Layer, Service};
 use tracing::{debug, error};
 
+// we should really initialize at start
+
 #[derive(Clone)]
 pub struct TokioTaskMetricsLayer {
-    task_monitors: Arc<RwLock<HashMap<String, TaskMonitor>>>,
+    task_monitors: Arc<AtomicCell<Arc<HashMap<String, TaskMonitor>>>>,
 }
 
 impl TokioTaskMetricsLayer {
