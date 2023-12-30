@@ -17,6 +17,7 @@ mod error;
 mod openid;
 pub mod routes;
 pub mod session;
+pub mod telemetry;
 
 use core::convert::Infallible;
 use core::time::Duration;
@@ -48,6 +49,7 @@ use sea_orm::{Database, DatabaseConnection};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
+use telemetry::setup_telemetry;
 use tokio::net::TcpListener;
 use tower::{service_fn, ServiceBuilder};
 use tower_http::catch_panic::CatchPanicLayer;
@@ -319,90 +321,11 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    //console_subscriber::init(); // drags in old axum
+    setup_telemetry();
 
-    const DEFAULT_LOG_LEVEL: &str = "trace,tokio=debug,runtime=debug,hyper=info,reqwest=info,\
-                                     h2=info,tower=info,tonic=info,tower_http=trace";
+    let meter = opentelemetry::global::meter("perfect-group-allocation");
 
-    let resource = opentelemetry_sdk::Resource::new(vec![KeyValue::new(
-        opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-        "perfect-group-allocation",
-    )]);
-
-    // will also redirect log events to trace events
-    let stdout_log = tracing_subscriber::fmt::layer().pretty();
-
-    let tracing_layer = tracing_opentelemetry::layer().with_tracer(
-        opentelemetry_otlp::new_pipeline()
-            .tracing()
-            .with_exporter(
-                opentelemetry_otlp::new_exporter()
-                    .tonic()
-                    .with_endpoint("http://localhost:4317"),
-            )
-            .with_trace_config(opentelemetry_sdk::trace::config().with_resource(resource.clone()))
-            .install_batch(opentelemetry_sdk::runtime::Tokio)
-            .unwrap(),
-    );
-
-    tracing_subscriber::registry()
-        .with(console_subscriber::spawn())
-        .with(
-            stdout_log.with_filter(
-                tracing_subscriber::EnvFilter::try_from_default_env()
-                    .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.into()),
-            ),
-        )
-        .with(
-            tracing_layer.with_filter(
-                tracing_subscriber::EnvFilter::try_from_default_env()
-                    .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.into()),
-            ),
-        )
-        .init();
-
-    let logger = opentelemetry_otlp::new_pipeline()
-        .logging()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint("http://localhost:4317"),
-        )
-        .with_log_config(opentelemetry_sdk::logs::Config::default().with_resource(resource.clone()))
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
-        .unwrap();
-
-    let logger_provider = logger_provider();
-    OpenTelemetryTracingBridge::new(&logger_provider);
-
-    let meter_provider = opentelemetry_otlp::new_pipeline()
-        .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint("http://localhost:4317"),
-        )
-        .with_resource(resource.clone())
-        .build()
-        .unwrap();
-
-    // TODO FIXME add opentelemetry logs feature
-    // https://github.com/open-telemetry/opentelemetry-rust/tree/5aa0311de87442604598c1c9b81b045bae58aea1/opentelemetry-otlp/examples
-
-    // https://github.com/opensearch-project/data-prepper/blob/f19de03d5418925935e019837fc4824fb250820c/data-prepper-api/src/main/java/org/opensearch/dataprepper/model/trace/DefaultSpanEvent.java#L31
-    // https://docs.rs/tracing/latest/tracing/index.html#using-the-macros
-    // maybe it doesn't always set an event name:
-
-    // https://github.com/open-telemetry/opentelemetry-rust/issues/1349
-    // https://github.com/open-telemetry/opentelemetry-rust/pull/1346
-    // https://github.com/tokio-rs/tracing/pull/2699
-
-    let meter = meter_provider.meter("perfect-group-allocation");
-
-    let histogram = meter
-        .u64_histogram("index.mean_poll_duration")
-        .with_description("Records values")
-        .init();
+    let metric_mean_poll_duration = meter.u64_gauge("gauge.mean_poll_duration").init();
 
     //opentelemetry::global::set_meter_provider(meter_provider.clone());
     //opentelemetry::global::set_tracer_provider(tracer.clone());
@@ -439,7 +362,8 @@ async fn main() -> Result<(), AppError> {
             {
                 // pretty-print the metric interval
                 // these metrics seem to work (tested using index.css spawn_blocking)
-                histogram.record(
+
+                metric_mean_poll_duration.record(
                     interval_root.mean_poll_duration().subsec_nanos().into(),
                     &[],
                 );
@@ -469,7 +393,7 @@ async fn main() -> Result<(), AppError> {
                     interval_list.mean_slow_poll_duration()
                 );*/
                 // wait 500ms
-                tokio::time::sleep(Duration::from_millis(500)).await;
+                tokio::time::sleep(Duration::from_millis(1000)).await;
             }
         });
     }
