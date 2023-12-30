@@ -15,7 +15,7 @@ exporters:
     tls:
       insecure: true
   otlphttp/prometheus:
-    endpoint: http://localhost:9090/api/v1/otlp
+    endpoint: http://prometheus:9090/api/v1/otlp
 
 service:
   pipelines:
@@ -24,19 +24,17 @@ service:
       processors: [batch]
       exporters:
         - otlphttp/jaeger
-        - otlp/opensearch
-        - otlphttp/prometheus
+        #- otlp/opensearch
     metrics:
       receivers: [otlp]
       processors: [batch]
       exporters:
-        - otlphttp/jaeger
-        - otlp/opensearch
+        #- otlp/opensearch
         - otlphttp/prometheus
     logs:
       receivers: [otlp]
       processors: [batch]
       exporters:
         - otlphttp/jaeger
-        - otlp/opensearch
+        #- otlp/opensearch
         - otlphttp/prometheus

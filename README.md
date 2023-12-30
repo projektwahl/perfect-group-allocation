@@ -14,7 +14,6 @@ https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
 https://doc.rust-lang.org/rustdoc/unstable-features.html
 https://rust-lang.github.io/rfcs/3424-cargo-script.html
 parallel rust frontend
-https://doc.rust-lang.org/cargo/reference/manifest.html#the-lints-section
 
 rustup component add rustc-codegen-cranelift-preview --toolchain nightly
 
@@ -24,11 +23,20 @@ warning blocks in rustdoc
 ## Dev
 
 ```bash
+sudo nano /etc/sysctl.conf
+vm.max_map_count=262144
+sudo sysctl -p
+
 pipx install https://github.com/containers/podman-compose/archive/devel.tar.gz # profile support not yet in 1.0.6
-clear && podman compose --profile opensearch up
+clear && podman compose down && podman compose up
+# clear && podman compose --profile opensearch up
+podman compose logs opentelemetry-collector
 
 # jaeger http://localhost:16686
 # opensearch http://localhost:5601
+# prometheus http://localhost:9090
+# grafana http://localhost:3001
+# add prometheus source to grafana: http://prometheus:9090
 
 # otel-v1-apm-span-*
 
@@ -40,64 +48,10 @@ DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin 
 
 
 export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
-OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_LOG=tokio=debug,h2=debug,trace RUST_BACKTRACE=1 cargo run --bin server
+OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
 
 tokio-console
-```
-
-https://datatracker.ietf.org/doc/html/rfc9204
-
-## Tracing
-
-```
-https://opentelemetry.io/docs/collector/
-
-http://localhost:55679/debug/tracez
-
-
-firefox http://localhost:16686/
-RUST_LOG=tower_http=debug RUST_BACKTRACE=1 cargo run --bin server
-```
-
-## Metrics
-
-```
-firefox http://localhost:9090/
-```
-
-## OpenSearch
-
-```
-# Edit the sysctl config file
-sudo nano /etc/sysctl.conf
-
-# Add a line to define the desired value
-# or change the value if the key exists,
-# and then save your changes.
-vm.max_map_count=262144
-
-# Reload the kernel parameters using sysctl
-sudo sysctl -p
-
-# Verify that the change was applied by checking the value
-cat /proc/sys/vm/max_map_count
-
-podman compose up
-
-http://localhost:5601/
-
-admin:admin
-
-# port 21892
-
-https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/#sample-docker-compose-file-for-development
-would be without security plugin
-```
-
-## Grafana
-https://grafana.com/docs/agent/latest/flow/reference/components/otelcol.receiver.otlp/
-```
 ```
 
 ## Async profiling

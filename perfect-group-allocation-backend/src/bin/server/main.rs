@@ -35,6 +35,7 @@ use opentelemetry::global::{self, logger_provider};
 use opentelemetry::metrics::MeterProvider as _;
 use opentelemetry::KeyValue;
 use opentelemetry_appender_log::OpenTelemetryLogBridge;
+use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::trace::Tracer;
 use routes::download::handler;
@@ -318,18 +319,19 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    //console_subscriber::init(); // drags in old axum version
+    //console_subscriber::init(); // drags in old axum
 
     const DEFAULT_LOG_LEVEL: &str = "trace,tokio=debug,h2=debug,runtime=debug,hyper=info,\
                                      reqwest=info,tower=info,tonic=info,tower_http=trace";
-
-    let stdout_log = tracing_subscriber::fmt::layer().pretty();
 
     let resource = opentelemetry_sdk::Resource::new(vec![KeyValue::new(
         opentelemetry_semantic_conventions::resource::SERVICE_NAME,
         "perfect-group-allocation",
     )]);
-    // TODO use docker run -p 4317:4317 otel/opentelemetry-collector-dev:latest
+
+    // will also redirect log events to trace events
+    let stdout_log = tracing_subscriber::fmt::layer().pretty();
+
     let tracing_layer = tracing_opentelemetry::layer().with_tracer(
         opentelemetry_otlp::new_pipeline()
             .tracing()
@@ -359,6 +361,20 @@ async fn main() -> Result<(), AppError> {
         )
         .init();
 
+    let logger = opentelemetry_otlp::new_pipeline()
+        .logging()
+        .with_exporter(
+            opentelemetry_otlp::new_exporter()
+                .tonic()
+                .with_endpoint("http://localhost:4317"),
+        )
+        .with_log_config(opentelemetry_sdk::logs::Config::default().with_resource(resource.clone()))
+        .install_batch(opentelemetry_sdk::runtime::Tokio)
+        .unwrap();
+
+    let logger_provider = logger_provider();
+    OpenTelemetryTracingBridge::new(&logger_provider);
+
     let meter_provider = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
         .with_exporter(
@@ -369,27 +385,6 @@ async fn main() -> Result<(), AppError> {
         .with_resource(resource.clone())
         .build()
         .unwrap();
-
-    let logger = opentelemetry_otlp::new_pipeline()
-        .logging()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint("http://localhost:4317"),
-        )
-        .with_log_config(opentelemetry_sdk::logs::Config::default().with_resource(resource))
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
-        .unwrap();
-
-    let logger_provider = logger_provider();
-
-    // Create a new OpenTelemetryLogBridge using the above LoggerProvider.
-    let otel_log_appender = OpenTelemetryLogBridge::new(&logger_provider);
-    log::set_boxed_logger(Box::new(otel_log_appender)).unwrap();
-    log::set_max_level(log::Level::Info.to_level_filter());
-
-    let tracer = global::tracer("perfect-group-allocation");
-    let meter = global::meter("perfect-group-allocation");
 
     // TODO FIXME add opentelemetry logs feature
     // https://github.com/open-telemetry/opentelemetry-rust/tree/5aa0311de87442604598c1c9b81b045bae58aea1/opentelemetry-otlp/examples

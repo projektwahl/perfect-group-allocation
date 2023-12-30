@@ -132,16 +132,17 @@ services:
   # so install mimir?
   # https://grafana.com/docs/mimir/latest/get-started/
   # also shows how to add mimir to grafana
-  grafana-mimir:
-    image: grafana/mimir:latest
-    container_name: mimir
-    command: --config.file=/etc/mimir/demo.yaml
-    ports:
-      - 9009:9009
-    volumes:
-      - ./grafana-mimir.yaml:/etc/mimir/demo.yaml
-    networks:
-      - opensearch-net
+  # to my understanding mimir is just a data backend for grafana so we can also use prometheus as data backend
+  #grafana-mimir:
+  #  image: grafana/mimir:latest
+  #  container_name: mimir
+  #  command: --config.file=/etc/mimir/demo.yaml
+  #  ports:
+  #    - 9009:9009
+  #  volumes:
+  #    - ./grafana-mimir.yaml:/etc/mimir/demo.yaml
+  #  networks:
+  #    - opensearch-net
 
 volumes:
   opensearch-data1:
