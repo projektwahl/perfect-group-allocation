@@ -15,6 +15,7 @@ pub mod csrf_protection;
 mod entities;
 mod error;
 mod openid;
+pub mod router;
 pub mod routes;
 pub mod session;
 pub mod telemetry;
@@ -66,13 +67,14 @@ use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Layer, Registry};
 
 use crate::openid::initialize_openid_client;
+use crate::router::MyRouter;
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
 
 pub trait CsrfSafeExtractor {}
 
 #[derive(Clone, FromRef)]
-struct MyState {
+pub struct MyState {
     database: DatabaseConnection,
     key: Key,
 }
@@ -317,7 +319,7 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
             .layer(CatchPanicLayer::new()),
     );
     let app: Router<()> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
-    app.layer(TokioTaskMetricsLayer::new())
+    app
 }
 
 #[tokio::main]
@@ -354,11 +356,7 @@ async fn program() -> Result<(), AppError> {
 
     let service = ServeDir::new("frontend");
 
-    // RUST_LOG=tower_http::trace=TRACE cargo run --bin server
-
-    // TODO FIXME use services here so we can specify the error type
-    // and then we can build a layer around it
-    let app: Router<MyState> = Router::new()
+    let my_router = MyRouter::new()
         .route("/", get(index))
         .route("/", post(create))
         .route("/index.css", get(indexcss))
@@ -366,6 +364,10 @@ async fn program() -> Result<(), AppError> {
         .route("/list", get(list))
         .route("/download", get(handler))
         .route("/openidconnect-login", post(openid_login))
+        .route("/openidconnect-redirect", get(openid_redirect));
+
+    let app = my_router
+        .finish()
         .route_service(
             "/test",
             service_fn(|req: http::Request<axum::body::Body>| async move {
@@ -374,7 +376,6 @@ async fn program() -> Result<(), AppError> {
                 Ok::<_, Infallible>(res)
             }),
         )
-        .route("/openidconnect-redirect", get(openid_redirect))
         .fallback_service(service);
 
     let app = layers(app, db);
