@@ -55,12 +55,12 @@ bytes = "1"
 pin-project = "1"
 
 # https://github.com/open-telemetry/opentelemetry-rust/pull/1410
-opentelemetry = { git = "https://github.com/open-telemetry/opentelemetry-rust.git", features = ["metrics", "otel_unstable"] }
-opentelemetry_sdk = { git = "https://github.com/open-telemetry/opentelemetry-rust.git", features = ["metrics", "rt-tokio"] }
-opentelemetry-otlp = { git = "https://github.com/open-telemetry/opentelemetry-rust.git", features = ["metrics", "http-proto", "reqwest-client", "logs"] }
-opentelemetry-semantic-conventions = { git = "https://github.com/open-telemetry/opentelemetry-rust.git" }
-opentelemetry-appender-log = { git = "https://github.com/open-telemetry/opentelemetry-rust.git" }
-opentelemetry-appender-tracing = { git = "https://github.com/open-telemetry/opentelemetry-rust.git" }
+opentelemetry = { version = "0.21", features = ["metrics"] }
+opentelemetry_sdk = { version = "0.21", features = ["metrics", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.14", features = ["metrics", "http-proto", "reqwest-client", "logs"] }
+opentelemetry-semantic-conventions = { version = "0.13" }
+opentelemetry-appender-log = { version = "0.2" }
+opentelemetry-appender-tracing = { version = "0.2" }
 tracing = "0.1"
-tracing-opentelemetry = { git = "https://github.com/mohe2015/tracing-opentelemetry.git" }
+tracing-opentelemetry = { version = "0.22" }
 tracing-subscriber = "0.3"

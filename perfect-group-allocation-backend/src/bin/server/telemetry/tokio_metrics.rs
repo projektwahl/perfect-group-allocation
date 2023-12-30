@@ -17,6 +17,7 @@ use pin_project::pin_project;
 use tokio::time::Sleep;
 use tokio_metrics::TaskMonitor;
 use tower::{Layer, Service};
+use tracing::{debug, error};
 
 #[derive(Clone)]
 pub struct TokioTaskMetricsLayer;
@@ -25,6 +26,7 @@ impl<S> Layer<S> for TokioTaskMetricsLayer {
     type Service = TokioTaskMetrics<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
+        error!("lol");
         TokioTaskMetrics::new(inner)
     }
 }
@@ -68,45 +70,32 @@ where
             let interval_root = std::sync::Mutex::new(new_task_monitor.intervals());
             let path = Arc::new(path);
 
-            let mean_poll_duration = Arc::new(
-                meter
-                    .u64_observable_gauge("tokio.task_monitor.mean_poll_duration")
-                    .with_unit(Unit::new("ns"))
-                    .init(),
-            );
-            let slow_poll_ratio = Arc::new(
-                meter
-                    .f64_observable_gauge("tokio.task_monitor.slow_poll_ratio")
-                    .init(),
-            );
+            let mean_poll_duration = meter
+                .u64_observable_gauge("tokio.task_monitor.mean_poll_duration")
+                .with_unit(Unit::new("ns"))
+                .init();
+            let slow_poll_ratio = meter
+                .f64_observable_gauge("tokio.task_monitor.slow_poll_ratio")
+                .init();
 
             meter
                 .register_callback(
-                    &[mean_poll_duration.clone(), slow_poll_ratio.clone()],
+                    &[mean_poll_duration.as_any(), slow_poll_ratio.as_any()],
                     move |observer| {
+                        // TODO FIXME get and post?
+                        debug!("metrics for {}", path);
+                        let task_metrics = interval_root.lock().unwrap().next().unwrap();
                         observer.observe_u64(
-                            &*mean_poll_duration,
-                            interval_root
-                                .lock()
-                                .unwrap()
-                                .next()
-                                .unwrap()
-                                .mean_poll_duration()
-                                .subsec_nanos()
-                                .into(),
+                            &mean_poll_duration,
+                            task_metrics.mean_poll_duration().subsec_nanos().into(),
                             &[KeyValue::new(
                                 opentelemetry_semantic_conventions::trace::URL_PATH,
                                 path.deref().clone(),
                             )],
                         );
                         observer.observe_f64(
-                            &*slow_poll_ratio,
-                            interval_root
-                                .lock()
-                                .unwrap()
-                                .next()
-                                .unwrap()
-                                .slow_poll_ratio(),
+                            &slow_poll_ratio,
+                            task_metrics.slow_poll_ratio(),
                             &[KeyValue::new(
                                 opentelemetry_semantic_conventions::trace::URL_PATH,
                                 path.deref().clone(),
