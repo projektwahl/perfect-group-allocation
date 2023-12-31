@@ -36,17 +36,91 @@ impl MyRouter {
 
         let interval_root = std::sync::Mutex::new(new_task_monitor.intervals());
 
-        let mean_poll_duration = meter
-            .u64_observable_gauge("tokio.task_monitor.mean_poll_duration")
+        let dropped_count = meter
+            .u64_observable_gauge("tokio.task_metrics.dropped_count")
+            .init();
+        let first_poll_count = meter
+            .u64_observable_gauge("tokio.task_metrics.first_poll_count")
+            .init();
+        let instrumented_count = meter
+            .u64_observable_gauge("tokio.task_metrics.instrumented_count")
+            .init();
+        let total_fast_poll_count = meter
+            .u64_observable_gauge("tokio.task_metrics.total_fast_poll_count")
+            .init();
+        let total_fast_poll_duration = meter
+            .u64_observable_gauge("tokio.task_metrics.total_fast_poll_duration")
             .with_unit(Unit::new("ns"))
             .init();
-        let slow_poll_ratio = meter
-            .f64_observable_gauge("tokio.task_monitor.slow_poll_ratio")
+        let total_first_poll_delay = meter
+            .u64_observable_gauge("tokio.task_metrics.total_first_poll_delay")
+            .with_unit(Unit::new("ns"))
+            .init();
+        let total_idle_duration = meter
+            .u64_observable_gauge("tokio.task_metrics.total_idle_duration")
+            .with_unit(Unit::new("ns"))
+            .init();
+        let total_idled_count = meter
+            .u64_observable_gauge("tokio.task_metrics.total_idled_count")
+            .init();
+        let total_long_delay_count = meter
+            .u64_observable_gauge("tokio.task_metrics.total_long_delay_count")
+            .init();
+        let total_long_delay_duration = meter
+            .u64_observable_gauge("tokio.task_metrics.total_long_delay_duration")
+            .with_unit(Unit::new("ns"))
+            .init();
+        let total_poll_count = meter
+            .u64_observable_gauge("tokio.task_metrics.total_poll_count")
+            .init();
+        let total_poll_duration = meter
+            .u64_observable_gauge("tokio.task_metrics.total_poll_duration")
+            .with_unit(Unit::new("ns"))
+            .init();
+        let total_scheduled_count = meter
+            .u64_observable_gauge("tokio.task_metrics.total_scheduled_count")
+            .init();
+        let total_scheduled_duration = meter
+            .u64_observable_gauge("tokio.task_metrics.total_scheduled_duration")
+            .with_unit(Unit::new("ns"))
+            .init();
+        let total_short_delay_count = meter
+            .u64_observable_gauge("tokio.task_metrics.total_short_delay_count")
+            .init();
+        let total_short_delay_duration = meter
+            .u64_observable_gauge("tokio.task_metrics.total_short_delay_duration")
+            .with_unit(Unit::new("ns"))
+            .init();
+        let total_slow_poll_count = meter
+            .u64_observable_gauge("tokio.task_metrics.total_slow_poll_count")
+            .init();
+        let total_slow_poll_duration = meter
+            .u64_observable_gauge("tokio.task_metrics.total_slow_poll_duration")
+            .with_unit(Unit::new("ns"))
             .init();
 
         meter
             .register_callback(
-                &[mean_poll_duration.as_any(), slow_poll_ratio.as_any()],
+                &[
+                    dropped_count.as_any(),
+                    first_poll_count.as_any(),
+                    instrumented_count.as_any(),
+                    total_fast_poll_count.as_any(),
+                    total_fast_poll_duration.as_any(),
+                    total_first_poll_delay.as_any(),
+                    total_idle_duration.as_any(),
+                    total_idled_count.as_any(),
+                    total_long_delay_count.as_any(),
+                    total_long_delay_duration.as_any(),
+                    total_poll_count.as_any(),
+                    total_poll_duration.as_any(),
+                    total_scheduled_count.as_any(),
+                    total_scheduled_duration.as_any(),
+                    total_short_delay_count.as_any(),
+                    total_short_delay_duration.as_any(),
+                    total_slow_poll_count.as_any(),
+                    total_slow_poll_duration.as_any(),
+                ],
                 move |observer| {
                     let task_metrics = interval_root.lock().unwrap().next().unwrap();
                     let attrs = &[
@@ -56,18 +130,112 @@ impl MyRouter {
                         ),
                         KeyValue::new(opentelemetry_semantic_conventions::trace::URL_PATH, path),
                     ];
-                    debug!(
-                        "metrics for {} {} {:?}",
-                        method,
-                        path,
-                        task_metrics.mean_poll_duration().subsec_nanos()
-                    );
+                    observer.observe_u64(&dropped_count, task_metrics.dropped_count, attrs);
+                    observer.observe_u64(&first_poll_count, task_metrics.first_poll_count, attrs);
                     observer.observe_u64(
-                        &mean_poll_duration,
-                        task_metrics.mean_poll_duration().subsec_nanos().into(),
+                        &instrumented_count,
+                        task_metrics.instrumented_count,
                         attrs,
                     );
-                    observer.observe_f64(&slow_poll_ratio, task_metrics.slow_poll_ratio(), attrs);
+                    observer.observe_u64(
+                        &total_fast_poll_count,
+                        task_metrics.total_fast_poll_count,
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_fast_poll_duration,
+                        task_metrics
+                            .total_fast_poll_duration
+                            .as_nanos()
+                            .try_into()
+                            .unwrap(),
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_first_poll_delay,
+                        task_metrics
+                            .total_first_poll_delay
+                            .as_nanos()
+                            .try_into()
+                            .unwrap(),
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_idle_duration,
+                        task_metrics
+                            .total_idle_duration
+                            .as_nanos()
+                            .try_into()
+                            .unwrap(),
+                        attrs,
+                    );
+                    observer.observe_u64(&total_idled_count, task_metrics.total_idled_count, attrs);
+                    observer.observe_u64(
+                        &total_long_delay_count,
+                        task_metrics.total_long_delay_count,
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_long_delay_duration,
+                        task_metrics
+                            .total_long_delay_duration
+                            .as_nanos()
+                            .try_into()
+                            .unwrap(),
+                        attrs,
+                    );
+                    observer.observe_u64(&total_poll_count, task_metrics.total_poll_count, attrs);
+                    observer.observe_u64(
+                        &total_poll_duration,
+                        task_metrics
+                            .total_poll_duration
+                            .as_nanos()
+                            .try_into()
+                            .unwrap(),
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_scheduled_count,
+                        task_metrics.total_scheduled_count,
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_scheduled_duration,
+                        task_metrics
+                            .total_scheduled_duration
+                            .as_nanos()
+                            .try_into()
+                            .unwrap(),
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_short_delay_count,
+                        task_metrics.total_short_delay_count,
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_short_delay_duration,
+                        task_metrics
+                            .total_short_delay_duration
+                            .as_nanos()
+                            .try_into()
+                            .unwrap(),
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_slow_poll_count,
+                        task_metrics.total_slow_poll_count,
+                        attrs,
+                    );
+                    observer.observe_u64(
+                        &total_slow_poll_duration,
+                        task_metrics
+                            .total_slow_poll_duration
+                            .as_nanos()
+                            .try_into()
+                            .unwrap(),
+                        attrs,
+                    );
                 },
             )
             .unwrap();
