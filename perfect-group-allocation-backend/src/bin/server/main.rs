@@ -1,6 +1,7 @@
 #![feature(gen_blocks)]
 #![feature(lint_reasons)]
 #![feature(let_chains)]
+#![feature(hash_raw_entry)]
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
@@ -357,14 +358,14 @@ async fn program() -> Result<(), AppError> {
     let service = ServeDir::new("frontend");
 
     let my_router = MyRouter::new()
-        .route("/", get(index))
-        .route("/", post(create))
-        .route("/index.css", get(indexcss))
-        .route("/favicon.ico", get(favicon_ico))
-        .route("/list", get(list))
-        .route("/download", get(handler))
-        .route("/openidconnect-login", post(openid_login))
-        .route("/openidconnect-redirect", get(openid_redirect));
+        .route(&Method::GET, "/", index)
+        .route(&Method::POST, "/", create)
+        .route(&Method::GET, "/index.css", indexcss)
+        .route(&Method::GET, "/favicon.ico", favicon_ico)
+        .route(&Method::GET, "/list", list)
+        .route(&Method::GET, "/download", handler)
+        .route(&Method::POST, "/openidconnect-login", openid_login)
+        .route(&Method::GET, "/openidconnect-redirect", openid_redirect);
 
     let app = my_router
         .finish()

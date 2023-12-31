@@ -3,24 +3,19 @@ use std::collections::HashMap;
 use axum::handler::Handler;
 use axum::routing::MethodRouter;
 use axum::Router;
+use http::Method;
 use opentelemetry::metrics::Unit;
 use opentelemetry::KeyValue;
 use tokio_metrics::TaskMonitor;
 use tracing::debug;
 
-use crate::telemetry::tokio_metrics::TokioTaskMetricsLayer;
+use crate::telemetry::tokio_metrics::{BorrowedMethodAndPath, TokioTaskMetricsLayer};
 use crate::MyState;
 
 #[derive(Default)]
 pub struct MyRouter {
     router: Router<MyState>,
-    task_monitors: HashMap<(Method, String), TaskMonitor>,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-enum Method {
-    Get,
-    Post,
+    task_monitors: HashMap<BorrowedMethodAndPath<'static>, TaskMonitor>,
 }
 
 impl MyRouter {
@@ -32,8 +27,8 @@ impl MyRouter {
     #[must_use]
     pub fn route<T: 'static, H: Handler<T, MyState>>(
         mut self,
+        method: &'static Method,
         path: &'static str,
-        method: Method,
         handler: H,
     ) -> Self {
         let meter = opentelemetry::global::meter("perfect-group-allocation");
@@ -53,7 +48,7 @@ impl MyRouter {
             .register_callback(
                 &[mean_poll_duration.as_any(), slow_poll_ratio.as_any()],
                 move |observer| {
-                    debug!("metrics for {}", path);
+                    debug!("metrics for {} {}", method, path);
                     let task_metrics = interval_root.lock().unwrap().next().unwrap();
                     observer.observe_u64(
                         &mean_poll_duration,
@@ -82,11 +77,18 @@ impl MyRouter {
             .unwrap();
         assert!(
             self.task_monitors
-                .insert(path.to_owned(), new_task_monitor)
+                .insert(BorrowedMethodAndPath { method, path }, new_task_monitor)
                 .is_none()
         );
         Self {
-            router: self.router.route(path, method_router),
+            router: self.router.route(
+                path,
+                match method {
+                    &Method::GET => axum::routing::get(handler),
+                    &Method::POST => axum::routing::post(handler),
+                    _ => unreachable!(),
+                },
+            ),
             task_monitors: self.task_monitors,
         }
     }

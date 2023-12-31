@@ -4,6 +4,7 @@ use std::convert::Infallible;
 // https://github.com/tower-rs/tower/blob/master/guides/building-a-middleware-from-scratch.md
 use std::fmt;
 use std::future::Future;
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::Deref;
 use std::pin::Pin;
 use std::sync::{Arc, RwLock, Weak};
@@ -12,6 +13,7 @@ use std::time::Duration;
 
 use axum::extract::{MatchedPath, Request};
 use crossbeam::atomic::AtomicCell;
+use http::Method;
 use opentelemetry::metrics::Unit;
 use opentelemetry::KeyValue;
 use pin_project::pin_project;
@@ -20,9 +22,15 @@ use tokio_metrics::TaskMonitor;
 use tower::{Layer, Service};
 use tracing::{debug, error};
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub struct BorrowedMethodAndPath<'a> {
+    pub method: &'a Method,
+    pub path: &'a str,
+}
+
 #[derive(Clone)]
 pub struct TokioTaskMetricsLayer {
-    pub task_monitors: HashMap<String, TaskMonitor>,
+    pub task_monitors: HashMap<BorrowedMethodAndPath<'static>, TaskMonitor>,
 }
 
 impl<S> Layer<S> for TokioTaskMetricsLayer {
@@ -39,7 +47,7 @@ impl<S> Layer<S> for TokioTaskMetricsLayer {
 #[derive(Debug, Clone)]
 pub struct TokioTaskMetrics<S> {
     inner: S,
-    task_monitors: HashMap<String, TaskMonitor>,
+    task_monitors: HashMap<BorrowedMethodAndPath<'static>, TaskMonitor>,
 }
 
 impl<S> Service<Request> for TokioTaskMetrics<S>
@@ -55,9 +63,17 @@ where
     }
 
     fn call(&mut self, request: Request) -> Self::Future {
+        let method = request.method();
         let path = request.extensions().get::<MatchedPath>().unwrap().as_str();
 
-        if let Some(task_monitor) = self.task_monitors.get(path) {
+        let mut build_hasher = self.task_monitors.hasher().build_hasher();
+        let key = BorrowedMethodAndPath { method, path };
+        key.hash(&mut build_hasher);
+        if let Some((k, task_monitor)) = self
+            .task_monitors
+            .raw_entry()
+            .from_hash(build_hasher.finish(), |k| key == *k)
+        {
             let response_future = task_monitor.instrument(self.inner.call(request));
 
             ResponseFuture { response_future }
