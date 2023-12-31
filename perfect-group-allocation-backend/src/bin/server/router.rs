@@ -49,6 +49,13 @@ impl MyRouter {
                 &[mean_poll_duration.as_any(), slow_poll_ratio.as_any()],
                 move |observer| {
                     let task_metrics = interval_root.lock().unwrap().next().unwrap();
+                    let attrs = &[
+                        KeyValue::new(
+                            opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD,
+                            method.as_str(),
+                        ),
+                        KeyValue::new(opentelemetry_semantic_conventions::trace::URL_PATH, path),
+                    ];
                     debug!(
                         "metrics for {} {} {:?}",
                         method,
@@ -58,31 +65,9 @@ impl MyRouter {
                     observer.observe_u64(
                         &mean_poll_duration,
                         task_metrics.mean_poll_duration().subsec_nanos().into(),
-                        &[
-                            KeyValue::new(
-                                opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD,
-                                method.as_str(),
-                            ),
-                            KeyValue::new(
-                                opentelemetry_semantic_conventions::trace::URL_PATH,
-                                path,
-                            ),
-                        ],
+                        attrs,
                     );
-                    observer.observe_f64(
-                        &slow_poll_ratio,
-                        task_metrics.slow_poll_ratio(),
-                        &[
-                            KeyValue::new(
-                                opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD,
-                                method.as_str(),
-                            ),
-                            KeyValue::new(
-                                opentelemetry_semantic_conventions::trace::URL_PATH,
-                                path,
-                            ),
-                        ],
-                    );
+                    observer.observe_f64(&slow_poll_ratio, task_metrics.slow_poll_ratio(), attrs);
                 },
             )
             .unwrap();
