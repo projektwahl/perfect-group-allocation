@@ -48,15 +48,20 @@ impl MyRouter {
             .register_callback(
                 &[mean_poll_duration.as_any(), slow_poll_ratio.as_any()],
                 move |observer| {
-                    debug!("metrics for {} {}", method, path);
                     let task_metrics = interval_root.lock().unwrap().next().unwrap();
+                    debug!(
+                        "metrics for {} {} {:?}",
+                        method,
+                        path,
+                        task_metrics.mean_poll_duration().subsec_nanos()
+                    );
                     observer.observe_u64(
                         &mean_poll_duration,
                         task_metrics.mean_poll_duration().subsec_nanos().into(),
                         &[
                             KeyValue::new(
                                 opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD,
-                                path,
+                                method.as_str(),
                             ),
                             KeyValue::new(
                                 opentelemetry_semantic_conventions::trace::URL_PATH,
@@ -67,10 +72,16 @@ impl MyRouter {
                     observer.observe_f64(
                         &slow_poll_ratio,
                         task_metrics.slow_poll_ratio(),
-                        &[KeyValue::new(
-                            opentelemetry_semantic_conventions::trace::URL_PATH,
-                            path,
-                        )],
+                        &[
+                            KeyValue::new(
+                                opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD,
+                                method.as_str(),
+                            ),
+                            KeyValue::new(
+                                opentelemetry_semantic_conventions::trace::URL_PATH,
+                                path,
+                            ),
+                        ],
                     );
                 },
             )
@@ -81,6 +92,7 @@ impl MyRouter {
                 .is_none()
         );
         Self {
+            // maybe don't use middleware but just add in here direcctly?
             router: self.router.route(
                 path,
                 match method {

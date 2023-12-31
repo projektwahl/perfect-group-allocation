@@ -39,7 +39,7 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
     )]);
 
     // will also redirect log events to trace events
-    let stdout_log = tracing_subscriber::fmt::layer().pretty();
+    let stdout_log = tracing_subscriber::fmt::layer();
 
     let tracing_provider = opentelemetry_otlp::new_pipeline()
         .tracing()
