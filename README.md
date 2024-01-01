@@ -38,6 +38,10 @@ podman compose logs opentelemetry-collector
 # grafana http://localhost:3001
 # add prometheus source to grafana: http://prometheus:9090, SET INTERVAL TO THE SAME AS OTEL_METRIC_EXPORT_INTERVAL in seconds
 
+# https://github.com/google/re2/wiki/Syntax
+# {__name__=~"tokio_runtime_metrics_.*",__name__!~"tokio_runtime_metrics_.*_nanoseconds"}
+# {__name__=~"tokio_runtime_metrics_.*_nanoseconds"}
+
 https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html
 
 # otel-v1-apm-span-*
