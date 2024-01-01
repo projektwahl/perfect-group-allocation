@@ -12,6 +12,8 @@ use tower_http::classify::{ServerErrorsAsFailures, SharedClassifier};
 use tower_http::trace::{
     DefaultMakeSpan, DefaultOnResponse, MakeSpan, OnRequest, OnResponse, TraceLayer,
 };
+use tracing::Level;
+use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 pub struct MyTraceHeaderPropagator;
 
@@ -62,28 +64,29 @@ impl<B> MakeSpan<B> for MyTraceMakeSpan {
         let baggage_propagator = BaggagePropagator::new();
         let trace_context_propagator = TraceContextPropagator::new();
 
-        // Then create a composite propagator
         let composite_propagator = TextMapCompositePropagator::new(vec![
             Box::new(baggage_propagator),
             Box::new(trace_context_propagator),
         ]);
 
-        // Then for a given implementation of `Injector`
         let mut injector = HashMap::new();
 
-        // And a given span
-        let example_span = TracerProvider::default()
-            .tracer("example-component")
-            .start("span-name");
+        let context =
+            opentelemetry::Context::current().with_baggage(vec![KeyValue::new("test", "example")]);
 
-        // with the current context, call inject to add the headers
-        composite_propagator.inject_context(
-            &opentelemetry::Context::current_with_span(example_span)
-                .with_baggage(vec![KeyValue::new("test", "example")]),
-            &mut injector,
+        composite_propagator.inject_context(&context, &mut injector);
+
+        let span = tracing::debug_span!(
+            "request",
+            method = %request.method(),
+            uri = %request.uri(),
+            version = ?request.version(),
+            headers = ?request.headers(),
         );
 
-        example_span
+        span.set_parent(context);
+
+        span
     }
 }
 
