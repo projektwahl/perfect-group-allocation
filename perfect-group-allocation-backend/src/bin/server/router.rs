@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 
 use axum::handler::Handler;
-use axum::routing::MethodRouter;
 use axum::Router;
 use http::Method;
 use opentelemetry::metrics::Unit;
 use opentelemetry::KeyValue;
 use tokio_metrics::TaskMonitor;
-use tracing::debug;
 
 use crate::telemetry::tokio_metrics::{BorrowedMethodAndPath, TokioTaskMetricsLayer};
 use crate::MyState;

@@ -1,26 +1,15 @@
 use core::task::{Context, Poll};
-use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::convert::Infallible;
 // https://github.com/tower-rs/tower/blob/master/guides/building-a-middleware-from-scratch.md
-use std::fmt;
 use std::future::Future;
-use std::hash::{BuildHasher, Hash, Hasher};
-use std::ops::Deref;
+use std::hash::{BuildHasher, Hash};
 use std::pin::Pin;
-use std::sync::{Arc, RwLock, Weak};
-use std::time::Duration;
 
 use axum::extract::{MatchedPath, Request};
-use crossbeam::atomic::AtomicCell;
 use http::Method;
-use opentelemetry::metrics::Unit;
-use opentelemetry::KeyValue;
 use pin_project::pin_project;
-use tokio::time::Sleep;
 use tokio_metrics::TaskMonitor;
 use tower::{Layer, Service};
-use tracing::{debug, error};
 
 // TODO runtime metrics
 // https://docs.rs/tokio/latest/tokio/runtime/struct.RuntimeMetrics.html
