@@ -259,23 +259,163 @@ pub fn tokio_runtime_metrics() {
                 io_driver_ready_count.as_any(),
             ],
             move |observer| {
-                let task_metrics = interval_root.lock().unwrap().next().unwrap();
+                let runtime_metrics = interval_root.lock().unwrap().next().unwrap();
                 let attrs = &[];
-                observer.observe_u64(&dropped_count, task_metrics.workers_count, attrs);
-                observer.observe_u64(&first_poll_count, task_metrics.first_poll_count, attrs);
-                observer.observe_u64(&instrumented_count, task_metrics.instrumented_count, attrs);
                 observer.observe_u64(
-                    &total_fast_poll_count,
-                    task_metrics.total_fast_poll_count,
+                    &workers_count,
+                    runtime_metrics.workers_count.try_into().unwrap(),
                     attrs,
                 );
+                observer.observe_u64(&total_park_count, runtime_metrics.total_park_count, attrs);
+                observer.observe_u64(&max_park_count, runtime_metrics.max_park_count, attrs);
+                observer.observe_u64(&min_park_count, runtime_metrics.min_park_count, attrs);
                 observer.observe_u64(
-                    &total_fast_poll_duration,
-                    task_metrics
-                        .total_fast_poll_duration
+                    &mean_poll_duration,
+                    runtime_metrics
+                        .mean_poll_duration
                         .as_nanos()
                         .try_into()
                         .unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &mean_poll_duration_worker_min,
+                    runtime_metrics
+                        .mean_poll_duration_worker_min
+                        .as_nanos()
+                        .try_into()
+                        .unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &mean_poll_duration_worker_max,
+                    runtime_metrics
+                        .mean_poll_duration_worker_max
+                        .as_nanos()
+                        .try_into()
+                        .unwrap(),
+                    attrs,
+                );
+                // TODO poll_count_histogram
+                observer.observe_u64(&total_noop_count, runtime_metrics.total_noop_count, attrs);
+                observer.observe_u64(&max_noop_count, runtime_metrics.max_noop_count, attrs);
+                observer.observe_u64(&min_noop_count, runtime_metrics.min_noop_count, attrs);
+                observer.observe_u64(&total_steal_count, runtime_metrics.total_steal_count, attrs);
+                observer.observe_u64(&max_steal_count, runtime_metrics.max_steal_count, attrs);
+                observer.observe_u64(&min_steal_count, runtime_metrics.min_steal_count, attrs);
+                observer.observe_u64(
+                    &total_steal_operations,
+                    runtime_metrics.total_steal_operations,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &max_steal_operations,
+                    runtime_metrics.max_steal_operations,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &min_steal_operations,
+                    runtime_metrics.min_steal_operations,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &num_remote_schedules,
+                    runtime_metrics.num_remote_schedules,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &total_local_schedule_count,
+                    runtime_metrics.total_local_schedule_count,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &max_local_schedule_count,
+                    runtime_metrics.max_local_schedule_count,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &min_local_schedule_count,
+                    runtime_metrics.min_local_schedule_count,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &total_overflow_count,
+                    runtime_metrics.total_overflow_count,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &max_overflow_count,
+                    runtime_metrics.max_overflow_count,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &min_overflow_count,
+                    runtime_metrics.min_overflow_count,
+                    attrs,
+                );
+                observer.observe_u64(&total_polls_count, runtime_metrics.total_polls_count, attrs);
+                observer.observe_u64(&max_polls_count, runtime_metrics.max_polls_count, attrs);
+                observer.observe_u64(&min_polls_count, runtime_metrics.min_polls_count, attrs);
+                observer.observe_u64(
+                    &total_busy_duration,
+                    runtime_metrics
+                        .total_busy_duration
+                        .as_nanos()
+                        .try_into()
+                        .unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &max_busy_duration,
+                    runtime_metrics
+                        .max_busy_duration
+                        .as_nanos()
+                        .try_into()
+                        .unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &min_busy_duration,
+                    runtime_metrics
+                        .min_busy_duration
+                        .as_nanos()
+                        .try_into()
+                        .unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &injection_queue_depth,
+                    runtime_metrics.injection_queue_depth.try_into().unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &total_local_queue_depth,
+                    runtime_metrics.total_local_queue_depth.try_into().unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &max_local_queue_depth,
+                    runtime_metrics.max_local_queue_depth.try_into().unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &min_local_queue_depth,
+                    runtime_metrics.min_local_queue_depth.try_into().unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &elapsed,
+                    runtime_metrics.elapsed.as_nanos().try_into().unwrap(),
+                    attrs,
+                );
+                observer.observe_u64(
+                    &budget_forced_yield_count,
+                    runtime_metrics.budget_forced_yield_count,
+                    attrs,
+                );
+                observer.observe_u64(
+                    &io_driver_ready_count,
+                    runtime_metrics.io_driver_ready_count,
                     attrs,
                 );
             },

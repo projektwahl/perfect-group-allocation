@@ -56,6 +56,7 @@ use crate::openid::initialize_openid_client;
 use crate::router::MyRouter;
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
+use crate::telemetry::tokio_metrics::tokio_runtime_metrics;
 
 pub trait CsrfSafeExtractor {}
 
@@ -318,6 +319,8 @@ async fn main() -> Result<(), AppError> {
 
 #[tracing::instrument]
 async fn program() -> Result<(), AppError> {
+    tokio_runtime_metrics();
+
     initialize_favicon_ico().await;
     initialize_index_css();
     initialize_openid_client().await;
