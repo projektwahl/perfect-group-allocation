@@ -8,9 +8,8 @@ use std::pin::Pin;
 use axum::extract::{MatchedPath, Request};
 use http::Method;
 use opentelemetry::metrics::Unit;
-use opentelemetry::KeyValue;
 use pin_project::pin_project;
-use tokio_metrics::{RuntimeMonitor, TaskMonitor};
+use tokio_metrics::TaskMonitor;
 use tower::{Layer, Service};
 
 // TODO runtime metrics
