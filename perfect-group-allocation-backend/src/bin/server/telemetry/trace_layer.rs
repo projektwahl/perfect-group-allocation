@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use http::{HeaderMap, HeaderValue};
 use opentelemetry::baggage::BaggageExt as _;
 use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
 use opentelemetry::trace::{TraceContextExt as _, Tracer as _, TracerProvider as _};
@@ -15,15 +16,15 @@ use tower_http::trace::{
 use tracing::Level;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
-pub struct MyTraceHeaderPropagator;
+pub struct MyTraceHeaderPropagator<'a>(&'a mut HeaderMap<HeaderValue>);
 
-impl Injector for MyTraceHeaderPropagator {
+impl<'a> Injector for MyTraceHeaderPropagator<'a> {
     fn set(&mut self, key: &str, value: String) {
         todo!()
     }
 }
 
-impl Extractor for MyTraceHeaderPropagator {
+impl<'a> Extractor for MyTraceHeaderPropagator<'a> {
     fn get(&self, key: &str) -> Option<&str> {
         todo!()
     }
@@ -52,6 +53,18 @@ impl<B> OnResponse<B> for MyTraceOnResponse {
         latency: std::time::Duration,
         span: &tracing::Span,
     ) {
+        let baggage_propagator = BaggagePropagator::new();
+        let trace_context_propagator = TraceContextPropagator::new();
+        let composite_propagator = TextMapCompositePropagator::new(vec![
+            Box::new(baggage_propagator),
+            Box::new(trace_context_propagator),
+        ]);
+
+        composite_propagator.inject_context(
+            &opentelemetry::Context::current(),
+            &mut MyTraceHeaderPropagator(response.headers_mut()),
+        );
+
         let response_headers = tracing::field::debug(response.headers());
 
         tracing::debug!(
@@ -69,18 +82,15 @@ impl<B> MakeSpan<B> for MyTraceMakeSpan {
     fn make_span(&mut self, request: &http::Request<B>) -> tracing::Span {
         let baggage_propagator = BaggagePropagator::new();
         let trace_context_propagator = TraceContextPropagator::new();
-
         let composite_propagator = TextMapCompositePropagator::new(vec![
             Box::new(baggage_propagator),
             Box::new(trace_context_propagator),
         ]);
 
-        let propagator = HashMap::new();
-
-        //composite_propagator.inject_context(&context, &mut injector);
-
-        let context = composite_propagator
-            .extract_with_context(&opentelemetry::Context::current(), &propagator);
+        let context = composite_propagator.extract_with_context(
+            &opentelemetry::Context::current(),
+            &MyTraceHeaderPropagator(request.headers_mut()),
+        );
 
         let span = tracing::debug_span!(
             "request",
