@@ -31,7 +31,11 @@ impl MyRouter {
         handler: H,
     ) -> Self {
         let meter = opentelemetry::global::meter("perfect-group-allocation");
-        let new_task_monitor = TaskMonitor::default();
+        let mut new_task_monitor = TaskMonitor::builder();
+        new_task_monitor
+            .with_long_delay_threshold(TaskMonitor::DEFAULT_LONG_DELAY_THRESHOLD * 2)
+            .with_slow_poll_threshold(TaskMonitor::DEFAULT_SLOW_POLL_THRESHOLD * 2);
+        let new_task_monitor = new_task_monitor.build();
 
         let interval_root = std::sync::Mutex::new(new_task_monitor.intervals());
 
