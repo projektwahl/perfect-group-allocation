@@ -50,8 +50,7 @@ use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{warn, Subscriber};
-use tracing_subscriber::Layer;
+use tracing::warn;
 
 use crate::openid::initialize_openid_client;
 use crate::router::MyRouter;
