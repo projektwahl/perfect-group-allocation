@@ -1,6 +1,7 @@
 #![feature(gen_blocks)]
 #![feature(lint_reasons)]
 #![feature(let_chains)]
+#![feature(hash_raw_entry)]
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
@@ -15,15 +16,16 @@ pub mod csrf_protection;
 mod entities;
 mod error;
 mod openid;
+pub mod router;
 pub mod routes;
 pub mod session;
+pub mod telemetry;
 
 use core::convert::Infallible;
 use core::time::Duration;
 
 use axum::extract::{FromRef, FromRequest};
 use axum::http::{self, HeaderName, HeaderValue};
-use axum::routing::{get, post};
 use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
 use axum_extra::headers::Header;
@@ -31,8 +33,6 @@ use error::{to_error_result, AppError};
 use http::StatusCode;
 use hyper::Method;
 use itertools::Itertools;
-use opentelemetry::metrics::MeterProvider as _;
-use opentelemetry_otlp::WithExportConfig;
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
@@ -43,24 +43,25 @@ use sea_orm::{Database, DatabaseConnection};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
+use telemetry::setup_telemetry;
 use tokio::net::TcpListener;
 use tower::{service_fn, ServiceBuilder};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::{error, trace};
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::{Layer, Registry};
+use tracing::warn;
 
 use crate::openid::initialize_openid_client;
+use crate::router::MyRouter;
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
+use crate::telemetry::tokio_metrics::tokio_runtime_metrics;
 
 pub trait CsrfSafeExtractor {}
 
 #[derive(Clone, FromRef)]
-struct MyState {
+pub struct MyState {
     database: DatabaseConnection,
     key: Key,
 }
@@ -310,129 +311,22 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    //console_subscriber::init(); // drags in old axum version
-    //tracing_subscriber::fmt::init();
+    // avoid putting more code here as this is outside of all spans so doesn't get traced
+    let _guard = setup_telemetry();
 
-    // TODO FIXME add opentelemetry logs feature
-    // https://github.com/open-telemetry/opentelemetry-rust/tree/5aa0311de87442604598c1c9b81b045bae58aea1/opentelemetry-otlp/examples
+    program().await
+}
 
-    let tracer = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint("http://localhost:4317"),
-        )
-        .install_batch(opentelemetry_sdk::runtime::Tokio)?;
-
-    let meter_provider = opentelemetry_otlp::new_pipeline()
-        .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .http()
-                .with_endpoint("http://localhost:9090/api/v1/otlp"),
-        )
-        .build()
-        .unwrap();
-
-    // maybe dont use tracing here in this library but opentelemetry directly?
-
-    // Create a tracing layer with the configured tracer
-    let telemetry = tracing_opentelemetry::layer()
-        .with_tracer(tracer)
-        .with_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                // axum logs rejections from built-in extractors with the `axum::rejection`
-                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
-                "example_tracing_aka_logging=debug,tower_http=debug,axum::rejection=trace".into()
-            }),
-        );
-
-    // Use the tracing subscriber `Registry`, or any other subscriber
-    // that impls `LookupSpan`
-    let subscriber = Registry::default().with(telemetry);
-
-    tracing::subscriber::set_global_default(subscriber).unwrap();
-
-    error!("This event will be logged in the root span.");
-    trace!("This event will be logged in the root span.");
-
-    let meter = meter_provider.meter("perfect-group-allocation");
-
-    let histogram = meter
-        .u64_histogram("index.mean_poll_duration")
-        .with_description("Records values")
-        .init();
-
-    //opentelemetry::global::set_meter_provider(meter_provider.clone());
-    //opentelemetry::global::set_tracer_provider(tracer.clone());
+#[tracing::instrument]
+async fn program() -> Result<(), AppError> {
+    tokio_runtime_metrics();
 
     initialize_favicon_ico().await;
     initialize_index_css();
     initialize_openid_client().await;
 
-    let _monitor = tokio_metrics::TaskMonitor::new();
-    let monitor_root = tokio_metrics::TaskMonitor::new();
-    let monitor_root_create = tokio_metrics::TaskMonitor::new();
-    let monitor_index_css = tokio_metrics::TaskMonitor::new();
-    let monitor_list = tokio_metrics::TaskMonitor::new();
-    let _monitor_download = tokio_metrics::TaskMonitor::new();
-    let _monitor_openidconnect_login = tokio_metrics::TaskMonitor::new();
-    let _monitor_openidconnect_redirect = tokio_metrics::TaskMonitor::new();
-
     let handle = tokio::runtime::Handle::current();
     let runtime_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
-
-    // print task metrics every 500ms
-    {
-        let monitor_index_css = monitor_index_css.clone();
-        let monitor_root = monitor_root.clone();
-        let monitor_root_create = monitor_root_create.clone();
-        let monitor_list = monitor_list.clone();
-        tokio::spawn(async move {
-            for (((_interval_index_css, interval_root), _interval_create), _interval_list) in
-                monitor_index_css
-                    .intervals()
-                    .zip(monitor_root.intervals())
-                    .zip(monitor_root_create.intervals())
-                    .zip(monitor_list.intervals())
-            {
-                // pretty-print the metric interval
-                // these metrics seem to work (tested using index.css spawn_blocking)
-                histogram.record(
-                    interval_root.mean_poll_duration().subsec_nanos().into(),
-                    &[],
-                );
-
-                /*println!(
-                    "GET /index.css {:?} {:?} {:?}",
-                    interval_index_css.mean_poll_duration(),
-                    interval_index_css.slow_poll_ratio(),
-                    interval_index_css.mean_slow_poll_duration()
-                );
-                println!(
-                    "GET / {:?} {:?} {:?}",
-                    interval_root.mean_poll_duration(),
-                    interval_root.slow_poll_ratio(),
-                    interval_root.mean_slow_poll_duration()
-                );
-                println!(
-                    "POST /create {:?} {:?} {:?}",
-                    interval_create.mean_poll_duration(),
-                    interval_create.slow_poll_ratio(),
-                    interval_create.mean_slow_poll_duration()
-                );
-                println!(
-                    "GET /list {:?} {:?} {:?}",
-                    interval_list.mean_poll_duration(),
-                    interval_list.slow_poll_ratio(),
-                    interval_list.mean_slow_poll_duration()
-                );*/
-                // wait 500ms
-                tokio::time::sleep(Duration::from_millis(500)).await;
-            }
-        });
-    }
 
     // print runtime metrics every 500ms
     {
@@ -451,30 +345,18 @@ async fn main() -> Result<(), AppError> {
 
     let service = ServeDir::new("frontend");
 
-    // RUST_LOG=tower_http::trace=TRACE cargo run --bin server
+    let my_router = MyRouter::new()
+        .route(&Method::GET, "/", index)
+        .route(&Method::POST, "/", create)
+        .route(&Method::GET, "/index.css", indexcss)
+        .route(&Method::GET, "/favicon.ico", favicon_ico)
+        .route(&Method::GET, "/list", list)
+        .route(&Method::GET, "/download", handler)
+        .route(&Method::POST, "/openidconnect-login", openid_login)
+        .route(&Method::GET, "/openidconnect-redirect", openid_redirect);
 
-    // TODO FIXME use services here so we can specify the error type
-    // and then we can build a layer around it
-    let app: Router<MyState> = Router::new()
-        .route(
-            "/",
-            get(move |p1, p2| monitor_root.instrument(index(p1, p2))),
-        )
-        .route(
-            "/",
-            post(move |p1, p2, p3, p4| monitor_root_create.instrument(create(p1, p2, p3, p4))),
-        )
-        .route(
-            "/index.css",
-            get(move |p1, p2, p3| monitor_index_css.instrument(indexcss(p1, p2, p3))),
-        )
-        .route("/favicon.ico", get(favicon_ico))
-        .route(
-            "/list",
-            get(move |p1, p2, p3| monitor_list.instrument(list(p1, p2, p3))),
-        )
-        .route("/download", get(handler))
-        .route("/openidconnect-login", post(openid_login))
+    let app = my_router
+        .finish()
         .route_service(
             "/test",
             service_fn(|req: http::Request<axum::body::Body>| async move {
@@ -483,7 +365,6 @@ async fn main() -> Result<(), AppError> {
                 Ok::<_, Infallible>(res)
             }),
         )
-        .route("/openidconnect-redirect", get(openid_redirect))
         .fallback_service(service);
 
     let app = layers(app, db);
@@ -512,7 +393,35 @@ async fn main() -> Result<(), AppError> {
     .await
     .unwrap();*/
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
-    axum::serve(listener, app.into_make_service()).await?;
-    opentelemetry::global::shutdown_tracer_provider(); // sending remaining spans
+
+    axum::serve(listener, app.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+    warn!("SHUTDOWN");
     Ok(())
+}
+
+#[allow(clippy::redundant_pub_crate)]
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
+    }
 }

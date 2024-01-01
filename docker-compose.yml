@@ -1,15 +1,17 @@
 version: '3'
 services:
-  opensearch-node1: # This is also the hostname of the container within the Docker network (i.e. https://opensearch-node1/)
-    image: docker.io/opensearchproject/opensearch:latest # Specifying the latest available image - modify if you want a specific version
+  opensearch-node1:
+    image: opensearchproject/opensearch:latest
     container_name: opensearch-node1
     environment:
       - cluster.name=opensearch-cluster # Name the cluster
       - node.name=opensearch-node1 # Name the node that will run in this container
-      - discovery.seed_hosts=opensearch-node1 # Nodes to look for when discovering the cluster
-      - cluster.initial_cluster_manager_nodes=opensearch-node1 # Nodes eligible to serve as cluster manager
-      - bootstrap.memory_lock=true # Disable JVM heap memory swapping
+      - discovery.seed_hosts=opensearch-node1,opensearch-node2 # Nodes to look for when discovering the cluster
+      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2 # Nodes eligibile to serve as cluster manager
+      - bootstrap.memory_lock=false # unprivileged podman
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # Set min and max JVM heap sizes to at least 50% of system RAM
+      - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
+      - "DISABLE_SECURITY_PLUGIN=true" # Disables Security plugin
     ulimits:
       memlock:
         soft: -1 # Set memlock to unlimited (no soft or hard limit)
@@ -24,20 +26,127 @@ services:
       - 9600:9600 # Performance Analyzer
     networks:
       - opensearch-net # All of the containers will join the same Docker bridge network
+    profiles: ["opensearch"]
+  opensearch-node2:
+    image: opensearchproject/opensearch:latest
+    container_name: opensearch-node2
+    environment:
+      - cluster.name=opensearch-cluster # Name the cluster
+      - node.name=opensearch-node2 # Name the node that will run in this container
+      - discovery.seed_hosts=opensearch-node1,opensearch-node2 # Nodes to look for when discovering the cluster
+      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2 # Nodes eligibile to serve as cluster manager
+      - bootstrap.memory_lock=false # unprivileged podman
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # Set min and max JVM heap sizes to at least 50% of system RAM
+      - "DISABLE_INSTALL_DEMO_CONFIG=true" # Prevents execution of bundled demo script which installs demo certificates and security configurations to OpenSearch
+      - "DISABLE_SECURITY_PLUGIN=true" # Disables Security plugin
+    ulimits:
+      memlock:
+        soft: -1 # Set memlock to unlimited (no soft or hard limit)
+        hard: -1
+      nofile:
+        soft: 65536 # Maximum number of open files for the opensearch user - set to at least 65536
+        hard: 65536
+    volumes:
+      - opensearch-data2:/usr/share/opensearch/data # Creates volume called opensearch-data2 and mounts it to the container
+    networks:
+      - opensearch-net # All of the containers will join the same Docker bridge network
+    profiles: ["opensearch"]
   opensearch-dashboards:
-    image: docker.io/opensearchproject/opensearch-dashboards:latest # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
+    image: opensearchproject/opensearch-dashboards:latest
     container_name: opensearch-dashboards
     ports:
       - 5601:5601 # Map host port 5601 to container port 5601
     expose:
       - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
     environment:
-      OPENSEARCH_HOSTS: '["https://opensearch-node1:9200"]' # Define the OpenSearch nodes that OpenSearch Dashboards will query
+      - 'OPENSEARCH_HOSTS=["http://opensearch-node1:9200","http://opensearch-node2:9200"]'
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true" # disables security dashboards plugin in OpenSearch Dashboards
     networks:
       - opensearch-net
+    profiles: ["opensearch"]
+  opensearch-data-prepper:
+    image: docker.io/opensearchproject/data-prepper:latest
+    container_name: opensearch-data-prepper
+    ports:
+      - 4900:4900
+    expose:
+      - "4900"
+      - "21890" # otel trace
+      - "21891" # otel metrics
+      - "21892" # otel logs
+    volumes:
+      - ./pipelines.yaml:/usr/share/data-prepper/pipelines/pipelines.yaml
+    networks:
+      - opensearch-net
+    profiles: ["opensearch"]
+  jaeger:
+    image: docker.io/jaegertracing/all-in-one
+    container_name: jaeger
+    expose:
+      - "4317" # OTLP gRPC receiver
+      - "4318" # OTLP HTTP receiver
+    ports:
+      - 16686:16686 # web interface
+    networks:
+      - opensearch-net
+  opentelemetry-collector:
+    image: docker.io/otel/opentelemetry-collector
+    container_name: opentelemetry-collector
+    volumes:
+      - ./opentelemetry-collector-config.yaml:/etc/otelcol/config.yaml
+    expose:
+      - "4317" # OTLP gRPC receiver
+    ports:
+      - 4317:4317 # OTLP gRPC receiver
+    networks:
+      - opensearch-net
+  prometheus:
+    image: docker.io/prom/prometheus
+    command: --enable-feature=otlp-write-receiver
+    container_name: prometheus
+    expose:
+      - "9090"
+    ports:
+      - 9090:9090
+    volumes:
+      ./prometheus.yml:/prometheus/prometheus.yml
+    networks:
+      - opensearch-net
+  grafana:
+    image: docker.io/grafana/grafana
+    container_name: grafana
+    environment:
+      - GF_SERVER_HTTP_PORT=3001
+    ports:
+      - 3001:3001
+    networks:
+      - opensearch-net
+  # https://grafana.com/docs/agent/latest/flow/setup/install/docker/
+  #docker run \
+  #-e AGENT_MODE=flow \
+  #-v CONFIG_FILE_PATH:/etc/agent/config.river \
+  #-p 12345:12345 \
+  #grafana/agent:latest \
+  #  run --server.http.listen-addr=0.0.0.0:12345 /etc/agent/config.river
+  # https://grafana.com/docs/mimir/latest/configure/configure-otel-collector/
+  # so install mimir?
+  # https://grafana.com/docs/mimir/latest/get-started/
+  # also shows how to add mimir to grafana
+  # to my understanding mimir is just a data backend for grafana so we can also use prometheus as data backend
+  #grafana-mimir:
+  #  image: grafana/mimir:latest
+  #  container_name: mimir
+  #  command: --config.file=/etc/mimir/demo.yaml
+  #  ports:
+  #    - 9009:9009
+  #  volumes:
+  #    - ./grafana-mimir.yaml:/etc/mimir/demo.yaml
+  #  networks:
+  #    - opensearch-net
 
 volumes:
   opensearch-data1:
+  opensearch-data2:
 
 networks:
   opensearch-net:

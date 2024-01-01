@@ -14,7 +14,6 @@ https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
 https://doc.rust-lang.org/rustdoc/unstable-features.html
 https://rust-lang.github.io/rfcs/3424-cargo-script.html
 parallel rust frontend
-https://doc.rust-lang.org/cargo/reference/manifest.html#the-lints-section
 
 rustup component add rustc-codegen-cranelift-preview --toolchain nightly
 
@@ -24,53 +23,49 @@ warning blocks in rustdoc
 ## Dev
 
 ```bash
+sudo nano /etc/sysctl.conf
+vm.max_map_count=262144
+sudo sysctl -p
+
+pipx install https://github.com/containers/podman-compose/archive/devel.tar.gz # profile support not yet in 1.0.6
+clear && podman compose down && podman compose up
+# clear && podman compose --profile opensearch up
+podman compose logs opentelemetry-collector
+
+# jaeger http://localhost:16686
+# opensearch http://localhost:5601
+# prometheus http://localhost:9090
+# grafana http://localhost:3001
+# add prometheus source to grafana: http://prometheus:9090, SET INTERVAL TO THE SAME AS OTEL_METRIC_EXPORT_INTERVAL in seconds
+
+# https://github.com/google/re2/wiki/Syntax
+# {__name__=~"tokio_runtime_metrics_.*",__name__!~"tokio_runtime_metrics_.*_nanoseconds"}
+# {__name__=~"tokio_runtime_metrics_.*_nanoseconds"}
+
+# {__name__=~"tokio_task_metrics_.*_nanoseconds"}
+# {__name__=~"tokio_task_metrics_.*",__name__!~"tokio_task_metrics_.*_nanoseconds"}
+
+# Grafana: Export for sharing externally
+
+# errors
+# http://localhost:16686/search?end=1704133081894000&limit=20&lookback=1h&maxDuration&minDuration&service=perfect-group-allocation&start=1704129481894000&tags=%7B%22error%22%3A%22true%22%7D
+
+https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html
+
+# otel-v1-apm-span-*
+
+podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
+psql postgres://postgres:password@localhost
+DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
+sea-orm-cli generate entity -u postgres://postgres:password@localhost/postgres -o src/bin/server/entities
+DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
+
+
 export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
-OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_LOG=trace,tokio=debug,h2=debug RUST_BACKTRACE=1 cargo run --bin server
+OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
 
 tokio-console
-```
-
-https://datatracker.ietf.org/doc/html/rfc9204
-
-## Tracing
-
-```
-podman run --rm --name jaeger \
-  -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
-  -p 6831:6831/udp \
-  -p 6832:6832/udp \
-  -p 5778:5778 \
-  -p 16686:16686 \
-  -p 4317:4317 \
-  -p 4318:4318 \
-  -p 14250:14250 \
-  -p 14268:14268 \
-  -p 14269:14269 \
-  -p 9411:9411 \
-  docker.io/jaegertracing/all-in-one
-firefox http://localhost:16686/
-RUST_LOG=tower_http=debug RUST_BACKTRACE=1 cargo run --bin server
-```
-
-## Metrics
-
-```
-podman run -p 9090:9090 -v ./prometheus.yml:/prometheus/prometheus.yml docker.io/prom/prometheus --enable-feature=otlp-write-receiver
-firefox http://localhost:9090/
-```
-
-## OpenSearch
-
-```
-podman compose up
-
-```
-
-## Grafana
-
-```
-podman run -d --name=grafana -p 3000:3000 docker.io/grafana/grafana
 ```
 
 ## Async profiling
@@ -167,12 +162,6 @@ https://github.com/abiosoft/caddy-json-schema
 
 xcaddy build --with github.com/abiosoft/caddy-json-schema
 ~/Documents/xcaddy/caddy json-schema --vscode # only needed for the json schema
-
-podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
-psql postgres://postgres:password@localhost
-DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
-sea-orm-cli generate entity -u postgres://postgres:password@localhost/postgres -o src/bin/server/entities
-DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
 
 
 curl --header "Accept-Encoding: deflate" -O https://h3.selfmade4u.de:8443/download

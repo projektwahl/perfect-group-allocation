@@ -1,15 +1,15 @@
 avoid-breaking-exported-api = false
-enforced-import-renames = [
-    { path = "std::task::Context", rename = "FullyQualifyPath" },
+#enforced-import-renames = [
+#    { path = "std::task::Context", rename = "FullyQualifyPath" },
 
-    { path = "http::request::Parts", rename = "FullyQualifyPath" },
+#    { path = "http::request::Parts", rename = "FullyQualifyPath" },
 
-    { path = "hyper::Request", rename = "HyperRequest" },
-    { path = "axum::http::Request", rename = "AxumRequest" },
+#    { path = "hyper::Request", rename = "HyperRequest" },
+#    { path = "axum::http::Request", rename = "AxumRequest" },
 
-    { path = "oauth2::TokenResponse", rename = "OAuth2TokenResponse" },
-    { path = "openidconnect::TokenResponse", rename = "OpenIdTokenResponse" },
-]
+#    { path = "oauth2::TokenResponse", rename = "OAuth2TokenResponse" },
+#    { path = "openidconnect::TokenResponse", rename = "OpenIdTokenResponse" },
+#]
 disallowed-types = [
     { path = "axum::form::Form", reason = "use CsrfSafeForm" },
     { path = "axum_extra::extract::Form", reason = "use CsrfSafeForm" },
