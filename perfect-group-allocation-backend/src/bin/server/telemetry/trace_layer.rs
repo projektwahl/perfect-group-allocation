@@ -38,7 +38,7 @@ pub struct MyTraceOnRequest;
 
 impl<B> OnRequest<B> for MyTraceOnRequest {
     fn on_request(&mut self, request: &http::Request<B>, span: &tracing::Span) {
-        todo!()
+        tracing::debug!("started processing request");
     }
 }
 
@@ -52,7 +52,13 @@ impl<B> OnResponse<B> for MyTraceOnResponse {
         latency: std::time::Duration,
         span: &tracing::Span,
     ) {
-        todo!()
+        let response_headers = tracing::field::debug(response.headers());
+
+        tracing::debug!(
+            latency = latency.as_nanos(),
+            response_headers,
+            "finished processing request"
+        );
     }
 }
 
@@ -90,6 +96,7 @@ impl<B> MakeSpan<B> for MyTraceMakeSpan {
     }
 }
 
+#[must_use]
 pub fn my_trace_layer() -> TraceLayer<
     SharedClassifier<ServerErrorsAsFailures>,
     MyTraceMakeSpan,
