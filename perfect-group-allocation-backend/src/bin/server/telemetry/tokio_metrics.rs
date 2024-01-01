@@ -104,7 +104,6 @@ pub fn tokio_runtime_metrics() {
     let workers_count = meter
         .u64_observable_gauge("tokio.runtime_metrics.workers_count")
         .init();
-
     let total_park_count = meter
         .u64_observable_gauge("tokio.runtime_metrics.total_park_count")
         .init();
@@ -221,11 +220,43 @@ pub fn tokio_runtime_metrics() {
     meter
         .register_callback(
             &[
-                dropped_count.as_any(),
-                first_poll_count.as_any(),
-                instrumented_count.as_any(),
-                total_fast_poll_count.as_any(),
-                total_fast_poll_duration.as_any(),
+                workers_count.as_any(),
+                total_park_count.as_any(),
+                max_park_count.as_any(),
+                min_park_count.as_any(),
+                mean_poll_duration.as_any(),
+                mean_poll_duration_worker_min.as_any(),
+                mean_poll_duration_worker_max.as_any(),
+                //poll_count_histogram.as_any(),
+                total_noop_count.as_any(),
+                max_noop_count.as_any(),
+                min_noop_count.as_any(),
+                total_steal_count.as_any(),
+                max_steal_count.as_any(),
+                min_steal_count.as_any(),
+                total_steal_operations.as_any(),
+                max_steal_operations.as_any(),
+                min_steal_operations.as_any(),
+                num_remote_schedules.as_any(),
+                total_local_schedule_count.as_any(),
+                max_local_schedule_count.as_any(),
+                min_local_schedule_count.as_any(),
+                total_overflow_count.as_any(),
+                max_overflow_count.as_any(),
+                min_overflow_count.as_any(),
+                total_polls_count.as_any(),
+                max_polls_count.as_any(),
+                min_polls_count.as_any(),
+                total_busy_duration.as_any(),
+                max_busy_duration.as_any(),
+                min_busy_duration.as_any(),
+                injection_queue_depth.as_any(),
+                total_local_queue_depth.as_any(),
+                max_local_queue_depth.as_any(),
+                min_local_queue_depth.as_any(),
+                elapsed.as_any(),
+                budget_forced_yield_count.as_any(),
+                io_driver_ready_count.as_any(),
             ],
             move |observer| {
                 let task_metrics = interval_root.lock().unwrap().next().unwrap();
