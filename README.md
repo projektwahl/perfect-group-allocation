@@ -42,6 +42,9 @@ podman compose logs opentelemetry-collector
 # {__name__=~"tokio_runtime_metrics_.*",__name__!~"tokio_runtime_metrics_.*_nanoseconds"}
 # {__name__=~"tokio_runtime_metrics_.*_nanoseconds"}
 
+# errors
+# http://localhost:16686/search?end=1704133081894000&limit=20&lookback=1h&maxDuration&minDuration&service=perfect-group-allocation&start=1704129481894000&tags=%7B%22error%22%3A%22true%22%7D
+
 https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html
 
 # otel-v1-apm-span-*
