@@ -19,6 +19,7 @@ pub struct MyRouter {
 }
 
 impl MyRouter {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -248,9 +249,9 @@ impl MyRouter {
             // maybe don't use middleware but just add in here direcctly?
             router: self.router.route(
                 path,
-                match method {
-                    &Method::GET => axum::routing::get(handler),
-                    &Method::POST => axum::routing::post(handler),
+                match *method {
+                    Method::GET => axum::routing::get(handler),
+                    Method::POST => axum::routing::post(handler),
                     _ => unreachable!(),
                 },
             ),

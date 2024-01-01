@@ -1,3 +1,4 @@
+use core::task::{Context, Poll};
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -8,7 +9,6 @@ use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::Deref;
 use std::pin::Pin;
 use std::sync::{Arc, RwLock, Weak};
-use std::task::{Context, Poll};
 use std::time::Duration;
 
 use axum::extract::{MatchedPath, Request};
@@ -70,13 +70,11 @@ where
         let method = request.method();
         let path = request.extensions().get::<MatchedPath>().unwrap().as_str();
 
-        let mut build_hasher = self.task_monitors.hasher().build_hasher();
         let key = BorrowedMethodAndPath { method, path };
-        key.hash(&mut build_hasher);
-        if let Some((k, task_monitor)) = self
+        if let Some((_k, task_monitor)) = self
             .task_monitors
             .raw_entry()
-            .from_hash(build_hasher.finish(), |k| key == *k)
+            .from_hash(self.task_monitors.hasher().hash_one(&key), |k| key == *k)
         {
             let response_future = task_monitor.instrument(self.inner.call(request));
 
