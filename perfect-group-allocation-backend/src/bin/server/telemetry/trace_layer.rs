@@ -69,12 +69,12 @@ impl<B> MakeSpan<B> for MyTraceMakeSpan {
             Box::new(trace_context_propagator),
         ]);
 
-        let mut injector = HashMap::new();
+        let propagator = HashMap::new();
 
-        let context =
-            opentelemetry::Context::current().with_baggage(vec![KeyValue::new("test", "example")]);
+        //composite_propagator.inject_context(&context, &mut injector);
 
-        composite_propagator.inject_context(&context, &mut injector);
+        let context = composite_propagator
+            .extract_with_context(&opentelemetry::Context::current(), &propagator);
 
         let span = tracing::debug_span!(
             "request",
