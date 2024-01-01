@@ -101,7 +101,17 @@ impl MyRouter {
             .u64_observable_gauge("tokio.task_metrics.total_slow_poll_duration")
             .with_unit(Unit::new("ns"))
             .init();
-
+        let attrs = [
+            KeyValue::new(
+                opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD,
+                method.as_str(),
+            ),
+            KeyValue::new(opentelemetry_semantic_conventions::trace::URL_PATH, path),
+            KeyValue::new(
+                opentelemetry_semantic_conventions::trace::HTTP_ROUTE,
+                method.as_str().to_owned() + path,
+            ),
+        ];
         meter
             .register_callback(
                 &[
@@ -126,24 +136,18 @@ impl MyRouter {
                 ],
                 move |observer| {
                     let task_metrics = interval_root.lock().unwrap().next().unwrap();
-                    let attrs = &[
-                        KeyValue::new(
-                            opentelemetry_semantic_conventions::trace::HTTP_REQUEST_METHOD,
-                            method.as_str(),
-                        ),
-                        KeyValue::new(opentelemetry_semantic_conventions::trace::URL_PATH, path),
-                    ];
-                    observer.observe_u64(&dropped_count, task_metrics.dropped_count, attrs);
-                    observer.observe_u64(&first_poll_count, task_metrics.first_poll_count, attrs);
+
+                    observer.observe_u64(&dropped_count, task_metrics.dropped_count, &attrs);
+                    observer.observe_u64(&first_poll_count, task_metrics.first_poll_count, &attrs);
                     observer.observe_u64(
                         &instrumented_count,
                         task_metrics.instrumented_count,
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_fast_poll_count,
                         task_metrics.total_fast_poll_count,
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_fast_poll_duration,
@@ -152,7 +156,7 @@ impl MyRouter {
                             .as_nanos()
                             .try_into()
                             .unwrap(),
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_first_poll_delay,
@@ -161,7 +165,7 @@ impl MyRouter {
                             .as_nanos()
                             .try_into()
                             .unwrap(),
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_idle_duration,
@@ -170,13 +174,17 @@ impl MyRouter {
                             .as_nanos()
                             .try_into()
                             .unwrap(),
-                        attrs,
+                        &attrs,
                     );
-                    observer.observe_u64(&total_idled_count, task_metrics.total_idled_count, attrs);
+                    observer.observe_u64(
+                        &total_idled_count,
+                        task_metrics.total_idled_count,
+                        &attrs,
+                    );
                     observer.observe_u64(
                         &total_long_delay_count,
                         task_metrics.total_long_delay_count,
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_long_delay_duration,
@@ -185,9 +193,9 @@ impl MyRouter {
                             .as_nanos()
                             .try_into()
                             .unwrap(),
-                        attrs,
+                        &attrs,
                     );
-                    observer.observe_u64(&total_poll_count, task_metrics.total_poll_count, attrs);
+                    observer.observe_u64(&total_poll_count, task_metrics.total_poll_count, &attrs);
                     observer.observe_u64(
                         &total_poll_duration,
                         task_metrics
@@ -195,12 +203,12 @@ impl MyRouter {
                             .as_nanos()
                             .try_into()
                             .unwrap(),
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_scheduled_count,
                         task_metrics.total_scheduled_count,
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_scheduled_duration,
@@ -209,12 +217,12 @@ impl MyRouter {
                             .as_nanos()
                             .try_into()
                             .unwrap(),
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_short_delay_count,
                         task_metrics.total_short_delay_count,
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_short_delay_duration,
@@ -223,12 +231,12 @@ impl MyRouter {
                             .as_nanos()
                             .try_into()
                             .unwrap(),
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_slow_poll_count,
                         task_metrics.total_slow_poll_count,
-                        attrs,
+                        &attrs,
                     );
                     observer.observe_u64(
                         &total_slow_poll_duration,
@@ -237,7 +245,7 @@ impl MyRouter {
                             .as_nanos()
                             .try_into()
                             .unwrap(),
-                        attrs,
+                        &attrs,
                     );
                 },
             )

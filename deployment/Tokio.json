@@ -267,9 +267,9 @@
       },
       "id": 6,
       "panels": [],
-      "repeat": "url_path",
+      "repeat": "http_route",
       "repeatDirection": "h",
-      "title": "Task Metrics $url_path",
+      "title": "Task Metrics $http_route",
       "type": "row"
     },
     {
@@ -357,7 +357,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "{__name__=~\"tokio_task_metrics_.*\",__name__!~\"tokio_task_metrics_.*_nanoseconds\",url_path=~\"$url_path\"}",
+          "expr": "{__name__=~\"tokio_task_metrics_.*\",__name__!~\"tokio_task_metrics_.*_nanoseconds\",http_route=~\"$http_route\"}",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -453,7 +453,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "{__name__=~\"tokio_task_metrics_.*_nanoseconds\",url_path=~\"$url_path\"}",
+          "expr": "{__name__=~\"tokio_task_metrics_.*_nanoseconds\",http_route=~\"$http_route\"}",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -464,7 +464,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "",
+  "refresh": "auto",
   "schemaVersion": 39,
   "tags": [],
   "templating": {
@@ -475,38 +475,15 @@
           "type": "prometheus",
           "uid": "${DS_PROMETHEUS}"
         },
-        "definition": "label_values(tokio_task_metrics_instrumented_count,url_path)",
+        "definition": "label_values(tokio_task_metrics_instrumented_count,http_route)",
         "hide": 0,
         "includeAll": true,
         "multi": true,
-        "name": "url_path",
+        "name": "http_route",
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(tokio_task_metrics_instrumented_count,url_path)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
-        },
-        "definition": "label_values(tokio_task_metrics_instrumented_count,http_request_method)",
-        "hide": 0,
-        "includeAll": true,
-        "multi": true,
-        "name": "http_request_method",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(tokio_task_metrics_instrumented_count,http_request_method)",
+          "query": "label_values(tokio_task_metrics_instrumented_count,http_route)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -525,6 +502,6 @@
   "timezone": "",
   "title": "Tokio",
   "uid": "b21ee6c0-e86d-40f9-ad41-17155664aba7",
-  "version": 17,
+  "version": 19,
   "weekStart": ""
 }
