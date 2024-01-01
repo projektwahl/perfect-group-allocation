@@ -15,11 +15,10 @@ use super::list::create_project;
 use crate::entities::project_history;
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{CreateProjectPayload, CsrfSafeForm, XRequestId};
+use crate::{CreateProjectPayload, CsrfSafeForm};
 
 pub async fn create(
     State(db): State<DatabaseConnection>,
-    TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> (Session, impl IntoResponse) {

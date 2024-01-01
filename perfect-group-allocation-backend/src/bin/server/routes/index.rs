@@ -11,12 +11,8 @@ use zero_cost_templating::{yieldoki, yieldokv};
 use crate::error::AppError;
 use crate::routes::projects::list::create_project;
 use crate::session::Session;
-use crate::XRequestId;
 
-pub async fn index(
-    TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
-    session: Session,
-) -> (Session, impl IntoResponse) {
+pub async fn index(session: Session) -> (Session, impl IntoResponse) {
     let session_clone = session.clone();
     let result = async gen move {
         let template = yieldoki!(create_project());

@@ -44,10 +44,10 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use telemetry::setup_telemetry;
+use telemetry::trace_layer::my_trace_layer;
 use tokio::net::TcpListener;
 use tower::{service_fn, ServiceBuilder};
 use tower_http::catch_panic::CatchPanicLayer;
-use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::warn;
@@ -117,10 +117,6 @@ where
         mut req: axum::extract::Request,
         state: &MyState,
     ) -> Result<Self, Self::Rejection> {
-        /*let request_id = req
-        .extract_parts::<TypedHeader<XRequestId>>()
-        .await
-        .map_or("unknown-request-id".to_owned(), |header| header.0.0);*/
         let not_get_or_head = !(req.method() == Method::GET || req.method() == Method::HEAD);
         let session = match req
             .extract_parts_with_state::<Session, MyState>(state)
@@ -152,83 +148,6 @@ where
 }
 
 impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
-
-// maybe not per request csrf but per form a different csrf token that is only valid for the form as defense in depth.
-/*
-fn csrf_helper(
-    h: &Helper<'_, '_>,
-    _hb: &Handlebars<'_>,
-    _c: &HandlebarsContext,
-    _rc: &mut RenderContext<'_, '_>,
-    out: &mut dyn Output,
-) -> HelperResult {
-    // get parameter from helper or throw an error
-    let param = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
-    //c.data()
-    //rc.context()
-
-    // is one of the always the top level context from which we could get the csrf token? Also we can create
-    // helpers as a struct and then store data in them so maybe register the helper per http handler and configure
-    // the user there?
-
-    out.write(param.to_uppercase().as_ref())?;
-    Ok(())
-}
-*/
-
-// https://github.com/sunng87/handlebars-rust/tree/master/src/helpers
-// https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
-// https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
-
-pub struct XRequestId(String);
-
-static X_REQUEST_ID_HEADER_NAME: HeaderName = http::header::HeaderName::from_static("x-request-id");
-
-impl Header for XRequestId {
-    fn name() -> &'static HeaderName {
-        &X_REQUEST_ID_HEADER_NAME
-    }
-
-    fn decode<'i, I>(values: &mut I) -> Result<Self, axum_extra::headers::Error>
-    where
-        I: Iterator<Item = &'i HeaderValue>,
-    {
-        let value = values
-            .exactly_one()
-            .map_err(|_e| axum_extra::headers::Error::invalid())?;
-        let value = value
-            .to_str()
-            .map_err(|_e| axum_extra::headers::Error::invalid())?;
-        Ok(Self(value.to_owned()))
-    }
-
-    fn encode<E>(&self, values: &mut E)
-    where
-        E: Extend<HeaderValue>,
-    {
-        #[expect(clippy::unwrap_used, reason = "decode ensures this is unreachable")]
-        let value = HeaderValue::from_str(&self.0).unwrap();
-
-        values.extend(core::iter::once(value));
-    }
-}
-
-/*
-async fn handle_error_test(
-    request_id: Result<TypedHeader<XRequestId>, TypedHeaderRejection>,
-    err: Box<dyn std::error::Error + Sync + Send + 'static>,
-) -> (StatusCode, String) {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        // intentionally not using handlebars etc to reduce amount of potentially broken code executed here
-        format!(
-            "Unhandled internal error for request {}: {:?}",
-            request_id.map_or("unknown-request-id".to_owned(), |header| header.0.0),
-            err
-        ),
-    )
-}
-*/
 
 pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
     let database_url = std::env::var("DATABASE_URL")?;
@@ -293,19 +212,12 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
         database: db,
         key: Key::generate(),
     });
-    //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
-    // TODO FIXME
     let app = app.layer(
         ServiceBuilder::new()
             //.layer(HandleErrorLayer::new(handle_error_test))
-            .layer(
-                TraceLayer::new_for_http()
-                    .make_span_with(DefaultMakeSpan::default().include_headers(true))
-                    .on_response(DefaultOnResponse::default().include_headers(true)),
-            )
+            .layer(my_trace_layer())
             .layer(CatchPanicLayer::new()),
     );
-    let app: Router<()> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
     app
 }
 

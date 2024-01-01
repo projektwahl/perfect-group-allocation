@@ -1,4 +1,5 @@
 pub mod tokio_metrics;
+pub mod trace_layer;
 
 use opentelemetry::global::{self, logger_provider};
 use opentelemetry::KeyValue;
