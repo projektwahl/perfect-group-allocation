@@ -54,16 +54,18 @@ where
 
         // https://opentelemetry.io/docs/specs/semconv/attributes-registry/http/
         // https://opentelemetry.io/docs/specs/semconv/http/http-spans/
-        // http.request.body.size
-        // http.request.header.<key>
 
-        // TODO FIXME set way more values
-        let span = tracing::debug_span!(
+        let route = request
+            .extensions()
+            .get::<MatchedPath>()
+            .unwrap()
+            .as_str()
+            .to_owned();
+
+        let span = tracing::span!(
+            tracing::Level::DEBUG,
             "request",
-            method = %request.method(),
-            uri = %request.uri(),
-            version = ?request.version(),
-            responseheaders = tracing::field::Empty,
+            "otel.name" = format!("{} {}", request.method(), route),
         );
 
         span.set_parent(context);
@@ -91,13 +93,6 @@ where
             }
         }
         span.set_attribute(otelsc::HTTP_REQUEST_METHOD, request.method().to_string());
-
-        let route = request
-            .extensions()
-            .get::<MatchedPath>()
-            .unwrap()
-            .as_str()
-            .to_owned();
 
         span.set_attribute(otelsc::HTTP_ROUTE, route);
 
