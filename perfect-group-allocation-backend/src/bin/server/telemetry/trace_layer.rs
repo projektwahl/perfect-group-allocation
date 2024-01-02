@@ -1,9 +1,11 @@
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
+use std::str::FromStr;
 use std::task::{ready, Context, Poll};
 
-use http::{HeaderMap, HeaderValue, Request, Response};
+use http::{HeaderMap, HeaderName, HeaderValue, Request, Response};
+use itertools::Itertools;
 use opentelemetry::global;
 use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
 use opentelemetry::trace::Tracer as _;
@@ -108,16 +110,20 @@ pub struct MyTraceHeaderPropagator<'a>(&'a mut HeaderMap<HeaderValue>);
 
 impl<'a> Injector for MyTraceHeaderPropagator<'a> {
     fn set(&mut self, key: &str, value: String) {
-        todo!()
+        if let Ok(key) = HeaderName::from_str(key) {
+            if let Ok(value) = HeaderValue::from_str(&value) {
+                self.0.insert(key, value);
+            }
+        }
     }
 }
 
 impl<'a> Extractor for MyTraceHeaderPropagator<'a> {
     fn get(&self, key: &str) -> Option<&str> {
-        todo!()
+        self.0.get(key).and_then(|value| value.to_str().ok())
     }
 
     fn keys(&self) -> Vec<&str> {
-        todo!()
+        self.0.keys().map(|key| key.as_str()).collect()
     }
 }
