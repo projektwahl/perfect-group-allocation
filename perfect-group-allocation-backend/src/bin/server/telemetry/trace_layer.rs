@@ -66,6 +66,8 @@ where
 
         span.set_parent(context);
 
+        // TODO FIXME async span needs correct handling
+
         tracing::debug!("started processing request");
 
         let response_future = self.inner.call(request);
