@@ -54,7 +54,7 @@ use tower::{service_fn, Service, ServiceBuilder, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse};
-use tracing::warn;
+use tracing::{warn, Instrument as _};
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 use crate::openid::initialize_openid_client;
@@ -330,6 +330,8 @@ async fn program() -> Result<(), AppError> {
                 // ready.
                 let tower_service = unwrap_infallible(make_service.call(remote_addr).await);
 
+                let child_span = tracing::debug_span!("child");
+
                 tokio::spawn(async move {
                     let socket = TokioIo::new(socket);
 
@@ -343,7 +345,7 @@ async fn program() -> Result<(), AppError> {
                     {
                         eprintln!("failed to serve connection: {err:#}");
                     }
-                });
+                }.instrument(child_span.or_current()));
             }
             () = shutdown_signal() => {
                 // TODO FIXME "graceful shutdown"
