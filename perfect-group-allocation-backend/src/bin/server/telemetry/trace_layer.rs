@@ -68,7 +68,8 @@ where
             "otel.name" = format!("{} {}", request.method(), route),
         );
 
-        span.set_parent(context);
+        // TODO FIXME set parent as the connection if no other parent is provided. Or maybe at least somehow link them.
+        //span.set_parent(context);
 
         if let Some(value) = request
             .headers()
