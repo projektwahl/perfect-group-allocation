@@ -222,6 +222,18 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
     app
 }
 
+// TODO https://github.com/tokio-rs/axum/tree/main/examples/auto-reload
+// TODO https://github.com/tokio-rs/axum/tree/main/examples/consume-body-in-extractor-or-middleware for body length, download time etc metrics
+// TODO https://github.com/tokio-rs/axum/blob/main/examples/error-handling/src/main.rs
+// TODO https://github.com/tokio-rs/axum/blob/main/examples/global-404-handler/src/main.rs
+// TODO https://github.com/tokio-rs/axum/blob/main/examples/graceful-shutdown/src/main.rs timeout handler
+// TODO https://github.com/tokio-rs/axum/blob/main/examples/low-level-rustls/src/main.rs allow enabling rustls
+// https://github.com/tokio-rs/axum/blob/main/examples/stream-to-file/src/main.rs
+// https://github.com/tokio-rs/axum/blob/main/examples/tls-graceful-shutdown/src/main.rs graceful shutdown
+// https://github.com/tokio-rs/axum/tree/main/examples/tls-rustls
+// https://github.com/tokio-rs/axum/blob/main/examples/serve-with-hyper/src/main.rs
+// https://github.com/tokio-rs/axum/blob/main/examples/listen-multiple-addrs/src/main.rs
+
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     // avoid putting more code here as this is outside of all spans so doesn't get traced

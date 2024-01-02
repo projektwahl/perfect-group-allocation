@@ -127,6 +127,7 @@ where
                 global::get_text_map_propagator(|propagator| {
                     propagator.inject_context(
                         &this.response_future.span().context(),
+                        // Can't use tower_http::trace::TraceLayer because we need mutable access to the response
                         &mut MyTraceHeaderPropagator(response.headers_mut()),
                     );
                 });
@@ -153,7 +154,7 @@ where
                 Poll::Ready(Ok(response))
             }
             Err(error) => {
-                // TODO trace error
+                // TODO FIXME trace error
                 Poll::Ready(Err(error))
             }
         }
