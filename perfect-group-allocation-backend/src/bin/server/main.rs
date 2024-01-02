@@ -48,7 +48,8 @@ use serde::{Deserialize, Serialize};
 use session::Session;
 use telemetry::setup_telemetry;
 use telemetry::trace_layer::MyTraceLayer;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
+use tokio::select;
 use tower::{service_fn, Service, ServiceBuilder, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
@@ -316,31 +317,42 @@ async fn program() -> Result<(), AppError> {
     let mut make_service = app.into_make_service_with_connect_info::<SocketAddr>();
 
     let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let mut accept: (TcpStream, SocketAddr);
 
+    #[allow(clippy::redundant_pub_crate)]
     loop {
-        let (socket, remote_addr) = listener.accept().await.unwrap();
+        select! {
+            accept = listener.accept() => {
 
-        // We don't need to call `poll_ready` because `IntoMakeServiceWithConnectInfo` is always
-        // ready.
-        let tower_service = unwrap_infallible(make_service.call(remote_addr).await);
+                let (socket, remote_addr) = accept.unwrap();
 
-        tokio::spawn(async move {
-            let socket = TokioIo::new(socket);
+                // We don't need to call `poll_ready` because `IntoMakeServiceWithConnectInfo` is always
+                // ready.
+                let tower_service = unwrap_infallible(make_service.call(remote_addr).await);
 
-            let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
-                tower_service.clone().oneshot(request)
-            });
+                tokio::spawn(async move {
+                    let socket = TokioIo::new(socket);
 
-            if let Err(err) = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
-                .serve_connection_with_upgrades(socket, hyper_service)
-                .await
-            {
-                eprintln!("failed to serve connection: {err:#}");
+                    let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
+                        tower_service.clone().oneshot(request)
+                    });
+
+                    if let Err(err) = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
+                        .serve_connection_with_upgrades(socket, hyper_service)
+                        .await
+                    {
+                        eprintln!("failed to serve connection: {err:#}");
+                    }
+                });
             }
-        });
+            () = shutdown_signal() => {
+                // TODO FIXME "graceful shutdown"
+                warn!("SHUTDOWN");
+                break;
+            }
+        }
     }
 
-    warn!("SHUTDOWN");
     Ok(())
 }
 
@@ -353,22 +365,19 @@ fn unwrap_infallible<T>(result: Result<T, Infallible>) -> T {
 
 #[allow(clippy::redundant_pub_crate)]
 async fn shutdown_signal() {
+    // check which of these two signals we need
     let ctrl_c = async {
         tokio::signal::ctrl_c()
             .await
             .expect("failed to install Ctrl+C handler");
     };
 
-    #[cfg(unix)]
     let terminate = async {
         tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
             .expect("failed to install signal handler")
             .recv()
             .await;
     };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
 
     tokio::select! {
         () = ctrl_c => {},
