@@ -44,11 +44,12 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use telemetry::setup_telemetry;
+use telemetry::trace_layer::MyTraceLayer;
 use tokio::net::TcpListener;
 use tower::{service_fn, ServiceBuilder};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
-use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse};
 use tracing::warn;
 
 use crate::openid::initialize_openid_client;
@@ -214,7 +215,7 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
     let app = app.layer(
         ServiceBuilder::new()
             //.layer(HandleErrorLayer::new(handle_error_test))
-            .layer(my_trace_layer())
+            .layer(MyTraceLayer)
             .layer(CatchPanicLayer::new()),
     );
     app

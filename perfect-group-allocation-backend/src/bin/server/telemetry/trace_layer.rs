@@ -10,29 +10,40 @@ use opentelemetry::global;
 use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
 use opentelemetry::trace::Tracer as _;
 use pin_project::pin_project;
-use tower::Service;
+use tower::{Layer, Service};
 use tracing::Span;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 // TODO FIXME add support for http client
 
 #[derive(Debug, Clone)]
-struct TraceService<S> {
-    inner: S,
-}
+pub struct MyTraceLayer;
 
-impl<S> TraceService<S> {
-    fn new(inner: S) -> Self {
-        TraceService { inner }
+impl<S> Layer<S> for MyTraceLayer {
+    type Service = MyTraceService<S>;
+
+    fn layer(&self, service: S) -> Self::Service {
+        MyTraceService { inner: service }
     }
 }
 
-impl<S, RequestBody, ResponseBody> Service<Request<RequestBody>> for TraceService<S>
+#[derive(Debug, Clone)]
+pub struct MyTraceService<S> {
+    inner: S,
+}
+
+impl<S> MyTraceService<S> {
+    fn new(inner: S) -> Self {
+        MyTraceService { inner }
+    }
+}
+
+impl<S, RequestBody, ResponseBody> Service<Request<RequestBody>> for MyTraceService<S>
 where
     S: Service<Request<RequestBody>, Response = Response<ResponseBody>>,
 {
     type Error = S::Error;
-    type Future = TraceFuture<S::Future>;
+    type Future = MyTraceFuture<S::Future>;
     type Response = S::Response;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -62,7 +73,7 @@ where
             self.inner.call(request)
         };
 
-        TraceFuture {
+        MyTraceFuture {
             response_future,
             span,
         }
@@ -70,13 +81,13 @@ where
 }
 
 #[pin_project]
-struct TraceFuture<F> {
+pub struct MyTraceFuture<F> {
     #[pin]
     response_future: F,
     span: Span,
 }
 
-impl<F, ResponseBody, Error> Future for TraceFuture<F>
+impl<F, ResponseBody, Error> Future for MyTraceFuture<F>
 where
     F: Future<Output = Result<Response<ResponseBody>, Error>>,
 {
