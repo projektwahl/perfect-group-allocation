@@ -23,6 +23,7 @@ pub mod telemetry;
 
 use core::convert::Infallible;
 use core::time::Duration;
+use std::net::SocketAddr;
 
 use axum::extract::{FromRef, FromRequest};
 use axum::http::{self, HeaderName, HeaderValue};
@@ -30,8 +31,10 @@ use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
 use axum_extra::headers::Header;
 use error::{to_error_result, AppError};
-use http::StatusCode;
+use http::{Request, StatusCode};
+use hyper::body::Incoming;
 use hyper::Method;
+use hyper_util::rt::{TokioExecutor, TokioIo};
 use itertools::Itertools;
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
@@ -46,7 +49,7 @@ use session::Session;
 use telemetry::setup_telemetry;
 use telemetry::trace_layer::MyTraceLayer;
 use tokio::net::TcpListener;
-use tower::{service_fn, ServiceBuilder};
+use tower::{service_fn, Service, ServiceBuilder, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse};
@@ -306,15 +309,46 @@ async fn program() -> Result<(), AppError> {
     .serve(app.into_make_service())
     .await
     .unwrap();*/
-    let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
 
     // TODO FIXME for every accepted connection trace
     // https://opentelemetry.io/docs/specs/semconv/attributes-registry/network/
-    axum::serve(listener, app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+
+    let mut make_service = app.into_make_service_with_connect_info::<SocketAddr>();
+
+    let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
+
+    loop {
+        let (socket, remote_addr) = listener.accept().await.unwrap();
+
+        // We don't need to call `poll_ready` because `IntoMakeServiceWithConnectInfo` is always
+        // ready.
+        let tower_service = unwrap_infallible(make_service.call(remote_addr).await);
+
+        tokio::spawn(async move {
+            let socket = TokioIo::new(socket);
+
+            let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
+                tower_service.clone().oneshot(request)
+            });
+
+            if let Err(err) = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
+                .serve_connection_with_upgrades(socket, hyper_service)
+                .await
+            {
+                eprintln!("failed to serve connection: {err:#}");
+            }
+        });
+    }
+
     warn!("SHUTDOWN");
     Ok(())
+}
+
+fn unwrap_infallible<T>(result: Result<T, Infallible>) -> T {
+    match result {
+        Ok(value) => value,
+        Err(err) => match err {},
+    }
 }
 
 #[allow(clippy::redundant_pub_crate)]
