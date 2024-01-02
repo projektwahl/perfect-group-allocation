@@ -44,7 +44,6 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use telemetry::setup_telemetry;
-use telemetry::trace_layer::my_trace_layer;
 use tokio::net::TcpListener;
 use tower::{service_fn, ServiceBuilder};
 use tower_http::catch_panic::CatchPanicLayer;

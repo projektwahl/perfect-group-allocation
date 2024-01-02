@@ -1,27 +1,14 @@
-use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::time::Duration;
+use std::task::{ready, Context, Poll};
 
-use http::{HeaderMap, HeaderValue};
-use opentelemetry::baggage::BaggageExt as _;
+use http::{HeaderMap, HeaderValue, Request, Response};
+use opentelemetry::global;
 use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
-use opentelemetry::trace::{TraceContextExt as _, Tracer as _, TracerProvider as _};
-use opentelemetry::{global, KeyValue};
-use opentelemetry_sdk::propagation::{
-    BaggagePropagator, TextMapCompositePropagator, TraceContextPropagator,
-};
-use opentelemetry_sdk::trace::TracerProvider;
+use opentelemetry::trace::Tracer as _;
 use pin_project::pin_project;
-use tokio::time::Sleep;
 use tower::Service;
-use tower_http::classify::{ServerErrorsAsFailures, SharedClassifier};
-use tower_http::trace::{
-    DefaultMakeSpan, DefaultOnResponse, MakeSpan, OnRequest, OnResponse, TraceLayer,
-};
-use tracing::Level;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 #[derive(Debug, Clone)]
@@ -35,12 +22,11 @@ impl<S> TraceService<S> {
     }
 }
 
-impl<S, Request> Service<Request> for TraceService<S>
+impl<S, RequestBody, ResponseBody> Service<Request<RequestBody>> for TraceService<S>
 where
-    S: Service<Request>,
-    S::Error: Into<BoxError>,
+    S: Service<Request<RequestBody>, Response = Response<ResponseBody>>,
 {
-    type Error = BoxError;
+    type Error = S::Error;
     type Future = TraceFuture<S::Future>;
     type Response = S::Response;
 
@@ -48,14 +34,12 @@ where
         self.inner.poll_ready(cx).map_err(Into::into)
     }
 
-    fn call(&mut self, request: Request) -> Self::Future {
+    fn call(&mut self, mut request: Request<RequestBody>) -> Self::Future {
         let context = global::get_text_map_propagator(|propagator| {
-            propagator.extract_with_context(
-                &opentelemetry::Context::current(),
-                &MyTraceHeaderPropagator(request.headers_mut()),
-            )
+            propagator.extract(&MyTraceHeaderPropagator(request.headers_mut()))
         });
 
+        // TODO FIXME set way more values
         let span = tracing::debug_span!(
             "request",
             method = %request.method(),
@@ -82,20 +66,18 @@ struct TraceFuture<F> {
     response_future: F,
 }
 
-impl<F, Response, Error> Future for TraceFuture<F>
+impl<F, ResponseBody, Error> Future for TraceFuture<F>
 where
-    F: Future<Output = Result<Response, Error>>,
-    Error: Into<BoxError>,
+    F: Future<Output = Result<Response<ResponseBody>, Error>>,
 {
-    type Output = Result<Response, BoxError>;
+    type Output = Result<Response<ResponseBody>, Error>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
 
-        match this.response_future.poll(cx) {
-            Poll::Ready(result) => {
-                let result = result.map_err(Into::into);
-
+        match ready!(this.response_future.poll(cx)) {
+            Ok(mut response) => {
+                // trace response
                 global::get_text_map_propagator(|propagator| {
                     propagator.inject_context(
                         &opentelemetry::Context::current(),
@@ -105,33 +87,17 @@ where
 
                 let response_headers = tracing::field::debug(response.headers());
 
-                tracing::debug!(
-                    latency = latency.as_nanos(),
-                    response_headers,
-                    "finished processing request"
-                );
+                tracing::debug!(response_headers, "finished processing request");
 
-                return Poll::Ready(result);
+                Poll::Ready(Ok(response))
             }
-            Poll::Pending => {}
+            Err(error) => {
+                // TODO trace error
+                Poll::Ready(Err(error))
+            }
         }
-
-        Poll::Pending
     }
 }
-
-#[derive(Debug, Default)]
-struct TraceError(());
-
-impl fmt::Display for TraceError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.pad("request timed out")
-    }
-}
-
-impl std::error::Error for TraceError {}
-
-type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 // https://github.com/slickbench/tower-opentelemetry/blob/main/src/lib.rs
 // https://github.com/mattiapenati/tower-otel/blob/main/src/trace/http.rs
