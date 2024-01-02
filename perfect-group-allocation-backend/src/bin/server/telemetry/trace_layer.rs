@@ -9,6 +9,7 @@ use itertools::Itertools;
 use opentelemetry::global;
 use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
 use opentelemetry::trace::Tracer as _;
+use opentelemetry_semantic_conventions::trace as otelsc;
 use pin_project::pin_project;
 use tower::{Layer, Service};
 use tracing::instrument::Instrumented;
@@ -50,6 +51,10 @@ where
             propagator.extract(&MyTraceHeaderPropagator(request.headers_mut()))
         });
 
+        // https://opentelemetry.io/docs/specs/semconv/attributes-registry/http/
+        // http.request.body.size
+        // http.request.header.<key>
+
         // TODO FIXME set way more values
         let span = tracing::debug_span!(
             "request",
@@ -61,6 +66,23 @@ where
         );
 
         span.set_parent(context);
+
+        if let Some(value) = request
+            .headers()
+            .get(http::header::USER_AGENT)
+            .and_then(|value| value.to_str().ok())
+        {
+            span.set_attribute(otelsc::USER_AGENT_ORIGINAL, value.to_owned());
+        }
+
+        span.set_attribute(otelsc::URL_FULL, request.uri().to_string());
+        span.set_attribute(otelsc::URL_PATH, request.uri().path().to_string());
+        if let Some(query) = request.uri().query() {
+            span.set_attribute(otelsc::URL_QUERY, query.to_string());
+        }
+        if let Some(scheme) = request.uri().scheme() {
+            span.set_attribute(otelsc::URL_SCHEME, scheme.to_string());
+        }
 
         let response_future = {
             let _ = span.enter();
@@ -113,10 +135,7 @@ where
     }
 }
 
-// https://github.com/slickbench/tower-opentelemetry/blob/main/src/lib.rs
-// https://github.com/mattiapenati/tower-otel/blob/main/src/trace/http.rs
 // https://docs.rs/tracing-opentelemetry/latest/tracing_opentelemetry/#special-fields
-// https://github.com/davidB/tracing-opentelemetry-instrumentation-sdk/blob/main/tracing-opentelemetry-instrumentation-sdk/src/http/http_server.rs
 
 pub struct MyTraceHeaderPropagator<'a>(&'a mut HeaderMap<HeaderValue>);
 

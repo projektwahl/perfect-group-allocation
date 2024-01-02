@@ -51,6 +51,7 @@ use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse};
 use tracing::warn;
+use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 use crate::openid::initialize_openid_client;
 use crate::router::MyRouter;
@@ -231,27 +232,16 @@ async fn main() -> Result<(), AppError> {
 
 #[tracing::instrument]
 async fn program() -> Result<(), AppError> {
+    tracing::Span::current().set_attribute(
+        opentelemetry_semantic_conventions::trace::SERVER_ADDRESS,
+        "localhost",
+    );
+
     tokio_runtime_metrics();
 
     initialize_favicon_ico().await;
     initialize_index_css();
     initialize_openid_client().await;
-
-    let handle = tokio::runtime::Handle::current();
-    let runtime_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
-
-    // print runtime metrics every 500ms
-    {
-        tokio::spawn(async move {
-            for _interval_runtime in runtime_monitor.intervals() {
-                // pretty-print the metric interval
-                //println!("runtime {:?}", interval_runtime.busy_ratio());
-
-                // wait 500ms
-                tokio::time::sleep(Duration::from_millis(500)).await;
-            }
-        });
-    }
 
     let db = get_database_connection().await?;
 
@@ -306,6 +296,8 @@ async fn program() -> Result<(), AppError> {
     .unwrap();*/
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
 
+    // TODO FIXME for every accepted connection trace
+    // https://opentelemetry.io/docs/specs/semconv/attributes-registry/network/
     axum::serve(listener, app.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await?;
