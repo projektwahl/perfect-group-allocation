@@ -12,7 +12,7 @@ use opentelemetry::trace::Tracer as _;
 use pin_project::pin_project;
 use tower::{Layer, Service};
 use tracing::Span;
-use tracing_opentelemetry::OpenTelemetrySpanExt as _;
+use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 // TODO FIXME add support for http client
 
@@ -30,12 +30,6 @@ impl<S> Layer<S> for MyTraceLayer {
 #[derive(Debug, Clone)]
 pub struct MyTraceService<S> {
     inner: S,
-}
-
-impl<S> MyTraceService<S> {
-    fn new(inner: S) -> Self {
-        MyTraceService { inner }
-    }
 }
 
 impl<S, RequestBody, ResponseBody> Service<Request<RequestBody>> for MyTraceService<S>
@@ -65,8 +59,6 @@ where
         );
 
         span.set_parent(context);
-
-        // TODO FIXME async span needs correct handling
 
         let response_future = {
             let _ = span.enter();
@@ -101,10 +93,15 @@ where
             Ok(mut response) => {
                 // trace response
                 global::get_text_map_propagator(|propagator| {
-                    propagator.inject(&mut MyTraceHeaderPropagator(response.headers_mut()))
+                    propagator.inject_context(
+                        &this.span.context(),
+                        &mut MyTraceHeaderPropagator(response.headers_mut()),
+                    );
                 });
 
                 let response_headers = tracing::field::debug(response.headers());
+
+                this.span.record("responseheaders", response_headers);
 
                 Poll::Ready(Ok(response))
             }
