@@ -11,7 +11,10 @@ use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
 use opentelemetry::trace::Tracer as _;
 use pin_project::pin_project;
 use tower::Service;
+use tracing::Span;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
+
+// TODO FIXME add support for http client
 
 #[derive(Debug, Clone)]
 struct TraceService<S> {
@@ -54,11 +57,15 @@ where
 
         // TODO FIXME async span needs correct handling
 
-        tracing::debug!("started processing request");
+        let response_future = {
+            let _ = span.enter();
+            self.inner.call(request)
+        };
 
-        let response_future = self.inner.call(request);
-
-        TraceFuture { response_future }
+        TraceFuture {
+            response_future,
+            span,
+        }
     }
 }
 
@@ -66,6 +73,7 @@ where
 struct TraceFuture<F> {
     #[pin]
     response_future: F,
+    span: Span,
 }
 
 impl<F, ResponseBody, Error> Future for TraceFuture<F>
@@ -76,20 +84,16 @@ where
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
+        let _ = this.span.enter();
 
         match ready!(this.response_future.poll(cx)) {
             Ok(mut response) => {
                 // trace response
                 global::get_text_map_propagator(|propagator| {
-                    propagator.inject_context(
-                        &opentelemetry::Context::current(),
-                        &mut MyTraceHeaderPropagator(response.headers_mut()),
-                    )
+                    propagator.inject(&mut MyTraceHeaderPropagator(response.headers_mut()))
                 });
 
                 let response_headers = tracing::field::debug(response.headers());
-
-                tracing::debug!(response_headers, "finished processing request");
 
                 Poll::Ready(Ok(response))
             }
