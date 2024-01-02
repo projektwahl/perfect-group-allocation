@@ -4,6 +4,7 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::task::{ready, Context, Poll};
 
+use axum::extract::MatchedPath;
 use http::{HeaderMap, HeaderName, HeaderValue, Request, Response};
 use itertools::Itertools;
 use opentelemetry::global;
@@ -52,6 +53,7 @@ where
         });
 
         // https://opentelemetry.io/docs/specs/semconv/attributes-registry/http/
+        // https://opentelemetry.io/docs/specs/semconv/http/http-spans/
         // http.request.body.size
         // http.request.header.<key>
 
@@ -61,7 +63,6 @@ where
             method = %request.method(),
             uri = %request.uri(),
             version = ?request.version(),
-            headers = ?request.headers(),
             responseheaders = tracing::field::Empty,
         );
 
@@ -83,6 +84,22 @@ where
         if let Some(scheme) = request.uri().scheme() {
             span.set_attribute(otelsc::URL_SCHEME, scheme.to_string());
         }
+        for (name, value) in request.headers() {
+            if let Ok(value) = value.to_str() {
+                // TODO FIXME escaping
+                span.set_attribute(format!("http.request.header.{name}"), value.to_owned());
+            }
+        }
+        span.set_attribute(otelsc::HTTP_REQUEST_METHOD, request.method().to_string());
+
+        let route = request
+            .extensions()
+            .get::<MatchedPath>()
+            .unwrap()
+            .as_str()
+            .to_owned();
+
+        span.set_attribute(otelsc::HTTP_ROUTE, route);
 
         let response_future = {
             let _ = span.enter();
@@ -119,11 +136,24 @@ where
                     );
                 });
 
-                let response_headers = tracing::field::debug(response.headers());
+                let span = this.response_future.span();
 
-                this.response_future
-                    .span()
-                    .record("responseheaders", response_headers);
+                //span.set_attribute(otelsc::HTTP_RESPONSE_BODY_SIZE, response.)
+
+                for (name, value) in response.headers() {
+                    if let Ok(value) = value.to_str() {
+                        // TODO FIXME escaping
+                        span.set_attribute(
+                            format!("http.response.header.{name}"),
+                            value.to_owned(),
+                        );
+                    }
+                }
+
+                span.set_attribute(
+                    otelsc::HTTP_RESPONSE_STATUS_CODE,
+                    response.status().to_string(),
+                );
 
                 Poll::Ready(Ok(response))
             }
