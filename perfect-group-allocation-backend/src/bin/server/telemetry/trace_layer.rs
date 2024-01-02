@@ -9,7 +9,7 @@ use http::{HeaderMap, HeaderValue};
 use opentelemetry::baggage::BaggageExt as _;
 use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
 use opentelemetry::trace::{TraceContextExt as _, Tracer as _, TracerProvider as _};
-use opentelemetry::KeyValue;
+use opentelemetry::{global, KeyValue};
 use opentelemetry_sdk::propagation::{
     BaggagePropagator, TextMapCompositePropagator, TraceContextPropagator,
 };
@@ -27,12 +27,11 @@ use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 #[derive(Debug, Clone)]
 struct TraceService<S> {
     inner: S,
-    timeout: Duration,
 }
 
 impl<S> TraceService<S> {
-    fn new(inner: S, timeout: Duration) -> Self {
-        TraceService { inner, timeout }
+    fn new(inner: S) -> Self {
+        TraceService { inner }
     }
 }
 
@@ -50,13 +49,28 @@ where
     }
 
     fn call(&mut self, request: Request) -> Self::Future {
-        let response_future = self.inner.call(request);
-        let sleep = tokio::time::sleep(self.timeout);
+        let context = global::get_text_map_propagator(|propagator| {
+            propagator.extract_with_context(
+                &opentelemetry::Context::current(),
+                &MyTraceHeaderPropagator(request.headers_mut()),
+            )
+        });
 
-        TraceFuture {
-            response_future,
-            sleep,
-        }
+        let span = tracing::debug_span!(
+            "request",
+            method = %request.method(),
+            uri = %request.uri(),
+            version = ?request.version(),
+            headers = ?request.headers(),
+        );
+
+        span.set_parent(context);
+
+        tracing::debug!("started processing request");
+
+        let response_future = self.inner.call(request);
+
+        TraceFuture { response_future }
     }
 }
 
@@ -64,8 +78,6 @@ where
 struct TraceFuture<F> {
     #[pin]
     response_future: F,
-    #[pin]
-    sleep: Sleep,
 }
 
 impl<F, Response, Error> Future for TraceFuture<F>
@@ -81,15 +93,23 @@ where
         match this.response_future.poll(cx) {
             Poll::Ready(result) => {
                 let result = result.map_err(Into::into);
-                return Poll::Ready(result);
-            }
-            Poll::Pending => {}
-        }
 
-        match this.sleep.poll(cx) {
-            Poll::Ready(()) => {
-                let error = Box::new(TraceError(()));
-                return Poll::Ready(Err(error));
+                global::get_text_map_propagator(|propagator| {
+                    propagator.inject_context(
+                        &opentelemetry::Context::current(),
+                        &mut MyTraceHeaderPropagator(response.headers_mut()),
+                    )
+                });
+
+                let response_headers = tracing::field::debug(response.headers());
+
+                tracing::debug!(
+                    latency = latency.as_nanos(),
+                    response_headers,
+                    "finished processing request"
+                );
+
+                return Poll::Ready(result);
             }
             Poll::Pending => {}
         }
@@ -132,89 +152,4 @@ impl<'a> Extractor for MyTraceHeaderPropagator<'a> {
     fn keys(&self) -> Vec<&str> {
         todo!()
     }
-}
-
-#[derive(Default, Clone, Copy)]
-pub struct MyTraceOnRequest;
-
-impl<B> OnRequest<B> for MyTraceOnRequest {
-    fn on_request(&mut self, request: &http::Request<B>, span: &tracing::Span) {
-        tracing::debug!("started processing request");
-    }
-}
-
-#[derive(Default, Clone, Copy)]
-pub struct MyTraceOnResponse;
-
-impl<B> OnResponse<B> for MyTraceOnResponse {
-    fn on_response(
-        self,
-        response: &http::Response<B>,
-        latency: std::time::Duration,
-        span: &tracing::Span,
-    ) {
-        let baggage_propagator = BaggagePropagator::new();
-        let trace_context_propagator = TraceContextPropagator::new();
-        let composite_propagator = TextMapCompositePropagator::new(vec![
-            Box::new(baggage_propagator),
-            Box::new(trace_context_propagator),
-        ]);
-
-        composite_propagator.inject_context(
-            &opentelemetry::Context::current(),
-            &mut MyTraceHeaderPropagator(response.headers_mut()),
-        );
-
-        let response_headers = tracing::field::debug(response.headers());
-
-        tracing::debug!(
-            latency = latency.as_nanos(),
-            response_headers,
-            "finished processing request"
-        );
-    }
-}
-
-#[derive(Default, Clone, Copy)]
-pub struct MyTraceMakeSpan;
-
-impl<B> MakeSpan<B> for MyTraceMakeSpan {
-    fn make_span(&mut self, request: &http::Request<B>) -> tracing::Span {
-        let baggage_propagator = BaggagePropagator::new();
-        let trace_context_propagator = TraceContextPropagator::new();
-        let composite_propagator = TextMapCompositePropagator::new(vec![
-            Box::new(baggage_propagator),
-            Box::new(trace_context_propagator),
-        ]);
-
-        let context = composite_propagator.extract_with_context(
-            &opentelemetry::Context::current(),
-            &MyTraceHeaderPropagator(request.headers_mut()),
-        );
-
-        let span = tracing::debug_span!(
-            "request",
-            method = %request.method(),
-            uri = %request.uri(),
-            version = ?request.version(),
-            headers = ?request.headers(),
-        );
-
-        span.set_parent(context);
-
-        span
-    }
-}
-
-#[must_use]
-pub fn my_trace_layer() -> TraceLayer<
-    SharedClassifier<ServerErrorsAsFailures>,
-    MyTraceMakeSpan,
-    MyTraceOnRequest,
-    MyTraceOnResponse,
-> {
-    TraceLayer::new_for_http()
-        .on_request(MyTraceOnRequest)
-        .on_response(MyTraceOnResponse)
-        .make_span_with(MyTraceMakeSpan)
 }

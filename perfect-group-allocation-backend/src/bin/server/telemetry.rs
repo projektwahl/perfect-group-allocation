@@ -6,6 +6,9 @@ use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::metrics::MeterProvider as SdkMeterProvider;
+use opentelemetry_sdk::propagation::{
+    BaggagePropagator, TextMapCompositePropagator, TraceContextPropagator,
+};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -83,6 +86,14 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
         )
         .with(opentelemetry_metrics)
         .init();
+
+    let baggage_propagator = BaggagePropagator::new();
+    let trace_context_propagator = TraceContextPropagator::new();
+    let composite_propagator = TextMapCompositePropagator::new(vec![
+        Box::new(baggage_propagator),
+        Box::new(trace_context_propagator),
+    ]);
+    global::set_text_map_propagator(composite_propagator);
 
     let _logger = opentelemetry_otlp::new_pipeline()
         .logging()
