@@ -377,13 +377,15 @@ async fn program() -> Result<(), AppError> {
                     }
                     println!("gracefully shut down");
 
+                    tracing::info!("hi");
+
                     drop(closed_rx);
                 }.instrument(child_span.or_current()));
             }
             () = shutdown_signal() => {
                 // TODO FIXME "graceful shutdown"
                 warn!("SHUTDOWN");
-                drop(shutdown_rx);
+                drop(shutdown_rx); // initiate shutdown
                 drop(closed_rx);
                 // should we drop the tcp listener here? (write a test)
                 closed_tx.closed().await;
