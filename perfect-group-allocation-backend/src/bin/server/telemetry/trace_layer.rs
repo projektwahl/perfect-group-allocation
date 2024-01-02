@@ -11,7 +11,8 @@ use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
 use opentelemetry::trace::Tracer as _;
 use pin_project::pin_project;
 use tower::{Layer, Service};
-use tracing::Span;
+use tracing::instrument::Instrumented;
+use tracing::{Instrument, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 // TODO FIXME add support for http client
@@ -41,7 +42,7 @@ where
     type Response = S::Response;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx).map_err(Into::into)
+        self.inner.poll_ready(cx)
     }
 
     fn call(&mut self, mut request: Request<RequestBody>) -> Self::Future {
@@ -56,27 +57,25 @@ where
             uri = %request.uri(),
             version = ?request.version(),
             headers = ?request.headers(),
+            responseheaders = tracing::field::Empty,
         );
 
         span.set_parent(context);
 
         let response_future = {
             let _ = span.enter();
-            self.inner.call(request)
+            let uninstrumented_future = self.inner.call(request);
+            uninstrumented_future.instrument(span)
         };
 
-        MyTraceFuture {
-            response_future,
-            span,
-        }
+        MyTraceFuture { response_future }
     }
 }
 
 #[pin_project]
 pub struct MyTraceFuture<F> {
     #[pin]
-    response_future: F,
-    span: Span,
+    response_future: Instrumented<F>,
 }
 
 impl<F, ResponseBody, Error> Future for MyTraceFuture<F>
@@ -86,22 +85,23 @@ where
     type Output = Result<Response<ResponseBody>, Error>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = self.project();
-        let _ = this.span.enter();
+        let mut this = self.project();
 
-        match ready!(this.response_future.poll(cx)) {
+        match ready!(this.response_future.as_mut().poll(cx)) {
             Ok(mut response) => {
                 // trace response
                 global::get_text_map_propagator(|propagator| {
                     propagator.inject_context(
-                        &this.span.context(),
+                        &this.response_future.span().context(),
                         &mut MyTraceHeaderPropagator(response.headers_mut()),
                     );
                 });
 
                 let response_headers = tracing::field::debug(response.headers());
 
-                this.span.record("responseheaders", response_headers);
+                this.response_future
+                    .span()
+                    .record("responseheaders", response_headers);
 
                 Poll::Ready(Ok(response))
             }
