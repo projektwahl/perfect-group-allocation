@@ -24,6 +24,7 @@ pub mod telemetry;
 use core::convert::Infallible;
 use core::time::Duration;
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use axum::extract::{FromRef, FromRequest};
 use axum::http::{self, HeaderName, HeaderValue};
@@ -31,6 +32,7 @@ use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
 use axum_extra::headers::Header;
 use error::{to_error_result, AppError};
+use futures_util::pin_mut;
 use http::{Request, StatusCode};
 use hyper::body::Incoming;
 use hyper::Method;
@@ -50,6 +52,7 @@ use telemetry::setup_telemetry;
 use telemetry::trace_layer::MyTraceLayer;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
+use tokio::sync::watch;
 use tower::{service_fn, Service, ServiceBuilder, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
@@ -319,6 +322,15 @@ async fn program() -> Result<(), AppError> {
     let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
     let mut accept: (TcpStream, SocketAddr);
 
+    // https://github.com/tokio-rs/axum/blob/af13c539386463b04b82f58155ee04702527212b/axum/src/serve.rs#L279
+
+    // tell the connections to shutdown
+    let (shutdown_tx, shutdown_rx) = watch::channel(());
+    let shutdown_tx = Arc::new(shutdown_tx);
+
+    // wait for the connections to finish shutdown
+    let (closed_tx, closed_rx) = watch::channel(());
+
     #[allow(clippy::redundant_pub_crate)]
     loop {
         select! {
@@ -332,6 +344,9 @@ async fn program() -> Result<(), AppError> {
 
                 let child_span = tracing::debug_span!("child");
 
+                let mut shutdown_tx = Arc::clone(&shutdown_tx);
+                let closed_rx = closed_rx.clone();
+
                 tokio::spawn(async move {
                     let socket = TokioIo::new(socket);
 
@@ -339,17 +354,39 @@ async fn program() -> Result<(), AppError> {
                         tower_service.clone().oneshot(request)
                     });
 
-                    if let Err(err) = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
-                        .serve_connection_with_upgrades(socket, hyper_service)
-                        .await
-                    {
-                        eprintln!("failed to serve connection: {err:#}");
+                    let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
+                    let connection = builder.serve_connection_with_upgrades(socket, hyper_service);
+                    pin_mut!(connection);
+
+                    // TODO FIXME https://github.com/tokio-rs/axum/blob/main/axum/src/serve.rs#L279 maybe its more performance to store and pin_mut!?
+
+                    loop {
+                        select! {
+                            connection_result = connection.as_mut() => {
+                                if let Err(err) = connection_result
+                                {
+                                    eprintln!("failed to serve connection: {err:#}");
+                                }
+                                break; // (gracefully) finished connection
+                            }
+                            _ = shutdown_tx.closed() => {
+                                println!("signal received, shutting down");
+                                connection.as_mut().graceful_shutdown();
+                            }
+                        }
                     }
+                    println!("gracefully shut down");
+
+                    drop(closed_rx);
                 }.instrument(child_span.or_current()));
             }
             () = shutdown_signal() => {
                 // TODO FIXME "graceful shutdown"
                 warn!("SHUTDOWN");
+                drop(shutdown_rx);
+                drop(closed_rx);
+                // should we drop the tcp listener here? (write a test)
+                closed_tx.closed().await;
                 break;
             }
         }
