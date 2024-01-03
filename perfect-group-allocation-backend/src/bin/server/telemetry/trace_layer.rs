@@ -158,6 +158,7 @@ where
 
                 Poll::Ready(Ok(response))
             }
+            // TODO FIXME maybe add catch panic handling, also services could explicitly return an internal server error without panicking which should also be traced
             Err(error) => match error {
                 /*// error.type
                 // https://opentelemetry.io/docs/specs/otel/trace/exceptions/
