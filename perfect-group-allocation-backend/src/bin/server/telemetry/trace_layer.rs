@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
@@ -19,6 +20,8 @@ use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 // TODO FIXME add support for http client
 
+// inspired by https://github.com/tower-rs/tower-http/blob/main/tower-http/src/trace/service.rs
+
 #[derive(Debug, Clone)]
 pub struct MyTraceLayer;
 
@@ -37,10 +40,9 @@ pub struct MyTraceService<S> {
 
 impl<S, RequestBody, ResponseBody> Service<Request<RequestBody>> for MyTraceService<S>
 where
-    S: Service<Request<RequestBody>, Response = Response<ResponseBody>>,
-    S::Error: tracing::Value,
+    S: Service<Request<RequestBody>, Response = Response<ResponseBody>, Error = Infallible>,
 {
-    type Error = S::Error;
+    type Error = Infallible;
     type Future = MyTraceFuture<S::Future>;
     type Response = S::Response;
 
@@ -114,11 +116,11 @@ pub struct MyTraceFuture<F> {
     response_future: Instrumented<F>,
 }
 
-impl<F, ResponseBody, Error: tracing::Value> Future for MyTraceFuture<F>
+impl<F, ResponseBody> Future for MyTraceFuture<F>
 where
-    F: Future<Output = Result<Response<ResponseBody>, Error>>,
+    F: Future<Output = Result<Response<ResponseBody>, Infallible>>,
 {
-    type Output = Result<Response<ResponseBody>, Error>;
+    type Output = Result<Response<ResponseBody>, Infallible>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut this = self.project();
@@ -156,14 +158,14 @@ where
 
                 Poll::Ready(Ok(response))
             }
-            Err(error) => {
-                // error.type
+            Err(error) => match error {
+                /*// error.type
                 // https://opentelemetry.io/docs/specs/otel/trace/exceptions/
                 // https://github.com/open-telemetry/semantic-conventions/blob/main/docs/exceptions/exceptions-spans.md
                 error!(error = error, "test",);
 
-                Poll::Ready(Err(error))
-            }
+                Poll::Ready(Err(error))*/
+            },
         }
     }
 }
