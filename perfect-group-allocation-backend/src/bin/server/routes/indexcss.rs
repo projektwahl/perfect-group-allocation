@@ -11,7 +11,6 @@ use lightningcss::targets::Targets;
 use parcel_sourcemap::SourceMap;
 
 use crate::session::Session;
-use crate::XRequestId;
 
 // add watcher and then use websocket to hot reload on client?
 // or for dev simply enforce unbundled development where chrome directly modifies the files
@@ -51,7 +50,6 @@ pub fn initialize_index_css() {
 
 // Etag and cache busting
 pub async fn indexcss(
-    TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     if_none_match: TypedHeader<headers::IfNoneMatch>,
     session: Session,
 ) -> (Session, impl IntoResponse) {

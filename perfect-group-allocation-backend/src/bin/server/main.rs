@@ -22,17 +22,19 @@ pub mod session;
 pub mod telemetry;
 
 use core::convert::Infallible;
-use core::time::Duration;
+use std::net::SocketAddr;
+use std::sync::Arc;
 
 use axum::extract::{FromRef, FromRequest};
-use axum::http::{self, HeaderName, HeaderValue};
+use axum::http::{self};
 use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
-use axum_extra::headers::Header;
 use error::{to_error_result, AppError};
-use http::StatusCode;
+use futures_util::pin_mut;
+use http::{Request, StatusCode};
+use hyper::body::Incoming;
 use hyper::Method;
-use itertools::Itertools;
+use hyper_util::rt::{TokioExecutor, TokioIo};
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
@@ -44,13 +46,15 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use telemetry::setup_telemetry;
-use tokio::net::TcpListener;
-use tower::{service_fn, ServiceBuilder};
+use telemetry::trace_layer::MyTraceLayer;
+use tokio::net::{TcpListener, TcpStream};
+use tokio::select;
+use tokio::sync::watch;
+use tower::{service_fn, Service, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
-use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::services::ServeDir;
-use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::warn;
+use tracing::{info, warn, Instrument as _};
+use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 use crate::openid::initialize_openid_client;
 use crate::router::MyRouter;
@@ -117,10 +121,6 @@ where
         mut req: axum::extract::Request,
         state: &MyState,
     ) -> Result<Self, Self::Rejection> {
-        /*let request_id = req
-        .extract_parts::<TypedHeader<XRequestId>>()
-        .await
-        .map_or("unknown-request-id".to_owned(), |header| header.0.0);*/
         let not_get_or_head = !(req.method() == Method::GET || req.method() == Method::HEAD);
         let session = match req
             .extract_parts_with_state::<Session, MyState>(state)
@@ -153,83 +153,6 @@ where
 
 impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
 
-// maybe not per request csrf but per form a different csrf token that is only valid for the form as defense in depth.
-/*
-fn csrf_helper(
-    h: &Helper<'_, '_>,
-    _hb: &Handlebars<'_>,
-    _c: &HandlebarsContext,
-    _rc: &mut RenderContext<'_, '_>,
-    out: &mut dyn Output,
-) -> HelperResult {
-    // get parameter from helper or throw an error
-    let param = h.param(0).and_then(|v| v.value().as_str()).unwrap_or("");
-    //c.data()
-    //rc.context()
-
-    // is one of the always the top level context from which we could get the csrf token? Also we can create
-    // helpers as a struct and then store data in them so maybe register the helper per http handler and configure
-    // the user there?
-
-    out.write(param.to_uppercase().as_ref())?;
-    Ok(())
-}
-*/
-
-// https://github.com/sunng87/handlebars-rust/tree/master/src/helpers
-// https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_with.rs
-// https://github.com/sunng87/handlebars-rust/blob/master/src/helpers/helper_lookup.rs
-
-pub struct XRequestId(String);
-
-static X_REQUEST_ID_HEADER_NAME: HeaderName = http::header::HeaderName::from_static("x-request-id");
-
-impl Header for XRequestId {
-    fn name() -> &'static HeaderName {
-        &X_REQUEST_ID_HEADER_NAME
-    }
-
-    fn decode<'i, I>(values: &mut I) -> Result<Self, axum_extra::headers::Error>
-    where
-        I: Iterator<Item = &'i HeaderValue>,
-    {
-        let value = values
-            .exactly_one()
-            .map_err(|_e| axum_extra::headers::Error::invalid())?;
-        let value = value
-            .to_str()
-            .map_err(|_e| axum_extra::headers::Error::invalid())?;
-        Ok(Self(value.to_owned()))
-    }
-
-    fn encode<E>(&self, values: &mut E)
-    where
-        E: Extend<HeaderValue>,
-    {
-        #[expect(clippy::unwrap_used, reason = "decode ensures this is unreachable")]
-        let value = HeaderValue::from_str(&self.0).unwrap();
-
-        values.extend(core::iter::once(value));
-    }
-}
-
-/*
-async fn handle_error_test(
-    request_id: Result<TypedHeader<XRequestId>, TypedHeaderRejection>,
-    err: Box<dyn std::error::Error + Sync + Send + 'static>,
-) -> (StatusCode, String) {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        // intentionally not using handlebars etc to reduce amount of potentially broken code executed here
-        format!(
-            "Unhandled internal error for request {}: {:?}",
-            request_id.map_or("unknown-request-id".to_owned(), |header| header.0.0),
-            err
-        ),
-    )
-}
-*/
-
 pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
     let database_url = std::env::var("DATABASE_URL")?;
 
@@ -238,76 +161,70 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
     Ok(db)
 }
 
-fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
-    // layers are in reverse order
-    //let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
-    //let app: Router<MyState, MyBody2> =
-    //    app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
-    //let app: Router<MyState, MyBody1> =
-    //    app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
-    //let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
-    //let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
-    /*let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        header::CONTENT_SECURITY_POLICY,
-        HeaderValue::from_static(
-            "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
-             'self'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin; \
-             upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types a",
-        ),
-    ));
-    // don't ask, thanks
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        HeaderName::from_static("permissions-policy"),
-        HeaderValue::from_static(
-            "accelerometer=(), ambient-light-sensor=(), attribution-reporting=(), autoplay=(), \
-             battery=(), camera=(), display-capture=(), document-domain=(), encrypted-media=(), \
-             execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), \
-             gamepad=(), gamepad=(), gyroscope=(), hid=(), identity-credentials-get=(), \
-             idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), \
-             otp-credentials=(), payment=(), picture-in-picture=(), \
-             publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), \
-             serial=(), speaker-selection=(), storage-access=(), usb=(), web-share=(), \
-             window-management=(), xr-spatial-tracking=();",
-        ),
-    ));
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        header::STRICT_TRANSPORT_SECURITY,
-        HeaderValue::from_static("max-age=63072000; preload"),
-    ));
-    // https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
-    // TODO FIXME sandbox is way too strict
-    // https://csp-evaluator.withgoogle.com/
-    // https://web.dev/articles/strict-csp
-    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
-    // cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        header::X_CONTENT_TYPE_OPTIONS,
-        HeaderValue::from_static("nosniff"),
-    ));
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("no-cache, no-store, must-revalidate"),
-    ));
-    */
-    let app: Router<()> = app.with_state(MyState {
-        database: db,
-        key: Key::generate(),
-    });
-    //let app: Router<(), MyBody0> = app.layer(PropagateRequestIdLayer::x_request_id());
-    // TODO FIXME
-    let app = app.layer(
-        ServiceBuilder::new()
-            //.layer(HandleErrorLayer::new(handle_error_test))
-            .layer(
-                TraceLayer::new_for_http()
-                    .make_span_with(DefaultMakeSpan::default().include_headers(true))
-                    .on_response(DefaultOnResponse::default().include_headers(true)),
-            )
-            .layer(CatchPanicLayer::new()),
-    );
-    let app: Router<()> = app.layer(SetRequestIdLayer::x_request_id(MakeRequestUuid));
-    app
-}
+//fn layers(_app: Router<MyState>, _db: DatabaseConnection) -> Router<()> {
+// layers are in reverse order
+//let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
+//let app: Router<MyState, MyBody2> =
+//    app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
+//let app: Router<MyState, MyBody1> =
+//    app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
+//let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
+//let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
+/*let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    header::CONTENT_SECURITY_POLICY,
+    HeaderValue::from_static(
+        "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
+         'self'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin; \
+         upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types a",
+    ),
+));
+// don't ask, thanks
+let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    HeaderName::from_static("permissions-policy"),
+    HeaderValue::from_static(
+        "accelerometer=(), ambient-light-sensor=(), attribution-reporting=(), autoplay=(), \
+         battery=(), camera=(), display-capture=(), document-domain=(), encrypted-media=(), \
+         execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), \
+         gamepad=(), gamepad=(), gyroscope=(), hid=(), identity-credentials-get=(), \
+         idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), \
+         otp-credentials=(), payment=(), picture-in-picture=(), \
+         publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), \
+         serial=(), speaker-selection=(), storage-access=(), usb=(), web-share=(), \
+         window-management=(), xr-spatial-tracking=();",
+    ),
+));
+let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    header::STRICT_TRANSPORT_SECURITY,
+    HeaderValue::from_static("max-age=63072000; preload"),
+));
+// https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
+// TODO FIXME sandbox is way too strict
+// https://csp-evaluator.withgoogle.com/
+// https://web.dev/articles/strict-csp
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+// cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
+let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    header::X_CONTENT_TYPE_OPTIONS,
+    HeaderValue::from_static("nosniff"),
+));
+let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    header::CACHE_CONTROL,
+    HeaderValue::from_static("no-cache, no-store, must-revalidate"),
+));
+*/
+//}
+
+// TODO https://github.com/tokio-rs/axum/tree/main/examples/auto-reload
+// TODO https://github.com/tokio-rs/axum/tree/main/examples/consume-body-in-extractor-or-middleware for body length, download time etc metrics
+// TODO https://github.com/tokio-rs/axum/blob/main/examples/error-handling/src/main.rs
+// TODO https://github.com/tokio-rs/axum/blob/main/examples/global-404-handler/src/main.rs
+// TODO https://github.com/tokio-rs/axum/blob/main/examples/graceful-shutdown/src/main.rs timeout handler
+// TODO https://github.com/tokio-rs/axum/blob/main/examples/low-level-rustls/src/main.rs allow enabling rustls
+// https://github.com/tokio-rs/axum/blob/main/examples/stream-to-file/src/main.rs
+// https://github.com/tokio-rs/axum/blob/main/examples/tls-graceful-shutdown/src/main.rs graceful shutdown
+// https://github.com/tokio-rs/axum/tree/main/examples/tls-rustls
+// https://github.com/tokio-rs/axum/blob/main/examples/serve-with-hyper/src/main.rs
+// https://github.com/tokio-rs/axum/blob/main/examples/listen-multiple-addrs/src/main.rs
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
@@ -319,27 +236,18 @@ async fn main() -> Result<(), AppError> {
 
 #[tracing::instrument]
 async fn program() -> Result<(), AppError> {
+    tracing::Span::current().set_attribute(
+        opentelemetry_semantic_conventions::trace::SERVER_ADDRESS,
+        "localhost",
+    );
+
+    info!("starting up server...");
+
     tokio_runtime_metrics();
 
     initialize_favicon_ico().await;
     initialize_index_css();
     initialize_openid_client().await;
-
-    let handle = tokio::runtime::Handle::current();
-    let runtime_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
-
-    // print runtime metrics every 500ms
-    {
-        tokio::spawn(async move {
-            for _interval_runtime in runtime_monitor.intervals() {
-                // pretty-print the metric interval
-                //println!("runtime {:?}", interval_runtime.busy_ratio());
-
-                // wait 500ms
-                tokio::time::sleep(Duration::from_millis(500)).await;
-            }
-        });
-    }
 
     let db = get_database_connection().await?;
 
@@ -367,7 +275,11 @@ async fn program() -> Result<(), AppError> {
         )
         .fallback_service(service);
 
-    let app = layers(app, db);
+    let app: Router<()> = app.with_state(MyState {
+        database: db,
+        key: Key::generate(),
+    });
+    let app = app.layer(CatchPanicLayer::new()).layer(MyTraceLayer);
     /*    let config = OpenSSLConfig::from_pem_file(
             ".lego/certificates/h3.selfmade4u.de.crt",
             ".lego/certificates/h3.selfmade4u.de.key",
@@ -392,33 +304,114 @@ async fn program() -> Result<(), AppError> {
     .serve(app.into_make_service())
     .await
     .unwrap();*/
-    let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
 
-    axum::serve(listener, app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
-    warn!("SHUTDOWN");
+    // TODO FIXME for every accepted connection trace
+    // https://opentelemetry.io/docs/specs/semconv/attributes-registry/network/
+
+    let mut make_service = app.into_make_service_with_connect_info::<SocketAddr>();
+
+    let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let mut _accept: (TcpStream, SocketAddr);
+
+    // https://github.com/tokio-rs/axum/blob/af13c539386463b04b82f58155ee04702527212b/axum/src/serve.rs#L279
+
+    // tell the connections to shutdown
+    let (shutdown_tx, shutdown_rx) = watch::channel(());
+    let shutdown_tx = Arc::new(shutdown_tx);
+
+    // wait for the connections to finish shutdown
+    let (closed_tx, closed_rx) = watch::channel(());
+
+    info!("started up server...");
+
+    #[allow(clippy::redundant_pub_crate)]
+    loop {
+        select! {
+            accept = listener.accept() => {
+
+                let (socket, remote_addr) = accept.unwrap();
+
+                // We don't need to call `poll_ready` because `IntoMakeServiceWithConnectInfo` is always
+                // ready.
+                let tower_service = unwrap_infallible(make_service.call(remote_addr).await);
+
+                let child_span = tracing::debug_span!("child");
+
+                let shutdown_tx = Arc::clone(&shutdown_tx);
+                let closed_rx = closed_rx.clone();
+
+                tokio::spawn(async move {
+                    let socket = TokioIo::new(socket);
+
+                    let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
+                        tower_service.clone().oneshot(request)
+                    });
+
+                    let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
+                    let connection = builder.serve_connection_with_upgrades(socket, hyper_service);
+                    pin_mut!(connection);
+
+                    // TODO FIXME https://github.com/tokio-rs/axum/blob/main/axum/src/serve.rs#L279 maybe its more performance to store and pin_mut!?
+
+                    loop {
+                        select! {
+                            connection_result = connection.as_mut() => {
+                                if let Err(err) = connection_result
+                                {
+                                    eprintln!("failed to serve connection: {err:#}");
+                                }
+                                break; // (gracefully) finished connection
+                            }
+                            () = shutdown_tx.closed() => {
+                                println!("signal received, shutting down");
+                                connection.as_mut().graceful_shutdown();
+                            }
+                        }
+                    }
+                    println!("gracefully shut down");
+
+                    tracing::info!("hi");
+
+                    drop(closed_rx);
+                }.instrument(child_span.or_current()));
+            }
+            () = shutdown_signal() => {
+                // TODO FIXME "graceful shutdown"
+                warn!("SHUTDOWN");
+                drop(shutdown_rx); // initiate shutdown
+                drop(closed_rx);
+                // should we drop the tcp listener here? (write a test)
+                closed_tx.closed().await;
+                break;
+            }
+        }
+    }
+
     Ok(())
+}
+
+fn unwrap_infallible<T>(result: Result<T, Infallible>) -> T {
+    match result {
+        Ok(value) => value,
+        Err(err) => match err {},
+    }
 }
 
 #[allow(clippy::redundant_pub_crate)]
 async fn shutdown_signal() {
+    // check which of these two signals we need
     let ctrl_c = async {
         tokio::signal::ctrl_c()
             .await
             .expect("failed to install Ctrl+C handler");
     };
 
-    #[cfg(unix)]
     let terminate = async {
         tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
             .expect("failed to install signal handler")
             .recv()
             .await;
     };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
 
     tokio::select! {
         () = ctrl_c => {},

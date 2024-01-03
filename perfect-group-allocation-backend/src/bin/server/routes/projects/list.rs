@@ -2,7 +2,6 @@ use alloc::borrow::Cow;
 
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum_extra::TypedHeader;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use hyper::header;
@@ -13,7 +12,6 @@ use zero_cost_templating::{template_stream, yieldoki, yieldokv};
 use crate::entities::project_history;
 use crate::error::AppError;
 use crate::session::Session;
-use crate::XRequestId;
 
 #[template_stream("templates")]
 async gen fn list_internal(
@@ -47,7 +45,6 @@ async gen fn list_internal(
 #[axum::debug_handler(state=crate::MyState)]
 pub async fn list(
     State(db): State<DatabaseConnection>,
-    TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     session: Session,
 ) -> (Session, impl IntoResponse) {
     let stream = AsyncIteratorStream(list_internal(db, session.clone())).map(|elem| match elem {

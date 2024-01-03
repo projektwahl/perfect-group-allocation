@@ -5,7 +5,6 @@ use axum_extra::{headers, TypedHeader};
 use http::{header, StatusCode};
 
 use crate::session::Session;
-use crate::XRequestId;
 
 static FAVICON_ICO: OnceLock<Vec<u8>> = OnceLock::new();
 
@@ -17,7 +16,6 @@ pub async fn initialize_favicon_ico() {
 
 // Etag and cache busting
 pub async fn favicon_ico(
-    TypedHeader(XRequestId(_request_id)): TypedHeader<XRequestId>,
     if_none_match: TypedHeader<headers::IfNoneMatch>,
     session: Session,
 ) -> (Session, impl IntoResponse) {

@@ -1,10 +1,20 @@
 pub mod tokio_metrics;
+pub mod trace_layer;
+
+use std::time::Duration;
 
 use opentelemetry::global::{self, logger_provider};
 use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::metrics::MeterProvider as SdkMeterProvider;
+use opentelemetry_sdk::propagation::{
+    BaggagePropagator, TextMapCompositePropagator, TraceContextPropagator,
+};
+use opentelemetry_sdk::resource::{
+    EnvResourceDetector, OsResourceDetector, ProcessResourceDetector, TelemetryResourceDetector,
+};
+use opentelemetry_sdk::Resource;
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -32,11 +42,19 @@ impl Drop for OpenTelemetryGuard {
 pub fn setup_telemetry() -> OpenTelemetryGuard {
     const DEFAULT_LOG_LEVEL: &str = "trace,tokio=debug,runtime=debug,hyper=info,reqwest=info,\
                                      h2=info,tower=info,tonic=info,tower_http=trace";
-
-    let resource = opentelemetry_sdk::Resource::new(vec![KeyValue::new(
+    let resource = Resource::from_detectors(
+        Duration::from_secs(1),
+        vec![
+            Box::new(OsResourceDetector),
+            Box::new(ProcessResourceDetector),
+            Box::new(TelemetryResourceDetector),
+            Box::new(EnvResourceDetector::new()),
+        ],
+    )
+    .merge(&opentelemetry_sdk::Resource::new(vec![KeyValue::new(
         opentelemetry_semantic_conventions::resource::SERVICE_NAME,
         "perfect-group-allocation",
-    )]);
+    )]));
 
     // will also redirect log events to trace events
     let stdout_log = tracing_subscriber::fmt::layer();
@@ -82,6 +100,14 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
         )
         .with(opentelemetry_metrics)
         .init();
+
+    let baggage_propagator = BaggagePropagator::new();
+    let trace_context_propagator = TraceContextPropagator::new();
+    let composite_propagator = TextMapCompositePropagator::new(vec![
+        Box::new(baggage_propagator),
+        Box::new(trace_context_propagator),
+    ]);
+    global::set_text_map_propagator(composite_propagator);
 
     let _logger = opentelemetry_otlp::new_pipeline()
         .logging()
