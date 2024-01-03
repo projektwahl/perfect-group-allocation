@@ -1,5 +1,4 @@
 use std::convert::Infallible;
-
 use std::future::Future;
 use std::pin::Pin;
 use std::str::FromStr;
@@ -7,15 +6,13 @@ use std::task::{ready, Context, Poll};
 
 use axum::extract::MatchedPath;
 use http::{HeaderMap, HeaderName, HeaderValue, Request, Response};
-
 use opentelemetry::global;
-use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
-
+use opentelemetry::propagation::{Extractor, Injector};
 use opentelemetry_semantic_conventions::trace as otelsc;
 use pin_project::pin_project;
 use tower::{Layer, Service};
 use tracing::instrument::Instrumented;
-use tracing::{Instrument};
+use tracing::Instrument as _;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 // TODO FIXME add support for http client

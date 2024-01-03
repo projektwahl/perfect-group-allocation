@@ -22,7 +22,6 @@ pub mod session;
 pub mod telemetry;
 
 use core::convert::Infallible;
-
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -30,14 +29,12 @@ use axum::extract::{FromRef, FromRequest};
 use axum::http::{self};
 use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
-
 use error::{to_error_result, AppError};
 use futures_util::pin_mut;
 use http::{Request, StatusCode};
 use hyper::body::Incoming;
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
-
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
@@ -56,7 +53,6 @@ use tokio::sync::watch;
 use tower::{service_fn, Service, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
-
 use tracing::{info, warn, Instrument as _};
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
@@ -165,59 +161,58 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
     Ok(db)
 }
 
-fn layers(_app: Router<MyState>, _db: DatabaseConnection) -> Router<()> {
-    // layers are in reverse order
-    //let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
-    //let app: Router<MyState, MyBody2> =
-    //    app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
-    //let app: Router<MyState, MyBody1> =
-    //    app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
-    //let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
-    //let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
-    /*let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        header::CONTENT_SECURITY_POLICY,
-        HeaderValue::from_static(
-            "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
-             'self'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin; \
-             upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types a",
-        ),
-    ));
-    // don't ask, thanks
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        HeaderName::from_static("permissions-policy"),
-        HeaderValue::from_static(
-            "accelerometer=(), ambient-light-sensor=(), attribution-reporting=(), autoplay=(), \
-             battery=(), camera=(), display-capture=(), document-domain=(), encrypted-media=(), \
-             execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), \
-             gamepad=(), gamepad=(), gyroscope=(), hid=(), identity-credentials-get=(), \
-             idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), \
-             otp-credentials=(), payment=(), picture-in-picture=(), \
-             publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), \
-             serial=(), speaker-selection=(), storage-access=(), usb=(), web-share=(), \
-             window-management=(), xr-spatial-tracking=();",
-        ),
-    ));
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        header::STRICT_TRANSPORT_SECURITY,
-        HeaderValue::from_static("max-age=63072000; preload"),
-    ));
-    // https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
-    // TODO FIXME sandbox is way too strict
-    // https://csp-evaluator.withgoogle.com/
-    // https://web.dev/articles/strict-csp
-    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
-    // cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        header::X_CONTENT_TYPE_OPTIONS,
-        HeaderValue::from_static("nosniff"),
-    ));
-    let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("no-cache, no-store, must-revalidate"),
-    ));
-    */
-    todo!();
-}
+//fn layers(_app: Router<MyState>, _db: DatabaseConnection) -> Router<()> {
+// layers are in reverse order
+//let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
+//let app: Router<MyState, MyBody2> =
+//    app.layer(ResponseBodyTimeoutLayer::new(Duration::from_secs(10)));
+//let app: Router<MyState, MyBody1> =
+//    app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(10))); // this timeout is between sends, so not the total timeout
+//let app: Router<MyState, MyBody0> = app.layer(RequestBodyLimitLayer::new(100 * 1024 * 1024));
+//let app: Router<MyState, MyBody0> = app.layer(TimeoutLayer::new(Duration::from_secs(5)));
+/*let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    header::CONTENT_SECURITY_POLICY,
+    HeaderValue::from_static(
+        "base-uri 'none'; default-src 'none'; style-src 'self'; img-src 'self'; form-action \
+         'self'; frame-ancestors 'none'; sandbox allow-forms allow-same-origin; \
+         upgrade-insecure-requests; require-trusted-types-for 'script'; trusted-types a",
+    ),
+));
+// don't ask, thanks
+let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    HeaderName::from_static("permissions-policy"),
+    HeaderValue::from_static(
+        "accelerometer=(), ambient-light-sensor=(), attribution-reporting=(), autoplay=(), \
+         battery=(), camera=(), display-capture=(), document-domain=(), encrypted-media=(), \
+         execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), \
+         gamepad=(), gamepad=(), gyroscope=(), hid=(), identity-credentials-get=(), \
+         idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), \
+         otp-credentials=(), payment=(), picture-in-picture=(), \
+         publickey-credentials-create=(), publickey-credentials-get=(), screen-wake-lock=(), \
+         serial=(), speaker-selection=(), storage-access=(), usb=(), web-share=(), \
+         window-management=(), xr-spatial-tracking=();",
+    ),
+));
+let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    header::STRICT_TRANSPORT_SECURITY,
+    HeaderValue::from_static("max-age=63072000; preload"),
+));
+// https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
+// TODO FIXME sandbox is way too strict
+// https://csp-evaluator.withgoogle.com/
+// https://web.dev/articles/strict-csp
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+// cat frontend/index.css | openssl dgst -sha256 -binary | openssl enc -base64
+let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    header::X_CONTENT_TYPE_OPTIONS,
+    HeaderValue::from_static("nosniff"),
+));
+let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding(
+    header::CACHE_CONTROL,
+    HeaderValue::from_static("no-cache, no-store, must-revalidate"),
+));
+*/
+//}
 
 // TODO https://github.com/tokio-rs/axum/tree/main/examples/auto-reload
 // TODO https://github.com/tokio-rs/axum/tree/main/examples/consume-body-in-extractor-or-middleware for body length, download time etc metrics
