@@ -283,7 +283,7 @@ async fn program() -> Result<(), AppError> {
         database: db,
         key: Key::generate(),
     });
-    let app = app.layer(MyTraceLayer);
+    let app = app.layer(CatchPanicLayer::new()).layer(MyTraceLayer);
     /*    let config = OpenSSLConfig::from_pem_file(
             ".lego/certificates/h3.selfmade4u.de.crt",
             ".lego/certificates/h3.selfmade4u.de.key",
