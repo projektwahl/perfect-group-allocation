@@ -14,7 +14,7 @@ use opentelemetry_semantic_conventions::trace as otelsc;
 use pin_project::pin_project;
 use tower::{Layer, Service};
 use tracing::instrument::Instrumented;
-use tracing::{Instrument, Span};
+use tracing::{error, Instrument, Span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 // TODO FIXME add support for http client
@@ -38,6 +38,7 @@ pub struct MyTraceService<S> {
 impl<S, RequestBody, ResponseBody> Service<Request<RequestBody>> for MyTraceService<S>
 where
     S: Service<Request<RequestBody>, Response = Response<ResponseBody>>,
+    S::Error: tracing::Value,
 {
     type Error = S::Error;
     type Future = MyTraceFuture<S::Future>;
@@ -113,7 +114,7 @@ pub struct MyTraceFuture<F> {
     response_future: Instrumented<F>,
 }
 
-impl<F, ResponseBody, Error> Future for MyTraceFuture<F>
+impl<F, ResponseBody, Error: tracing::Value> Future for MyTraceFuture<F>
 where
     F: Future<Output = Result<Response<ResponseBody>, Error>>,
 {
@@ -122,7 +123,10 @@ where
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut this = self.project();
 
-        match ready!(this.response_future.as_mut().poll(cx)) {
+        let poll_result = ready!(this.response_future.as_mut().poll(cx));
+        let span = this.response_future.span();
+
+        match poll_result {
             Ok(mut response) => {
                 // trace response
                 global::get_text_map_propagator(|propagator| {
@@ -132,8 +136,6 @@ where
                         &mut MyTraceHeaderPropagator(response.headers_mut()),
                     );
                 });
-
-                let span = this.response_future.span();
 
                 //span.set_attribute(otelsc::HTTP_RESPONSE_BODY_SIZE, response.)
 
@@ -155,7 +157,11 @@ where
                 Poll::Ready(Ok(response))
             }
             Err(error) => {
-                // TODO FIXME trace error
+                // error.type
+                // https://opentelemetry.io/docs/specs/otel/trace/exceptions/
+                // https://github.com/open-telemetry/semantic-conventions/blob/main/docs/exceptions/exceptions-spans.md
+                error!(error = error, "test",);
+
                 Poll::Ready(Err(error))
             }
         }

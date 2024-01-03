@@ -57,7 +57,7 @@ use tower::{service_fn, Service, ServiceBuilder, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse};
-use tracing::{warn, Instrument as _};
+use tracing::{info, warn, Instrument as _};
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 use crate::openid::initialize_openid_client;
@@ -216,17 +216,6 @@ fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
         HeaderValue::from_static("no-cache, no-store, must-revalidate"),
     ));
     */
-    let app: Router<()> = app.with_state(MyState {
-        database: db,
-        key: Key::generate(),
-    });
-    let app = app.layer(
-        ServiceBuilder::new()
-            //.layer(HandleErrorLayer::new(handle_error_test))
-            .layer(MyTraceLayer)
-            .layer(CatchPanicLayer::new()),
-    );
-    app
 }
 
 // TODO https://github.com/tokio-rs/axum/tree/main/examples/auto-reload
@@ -255,6 +244,8 @@ async fn program() -> Result<(), AppError> {
         opentelemetry_semantic_conventions::trace::SERVER_ADDRESS,
         "localhost",
     );
+
+    info!("starting up server...");
 
     tokio_runtime_metrics();
 
@@ -288,7 +279,11 @@ async fn program() -> Result<(), AppError> {
         )
         .fallback_service(service);
 
-    let app = layers(app, db);
+    let app: Router<()> = app.with_state(MyState {
+        database: db,
+        key: Key::generate(),
+    });
+    let app = app.layer(MyTraceLayer);
     /*    let config = OpenSSLConfig::from_pem_file(
             ".lego/certificates/h3.selfmade4u.de.crt",
             ".lego/certificates/h3.selfmade4u.de.key",
@@ -330,6 +325,8 @@ async fn program() -> Result<(), AppError> {
 
     // wait for the connections to finish shutdown
     let (closed_tx, closed_rx) = watch::channel(());
+
+    info!("started up server...");
 
     #[allow(clippy::redundant_pub_crate)]
     loop {
