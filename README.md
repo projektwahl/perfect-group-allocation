@@ -61,7 +61,6 @@ https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html
 
 # otel-v1-apm-span-*
 
-podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
 psql postgres://postgres:password@localhost
 DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
 
