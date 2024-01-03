@@ -20,6 +20,13 @@ rustup component add rustc-codegen-cranelift-preview --toolchain nightly
 warning blocks in rustdoc
 <div class="warning">A big warning!</div>
 
+## Testing
+
+```bash
+podman run --rm --name postgres-testing --env POSTGRES_PASSWORD=password --publish 5431:5432 docker.io/postgres
+cargo test
+```
+
 ## Dev
 
 ```bash
@@ -56,13 +63,9 @@ https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html
 
 podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
 psql postgres://postgres:password@localhost
-DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
-sea-orm-cli generate entity -u postgres://postgres:password@localhost/postgres -o src/bin/server/entities
 DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
 
-
-export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
-OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_BACKTRACE=1 cargo run --bin server
+DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable" OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
 
 tokio-console
@@ -240,18 +243,6 @@ openssl rsa -inform pem -in example.com.key.pem -outform der -out example.com.ke
 openssl x509 -outform der -in example.com.cert.pem -out example.com.cert.der
 
 cargo run --bin server -- --cert example.com.crt --key example.com.key.der
-```
-
-https://github.com/SeaQL/sea-orm
-
-https://www.sea-ql.org/SeaORM/
-
-https://www.sea-ql.org/sea-orm-tutorial/
-
-https://www.sea-ql.org/sea-orm-cookbook/
-
-```
-cargo install sea-orm-cli
 ```
 
 ```bash

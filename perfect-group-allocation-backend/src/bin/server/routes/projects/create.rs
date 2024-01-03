@@ -109,28 +109,32 @@ mod tests {
     use axum_extra::extract::PrivateCookieJar;
     use http_body_util::BodyExt;
 
+    use crate::database::{get_offline_test_database, get_test_database};
     use crate::error::AppError;
     use crate::session::Session;
-    use crate::{create, get_database_connection, CreateProjectPayload, CsrfSafeForm};
+    use crate::{create, CreateProjectPayload, CsrfSafeForm};
 
     #[tokio::test]
     async fn hello_world() -> Result<(), AppError> {
-        let db = get_database_connection().await?;
+        let database = get_offline_test_database().await?;
         let session = Session::new(PrivateCookieJar::new(Key::generate()));
         let form = CsrfSafeForm {
             value: CreateProjectPayload {
                 csrf_token: String::new(),
-                title: String::new(),
-                description: String::new(),
+                title: "test".to_owned(),
+                description: "test".to_owned(),
             },
         };
 
-        let state = axum::extract::State(db);
+        let state = axum::extract::State(database);
         let (_session, response) = create(state, session, form).await;
         let response = response.into_response();
         let binding = response.into_body().collect().await.unwrap().to_bytes();
         let response = from_utf8(&binding).unwrap();
-        assert!(response.contains("Create project"));
+        assert!(response.contains(
+            "Error database error: Failed to acquire connection from pool: Connection pool timed \
+             out"
+        ));
 
         Ok(())
     }

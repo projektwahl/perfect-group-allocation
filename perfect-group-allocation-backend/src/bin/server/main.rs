@@ -13,6 +13,7 @@
 extern crate alloc;
 
 pub mod csrf_protection;
+pub mod database;
 mod entities;
 mod error;
 mod openid;
@@ -41,7 +42,7 @@ use routes::index::index;
 use routes::indexcss::{indexcss, initialize_index_css};
 use routes::openid_login::openid_login;
 use routes::projects::create::create;
-use sea_orm::{Database, DatabaseConnection};
+use sea_orm::DatabaseConnection;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
@@ -56,6 +57,7 @@ use tower_http::services::ServeDir;
 use tracing::{info, warn, Instrument as _};
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
+use crate::database::get_database_connection_from_env;
 use crate::openid::initialize_openid_client;
 use crate::router::MyRouter;
 use crate::routes::openid_redirect::openid_redirect;
@@ -153,14 +155,6 @@ where
 
 impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
 
-pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
-    let database_url = std::env::var("DATABASE_URL")?;
-
-    let db = Database::connect(&database_url).await?;
-
-    Ok(db)
-}
-
 //fn layers(_app: Router<MyState>, _db: DatabaseConnection) -> Router<()> {
 // layers are in reverse order
 //let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
@@ -249,7 +243,7 @@ async fn program() -> Result<(), AppError> {
     initialize_index_css();
     initialize_openid_client().await;
 
-    let db = get_database_connection().await?;
+    let db = get_database_connection_from_env().await?;
 
     let service = ServeDir::new("frontend");
 

@@ -22,8 +22,6 @@ good_lp = { default-features = false, version = "1", features = [ "coin_cbc" ] }
 itertools = { default-features = false, version = "0.12", features = [ "use_alloc", "use_std" ] }
 tokio = { version = "1", features = ["full"] }
 log = { version = "0.4", features = ["release_max_level_off"] }
-sea-orm = { version = "0.12", features = [ "sqlx-postgres", "runtime-tokio-rustls", "macros" ] }
-sea-orm-migration = "0.12"
 axum = { version = "0.7", features = [ "http2", "macros", "multipart", "tracing" ] }
 axum-server = { version = "0.6", features = ["tls-rustls"] }
 tokio-rustls = "0.25"
