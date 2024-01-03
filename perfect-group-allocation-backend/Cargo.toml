@@ -55,6 +55,7 @@ bytes = "1"
 pin-project = "1"
 crossbeam = "0.8"
 hyper-util = "0.1"
+http-body-util = "0.1.0"
 
 # https://github.com/open-telemetry/opentelemetry-rust/pull/1410
 opentelemetry = { version = "0.21", features = ["metrics"] }

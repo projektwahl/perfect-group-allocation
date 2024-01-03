@@ -99,3 +99,39 @@ pub async fn create(
         ),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::from_utf8;
+
+    use axum::response::IntoResponse as _;
+    use axum_extra::extract::cookie::Key;
+    use axum_extra::extract::PrivateCookieJar;
+    use http_body_util::BodyExt;
+
+    use crate::error::AppError;
+    use crate::session::Session;
+    use crate::{create, get_database_connection, CreateProjectPayload, CsrfSafeForm};
+
+    #[tokio::test]
+    async fn hello_world() -> Result<(), AppError> {
+        let db = get_database_connection().await?;
+        let session = Session::new(PrivateCookieJar::new(Key::generate()));
+        let form = CsrfSafeForm {
+            value: CreateProjectPayload {
+                csrf_token: String::new(),
+                title: String::new(),
+                description: String::new(),
+            },
+        };
+
+        let state = axum::extract::State(db);
+        let (_session, response) = create(state, session, form).await;
+        let response = response.into_response();
+        let binding = response.into_body().collect().await.unwrap().to_bytes();
+        let response = from_utf8(&binding).unwrap();
+        assert!(response.contains("Create project"));
+
+        Ok(())
+    }
+}
