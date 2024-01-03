@@ -22,22 +22,22 @@ pub mod session;
 pub mod telemetry;
 
 use core::convert::Infallible;
-use core::time::Duration;
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::extract::{FromRef, FromRequest};
-use axum::http::{self, HeaderName, HeaderValue};
+use axum::http::{self};
 use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
-use axum_extra::headers::Header;
+
 use error::{to_error_result, AppError};
 use futures_util::pin_mut;
 use http::{Request, StatusCode};
 use hyper::body::Incoming;
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
-use itertools::Itertools;
+
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
@@ -53,10 +53,10 @@ use telemetry::trace_layer::MyTraceLayer;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::sync::watch;
-use tower::{service_fn, Service, ServiceBuilder, ServiceExt as _};
+use tower::{service_fn, Service, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
-use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse};
+
 use tracing::{info, warn, Instrument as _};
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
@@ -165,7 +165,7 @@ pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
     Ok(db)
 }
 
-fn layers(app: Router<MyState>, db: DatabaseConnection) -> Router<()> {
+fn layers(_app: Router<MyState>, _db: DatabaseConnection) -> Router<()> {
     // layers are in reverse order
     //let app: Router<MyState, MyBody2> = app.layer(CompressionLayer::new()); // needs lots of compute power
     //let app: Router<MyState, MyBody2> =
@@ -316,7 +316,7 @@ async fn program() -> Result<(), AppError> {
     let mut make_service = app.into_make_service_with_connect_info::<SocketAddr>();
 
     let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    let mut accept: (TcpStream, SocketAddr);
+    let mut _accept: (TcpStream, SocketAddr);
 
     // https://github.com/tokio-rs/axum/blob/af13c539386463b04b82f58155ee04702527212b/axum/src/serve.rs#L279
 
@@ -342,7 +342,7 @@ async fn program() -> Result<(), AppError> {
 
                 let child_span = tracing::debug_span!("child");
 
-                let mut shutdown_tx = Arc::clone(&shutdown_tx);
+                let shutdown_tx = Arc::clone(&shutdown_tx);
                 let closed_rx = closed_rx.clone();
 
                 tokio::spawn(async move {
@@ -367,7 +367,7 @@ async fn program() -> Result<(), AppError> {
                                 }
                                 break; // (gracefully) finished connection
                             }
-                            _ = shutdown_tx.closed() => {
+                            () = shutdown_tx.closed() => {
                                 println!("signal received, shutting down");
                                 connection.as_mut().graceful_shutdown();
                             }

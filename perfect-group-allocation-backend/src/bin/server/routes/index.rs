@@ -1,7 +1,7 @@
 use alloc::borrow::Cow;
 
 use axum::response::IntoResponse;
-use axum_extra::TypedHeader;
+
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;

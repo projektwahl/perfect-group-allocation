@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum_extra::TypedHeader;
+
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;

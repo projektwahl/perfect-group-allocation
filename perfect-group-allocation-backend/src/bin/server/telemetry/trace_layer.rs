@@ -1,5 +1,5 @@
 use std::convert::Infallible;
-use std::fmt;
+
 use std::future::Future;
 use std::pin::Pin;
 use std::str::FromStr;
@@ -7,15 +7,15 @@ use std::task::{ready, Context, Poll};
 
 use axum::extract::MatchedPath;
 use http::{HeaderMap, HeaderName, HeaderValue, Request, Response};
-use itertools::Itertools;
+
 use opentelemetry::global;
 use opentelemetry::propagation::{Extractor, Injector, TextMapPropagator as _};
-use opentelemetry::trace::Tracer as _;
+
 use opentelemetry_semantic_conventions::trace as otelsc;
 use pin_project::pin_project;
 use tower::{Layer, Service};
 use tracing::instrument::Instrumented;
-use tracing::{error, Instrument, Span};
+use tracing::{Instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 // TODO FIXME add support for http client
@@ -51,7 +51,7 @@ where
     }
 
     fn call(&mut self, mut request: Request<RequestBody>) -> Self::Future {
-        let context = global::get_text_map_propagator(|propagator| {
+        let _context = global::get_text_map_propagator(|propagator| {
             propagator.extract(&MyTraceHeaderPropagator(request.headers_mut()))
         });
 
@@ -191,6 +191,6 @@ impl<'a> Extractor for MyTraceHeaderPropagator<'a> {
     }
 
     fn keys(&self) -> Vec<&str> {
-        self.0.keys().map(|key| key.as_str()).collect()
+        self.0.keys().map(http::HeaderName::as_str).collect()
     }
 }
