@@ -139,7 +139,7 @@ impl WebDriverBiDi {
         }
     }
 
-    pub async fn create_session(
+    pub async fn session_new(
         mut self,
     ) -> Result<WebDriverBiDiSession, tokio_tungstenite::tungstenite::Error> {
         let result: WebDriverBiDiLocalEndSessionNewResult = self
@@ -160,6 +160,23 @@ impl WebDriverBiDi {
             session_id: result.sessionId,
             driver: self,
         })
+    }
+}
+
+impl WebDriverBiDiSession {
+    pub async fn session_end(mut self) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+        let result: WebDriverBiDiLocalEndSessionEndResult = self
+            .driver
+            .send_command(WebDriverBiDiRemoteEndCommandData::SessionCommand(
+                WebDriverBiDiRemoteEndSessionCommand::SessionEnd(
+                    WebDriverBiDiRemoteEndSessionEnd {
+                        params: WebDriverBiDiRemoteEndSessionEndParameters {},
+                    },
+                ),
+            ))
+            .await?;
+        println!("{result:?}");
+        Ok(())
     }
 }
 
@@ -225,6 +242,8 @@ pub enum WebDriverBiDiRemoteEndCommandData {
 pub enum WebDriverBiDiRemoteEndSessionCommand {
     /// https://w3c.github.io/webdriver-bidi/#command-session-new
     SessionNew(WebDriverBiDiRemoteEndSessionNew),
+    /// https://w3c.github.io/webdriver-bidi/#command-session-end
+    SessionEnd(WebDriverBiDiRemoteEndSessionEnd),
 }
 
 /// https://w3c.github.io/webdriver-bidi/#module-session-definition
@@ -234,6 +253,19 @@ pub enum WebDriverBiDiRemoteEndSessionCommand {
 pub struct WebDriverBiDiRemoteEndSessionNew {
     params: WebDriverBiDiRemoteEndSessionNewParameters,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "method")]
+#[serde(rename = "session.end")]
+pub struct WebDriverBiDiRemoteEndSessionEnd {
+    params: WebDriverBiDiRemoteEndSessionEndParameters,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WebDriverBiDiRemoteEndSessionEndParameters {}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WebDriverBiDiLocalEndSessionEndResult {}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebDriverBiDiRemoteEndSessionNewParameters {
