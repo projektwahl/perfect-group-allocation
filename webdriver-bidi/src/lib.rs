@@ -1,3 +1,7 @@
+use core::any::Any;
+use std::collections::HashMap;
+
+use futures::stream::SplitSink;
 use futures::{SinkExt as _, StreamExt as _};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
@@ -6,7 +10,8 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 /// https://w3c.github.io/webdriver-bidi
 pub struct WebDriverBiDi {
-    stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    sink: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
+    pending_requests: HashMap<u64, Box<dyn Any>>, // TODO FIXME make enum?
 }
 
 impl WebDriverBiDi {
@@ -18,28 +23,38 @@ impl WebDriverBiDi {
 
         let (stream, response) =
             tokio_tungstenite::connect_async("ws://127.0.0.1:9222/session").await?;
+        let (sink, mut stream) =  stream.split();
 
-        Ok(Self { stream })
+        tokio::spawn(async move {
+            while let Some(msg) = stream.next().await {
+                
+            }
+        });
+
+        Ok(Self {
+            sink,
+            pending_requests: HashMap::new(),
+        })
     }
 
-    pub async fn create_session(&mut self) -> Result<(), tokio_tungstenite::tungstenite::Error> {
-        self.stream
+    async fn send_command(
+       &mut self, command: WebDriverBiDiCommand,
+    ) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+        self.sink
             .send(Message::Text(
-                serde_json::to_string(&WebDriverBiDiCommand::SessionNew(SessionNewParameters {
-                    capabilities: SessionCapabilitiesRequest {},
-                }))
+                serde_json::to_string(&)
                 .unwrap(),
             ))
             .await?;
-
-        self.stream.flush().await?;
-
-        while let Some(msg) = self.stream.next().await {
-            let msg = msg?;
-            println!("{msg:?}");
-        }
+        self.sink.flush().await?;
 
         Ok(())
+    }
+
+    pub async fn create_session(&mut self) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+        self.send_command(WebDriverBiDiCommand::SessionNew(SessionNewParameters {
+            capabilities: SessionCapabilitiesRequest {},
+        })).await
     }
 }
 
