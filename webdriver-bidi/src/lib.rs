@@ -72,12 +72,20 @@ impl WebDriverBiDi {
         pending_requests: &mut HashMap<u64, oneshot::Sender<String>>,
         message: String,
     ) {
-        let parsed_message: WebDriverBiDiMessage = serde_json::from_str(&message).unwrap();
-        pending_requests
-            .remove(&parsed_message.id)
-            .unwrap()
-            .send(message)
-            .unwrap();
+        println!("message {message:?}");
+        let parsed_message: WebDriverBiDiLocalEndMessage = serde_json::from_str(&message).unwrap();
+        match parsed_message {
+            WebDriverBiDiLocalEndMessage::Ok(parsed_message) => {
+                pending_requests
+                    .remove(&parsed_message.id)
+                    .unwrap()
+                    .send(message)
+                    .unwrap();
+            }
+            WebDriverBiDiLocalEndMessage::Error(error) => {
+                println!("error {error:?}");
+            }
+        }
     }
 
     async fn send_command(
@@ -114,12 +122,28 @@ impl WebDriverBiDi {
     }
 }
 
+// https://w3c.github.io/webdriver-bidi/#protocol-definition
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum WebDriverBiDiLocalEndMessage {
+    Ok(WebDriverBiDiLocalEndMessageOk),
+    Error(WebDriverBiDiLocalEndMessageError),
+}
+
 // https://w3c.github.io/webdriver-bidi/#handle-an-incoming-message
 #[derive(Debug, Serialize, Deserialize)]
-pub struct WebDriverBiDiMessage {
+pub struct WebDriverBiDiLocalEndMessageOk {
     id: u64,
     method: String,
     params: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WebDriverBiDiLocalEndMessageError {
+    error: String,
+    message: String,
+    stacktrace: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
