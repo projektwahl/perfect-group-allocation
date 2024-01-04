@@ -189,8 +189,9 @@ pub enum WebDriverBiDiRemoteEndSessionCommand {
 
 /// https://w3c.github.io/webdriver-bidi/#module-session-definition
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "method")]
+#[serde(rename = "session.new")]
 pub struct WebDriverBiDiRemoteEndSessionNew {
-    method: SessionNew,
     params: WebDriverBiDiRemoteEndSessionNewParameters,
 }
 
