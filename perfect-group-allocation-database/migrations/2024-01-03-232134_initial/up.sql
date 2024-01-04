@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS projects_history (
 );
 
 -- check that this prevents duplicate insertions
+-- doesn't prevent no entry set to current
 CREATE UNIQUE INDEX IF NOT EXISTS projects_history_current ON projects_history (id) INCLUDE (history_id) WHERE current;
 
 SELECT * FROM projects_history WHERE current;
