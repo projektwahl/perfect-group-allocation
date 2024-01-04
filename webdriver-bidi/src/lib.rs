@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use futures::stream::SplitSink;
 use futures::{SinkExt as _, StreamExt as _};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
@@ -43,9 +44,9 @@ impl WebDriverBiDi {
                                 Self::handle_message(&mut pending_requests, message);
                             }
                             Some(Ok(message)) => {
-                                println!("Unknown message: {message:?}");
+                                println!("Unknown message: {message:#?}");
                             }
-                            Some(Err(error)) => println!("Error {error:?}"),
+                            Some(Err(error)) => println!("Error {error:#?}"),
                             None => {
                                 println!("connection closed");
                                 break;
@@ -72,19 +73,19 @@ impl WebDriverBiDi {
         pending_requests: &mut HashMap<u64, oneshot::Sender<String>>,
         message: String,
     ) {
-        println!("message {message:?}");
         let parsed_message: WebDriverBiDiLocalEndMessage = serde_json::from_str(&message).unwrap();
         match parsed_message {
-            WebDriverBiDiLocalEndMessage::Ok(parsed_message) => {
+            WebDriverBiDiLocalEndMessage::CommandResponse(parsed_message) => {
                 pending_requests
                     .remove(&parsed_message.id)
                     .unwrap()
                     .send(message)
                     .unwrap();
             }
-            WebDriverBiDiLocalEndMessage::Error(error) => {
-                println!("error {error:?}");
+            WebDriverBiDiLocalEndMessage::ErrorResponse(error) => {
+                println!("error {error:#?}");
             }
+            WebDriverBiDiLocalEndMessage::Event(_) => todo!(),
         }
     }
 
@@ -123,27 +124,41 @@ impl WebDriverBiDi {
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum WebDriverBiDiLocalEndMessage {
-    Ok(WebDriverBiDiLocalEndMessageOk),
-    Error(WebDriverBiDiLocalEndMessageError),
+    #[serde(rename = "success")]
+    CommandResponse(WebDriverBiDiLocalEndCommandResponse),
+    #[serde(rename = "error")]
+    ErrorResponse(WebDriverBiDiLocalEndMessageErrorResponse),
+    #[serde(rename = "event")]
+    Event(WebDriverBiDiLocalEndEvent),
 }
 
-// https://w3c.github.io/webdriver-bidi/#handle-an-incoming-message
+// https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
-pub struct WebDriverBiDiLocalEndMessageOk {
+pub struct WebDriverBiDiLocalEndCommandResponse {
     id: u64,
-    method: String,
-    params: String,
+    result: Value,
+    // Extensible
 }
 
+// https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
-pub struct WebDriverBiDiLocalEndMessageError {
+pub struct WebDriverBiDiLocalEndEvent {
+    id: u64,
+    // TODO EventData
+    // Extensible
+}
+
+// https://w3c.github.io/webdriver-bidi/#protocol-definition
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WebDriverBiDiLocalEndMessageErrorResponse {
+    id: Option<u64>,
     error: String,
     message: String,
-    stacktrace: String,
+    stacktrace: Option<String>,
+    // Extensible
 }
 
 #[derive(Debug, Serialize, Deserialize)]
