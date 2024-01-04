@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "perfect-group-allocation-backend", "perfect-group-allocation-e2e", "perfect-group-allocation-database"
-]
+, "webdriver-bidi"]
 
 [workspace.package]
 edition = "2024"
