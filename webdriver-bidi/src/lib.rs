@@ -5,13 +5,15 @@ use futures::stream::SplitSink;
 use futures::{SinkExt as _, StreamExt as _};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
+use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 /// https://w3c.github.io/webdriver-bidi
 pub struct WebDriverBiDi {
     sink: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
-    pending_requests: HashMap<u64, Box<dyn Any>>, // TODO FIXME make enum?
+    // TODO FIXMe maybe use an mpsc to send them to the worker
+    pending_requests: HashMap<u64, oneshot::Sender<String>>,
 }
 
 impl WebDriverBiDi {
@@ -23,11 +25,19 @@ impl WebDriverBiDi {
 
         let (stream, response) =
             tokio_tungstenite::connect_async("ws://127.0.0.1:9222/session").await?;
-        let (sink, mut stream) =  stream.split();
+        let (sink, mut stream) = stream.split();
 
         tokio::spawn(async move {
-            while let Some(msg) = stream.next().await {
-                
+            while let Some(message) = stream.next().await {
+                match message {
+                    Ok(Message::Text(message)) => {
+                        let message: WebDriverBiDiMessage = serde_json::from_str(&message).unwrap();
+                    }
+                    Ok(message) => {
+                        println!("Unknown message: {message:?}")
+                    }
+                    Err(error) => println!("Error {error:?}"),
+                }
             }
         });
 
@@ -38,23 +48,25 @@ impl WebDriverBiDi {
     }
 
     async fn send_command(
-       &mut self, command: WebDriverBiDiCommand,
+        &mut self,
+        command: WebDriverBiDiCommand,
     ) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+        let (tx, rx) = oneshot::channel();
+
+        self.pending_requests.insert(1, tx);
         self.sink
-            .send(Message::Text(
-                serde_json::to_string(&)
-                .unwrap(),
-            ))
+            .send(Message::Text(serde_json::to_string(&command).unwrap()))
             .await?;
         self.sink.flush().await?;
 
-        Ok(())
+        Ok(rx.await.unwrap())
     }
 
     pub async fn create_session(&mut self) -> Result<(), tokio_tungstenite::tungstenite::Error> {
         self.send_command(WebDriverBiDiCommand::SessionNew(SessionNewParameters {
             capabilities: SessionCapabilitiesRequest {},
-        })).await
+        }))
+        .await
     }
 }
 
@@ -80,6 +92,24 @@ pub struct SessionNewParameters {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SessionCapabilitiesRequest {}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SessionNewResult {
+    sessionId: String,
+    capabilities: SessionNewResultCapabilities,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SessionNewResultCapabilities {
+    acceptInsecureCerts: bool,
+    browserName: String,
+    browserVersion: String,
+    platformName: String,
+    setWindowRect: bool,
+    //proxy: Option<session.ProxyConfiguration>,
+    //webSocketUrl: Option<text / true>,
+    //Extensible
+}
 
 #[cfg(test)]
 mod tests {
