@@ -1,6 +1,8 @@
 #![feature(lint_reasons)]
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
+pub mod browsing_context;
+
 use std::collections::HashMap;
 
 use futures::stream::SplitSink;
@@ -178,6 +180,20 @@ impl WebDriverBiDiSession {
         println!("{result:?}");
         Ok(())
     }
+
+    pub async fn browsing_context_get_tree(
+        &mut self,
+    ) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+        self.driver
+            .send_command(WebDriverBiDiRemoteEndCommandData::SessionCommand(
+                WebDriverBiDiRemoteEndSessionCommand::SessionEnd(
+                    WebDriverBiDiRemoteEndSessionEnd {
+                        params: WebDriverBiDiRemoteEndSessionEndParameters {},
+                    },
+                ),
+            ))
+            .await
+    }
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
@@ -236,7 +252,7 @@ pub enum WebDriverBiDiRemoteEndCommandData {
     SessionCommand(WebDriverBiDiRemoteEndSessionCommand),
 }
 
-/// https://w3c.github.io/webdriver-bidi/#module-session-definition
+/// <https://w3c.github.io/webdriver-bidi/#module-session-definition>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum WebDriverBiDiRemoteEndSessionCommand {
@@ -246,7 +262,7 @@ pub enum WebDriverBiDiRemoteEndSessionCommand {
     SessionEnd(WebDriverBiDiRemoteEndSessionEnd),
 }
 
-/// https://w3c.github.io/webdriver-bidi/#module-session-definition
+/// <https://w3c.github.io/webdriver-bidi/#module-session-definition>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "method")]
 #[serde(rename = "session.new")]
