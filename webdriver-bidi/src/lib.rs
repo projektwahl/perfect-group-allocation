@@ -30,15 +30,14 @@ impl WebDriverBiDi {
         let (tx, mut rx) = mpsc::channel::<(u64, oneshot::Sender<String>)>(100);
 
         tokio::spawn(async move {
-            let pending_requests = HashMap::<u64, oneshot::Sender<String>>::new();
+            let mut pending_requests = HashMap::<u64, oneshot::Sender<String>>::new();
 
             loop {
                 tokio::select! {
                     message = stream.next() => {
                         match message {
                             Some(Ok(Message::Text(message))) => {
-                                let message: WebDriverBiDiMessage = serde_json::from_str(&message).unwrap();
-                                pending_requests.remove(&message.id).unwrap().send(message);
+                                WebDriverBiDi::handle_message(&mut pending_requests, message);
                             }
                             Some(Ok(message)) => {
                                 println!("Unknown message: {message:?}")
@@ -64,6 +63,14 @@ impl WebDriverBiDi {
             current_id: 0,
             add_pending_request: tx,
         })
+    }
+
+    async fn handle_message(
+        pending_requests: &mut HashMap<u64, oneshot::Sender<String>>,
+        message: String,
+    ) {
+        let message: WebDriverBiDiMessage = serde_json::from_str(&message).unwrap();
+        pending_requests.remove(&message.id).unwrap().send(message);
     }
 
     async fn send_command(
