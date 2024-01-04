@@ -4,6 +4,7 @@ use webdriver_bidi::WebDriverBiDi;
 pub async fn main() -> Result<(), tokio_tungstenite::tungstenite::Error> {
     let mut driver = WebDriverBiDi::new().await?;
     let session = driver.create_session().await?;
+    println!("{session:?}");
 
     Ok(())
 }

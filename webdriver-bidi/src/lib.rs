@@ -1,4 +1,6 @@
-use core::any::Any;
+#![feature(lint_reasons)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
 use std::collections::HashMap;
 
 use futures::stream::SplitSink;
@@ -9,7 +11,7 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-/// https://w3c.github.io/webdriver-bidi
+/// <https://w3c.github.io/webdriver-bidi>
 pub struct WebDriverBiDi {
     sink: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
     current_id: u64,
@@ -23,7 +25,7 @@ impl WebDriverBiDi {
     pub async fn new() -> Result<Self, tokio_tungstenite::tungstenite::Error> {
         // firefox --profile /tmp/a --new-instance --remote-debugging-port 9222
 
-        let (stream, response) =
+        let (stream, _response) =
             tokio_tungstenite::connect_async("ws://127.0.0.1:9222/session").await?;
         let (sink, mut stream) = stream.split();
 
@@ -32,15 +34,16 @@ impl WebDriverBiDi {
         tokio::spawn(async move {
             let mut pending_requests = HashMap::<u64, oneshot::Sender<String>>::new();
 
+            #[expect(clippy::redundant_pub_crate, reason = "tokio::select!")]
             loop {
                 tokio::select! {
                     message = stream.next() => {
                         match message {
                             Some(Ok(Message::Text(message))) => {
-                                WebDriverBiDi::handle_message(&mut pending_requests, message);
+                                Self::handle_message(&mut pending_requests, message);
                             }
                             Some(Ok(message)) => {
-                                println!("Unknown message: {message:?}")
+                                println!("Unknown message: {message:?}");
                             }
                             Some(Err(error)) => println!("Error {error:?}"),
                             None => {
@@ -65,12 +68,16 @@ impl WebDriverBiDi {
         })
     }
 
-    async fn handle_message(
+    fn handle_message(
         pending_requests: &mut HashMap<u64, oneshot::Sender<String>>,
         message: String,
     ) {
-        let message: WebDriverBiDiMessage = serde_json::from_str(&message).unwrap();
-        pending_requests.remove(&message.id).unwrap().send(message);
+        let parsed_message: WebDriverBiDiMessage = serde_json::from_str(&message).unwrap();
+        pending_requests
+            .remove(&parsed_message.id)
+            .unwrap()
+            .send(message)
+            .unwrap();
     }
 
     async fn send_command(
@@ -80,7 +87,10 @@ impl WebDriverBiDi {
         let (tx, rx) = oneshot::channel();
 
         self.current_id += 1;
-        self.add_pending_request.send((self.current_id, tx)).await;
+        self.add_pending_request
+            .send((self.current_id, tx))
+            .await
+            .unwrap();
 
         self.sink
             .send(Message::Text(serde_json::to_string(&command).unwrap()))
@@ -147,10 +157,6 @@ pub struct SessionNewResultCapabilities {
 
 #[cfg(test)]
 mod tests {
-    use futures::{SinkExt as _, StreamExt as _};
-    use tokio_tungstenite::tungstenite::Message;
-
-    use crate::WebDriverBiDiMessage;
 
     #[tokio::test]
     async fn it_works() -> Result<(), tokio_tungstenite::tungstenite::Error> {
