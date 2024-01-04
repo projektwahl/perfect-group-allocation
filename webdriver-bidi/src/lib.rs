@@ -1,5 +1,7 @@
+use futures::{SinkExt as _, StreamExt as _};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
+use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 /// https://w3c.github.io/webdriver-bidi
@@ -18,6 +20,26 @@ impl WebDriverBiDi {
             tokio_tungstenite::connect_async("ws://127.0.0.1:9222/session").await?;
 
         Ok(Self { stream })
+    }
+
+    pub async fn create_session(&mut self) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+        self.stream
+            .send(Message::Text(
+                serde_json::to_string(&WebDriverBiDiCommand::SessionNew(SessionNewParameters {
+                    capabilities: SessionCapabilitiesRequest {},
+                }))
+                .unwrap(),
+            ))
+            .await?;
+
+        self.stream.flush().await?;
+
+        while let Some(msg) = self.stream.next().await {
+            let msg = msg?;
+            println!("{msg:?}");
+        }
+
+        Ok(())
     }
 }
 
@@ -53,23 +75,6 @@ mod tests {
 
     #[tokio::test]
     async fn it_works() -> Result<(), tokio_tungstenite::tungstenite::Error> {
-        stream
-            .send(Message::Text(
-                serde_json::to_string(&WebDriverBiDiMessage {
-                    id: todo!(),
-                    method: todo!(),
-                    params: todo!(),
-                })
-                .unwrap(),
-            ))
-            .await?;
-        stream.flush().await?;
-
-        while let Some(msg) = stream.next().await {
-            let msg = msg?;
-            println!("{msg:?}");
-        }
-
         Ok(())
     }
 }
