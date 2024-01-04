@@ -14,10 +14,17 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 /// <https://w3c.github.io/webdriver-bidi>
+#[derive(Debug)]
 pub struct WebDriverBiDi {
     sink: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
     current_id: u64,
     add_pending_request: mpsc::Sender<(u64, oneshot::Sender<String>)>,
+}
+
+#[derive(Debug)]
+pub struct WebDriverBiDiSession {
+    session_id: String,
+    driver: WebDriverBiDi,
 }
 
 impl WebDriverBiDi {
@@ -106,6 +113,7 @@ impl WebDriverBiDi {
                 serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
                     id,
                     CommandData: command_data,
+                    extensible: Value::Null,
                 })
                 .unwrap(),
             ))
@@ -132,20 +140,26 @@ impl WebDriverBiDi {
     }
 
     pub async fn create_session(
-        &mut self,
-    ) -> Result<WebDriverBiDiLocalEndSessionNewResult, tokio_tungstenite::tungstenite::Error> {
-        self.send_command::<WebDriverBiDiLocalEndSessionNewResult>(
-            WebDriverBiDiRemoteEndCommandData::SessionCommand(
-                WebDriverBiDiRemoteEndSessionCommand::SessionNew(
-                    WebDriverBiDiRemoteEndSessionNew {
-                        params: WebDriverBiDiRemoteEndSessionNewParameters {
-                            capabilities: WebDriverBiDiRemoteEndSessionCapabilitiesRequest {},
+        mut self,
+    ) -> Result<WebDriverBiDiSession, tokio_tungstenite::tungstenite::Error> {
+        let result: WebDriverBiDiLocalEndSessionNewResult = self
+            .send_command::<WebDriverBiDiLocalEndSessionNewResult>(
+                WebDriverBiDiRemoteEndCommandData::SessionCommand(
+                    WebDriverBiDiRemoteEndSessionCommand::SessionNew(
+                        WebDriverBiDiRemoteEndSessionNew {
+                            params: WebDriverBiDiRemoteEndSessionNewParameters {
+                                capabilities: WebDriverBiDiRemoteEndSessionCapabilitiesRequest {},
+                            },
                         },
-                    },
+                    ),
                 ),
-            ),
-        )
-        .await
+            )
+            .await?;
+        println!("{result:?}");
+        Ok(WebDriverBiDiSession {
+            session_id: result.sessionId,
+            driver: self,
+        })
     }
 }
 
@@ -184,7 +198,8 @@ pub struct WebDriverBiDiLocalEndMessageErrorResponse {
     error: String,
     message: String,
     stacktrace: Option<String>,
-    // Extensible
+    #[serde(flatten)]
+    extensible: Value,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
@@ -193,7 +208,8 @@ pub struct WebDriverBiDiRemoteEndCommand {
     id: u64,
     #[serde(flatten)]
     CommandData: WebDriverBiDiRemoteEndCommandData,
-    // Extensible
+    #[serde(flatten)]
+    extensible: Value,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
@@ -242,7 +258,8 @@ pub struct WebDriverBiDiLocalEndSessionNewResultCapabilities {
     setWindowRect: bool,
     //proxy: Option<session.ProxyConfiguration>,
     //webSocketUrl: Option<text / true>,
-    //Extensible
+    #[serde(flatten)]
+    extensible: Value,
 }
 
 #[cfg(test)]
