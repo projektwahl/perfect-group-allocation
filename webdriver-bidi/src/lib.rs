@@ -91,7 +91,7 @@ impl WebDriverBiDi {
 
     async fn send_command(
         &mut self,
-        command: WebDriverBiDiCommand,
+        command: WebDriverBiDiRemoteEndCommand,
     ) -> Result<String, tokio_tungstenite::tungstenite::Error> {
         let (tx, rx) = oneshot::channel();
 
@@ -114,9 +114,11 @@ impl WebDriverBiDi {
     ) -> Result<SessionNewResult, tokio_tungstenite::tungstenite::Error> {
         Ok(serde_json::from_str(
             &self
-                .send_command(WebDriverBiDiCommand::SessionNew(SessionNewParameters {
-                    capabilities: SessionCapabilitiesRequest {},
-                }))
+                .send_command(WebDriverBiDiRemoteEndCommand::SessionNew(
+                    SessionNewParameters {
+                        capabilities: SessionCapabilitiesRequest {},
+                    },
+                ))
                 .await?,
         )
         .unwrap())
@@ -161,9 +163,22 @@ pub struct WebDriverBiDiLocalEndMessageErrorResponse {
     // Extensible
 }
 
+/// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum WebDriverBiDiCommand {
+pub struct WebDriverBiDiRemoteEndCommand {
+    id: u64,
+    CommandData: WebDriverBiDiRemoteEndCommandData,
+    // Extensible
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+#[derive(Debug, Serialize, Deserialize)]
+pub enum WebDriverBiDiRemoteEndCommandData {
+    SessionCommand(WebDriverBiDiRemoteEndSessionCommand),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum WebDriverBiDiRemoteEndSessionCommand {
     /// https://w3c.github.io/webdriver-bidi/#command-session-new
     SessionNew(SessionNewParameters),
 }
