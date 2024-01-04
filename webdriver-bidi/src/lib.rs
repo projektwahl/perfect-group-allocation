@@ -38,6 +38,7 @@ impl WebDriverBiDi {
                         match message {
                             Some(Ok(Message::Text(message))) => {
                                 let message: WebDriverBiDiMessage = serde_json::from_str(&message).unwrap();
+                                pending_requests.remove(&message.id).unwrap().send(message);
                             }
                             Some(Ok(message)) => {
                                 println!("Unknown message: {message:?}")
