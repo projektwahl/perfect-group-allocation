@@ -167,29 +167,40 @@ pub struct WebDriverBiDiLocalEndMessageErrorResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebDriverBiDiRemoteEndCommand {
     id: u64,
+    #[serde(flatten)]
     CommandData: WebDriverBiDiRemoteEndCommandData,
     // Extensible
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum WebDriverBiDiRemoteEndCommandData {
     SessionCommand(WebDriverBiDiRemoteEndSessionCommand),
 }
 
+/// https://w3c.github.io/webdriver-bidi/#module-session-definition
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum WebDriverBiDiRemoteEndSessionCommand {
     /// https://w3c.github.io/webdriver-bidi/#command-session-new
-    SessionNew(SessionNewParameters),
+    SessionNew(WebDriverBiDiRemoteEndSessionNew),
+}
+
+/// https://w3c.github.io/webdriver-bidi/#module-session-definition
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WebDriverBiDiRemoteEndSessionNew {
+    method: SessionNew,
+    params: WebDriverBiDiRemoteEndSessionNewParameters,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SessionNewParameters {
-    capabilities: SessionCapabilitiesRequest,
+pub struct WebDriverBiDiRemoteEndSessionNewParameters {
+    capabilities: WebDriverBiDiRemoteEndSessionCapabilitiesRequest,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SessionCapabilitiesRequest {}
+pub struct WebDriverBiDiRemoteEndSessionCapabilitiesRequest {}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SessionNewResult {
