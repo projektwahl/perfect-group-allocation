@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use futures::stream::SplitSink;
 use futures::{SinkExt as _, StreamExt as _};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::net::TcpStream;
@@ -89,39 +90,45 @@ impl WebDriverBiDi {
         }
     }
 
-    async fn send_command(
+    async fn send_command<R: DeserializeOwned>(
         &mut self,
-        command: WebDriverBiDiRemoteEndCommand,
-    ) -> Result<String, tokio_tungstenite::tungstenite::Error> {
+        command_data: WebDriverBiDiRemoteEndCommandData,
+    ) -> Result<R, tokio_tungstenite::tungstenite::Error> {
         let (tx, rx) = oneshot::channel();
 
+        let id: u64 = self.current_id;
         self.current_id += 1;
-        self.add_pending_request
-            .send((self.current_id, tx))
-            .await
-            .unwrap();
+        self.add_pending_request.send((id, tx)).await.unwrap();
 
         self.sink
-            .send(Message::Text(serde_json::to_string(&command).unwrap()))
+            .send(Message::Text(
+                serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+                    id,
+                    CommandData: command_data,
+                })
+                .unwrap(),
+            ))
             .await?;
         self.sink.flush().await?;
 
-        Ok(rx.await.unwrap())
+        Ok(serde_json::from_str(&rx.await.unwrap()).unwrap())
     }
 
     pub async fn create_session(
         &mut self,
-    ) -> Result<SessionNewResult, tokio_tungstenite::tungstenite::Error> {
-        Ok(serde_json::from_str(
-            &self
-                .send_command(WebDriverBiDiRemoteEndCommand::SessionNew(
-                    SessionNewParameters {
-                        capabilities: SessionCapabilitiesRequest {},
+    ) -> Result<WebDriverBiDiLocalEndSessionNewResult, tokio_tungstenite::tungstenite::Error> {
+        self.send_command::<WebDriverBiDiLocalEndSessionNewResult>(
+            WebDriverBiDiRemoteEndCommandData::SessionCommand(
+                WebDriverBiDiRemoteEndSessionCommand::SessionNew(
+                    WebDriverBiDiRemoteEndSessionNew {
+                        params: WebDriverBiDiRemoteEndSessionNewParameters {
+                            capabilities: WebDriverBiDiRemoteEndSessionCapabilitiesRequest {},
+                        },
                     },
-                ))
-                .await?,
+                ),
+            ),
         )
-        .unwrap())
+        .await
     }
 }
 
@@ -204,13 +211,13 @@ pub struct WebDriverBiDiRemoteEndSessionNewParameters {
 pub struct WebDriverBiDiRemoteEndSessionCapabilitiesRequest {}
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SessionNewResult {
+pub struct WebDriverBiDiLocalEndSessionNewResult {
     sessionId: String,
-    capabilities: SessionNewResultCapabilities,
+    capabilities: WebDriverBiDiLocalEndSessionNewResultCapabilities,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SessionNewResultCapabilities {
+pub struct WebDriverBiDiLocalEndSessionNewResultCapabilities {
     acceptInsecureCerts: bool,
     browserName: String,
     browserVersion: String,
