@@ -5,15 +5,15 @@ use futures::stream::SplitSink;
 use futures::{SinkExt as _, StreamExt as _};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 /// https://w3c.github.io/webdriver-bidi
 pub struct WebDriverBiDi {
     sink: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
-    // TODO FIXMe maybe use an mpsc to send them to the worker
-    pending_requests: HashMap<u64, oneshot::Sender<String>>,
+    current_id: u64,
+    add_pending_request: mpsc::Sender<(u64, oneshot::Sender<String>)>,
 }
 
 impl WebDriverBiDi {
@@ -27,33 +27,53 @@ impl WebDriverBiDi {
             tokio_tungstenite::connect_async("ws://127.0.0.1:9222/session").await?;
         let (sink, mut stream) = stream.split();
 
+        let (tx, mut rx) = mpsc::channel::<(u64, oneshot::Sender<String>)>(100);
+
         tokio::spawn(async move {
-            while let Some(message) = stream.next().await {
-                match message {
-                    Ok(Message::Text(message)) => {
-                        let message: WebDriverBiDiMessage = serde_json::from_str(&message).unwrap();
+            let pending_requests = HashMap::<u64, oneshot::Sender<String>>::new();
+
+            loop {
+                tokio::select! {
+                    message = stream.next() => {
+                        match message {
+                            Some(Ok(Message::Text(message))) => {
+                                let message: WebDriverBiDiMessage = serde_json::from_str(&message).unwrap();
+                            }
+                            Some(Ok(message)) => {
+                                println!("Unknown message: {message:?}")
+                            }
+                            Some(Err(error)) => println!("Error {error:?}"),
+                            None => {
+                                println!("connection closed");
+                                break;
+                            }
+                        }
                     }
-                    Ok(message) => {
-                        println!("Unknown message: {message:?}")
+                    pending_request = rx.recv() => {
+                        if let Some(pending_request) = pending_request {
+                            pending_requests.insert(pending_request.0, pending_request.1);
+                        }
                     }
-                    Err(error) => println!("Error {error:?}"),
                 }
             }
         });
 
         Ok(Self {
             sink,
-            pending_requests: HashMap::new(),
+            current_id: 0,
+            add_pending_request: tx,
         })
     }
 
     async fn send_command(
         &mut self,
         command: WebDriverBiDiCommand,
-    ) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+    ) -> Result<String, tokio_tungstenite::tungstenite::Error> {
         let (tx, rx) = oneshot::channel();
 
-        self.pending_requests.insert(1, tx);
+        self.current_id += 1;
+        self.add_pending_request.send((self.current_id, tx)).await;
+
         self.sink
             .send(Message::Text(serde_json::to_string(&command).unwrap()))
             .await?;
@@ -62,11 +82,17 @@ impl WebDriverBiDi {
         Ok(rx.await.unwrap())
     }
 
-    pub async fn create_session(&mut self) -> Result<(), tokio_tungstenite::tungstenite::Error> {
-        self.send_command(WebDriverBiDiCommand::SessionNew(SessionNewParameters {
-            capabilities: SessionCapabilitiesRequest {},
-        }))
-        .await
+    pub async fn create_session(
+        &mut self,
+    ) -> Result<SessionNewResult, tokio_tungstenite::tungstenite::Error> {
+        Ok(serde_json::from_str(
+            &self
+                .send_command(WebDriverBiDiCommand::SessionNew(SessionNewParameters {
+                    capabilities: SessionCapabilitiesRequest {},
+                }))
+                .await?,
+        )
+        .unwrap())
     }
 }
 
