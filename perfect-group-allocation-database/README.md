@@ -7,5 +7,6 @@ podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgres
 export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
 
 diesel setup
+psql postgres://postgres:password@localhost
 
 ```
