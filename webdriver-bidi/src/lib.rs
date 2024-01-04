@@ -74,7 +74,8 @@ impl WebDriverBiDi {
         pending_requests: &mut HashMap<u64, oneshot::Sender<String>>,
         message: String,
     ) {
-        let parsed_message: WebDriverBiDiLocalEndMessage = serde_json::from_str(&message).unwrap();
+        let parsed_message: WebDriverBiDiLocalEndMessage<Value> =
+            serde_json::from_str(&message).unwrap();
         match parsed_message {
             WebDriverBiDiLocalEndMessage::CommandResponse(parsed_message) => {
                 pending_requests
@@ -84,16 +85,16 @@ impl WebDriverBiDi {
                     .unwrap();
             }
             WebDriverBiDiLocalEndMessage::ErrorResponse(error) => {
-                println!("error {error:#?}");
+                println!("error {error:#?}"); // TODO FIXME propage to command if it has an id.
             }
             WebDriverBiDiLocalEndMessage::Event(_) => todo!(),
         }
     }
 
-    async fn send_command<R: DeserializeOwned>(
+    async fn send_command<ResultData: DeserializeOwned>(
         &mut self,
         command_data: WebDriverBiDiRemoteEndCommandData,
-    ) -> Result<R, tokio_tungstenite::tungstenite::Error> {
+    ) -> Result<ResultData, tokio_tungstenite::tungstenite::Error> {
         let (tx, rx) = oneshot::channel();
 
         let id: u64 = self.current_id;
@@ -111,7 +112,23 @@ impl WebDriverBiDi {
             .await?;
         self.sink.flush().await?;
 
-        Ok(serde_json::from_str(&rx.await.unwrap()).unwrap())
+        let received = rx.await.unwrap();
+        let parsed: WebDriverBiDiLocalEndMessage<ResultData> =
+            serde_json::from_str(&received).expect(&received);
+        match parsed {
+            WebDriverBiDiLocalEndMessage::CommandResponse(
+                WebDriverBiDiLocalEndCommandResponse {
+                    result: result_data,
+                    ..
+                },
+            ) => Ok(result_data),
+            WebDriverBiDiLocalEndMessage::ErrorResponse(error_response) => {
+                panic!("{error_response:?}");
+            }
+            WebDriverBiDiLocalEndMessage::Event(_) => {
+                unreachable!("command should never get an event as response");
+            }
+        }
     }
 
     pub async fn create_session(
@@ -135,9 +152,9 @@ impl WebDriverBiDi {
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
-pub enum WebDriverBiDiLocalEndMessage {
+pub enum WebDriverBiDiLocalEndMessage<ResultData> {
     #[serde(rename = "success")]
-    CommandResponse(WebDriverBiDiLocalEndCommandResponse),
+    CommandResponse(WebDriverBiDiLocalEndCommandResponse<ResultData>),
     #[serde(rename = "error")]
     ErrorResponse(WebDriverBiDiLocalEndMessageErrorResponse),
     #[serde(rename = "event")]
@@ -146,9 +163,9 @@ pub enum WebDriverBiDiLocalEndMessage {
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
-pub struct WebDriverBiDiLocalEndCommandResponse {
+pub struct WebDriverBiDiLocalEndCommandResponse<ResultData> {
     id: u64,
-    result: Value,
+    result: ResultData,
     // Extensible
 }
 
