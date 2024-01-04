@@ -112,7 +112,7 @@ impl WebDriverBiDi {
             .send(Message::Text(
                 serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
                     id,
-                    CommandData: command_data,
+                    command_data,
                     extensible: Value::Null,
                 })
                 .unwrap(),
@@ -157,7 +157,7 @@ impl WebDriverBiDi {
             .await?;
         println!("{result:?}");
         Ok(WebDriverBiDiSession {
-            session_id: result.sessionId,
+            session_id: result.session_id,
             driver: self,
         })
     }
@@ -224,7 +224,7 @@ pub struct WebDriverBiDiLocalEndMessageErrorResponse {
 pub struct WebDriverBiDiRemoteEndCommand {
     id: u64,
     #[serde(flatten)]
-    CommandData: WebDriverBiDiRemoteEndCommandData,
+    command_data: WebDriverBiDiRemoteEndCommandData,
     #[serde(flatten)]
     extensible: Value,
 }
@@ -276,18 +276,20 @@ pub struct WebDriverBiDiRemoteEndSessionNewParameters {
 pub struct WebDriverBiDiRemoteEndSessionCapabilitiesRequest {}
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WebDriverBiDiLocalEndSessionNewResult {
-    sessionId: String,
+    session_id: String,
     capabilities: WebDriverBiDiLocalEndSessionNewResultCapabilities,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WebDriverBiDiLocalEndSessionNewResultCapabilities {
-    acceptInsecureCerts: bool,
-    browserName: String,
-    browserVersion: String,
-    platformName: String,
-    setWindowRect: bool,
+    accept_insecure_certs: bool,
+    browser_name: String,
+    browser_version: String,
+    platform_name: String,
+    set_window_rect: bool,
     //proxy: Option<session.ProxyConfiguration>,
     //webSocketUrl: Option<text / true>,
     #[serde(flatten)]
