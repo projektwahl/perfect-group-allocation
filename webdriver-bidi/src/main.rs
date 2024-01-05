@@ -21,7 +21,7 @@ pub async fn main() -> Result<(), tokio_tungstenite::tungstenite::Error> {
         .browsing_context_navigate(browsing_context, "https://www.google.com/".to_owned())
         .await?;
 
-    sleep(Duration::from_secs(60)).await;
+    sleep(Duration::from_secs(5)).await;
 
     session.session_end().await?;
 

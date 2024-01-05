@@ -20,7 +20,8 @@ use crate::{
 pub struct WebDriver {
     sink: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
     current_id: u64,
-    add_pending_request: mpsc::Sender<(u64, oneshot::Sender<String>)>,
+    add_pending_command: mpsc::Sender<(u64, oneshot::Sender<String>)>,
+    // TODO FIXME browsing context specific events?
 }
 
 impl WebDriver {
@@ -66,7 +67,7 @@ impl WebDriver {
         Ok(Self {
             sink,
             current_id: 0,
-            add_pending_request: tx,
+            add_pending_command: tx,
         })
     }
 
@@ -87,7 +88,7 @@ impl WebDriver {
             WebDriverBiDiLocalEndMessage::ErrorResponse(error) => {
                 println!("error {error:#?}"); // TODO FIXME propage to command if it has an id.
             }
-            WebDriverBiDiLocalEndMessage::Event(_) => todo!(),
+            WebDriverBiDiLocalEndMessage::Event(event) => todo!("{event:?}"),
         }
     }
 
@@ -99,7 +100,7 @@ impl WebDriver {
 
         let id: u64 = self.current_id;
         self.current_id += 1;
-        self.add_pending_request.send((id, tx)).await.unwrap();
+        self.add_pending_command.send((id, tx)).await.unwrap();
 
         self.sink
             .send(Message::Text(
