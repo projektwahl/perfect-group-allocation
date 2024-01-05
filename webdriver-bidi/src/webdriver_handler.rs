@@ -15,15 +15,19 @@ use crate::{
 };
 
 macro_rules! magic {
-    (pub enum $name:ident { $($variant:ident($($command:ident)::+)),* }) => {
-        pub enum $name {
+    (pub enum { $($variant:ident($($command:ident)::+)),* }) => {
+        pub enum SendCommand {
             $($variant($($command)::*::Command, oneshot::Sender<oneshot::Receiver<$($command)::*::Result>>),)*
+        }
+
+        pub enum RespondCommand {
+            $($variant(oneshot::Sender<$($command)::*::Result>),)*
         }
     };
 }
 
 magic! {
-    pub enum SendCommand {
+    pub enum {
         SessionNew(
             crate::session::new
         ),
@@ -40,14 +44,6 @@ magic! {
             crate::browsing_context::navigate
         )
     }
-}
-
-pub enum RespondCommand {
-    SessionNew(oneshot::Sender<crate::session::new::Result>),
-    SessionEnd(oneshot::Sender<crate::session::end::Result>),
-    SessionSubscribe(oneshot::Sender<crate::session::subscribe::Result>),
-    BrowsingContextGetTree(oneshot::Sender<crate::browsing_context::get_tree::Result>),
-    BrowsingContextNavigate(oneshot::Sender<crate::browsing_context::navigate::Result>),
 }
 
 pub struct WebDriverHandler {
