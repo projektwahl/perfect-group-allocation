@@ -15,43 +15,31 @@ use crate::{
 };
 
 macro_rules! magic {
-    (enum $name:ident { $($variant:ident($command:ty, $result:ty)),* }) => {
-        enum $name {
-            $($variant($command, $result),)*
+    (pub enum $name:ident { $($variant:ident($($command:ident)::+)),* }) => {
+        pub enum $name {
+            $($variant($($command)::*::Command, oneshot::Sender<oneshot::Receiver<$($command)::*::Result>>),)*
         }
     };
 }
 
 magic! {
-    enum Test {
+    pub enum SendCommand {
         SessionNew(
-            crate::session::new::Command,
-            oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>
+            crate::session::new
+        ),
+        SessionEnd(
+            crate::session::end
+        ),
+        SessionSubscribe(
+            crate::session::subscribe
+        ),
+        BrowsingContextGetTree(
+            crate::browsing_context::get_tree
+        ),
+        BrowsingContextNavigate(
+            crate::browsing_context::navigate
         )
     }
-}
-
-pub enum SendCommand {
-    SessionNew(
-        crate::session::new::Command,
-        oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>,
-    ),
-    SessionEnd(
-        crate::session::end::Command,
-        oneshot::Sender<oneshot::Receiver<crate::session::end::Result>>,
-    ),
-    SessionSubscribe(
-        crate::session::subscribe::Command,
-        oneshot::Sender<oneshot::Receiver<crate::session::subscribe::Result>>,
-    ),
-    BrowsingContextGetTree(
-        crate::browsing_context::get_tree::Command,
-        oneshot::Sender<oneshot::Receiver<crate::browsing_context::get_tree::Result>>,
-    ),
-    BrowsingContextNavigate(
-        crate::browsing_context::navigate::Command,
-        oneshot::Sender<oneshot::Receiver<crate::browsing_context::navigate::Result>>,
-    ),
 }
 
 pub enum RespondCommand {
