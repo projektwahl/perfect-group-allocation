@@ -1,3 +1,4 @@
+use crate::browsing_context::BrowsingContext;
 use crate::webdriver::WebDriver;
 use crate::{browsing_context, session, WebDriverBiDiRemoteEndCommandData};
 
@@ -30,6 +31,24 @@ impl WebDriverSession {
                     params: browsing_context::get_tree::Parameters {
                         max_depth: None,
                         root: None,
+                    },
+                }),
+            ))
+            .await
+    }
+
+    pub async fn browsing_context_navigate(
+        &mut self,
+        context: BrowsingContext,
+        url: String,
+    ) -> Result<browsing_context::navigate::Result, tokio_tungstenite::tungstenite::Error> {
+        self.driver
+            .send_command(WebDriverBiDiRemoteEndCommandData::BrowsingContext(
+                browsing_context::Command::Navigate(browsing_context::navigate::CommandType {
+                    params: browsing_context::navigate::Parameters {
+                        context,
+                        url,
+                        wait: browsing_context::ReadinessState::Complete,
                     },
                 }),
             ))

@@ -18,5 +18,5 @@ pub struct Parameters {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Result {
-    contexts: Vec<super::Info>,
+    pub contexts: Vec<super::Info>,
 }
