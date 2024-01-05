@@ -15,10 +15,8 @@ use crate::{
 
 pub enum SendCommand {
     SessionNew(
-        (
-            crate::session::new::Command,
-            oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>,
-        ),
+        crate::session::new::Command,
+        oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>,
     ),
 }
 
@@ -75,7 +73,7 @@ impl WebDriverHandler {
 
     async fn handle_command(&mut self, input: SendCommand) -> crate::result::Result<()> {
         match input {
-            SendCommand::SessionNew((command, sender)) => {
+            SendCommand::SessionNew(command, sender) => {
                 let (tx, rx) = oneshot::channel();
                 self.handle_command_internal(command, sender, rx, RespondCommand::SessionNew(tx))
                     .await
