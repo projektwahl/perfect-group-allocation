@@ -13,6 +13,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::browsing_context::BrowsingContext;
+use crate::webdriver_handler::WebDriverHandler;
 use crate::webdriver_session::WebDriverSession;
 use crate::{
     log, session, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
@@ -20,8 +21,6 @@ use crate::{
 };
 
 /// <https://w3c.github.io/webdriver-bidi>
-// TODO FIXME make usable from multiple threads
-// TODO FIXME implement pipelining
 #[derive(Debug, Clone)]
 pub struct WebDriver {
     /// send a session new command
@@ -118,86 +117,11 @@ impl WebDriver {
         let (command_session_new, mut command_session_new_rx) = mpsc::channel(1);
         //let (event_handlers_log, event_handlers_log_rx) = mpsc::channel(10);
 
-        tokio::spawn(async move {
-            let mut id = 0;
-            let mut pending_session_new =
-                HashMap::<u64, oneshot::Sender<session::new::Result>>::new();
-
-            loop {
-                tokio::select! {
-                    message = stream.next() => {
-                        match message {
-                            Some(Ok(Message::Text(message))) => {
-                               //Self::handle_message(&mut pending_requests, message);
-                            }
-                            Some(Ok(message)) => {
-                                println!("Unknown message: {message:#?}");
-                            }
-                            Some(Err(error)) => println!("Error {error:#?}"),
-                            None => {
-                                println!("connection closed");
-                                break;
-                            }
-                        }
-                    }
-                    Some(command_session_new) = command_session_new_rx.recv() => {
-                        Self::handle_command_session_new(&mut id, &mut stream, &mut pending_session_new, command_session_new).await;
-                    }
-                }
-            }
-        });
+        tokio::spawn(WebDriverHandler::new(stream, command_session_new_rx));
 
         Ok(Self {
             command_session_new,
         })
-    }
-
-    async fn handle_command_session_new(
-        id: &mut u64,
-        stream: &mut WebSocketStream<MaybeTlsStream<TcpStream>>,
-        pending_session_new: &mut HashMap<u64, oneshot::Sender<session::new::Result>>,
-        input: (
-            session::new::Command,
-            oneshot::Sender<oneshot::Receiver<session::new::Result>>,
-        ),
-    ) -> crate::result::Result<()> {
-        stream
-            .send(Message::Text(
-                serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
-                    id: *id,
-                    command_data: input.0,
-                })
-                .unwrap(),
-            ))
-            .await?;
-
-        let (tx, rx) = oneshot::channel();
-        pending_session_new.insert(*id, tx);
-
-        *id += 1;
-
-        input
-            .1
-            .send(rx)
-            .map_err(|_| crate::result::Error::CommandCallerExited)?;
-
-        Ok(())
-    }
-
-    fn handle_message(
-        pending_requests: &mut HashMap<u64, oneshot::Sender<String>>,
-        message: String,
-    ) {
-        let parsed_message: WebDriverBiDiLocalEndMessage<Value> = serde_json::from_str(&message)?;
-        match parsed_message {
-            WebDriverBiDiLocalEndMessage::CommandResponse(parsed_message) => {
-                pending_requests.remove(&parsed_message.id)?.send(message)?;
-            }
-            WebDriverBiDiLocalEndMessage::ErrorResponse(error) => {
-                println!("error {error:#?}"); // TODO FIXME propage to command if it has an id.
-            }
-            WebDriverBiDiLocalEndMessage::Event(event) => todo!("{event:?}"),
-        }
     }
 
     pub fn session_new<'a>(

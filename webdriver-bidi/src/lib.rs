@@ -6,6 +6,7 @@ pub mod log;
 pub mod result;
 pub mod session;
 pub mod webdriver;
+pub mod webdriver_handler;
 pub mod webdriver_session;
 
 use serde::{Deserialize, Serialize};
