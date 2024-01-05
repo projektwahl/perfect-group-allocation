@@ -6,17 +6,20 @@ use super::BrowsingContext;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.getTree")]
+#[serde(rename_all = "camelCase")]
 pub struct CommandType {
     pub params: Parameters,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Parameters {
     pub max_depth: Option<u64>,
     pub root: Option<BrowsingContext>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Result {
     pub contexts: Vec<super::Info>,
 }

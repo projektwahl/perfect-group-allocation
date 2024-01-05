@@ -5,16 +5,19 @@ use serde_json::Value;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "method")]
 #[serde(rename = "session.new")]
+#[serde(rename_all = "camelCase")]
 pub struct CommandType {
     pub params: Parameters,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Parameters {
     pub capabilities: CapabilitiesRequest,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CapabilitiesRequest {}
 
 #[derive(Debug, Serialize, Deserialize)]

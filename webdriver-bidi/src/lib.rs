@@ -2,6 +2,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 pub mod browsing_context;
+pub mod log;
 pub mod session;
 pub mod webdriver;
 pub mod webdriver_session;
@@ -18,23 +19,32 @@ pub enum WebDriverBiDiLocalEndMessage<ResultData> {
     #[serde(rename = "error")]
     ErrorResponse(WebDriverBiDiLocalEndMessageErrorResponse),
     #[serde(rename = "event")]
-    Event(WebDriverBiDiLocalEndEvent),
+    Event(WebDriverBiDiLocalEndEvent<Value>),
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebDriverBiDiLocalEndCommandResponse<ResultData> {
     id: u64,
+    #[serde(flatten)]
     result: ResultData,
-    // Extensible
+    #[serde(flatten)]
+    extensible: Value,
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
-pub struct WebDriverBiDiLocalEndEvent {
-    id: u64,
-    // TODO EventData
-    // Extensible
+pub struct WebDriverBiDiLocalEndEvent<EventData> {
+    #[serde(flatten)]
+    event_data: EventData,
+    #[serde(flatten)]
+    extensible: Value,
+}
+
+// https://w3c.github.io/webdriver-bidi/#protocol-definition
+#[derive(Debug, Serialize, Deserialize)]
+pub enum WebDriverBiDiLocalEndEventData {
+    LogEvent(log::Event),
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition

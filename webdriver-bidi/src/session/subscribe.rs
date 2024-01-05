@@ -8,6 +8,7 @@ use crate::browsing_context::BrowsingContext;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "method")]
 #[serde(rename = "session.subscribe")]
+#[serde(rename_all = "camelCase")]
 pub struct CommandType {
     pub params: SubscriptionRequest,
 }
