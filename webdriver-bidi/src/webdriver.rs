@@ -108,9 +108,9 @@ impl WebDriver {
 
         let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session")).await?;
-        let (sink, mut stream) = stream.split();
 
-        let (tx, mut rx) = mpsc::channel::<(u64, oneshot::Sender<String>)>(100);
+        let (command_session_new, command_session_new_rx) = mpsc::channel(1);
+        let (event_handlers_log, event_handlers_log_rx) = mpsc::channel(10);
 
         tokio::spawn(async move {
             let mut pending_requests = HashMap::<u64, oneshot::Sender<String>>::new();
@@ -142,10 +142,8 @@ impl WebDriver {
         });
 
         Ok(Self {
-            current_id: 0,
-            event_handlers_log: broadcast::channel(10),
-            pending_commands: Default::default(),
-            event_handlers_browsing_context: Default::default(),
+            command_session_new,
+            event_handlers_log,
         })
     }
 
