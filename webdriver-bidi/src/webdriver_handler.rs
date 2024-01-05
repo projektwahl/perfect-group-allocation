@@ -14,6 +14,23 @@ use crate::{
     WebDriverBiDiRemoteEndCommand,
 };
 
+macro_rules! magic {
+    (enum $name:ident { $($variant:ident($command:ty, $result:ty)),* }) => {
+        enum $name {
+            $($variant($command, $result),)*
+        }
+    };
+}
+
+magic! {
+    enum Test {
+        SessionNew(
+            crate::session::new::Command,
+            oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>
+        )
+    }
+}
+
 pub enum SendCommand {
     SessionNew(
         crate::session::new::Command,
