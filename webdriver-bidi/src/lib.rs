@@ -75,16 +75,32 @@ pub struct WebDriverBiDiRemoteEndCommand<T> {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum WebDriverBiDiRemoteEndCommandData {
-    Session(session::Command),
-    BrowsingContext(browsing_context::Command),
+    /// https://w3c.github.io/webdriver-bidi/#command-session-new
+    SessionNew(session::new::Command),
+    /// https://w3c.github.io/webdriver-bidi/#command-session-end
+    SessionEnd(session::end::Command),
+    /// https://w3c.github.io/webdriver-bidi/#command-session-subscribe
+    SessionSubscribe(session::subscribe::Command),
+    /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
+    BrowsingContextGetTree(browsing_context::get_tree::Command),
+    /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
+    BrowsingContextNavigate(browsing_context::navigate::Command),
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ResultData {
-    Session(session::Result),
-    BrowsingContext(browsing_context::Result),
+    /// https://w3c.github.io/webdriver-bidi/#command-session-new
+    SessionNew(session::new::Result),
+    /// https://w3c.github.io/webdriver-bidi/#command-session-end
+    SessionEnd(session::end::Result),
+    /// https://w3c.github.io/webdriver-bidi/#command-session-subscribe
+    SessionSubscribe(session::subscribe::Result),
+    /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
+    BrowsingContextGetTree(browsing_context::get_tree::Result),
+    /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
+    BrowsingContextNavigate(browsing_context::navigate::Result),
 }
 
 pub trait CommandResultPair<Command, Result> {

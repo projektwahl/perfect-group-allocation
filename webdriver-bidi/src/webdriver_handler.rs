@@ -9,19 +9,35 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::{
-    browsing_context, session, CommandResultPair, ResultData, WebDriverBiDiLocalEndCommandResponse,
+    browsing_context, session, CommandResultPair, WebDriverBiDiLocalEndCommandResponse,
     WebDriverBiDiLocalEndMessage, WebDriverBiDiLocalEndMessageErrorResponse,
     WebDriverBiDiRemoteEndCommand,
 };
 
 macro_rules! magic {
-    (pub enum { $($variant:ident($($command:ident)::+)),* }) => {
+    (pub enum { $(#[doc = $doc:expr] $variant:ident($($command:ident)::+)),* }) => {
+        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         pub enum SendCommand {
-            $($variant($($command)::*::Command, oneshot::Sender<oneshot::Receiver<$($command)::*::Result>>),)*
+            $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<oneshot::Receiver<$($command)::*::Result>>),)*
         }
 
+        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         pub enum RespondCommand {
-            $($variant(oneshot::Sender<$($command)::*::Result>),)*
+            $(#[doc = $doc] $variant(oneshot::Sender<$($command)::*::Result>),)*
+        }
+
+        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+        #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+        #[serde(untagged)]
+        pub enum WebDriverBiDiRemoteEndCommandData {
+            $(#[doc = $doc] $variant($($command)::*::Command),)*
+        }
+
+        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+        #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+        #[serde(untagged)]
+        pub enum ResultData {
+            $(#[doc = $doc] $variant($($command)::*::Result),)*
         }
 
         async fn handle_command(this: &mut WebDriverHandler, input: SendCommand) -> crate::result::Result<()> {
@@ -38,10 +54,15 @@ macro_rules! magic {
 
 magic! {
     pub enum {
+        /// https://w3c.github.io/webdriver-bidi/#command-session-new
         SessionNew(session::new),
+        /// https://w3c.github.io/webdriver-bidi/#command-session-end
         SessionEnd(session::end),
+        /// https://w3c.github.io/webdriver-bidi/#command-session-subscribe
         SessionSubscribe(session::subscribe),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
         BrowsingContextGetTree(browsing_context::get_tree),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
         BrowsingContextNavigate(browsing_context::navigate)
     }
 }
@@ -141,12 +162,11 @@ impl WebDriverHandler {
                     .ok_or(crate::result::Error::ResponseWithoutRequest(id))?;
 
                 match (result, respond_command) {
-                    (
-                        ResultData::Session(session::Result::New(result)),
-                        RespondCommand::SessionNew(session_new),
-                    ) => session_new
-                        .send(result)
-                        .map_err(|_| crate::result::Error::CommandCallerExited),
+                    (ResultData::SessionNew(result), RespondCommand::SessionNew(session_new)) => {
+                        session_new
+                            .send(result)
+                            .map_err(|_| crate::result::Error::CommandCallerExited)
+                    }
                     _ => panic!(),
                 }
             }
