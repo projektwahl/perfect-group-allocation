@@ -85,6 +85,11 @@ pub enum ResultData {
     BrowsingContext(browsing_context::Result),
 }
 
+pub trait CommandResultPair {
+    type Command;
+    type Result;
+}
+
 #[cfg(test)]
 mod tests {
 
