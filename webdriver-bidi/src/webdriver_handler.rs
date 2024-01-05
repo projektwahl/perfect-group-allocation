@@ -116,7 +116,9 @@ impl WebDriverHandler {
                 message = self.stream.next() => {
                     match message {
                         Some(Ok(Message::Text(message))) => {
-                           self.handle_message(message);
+                            if let Err(error) = self.handle_message(message) {
+                                eprintln!("error {error:?}");
+                            }
                         }
                         Some(Ok(message)) => {
                             println!("Unknown message: {message:#?}");
@@ -129,10 +131,13 @@ impl WebDriverHandler {
                     }
                 }
                 Some(command_session_new) = self.receive_command.recv() => {
-                    handle_command(self, command_session_new).await;
+                    if let Err(error) = handle_command(self, command_session_new).await {
+                        eprintln!("error {error:?}");
+                    }
                 }
             }
         }
+        println!("handle closed");
     }
 
     async fn handle_command_internal<C: Serialize + Debug, R>(
@@ -153,7 +158,7 @@ impl WebDriverHandler {
         })
         .unwrap();
 
-        println!("{}", string);
+        println!("{string}");
 
         // starting from here this could be done asynchronously
         // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
@@ -167,7 +172,7 @@ impl WebDriverHandler {
     }
 
     fn handle_message(&mut self, message: String) -> crate::result::Result<()> {
-        println!("{}", message);
+        println!("{message}");
         let parsed_message: WebDriverBiDiLocalEndMessage<ResultData> =
             serde_json::from_str(&message).map_err(crate::result::Error::ParseReceived)?;
         match parsed_message {
@@ -191,7 +196,7 @@ impl WebDriverHandler {
                 },
             ) => {
                 // TODO FIXME we need a id -> channel mapping bruh
-                println!("error {error:#?}"); // TODO FIXME propage to command if it has an id.
+                eprintln!("error {error:#?}"); // TODO FIXME propage to command if it has an id.
 
                 Ok(())
             }

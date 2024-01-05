@@ -11,7 +11,9 @@ use webdriver_bidi::webdriver::WebDriver;
 #[tokio::main]
 pub async fn main() -> Result<(), webdriver_bidi::result::Error> {
     let driver = WebDriver::new().await?;
+    println!("test");
     let mut session = driver.session_new().await?.await?;
+    println!("new session");
     let browsing_context = session.browsing_context_get_tree().await?.await?;
     println!("{browsing_context:?}");
     let browsing_context = browsing_context.contexts[0].context.clone();
@@ -19,10 +21,11 @@ pub async fn main() -> Result<(), webdriver_bidi::result::Error> {
     .session_subscribe(browsing_context.clone())
     .await?
     .await?;*/
-    let _navigation = session
+    let navigation = session
         .browsing_context_navigate(browsing_context, "https://www.google.com/".to_owned())
         .await?
         .await?;
+    println!("{navigation:?}");
 
     sleep(Duration::from_secs(5)).await;
 
