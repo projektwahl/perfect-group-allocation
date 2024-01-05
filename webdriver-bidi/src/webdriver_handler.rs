@@ -20,6 +20,11 @@ pub struct WebDriverHandler {
         oneshot::Sender<oneshot::Receiver<session::new::Result>>,
     )>,
     pending_session_new: HashMap<u64, oneshot::Sender<session::new::Result>>,
+    command_session_end_rx: mpsc::Receiver<(
+        session::end::Command,
+        oneshot::Sender<oneshot::Receiver<session::end::Result>>,
+    )>,
+    pending_session_end: HashMap<u64, oneshot::Sender<session::end::Result>>,
 }
 
 impl WebDriverHandler {
@@ -29,12 +34,18 @@ impl WebDriverHandler {
             session::new::Command,
             oneshot::Sender<oneshot::Receiver<session::new::Result>>,
         )>,
+        command_session_end_rx: mpsc::Receiver<(
+            session::end::Command,
+            oneshot::Sender<oneshot::Receiver<session::end::Result>>,
+        )>,
     ) {
         let mut this = Self {
             id: 0,
             stream,
             command_session_new_rx,
+            command_session_end_rx,
             pending_session_new: Default::default(),
+            pending_session_end: Default::default(),
         };
         this.handle().await;
     }
@@ -60,6 +71,9 @@ impl WebDriverHandler {
                 }
                 Some(command_session_new) = self.command_session_new_rx.recv() => {
                     self.handle_command_session_new(command_session_new).await;
+                }
+                Some(command_session_end) = self.command_session_end_rx.recv() => {
+                    self.handle_command_session_end(command_session_end).await;
                 }
             }
         }

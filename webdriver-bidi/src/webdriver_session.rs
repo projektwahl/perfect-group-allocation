@@ -1,3 +1,5 @@
+use futures::Future;
+
 use crate::browsing_context::BrowsingContext;
 use crate::session::SubscriptionRequest;
 use crate::webdriver::WebDriver;
@@ -10,17 +12,20 @@ pub struct WebDriverSession {
 }
 
 impl WebDriverSession {
-    pub async fn session_end(mut self) -> crate::result::Result<()> {
-        let result: session::end::Result = self
+    pub async fn session_end(
+        mut self,
+    ) -> crate::result::Result<impl Future<Output = crate::result::Result<session::end::Result>>>
+    {
+        let result = self
             .driver
-            .send_command(WebDriverBiDiRemoteEndCommandData::Session(
-                session::Command::End(session::end::Command {
+            .send_command(
+                &self.command_session_end,
+                session::end::Command {
                     params: session::end::Parameters {},
-                }),
-            ))
+                },
+            )
             .await?;
-        println!("{result:?}");
-        Ok(())
+        Ok(result)
     }
 
     pub async fn browsing_context_get_tree(
