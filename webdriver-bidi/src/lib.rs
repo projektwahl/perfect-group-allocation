@@ -6,17 +6,8 @@ pub mod session;
 pub mod webdriver;
 pub mod webdriver_session;
 
-use std::collections::HashMap;
-
-use futures::stream::SplitSink;
-use futures::{SinkExt as _, StreamExt as _};
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tokio::net::TcpStream;
-use tokio::sync::{mpsc, oneshot};
-use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]

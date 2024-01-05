@@ -1,4 +1,5 @@
 use crate::browsing_context::BrowsingContext;
+use crate::session::SubscriptionRequest;
 use crate::webdriver::WebDriver;
 use crate::{browsing_context, session, WebDriverBiDiRemoteEndCommandData};
 
@@ -49,6 +50,22 @@ impl WebDriverSession {
                         context,
                         url,
                         wait: browsing_context::ReadinessState::Complete,
+                    },
+                }),
+            ))
+            .await
+    }
+
+    pub async fn session_subscribe(
+        &mut self,
+        browsing_context: BrowsingContext,
+    ) -> Result<session::subscribe::Result, tokio_tungstenite::tungstenite::Error> {
+        self.driver
+            .send_command(WebDriverBiDiRemoteEndCommandData::SessionCommand(
+                session::Command::Subscribe(session::subscribe::CommandType {
+                    params: SubscriptionRequest {
+                        events: vec!["log.entryAdded".to_owned()],
+                        contexts: vec![browsing_context],
                     },
                 }),
             ))

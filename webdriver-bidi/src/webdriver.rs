@@ -37,7 +37,6 @@ impl WebDriver {
         tokio::spawn(async move {
             let mut pending_requests = HashMap::<u64, oneshot::Sender<String>>::new();
 
-            #[expect(clippy::redundant_pub_crate, reason = "tokio::select!")]
             loop {
                 tokio::select! {
                     message = stream.next() => {
