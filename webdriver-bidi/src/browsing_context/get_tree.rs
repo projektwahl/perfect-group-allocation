@@ -5,12 +5,12 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.getTree")]
 pub struct CommandType {
-    params: Parameters,
+    pub params: Parameters,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Parameters {
-    max_depth: u64,
+    pub max_depth: Option<u64>,
     /// browsing context
-    root: String,
+    pub root: Option<String>,
 }
