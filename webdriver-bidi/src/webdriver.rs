@@ -50,8 +50,8 @@ impl WebDriver {
     /// Creates a new [WebDriver BiDi](https://w3c.github.io/webdriver-bidi) connection.
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
-    pub async fn new() -> Result<Self, tokio_tungstenite::tungstenite::Error> {
-        let tmp_dir = tempdir()?;
+    pub async fn new() -> Result<Self, crate::error::Error> {
+        let tmp_dir = tempdir().map_err(crate::error::Error::TmpDirCreateError)?;
 
         let mut child = tokio::process::Command::new("firefox")
             .kill_on_drop(true)
@@ -66,12 +66,9 @@ impl WebDriver {
             ])
             .stderr(Stdio::piped())
             .spawn()
-            .expect("failed to spawn command");
+            .map_err(crate::error::Error::SpawnBrowserError)?;
 
-        let stderr = child
-            .stderr
-            .take()
-            .expect("child did not have a handle to stdout");
+        let stderr = child.stderr.take().unwrap();
 
         let mut reader = BufReader::new(stderr).lines();
 
@@ -81,22 +78,31 @@ impl WebDriver {
             let status = child
                 .wait()
                 .await
-                .expect("child process encountered an error");
+                .map_err(crate::error::Error::FailedToRunBrowser)?;
 
             println!("child status was: {status}");
+
+            Ok::<(), crate::error::Error>(())
         });
 
         let mut port = None;
-        while let Some(line) = reader.next_line().await? {
+        while let Some(line) = reader
+            .next_line()
+            .await
+            .map_err(crate::error::Error::ReadBrowserStderr)?
+        {
             eprintln!("{line}");
             if let Some(p) = line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:") {
-                port = Some(p.parse::<u16>().unwrap());
+                port = Some(
+                    p.parse::<u16>()
+                        .map_err(crate::error::Error::PortDetectError)?,
+                );
                 break;
             }
         }
 
         let Some(port) = port else {
-            panic!("failed to retrieve port");
+            return Err(crate::error::Error::PortNotFound);
         };
 
         tokio::spawn(async move {
@@ -148,15 +154,10 @@ impl WebDriver {
         pending_requests: &mut HashMap<u64, oneshot::Sender<String>>,
         message: String,
     ) {
-        let parsed_message: WebDriverBiDiLocalEndMessage<Value> =
-            serde_json::from_str(&message).unwrap();
+        let parsed_message: WebDriverBiDiLocalEndMessage<Value> = serde_json::from_str(&message)?;
         match parsed_message {
             WebDriverBiDiLocalEndMessage::CommandResponse(parsed_message) => {
-                pending_requests
-                    .remove(&parsed_message.id)
-                    .unwrap()
-                    .send(message)
-                    .unwrap();
+                pending_requests.remove(&parsed_message.id)?.send(message)?;
             }
             WebDriverBiDiLocalEndMessage::ErrorResponse(error) => {
                 println!("error {error:#?}"); // TODO FIXME propage to command if it has an id.
@@ -174,7 +175,7 @@ impl WebDriver {
 
             let id: u64 = self.current_id;
             self.current_id += 1;
-            self.pending_commands.send((id, tx)).await.unwrap();
+            self.pending_commands.send((id, tx)).await?;
 
             self.sink
                 .send(Message::Text(
@@ -182,15 +183,15 @@ impl WebDriver {
                         id,
                         command_data,
                         extensible: Value::Null,
-                    })
-                    .unwrap(),
+                    })?
+                    ,
                 ))
                 .await?;
             self.sink.flush().await?;
 
-            let received = rx.await.unwrap();
+            let received = rx.await?;
             let parsed: WebDriverBiDiLocalEndMessage<ResultData> =
-                serde_json::from_str(&received).expect(&received);
+                serde_json::from_str(&received)?;
             match parsed {
                 WebDriverBiDiLocalEndMessage::CommandResponse(
                     WebDriverBiDiLocalEndCommandResponse {
@@ -199,7 +200,7 @@ impl WebDriver {
                     },
                 ) => Ok(result_data),
                 WebDriverBiDiLocalEndMessage::ErrorResponse(error_response) => {
-                    panic!("{error_response:?}");
+
                 }
                 WebDriverBiDiLocalEndMessage::Event(_) => {
                     unreachable!("command should never get an event as response");
@@ -209,7 +210,10 @@ impl WebDriver {
     */
     pub async fn session_new(
         mut self,
-    ) -> impl Future<Output = Result<WebDriverSession, tokio_tungstenite::tungstenite::Error>> {
+    ) -> Result<
+        impl Future<Output = Result<WebDriverSession, crate::error::Error>>,
+        crate::error::Error,
+    > {
         let (tx, rx) = oneshot::channel();
 
         self.command_session_new
@@ -222,14 +226,16 @@ impl WebDriver {
                 tx,
             ))
             .await
-            .unwrap();
+            .map_err(|_| crate::error::Error::CommandTaskExited)?;
 
-        async {
-            let result = rx.await?;
+        Ok(async {
+            let result = rx
+                .await
+                .map_err(|_| crate::error::Error::CommandTaskExited)?;
             Ok(WebDriverSession {
                 session_id: result.session_id,
                 driver: self,
             })
-        }
+        })
     }
 }
