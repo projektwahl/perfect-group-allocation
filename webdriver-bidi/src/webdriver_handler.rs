@@ -9,7 +9,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::{
-    session, CommandResultPair, ResultData, WebDriverBiDiLocalEndCommandResponse,
+    browsing_context, session, CommandResultPair, ResultData, WebDriverBiDiLocalEndCommandResponse,
     WebDriverBiDiLocalEndMessage, WebDriverBiDiLocalEndMessageErrorResponse,
     WebDriverBiDiRemoteEndCommand,
 };
@@ -23,26 +23,26 @@ macro_rules! magic {
         pub enum RespondCommand {
             $($variant(oneshot::Sender<$($command)::*::Result>),)*
         }
+
+        async fn handle_command(this: &mut WebDriverHandler, input: SendCommand) -> crate::result::Result<()> {
+            match input {
+                $(
+                    SendCommand::$variant(command, sender) => {
+                        this.handle_command_internal(command, sender).await
+                    }
+                ),*
+            }
+        }
     };
 }
 
 magic! {
     pub enum {
-        SessionNew(
-            crate::session::new
-        ),
-        SessionEnd(
-            crate::session::end
-        ),
-        SessionSubscribe(
-            crate::session::subscribe
-        ),
-        BrowsingContextGetTree(
-            crate::browsing_context::get_tree
-        ),
-        BrowsingContextNavigate(
-            crate::browsing_context::navigate
-        )
+        SessionNew(session::new),
+        SessionEnd(session::end),
+        SessionSubscribe(session::subscribe),
+        BrowsingContextGetTree(browsing_context::get_tree),
+        BrowsingContextNavigate(browsing_context::navigate)
     }
 }
 
@@ -87,28 +87,8 @@ impl WebDriverHandler {
                     }
                 }
                 Some(command_session_new) = self.receive_command.recv() => {
-                    self.handle_command(command_session_new).await;
+                    handle_command(self, command_session_new).await;
                 }
-            }
-        }
-    }
-
-    async fn handle_command(&mut self, input: SendCommand) -> crate::result::Result<()> {
-        match input {
-            SendCommand::SessionNew(command, sender) => {
-                self.handle_command_internal(command, sender).await
-            }
-            SendCommand::SessionEnd(command, sender) => {
-                self.handle_command_internal(command, sender).await
-            }
-            SendCommand::SessionSubscribe(command, sender) => {
-                self.handle_command_internal(command, sender).await
-            }
-            SendCommand::BrowsingContextGetTree(command, sender) => {
-                self.handle_command_internal(command, sender).await
-            }
-            SendCommand::BrowsingContextNavigate(command, sender) => {
-                self.handle_command_internal(command, sender).await
             }
         }
     }
