@@ -17,10 +17,10 @@ pub async fn main() -> Result<(), webdriver_bidi::result::Error> {
     let browsing_context = session.browsing_context_get_tree().await?.await?;
     println!("{browsing_context:?}");
     let browsing_context = browsing_context.contexts[0].context.clone();
-    /*session
-    .session_subscribe(browsing_context.clone())
-    .await?
-    .await?;*/
+    session
+        .session_subscribe(browsing_context.clone())
+        .await?
+        .await?;
     let navigation = session
         .browsing_context_navigate(browsing_context, "https://www.google.com/".to_owned())
         .await?
