@@ -49,6 +49,19 @@ macro_rules! magic {
                 ),*
             }
         }
+
+        fn send_response(result: ResultData, respond_command: RespondCommand) -> crate::result::Result<()> {
+            match (result, respond_command) {
+                $(
+                    (ResultData::$variant(result), RespondCommand::$variant(respond_command)) => {
+                        respond_command
+                            .send(result)
+                            .map_err(|_| crate::result::Error::CommandCallerExited)
+                    }
+                ),*
+                _ => panic!(),
+            }
+        }
     };
 }
 
@@ -161,14 +174,7 @@ impl WebDriverHandler {
                     .remove(&id)
                     .ok_or(crate::result::Error::ResponseWithoutRequest(id))?;
 
-                match (result, respond_command) {
-                    (ResultData::SessionNew(result), RespondCommand::SessionNew(session_new)) => {
-                        session_new
-                            .send(result)
-                            .map_err(|_| crate::result::Error::CommandCallerExited)
-                    }
-                    _ => panic!(),
-                }
+                send_response(result, respond_command)
             }
             WebDriverBiDiLocalEndMessage::ErrorResponse(
                 WebDriverBiDiLocalEndMessageErrorResponse {
