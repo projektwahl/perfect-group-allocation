@@ -9,7 +9,7 @@ pub struct EntryAdded {
     pub params: Entry,
 }
 
-/// https://w3c.github.io/webdriver-bidi/#types-log-logentry
+/// <https://w3c.github.io/webdriver-bidi/#types-log-logentry>
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Entry {
     Log(GenericLogEntry),
