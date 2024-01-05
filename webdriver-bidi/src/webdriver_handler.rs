@@ -18,6 +18,22 @@ pub enum SendCommand {
         crate::session::new::Command,
         oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>,
     ),
+    SessionEnd(
+        crate::session::end::Command,
+        oneshot::Sender<oneshot::Receiver<crate::session::end::Result>>,
+    ),
+    SessionSubscribe(
+        crate::session::subscribe::Command,
+        oneshot::Sender<oneshot::Receiver<crate::session::subscribe::Result>>,
+    ),
+    BrowsingContextGetTree(
+        crate::browsing_context::get_tree::Command,
+        oneshot::Sender<oneshot::Receiver<crate::browsing_context::get_tree::Result>>,
+    ),
+    BrowsingContextNavigate(
+        crate::browsing_context::navigate::Command,
+        oneshot::Sender<oneshot::Receiver<crate::browsing_context::navigate::Result>>,
+    ),
 }
 
 pub enum RespondCommand {

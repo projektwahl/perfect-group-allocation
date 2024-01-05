@@ -3,6 +3,7 @@ use futures::Future;
 use crate::browsing_context::BrowsingContext;
 use crate::session::SubscriptionRequest;
 use crate::webdriver::WebDriver;
+use crate::webdriver_handler::SendCommand;
 use crate::{browsing_context, session, WebDriverBiDiRemoteEndCommandData};
 
 #[derive(Debug)]
@@ -13,33 +14,34 @@ pub struct WebDriverSession {
 
 impl WebDriverSession {
     pub async fn session_end(
-        mut self,
+        &mut self,
     ) -> crate::result::Result<impl Future<Output = crate::result::Result<session::end::Result>>>
     {
-        let result = self
-            .driver
+        self.driver
             .send_command(
-                &self.command_session_end,
                 session::end::Command {
                     params: session::end::Parameters {},
                 },
+                SendCommand::SessionEnd,
             )
-            .await?;
-        Ok(result)
+            .await
     }
 
     pub async fn browsing_context_get_tree(
         &mut self,
-    ) -> crate::result::Result<browsing_context::get_tree::Result> {
+    ) -> crate::result::Result<
+        impl Future<Output = crate::result::Result<browsing_context::get_tree::Result>>,
+    > {
         self.driver
-            .send_command(WebDriverBiDiRemoteEndCommandData::BrowsingContext(
-                browsing_context::Command::GetTree(browsing_context::get_tree::Command {
+            .send_command(
+                browsing_context::get_tree::Command {
                     params: browsing_context::get_tree::Parameters {
                         max_depth: None,
                         root: None,
                     },
-                }),
-            ))
+                },
+                SendCommand::BrowsingContextGetTree,
+            )
             .await
     }
 
@@ -47,17 +49,20 @@ impl WebDriverSession {
         &mut self,
         context: BrowsingContext,
         url: String,
-    ) -> crate::result::Result<browsing_context::navigate::Result> {
+    ) -> crate::result::Result<
+        impl Future<Output = crate::result::Result<browsing_context::navigate::Result>>,
+    > {
         self.driver
-            .send_command(WebDriverBiDiRemoteEndCommandData::BrowsingContext(
-                browsing_context::Command::Navigate(browsing_context::navigate::Command {
+            .send_command(
+                browsing_context::navigate::Command {
                     params: browsing_context::navigate::Parameters {
                         context,
                         url,
                         wait: browsing_context::ReadinessState::Complete,
                     },
-                }),
-            ))
+                },
+                SendCommand::BrowsingContextNavigate,
+            )
             .await
     }
 
@@ -65,16 +70,19 @@ impl WebDriverSession {
     pub async fn session_subscribe(
         &mut self,
         browsing_context: BrowsingContext,
-    ) -> crate::result::Result<session::subscribe::Result> {
+    ) -> crate::result::Result<
+        impl Future<Output = crate::result::Result<session::subscribe::Result>>,
+    > {
         self.driver
-            .send_command(WebDriverBiDiRemoteEndCommandData::Session(
-                session::Command::Subscribe(session::subscribe::Command {
+            .send_command(
+                session::subscribe::Command {
                     params: SubscriptionRequest {
                         events: vec!["log.entryAdded".to_owned()],
                         contexts: vec![browsing_context],
                     },
-                }),
-            ))
+                },
+                SendCommand::SessionSubscribe,
+            )
             .await
     }
 }
