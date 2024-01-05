@@ -23,6 +23,10 @@ pub enum Error {
     PortNotFound,
     #[error("the command task exited. this may be because you requested it or because it crashed")]
     CommandTaskExited,
+    #[error(
+        "a caller that wanted to execute a command has exited. this may be because it panicked."
+    )]
+    CommandCallerExited,
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

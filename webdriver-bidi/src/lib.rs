@@ -60,12 +60,12 @@ pub struct WebDriverBiDiLocalEndMessageErrorResponse {
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
 #[derive(Debug, Serialize, Deserialize)]
-pub struct WebDriverBiDiRemoteEndCommand {
+pub struct WebDriverBiDiRemoteEndCommand<T> {
     id: u64,
     #[serde(flatten)]
-    command_data: WebDriverBiDiRemoteEndCommandData,
-    #[serde(flatten)]
-    extensible: Value,
+    command_data: T,
+    //#[serde(flatten)]
+    //extensible: Value,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>

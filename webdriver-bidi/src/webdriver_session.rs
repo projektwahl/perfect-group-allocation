@@ -10,7 +10,7 @@ pub struct WebDriverSession {
 }
 
 impl WebDriverSession {
-    pub async fn session_end(mut self) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+    pub async fn session_end(mut self) -> crate::result::Result<()> {
         let result: session::end::Result = self
             .driver
             .send_command(WebDriverBiDiRemoteEndCommandData::Session(
@@ -25,7 +25,7 @@ impl WebDriverSession {
 
     pub async fn browsing_context_get_tree(
         &mut self,
-    ) -> Result<browsing_context::get_tree::Result, tokio_tungstenite::tungstenite::Error> {
+    ) -> crate::result::Result<browsing_context::get_tree::Result> {
         self.driver
             .send_command(WebDriverBiDiRemoteEndCommandData::BrowsingContext(
                 browsing_context::Command::GetTree(browsing_context::get_tree::Command {
@@ -42,7 +42,7 @@ impl WebDriverSession {
         &mut self,
         context: BrowsingContext,
         url: String,
-    ) -> Result<browsing_context::navigate::Result, tokio_tungstenite::tungstenite::Error> {
+    ) -> crate::result::Result<browsing_context::navigate::Result> {
         self.driver
             .send_command(WebDriverBiDiRemoteEndCommandData::BrowsingContext(
                 browsing_context::Command::Navigate(browsing_context::navigate::Command {
@@ -60,7 +60,7 @@ impl WebDriverSession {
     pub async fn session_subscribe(
         &mut self,
         browsing_context: BrowsingContext,
-    ) -> Result<session::subscribe::Result, tokio_tungstenite::tungstenite::Error> {
+    ) -> crate::result::Result<session::subscribe::Result> {
         self.driver
             .send_command(WebDriverBiDiRemoteEndCommandData::Session(
                 session::Command::Subscribe(session::subscribe::Command {

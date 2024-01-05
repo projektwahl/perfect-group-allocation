@@ -119,14 +119,16 @@ impl WebDriver {
         //let (event_handlers_log, event_handlers_log_rx) = mpsc::channel(10);
 
         tokio::spawn(async move {
-            let mut pending_requests = HashMap::<u64, oneshot::Sender<String>>::new();
+            let mut id = 0;
+            let mut pending_session_new =
+                HashMap::<u64, oneshot::Sender<session::new::Result>>::new();
 
             loop {
                 tokio::select! {
                     message = stream.next() => {
                         match message {
                             Some(Ok(Message::Text(message))) => {
-                                Self::handle_message(&mut pending_requests, message);
+                               //Self::handle_message(&mut pending_requests, message);
                             }
                             Some(Ok(message)) => {
                                 println!("Unknown message: {message:#?}");
@@ -139,7 +141,7 @@ impl WebDriver {
                         }
                     }
                     Some(command_session_new) = command_session_new_rx.recv() => {
-
+                        Self::handle_command_session_new(&mut id, &mut stream, &mut pending_session_new, command_session_new).await;
                     }
                 }
             }
@@ -148,6 +150,38 @@ impl WebDriver {
         Ok(Self {
             command_session_new,
         })
+    }
+
+    async fn handle_command_session_new(
+        id: &mut u64,
+        stream: &mut WebSocketStream<MaybeTlsStream<TcpStream>>,
+        pending_session_new: &mut HashMap<u64, oneshot::Sender<session::new::Result>>,
+        input: (
+            session::new::Command,
+            oneshot::Sender<oneshot::Receiver<session::new::Result>>,
+        ),
+    ) -> crate::result::Result<()> {
+        stream
+            .send(Message::Text(
+                serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+                    id: *id,
+                    command_data: input.0,
+                })
+                .unwrap(),
+            ))
+            .await?;
+
+        let (tx, rx) = oneshot::channel();
+        pending_session_new.insert(*id, tx);
+
+        *id += 1;
+
+        input
+            .1
+            .send(rx)
+            .map_err(|_| crate::result::Error::CommandCallerExited)?;
+
+        Ok(())
     }
 
     fn handle_message(
@@ -166,48 +200,6 @@ impl WebDriver {
         }
     }
 
-    /*
-        pub(crate) async fn send_command<ResultData: DeserializeOwned>(
-            &mut self,
-            command_data: WebDriverBiDiRemoteEndCommandData,
-        ) -> Result<ResultData, tokio_tungstenite::tungstenite::Error> {
-            let (tx, rx) = oneshot::channel();
-
-            let id: u64 = self.current_id;
-            self.current_id += 1;
-            self.pending_commands.send((id, tx)).await?;
-
-            self.sink
-                .send(Message::Text(
-                    serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
-                        id,
-                        command_data,
-                        extensible: Value::Null,
-                    })?
-                    ,
-                ))
-                .await?;
-            self.sink.flush().await?;
-
-            let received = rx.await?;
-            let parsed: WebDriverBiDiLocalEndMessage<ResultData> =
-                serde_json::from_str(&received)?;
-            match parsed {
-                WebDriverBiDiLocalEndMessage::CommandResponse(
-                    WebDriverBiDiLocalEndCommandResponse {
-                        result: result_data,
-                        ..
-                    },
-                ) => Ok(result_data),
-                WebDriverBiDiLocalEndMessage::ErrorResponse(error_response) => {
-
-                }
-                WebDriverBiDiLocalEndMessage::Event(_) => {
-                    unreachable!("command should never get an event as response");
-                }
-            }
-        }
-    */
     pub fn session_new<'a>(
         &self,
     ) -> impl Future<
@@ -236,7 +228,7 @@ impl WebDriver {
         }
     }
 
-    pub fn send_command<'a: 'b, 'b, C: 'static, R: 'static>(
+    pub(crate) fn send_command<'a: 'b, 'b, C: 'static, R: 'static>(
         &'a self,
         queue: &'b mpsc::Sender<(C, oneshot::Sender<oneshot::Receiver<R>>)>,
         command: C,
