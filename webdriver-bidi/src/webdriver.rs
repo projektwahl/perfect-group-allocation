@@ -129,10 +129,11 @@ impl WebDriver {
         })
     }
 
-    pub(crate) async fn send_command<C, R>(
+    pub(crate) async fn send_command<C: Send, R: Send>(
         &self,
         command: C,
-        send_command_constructor: impl FnOnce(C, oneshot::Sender<oneshot::Receiver<R>>) -> SendCommand,
+        send_command_constructor: impl FnOnce(C, oneshot::Sender<oneshot::Receiver<R>>) -> SendCommand
+        + Send,
     ) -> crate::result::Result<impl Future<Output = crate::result::Result<R>>> {
         let (tx, rx) = oneshot::channel();
         self.send_command

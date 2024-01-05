@@ -142,11 +142,11 @@ impl WebDriverHandler {
         println!("handle closed");
     }
 
-    async fn handle_command_internal<C: Serialize + Debug, R>(
+    async fn handle_command_internal<C: Serialize + Debug + Send, R: Send>(
         &mut self,
         command_data: C,
         sender: oneshot::Sender<oneshot::Receiver<R>>,
-        respond_command_constructor: impl FnOnce(oneshot::Sender<R>) -> RespondCommand,
+        respond_command_constructor: impl FnOnce(oneshot::Sender<R>) -> RespondCommand + Send,
     ) -> crate::result::Result<()> {
         self.id += 1;
 
