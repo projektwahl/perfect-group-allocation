@@ -1,9 +1,12 @@
 use std::collections::HashMap;
+use std::process::Stdio;
 
 use futures::stream::SplitSink;
 use futures::{SinkExt as _, StreamExt as _};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
+use tempfile::tempdir;
+use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
@@ -29,8 +32,63 @@ impl WebDriver {
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
     pub async fn new() -> Result<Self, tokio_tungstenite::tungstenite::Error> {
+        let tmp_dir = tempdir()?;
+
+        let mut child = tokio::process::Command::new("firefox")
+            .kill_on_drop(true)
+            .args([
+                "--profile",
+                &tmp_dir.path().to_string_lossy(),
+                "--no-remote",
+                "--new-instance",
+                //"--headless",
+                "--remote-debugging-port",
+                "0",
+            ])
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("failed to spawn command");
+
+        let stderr = child
+            .stderr
+            .take()
+            .expect("child did not have a handle to stdout");
+
+        let mut reader = BufReader::new(stderr).lines();
+
+        // Ensure the child process is spawned in the runtime so it can
+        // make progress on its own while we await for any output.
+        tokio::spawn(async move {
+            let status = child
+                .wait()
+                .await
+                .expect("child process encountered an error");
+
+            println!("child status was: {status}");
+        });
+
+        let mut port = None;
+        while let Some(line) = reader.next_line().await? {
+            eprintln!("{line}");
+            if let Some(p) = line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:") {
+                port = Some(p.parse::<u16>().unwrap());
+                break;
+            }
+        }
+
+        let Some(port) = port else {
+            panic!("failed to retrieve port");
+        };
+
+        tokio::spawn(async move {
+            while let Some(line) = reader.next_line().await? {
+                eprintln!("{line}");
+            }
+            Ok::<(), std::io::Error>(())
+        });
+
         let (stream, _response) =
-            tokio_tungstenite::connect_async("ws://127.0.0.1:9222/session").await?;
+            tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session")).await?;
         let (sink, mut stream) = stream.split();
 
         let (tx, mut rx) = mpsc::channel::<(u64, oneshot::Sender<String>)>(100);

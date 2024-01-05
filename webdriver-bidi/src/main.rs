@@ -4,13 +4,12 @@
 
 use std::time::Duration;
 
+use futures::future::FutureExt as _;
 use tokio::time::sleep;
 use webdriver_bidi::webdriver::WebDriver;
 
 #[tokio::main]
 pub async fn main() -> Result<(), tokio_tungstenite::tungstenite::Error> {
-    // firefox --profile /tmp/a --new-instance --remote-debugging-port 9222
-
     let driver = WebDriver::new().await?;
     let mut session = driver.session_new().await?;
     let browsing_context = session.browsing_context_get_tree().await?;
