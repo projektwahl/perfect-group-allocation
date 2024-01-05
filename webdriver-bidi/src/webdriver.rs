@@ -20,14 +20,20 @@ use crate::{
     WebDriverBiDiRemoteEndCommand, WebDriverBiDiRemoteEndCommandData,
 };
 
+pub enum SendCommand {
+    SessionNew(
+        (
+            crate::session::new::Command,
+            oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>,
+        ),
+    ),
+}
+
 /// <https://w3c.github.io/webdriver-bidi>
 #[derive(Debug, Clone)]
 pub struct WebDriver {
-    /// send a session new command
-    command_session_new: mpsc::Sender<(
-        crate::session::new::Command,
-        oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>,
-    )>,
+    /// send a command
+    send_command: mpsc::Sender<SendCommand>,
     // send a subscribe command for global log messages and receive the subscription channel.
     // when we have received the subscription channel we can be sure that the command has been sent (for ordering purposes).
     // if you don't care about the relative ordering of the commands you can join! etc. this future.
@@ -120,63 +126,40 @@ impl WebDriver {
         tokio::spawn(WebDriverHandler::new(stream, command_session_new_rx));
 
         Ok(Self {
-            command_session_new,
+            send_command: command_session_new,
         })
     }
 
-    pub fn session_new<'a>(
+    pub async fn session_new(
         &self,
-    ) -> impl Future<
-        Output = crate::result::Result<
-            impl Future<Output = crate::result::Result<WebDriverSession>>,
-        >,
-    > {
-        async {
-            let result = self
-                .send_command(
-                    &self.command_session_new,
-                    crate::session::new::Command {
-                        params: session::new::Parameters {
-                            capabilities: session::new::CapabilitiesRequest {},
-                        },
-                    },
-                )
-                .await?;
-            Ok(async {
-                let result = result.await?;
-                Ok(WebDriverSession {
-                    session_id: result.session_id,
-                    driver: self.clone(),
-                })
-            })
-        }
-    }
-
-    pub(crate) fn send_command<'a: 'b, 'b, C: 'static, R: 'static>(
-        &'a self,
-        queue: &'b mpsc::Sender<(C, oneshot::Sender<oneshot::Receiver<R>>)>,
-        command: C,
-    ) -> impl Future<
-        Output = crate::result::Result<impl Future<Output = crate::result::Result<R>> + 'a>,
-    > + 'b {
+    ) -> crate::result::Result<impl Future<Output = crate::result::Result<WebDriverSession>>> {
         let (tx, rx) = oneshot::channel();
-        let sending = queue.send((command, tx));
-        async {
-            sending
+
+        self.send_command
+            .send(SendCommand::SessionNew((
+                crate::session::new::Command {
+                    params: session::new::Parameters {
+                        capabilities: session::new::CapabilitiesRequest {},
+                    },
+                },
+                tx,
+            )))
+            .await
+            .map_err(|_| crate::result::Error::CommandTaskExited)?;
+
+        // when we received the final receiver, we can be sure that our command got handled and is ordered before all commands that we sent afterwards.
+        let rx = rx
+            .await
+            .map_err(|_| crate::result::Error::CommandTaskExited)?;
+
+        Ok(async {
+            let result = rx
                 .await
                 .map_err(|_| crate::result::Error::CommandTaskExited)?;
-
-            // when we received the final receiver, we can be sure that our command got handled and is ordered before all commands that we sent afterwards.
-            let rx = rx
-                .await
-                .map_err(|_| crate::result::Error::CommandTaskExited)?;
-
-            Ok(async {
-                let result = rx
-                    .await
-                    .map_err(|_| crate::result::Error::CommandTaskExited)?;
-                Ok(result)
+            Ok(WebDriverSession {
+                session_id: result.session_id,
+                driver: self.clone(),
             })
-        }
+        })
     }
 }

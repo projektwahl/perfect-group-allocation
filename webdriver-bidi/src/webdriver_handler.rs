@@ -7,6 +7,7 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
+use crate::webdriver::SendCommand;
 use crate::{
     session, ResultData, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
     WebDriverBiDiLocalEndMessageErrorResponse, WebDriverBiDiRemoteEndCommand,
@@ -15,35 +16,21 @@ use crate::{
 pub struct WebDriverHandler {
     id: u64,
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
-    command_session_new_rx: mpsc::Receiver<(
-        session::new::Command,
-        oneshot::Sender<oneshot::Receiver<session::new::Result>>,
-    )>,
+    receive_command: mpsc::Receiver<SendCommand>,
+
     pending_session_new: HashMap<u64, oneshot::Sender<session::new::Result>>,
-    command_session_end_rx: mpsc::Receiver<(
-        session::end::Command,
-        oneshot::Sender<oneshot::Receiver<session::end::Result>>,
-    )>,
     pending_session_end: HashMap<u64, oneshot::Sender<session::end::Result>>,
 }
 
 impl WebDriverHandler {
     pub async fn new(
         stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
-        command_session_new_rx: mpsc::Receiver<(
-            session::new::Command,
-            oneshot::Sender<oneshot::Receiver<session::new::Result>>,
-        )>,
-        command_session_end_rx: mpsc::Receiver<(
-            session::end::Command,
-            oneshot::Sender<oneshot::Receiver<session::end::Result>>,
-        )>,
+        receive_command: mpsc::Receiver<SendCommand>,
     ) {
         let mut this = Self {
             id: 0,
             stream,
-            command_session_new_rx,
-            command_session_end_rx,
+            receive_command,
             pending_session_new: Default::default(),
             pending_session_end: Default::default(),
         };
