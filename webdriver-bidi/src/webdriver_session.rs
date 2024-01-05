@@ -1,5 +1,3 @@
-use std::panic::UnwindSafe;
-
 use crate::browsing_context::BrowsingContext;
 use crate::session::SubscriptionRequest;
 use crate::webdriver::WebDriver;

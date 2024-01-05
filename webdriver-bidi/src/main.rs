@@ -4,7 +4,6 @@
 
 use std::time::Duration;
 
-use futures::future::FutureExt as _;
 use tokio::time::sleep;
 use webdriver_bidi::webdriver::WebDriver;
 
