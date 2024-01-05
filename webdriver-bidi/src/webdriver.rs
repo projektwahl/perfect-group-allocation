@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::process::Stdio;
 
 use futures::stream::SplitSink;
-use futures::{SinkExt as _, StreamExt as _};
+use futures::{Future, SinkExt as _, StreamExt as _};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tempfile::tempdir;
@@ -29,21 +29,21 @@ pub struct WebDriver {
         crate::session::new::Command,
         oneshot::Sender<crate::session::new::Result>,
     )>,
-    /// send a subscribe command for global log messages and receive the subscription channel.
-    /// when we have received the subscription channel we can be sure that the command has been sent (for ordering purposes).
-    /// if you don't care about the relative ordering of the commands you can join! etc. this future.
-    event_handlers_log: mpsc::Sender<((), oneshot::Sender<broadcast::Receiver<log::Entry>>)>,
-    /// channel to receive browsing context specific log messages
-    event_handlers_browsing_context_log: mpsc::Sender<(
-        BrowsingContext,
-        oneshot::Sender<broadcast::Receiver<log::Entry>>,
-    )>,
+    // send a subscribe command for global log messages and receive the subscription channel.
+    // when we have received the subscription channel we can be sure that the command has been sent (for ordering purposes).
+    // if you don't care about the relative ordering of the commands you can join! etc. this future.
+    //event_handlers_log: mpsc::Sender<((), oneshot::Sender<broadcast::Receiver<log::Entry>>)>,
+    // channel to receive browsing context specific log messages
+    //event_handlers_browsing_context_log: mpsc::Sender<(
+    //    BrowsingContext,
+    //    oneshot::Sender<broadcast::Receiver<log::Entry>>,
+    //)>,
     // wait we want to subscribe and unsubscribe per subscription and also then end the subscriber.
     // how do we implement this?. I think we unsubscribe by dropping the receiver and
     // then the sender realizes this and unsubscribes by itself?
-    /// send a subscribe command and then receive the subscription channel
-    event_handlers_browsing_context:
-        mpsc::Sender<(String, oneshot::Sender<broadcast::Receiver<String>>)>,
+    // send a subscribe command and then receive the subscription channel
+    //event_handlers_browsing_context:
+    //    mpsc::Sender<(String, oneshot::Sender<broadcast::Receiver<String>>)>,
 }
 
 impl WebDriver {
@@ -106,11 +106,11 @@ impl WebDriver {
             Ok::<(), std::io::Error>(())
         });
 
-        let (stream, _response) =
+        let (mut stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session")).await?;
 
-        let (command_session_new, command_session_new_rx) = mpsc::channel(1);
-        let (event_handlers_log, event_handlers_log_rx) = mpsc::channel(10);
+        let (command_session_new, mut command_session_new_rx) = mpsc::channel(1);
+        //let (event_handlers_log, event_handlers_log_rx) = mpsc::channel(10);
 
         tokio::spawn(async move {
             let mut pending_requests = HashMap::<u64, oneshot::Sender<String>>::new();
@@ -132,10 +132,8 @@ impl WebDriver {
                             }
                         }
                     }
-                    pending_request = rx.recv() => {
-                        if let Some(pending_request) = pending_request {
-                            pending_requests.insert(pending_request.0, pending_request.1);
-                        }
+                    Some(command_session_new) = command_session_new_rx.recv() => {
+
                     }
                 }
             }
@@ -143,7 +141,6 @@ impl WebDriver {
 
         Ok(Self {
             command_session_new,
-            event_handlers_log,
         })
     }
 
@@ -168,63 +165,71 @@ impl WebDriver {
         }
     }
 
-    pub(crate) async fn send_command<ResultData: DeserializeOwned>(
-        &mut self,
-        command_data: WebDriverBiDiRemoteEndCommandData,
-    ) -> Result<ResultData, tokio_tungstenite::tungstenite::Error> {
-        let (tx, rx) = oneshot::channel();
+    /*
+        pub(crate) async fn send_command<ResultData: DeserializeOwned>(
+            &mut self,
+            command_data: WebDriverBiDiRemoteEndCommandData,
+        ) -> Result<ResultData, tokio_tungstenite::tungstenite::Error> {
+            let (tx, rx) = oneshot::channel();
 
-        let id: u64 = self.current_id;
-        self.current_id += 1;
-        self.pending_commands.send((id, tx)).await.unwrap();
+            let id: u64 = self.current_id;
+            self.current_id += 1;
+            self.pending_commands.send((id, tx)).await.unwrap();
 
-        self.sink
-            .send(Message::Text(
-                serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
-                    id,
-                    command_data,
-                    extensible: Value::Null,
-                })
-                .unwrap(),
-            ))
-            .await?;
-        self.sink.flush().await?;
+            self.sink
+                .send(Message::Text(
+                    serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+                        id,
+                        command_data,
+                        extensible: Value::Null,
+                    })
+                    .unwrap(),
+                ))
+                .await?;
+            self.sink.flush().await?;
 
-        let received = rx.await.unwrap();
-        let parsed: WebDriverBiDiLocalEndMessage<ResultData> =
-            serde_json::from_str(&received).expect(&received);
-        match parsed {
-            WebDriverBiDiLocalEndMessage::CommandResponse(
-                WebDriverBiDiLocalEndCommandResponse {
-                    result: result_data,
-                    ..
-                },
-            ) => Ok(result_data),
-            WebDriverBiDiLocalEndMessage::ErrorResponse(error_response) => {
-                panic!("{error_response:?}");
-            }
-            WebDriverBiDiLocalEndMessage::Event(_) => {
-                unreachable!("command should never get an event as response");
+            let received = rx.await.unwrap();
+            let parsed: WebDriverBiDiLocalEndMessage<ResultData> =
+                serde_json::from_str(&received).expect(&received);
+            match parsed {
+                WebDriverBiDiLocalEndMessage::CommandResponse(
+                    WebDriverBiDiLocalEndCommandResponse {
+                        result: result_data,
+                        ..
+                    },
+                ) => Ok(result_data),
+                WebDriverBiDiLocalEndMessage::ErrorResponse(error_response) => {
+                    panic!("{error_response:?}");
+                }
+                WebDriverBiDiLocalEndMessage::Event(_) => {
+                    unreachable!("command should never get an event as response");
+                }
             }
         }
-    }
-
+    */
     pub async fn session_new(
         mut self,
-    ) -> Result<WebDriverSession, tokio_tungstenite::tungstenite::Error> {
-        let result: crate::session::new::Result = self
-            .send_command(WebDriverBiDiRemoteEndCommandData::Session(
-                session::Command::New(crate::session::new::Command {
+    ) -> impl Future<Output = Result<WebDriverSession, tokio_tungstenite::tungstenite::Error>> {
+        let (tx, rx) = oneshot::channel();
+
+        self.command_session_new
+            .send((
+                crate::session::new::Command {
                     params: session::new::Parameters {
                         capabilities: session::new::CapabilitiesRequest {},
                     },
-                }),
+                },
+                tx,
             ))
-            .await?;
-        println!("{result:?}");
-        Ok(WebDriverSession {
-            session_id: result.session_id,
-            driver: self,
-        })
+            .await
+            .unwrap();
+
+        async {
+            let result = rx.await?;
+            Ok(WebDriverSession {
+                session_id: result.session_id,
+                driver: self,
+            })
+        }
     }
 }
