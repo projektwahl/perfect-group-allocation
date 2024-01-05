@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 use futures::{SinkExt as _, StreamExt as _};
 use serde::Serialize;
@@ -13,7 +14,7 @@ use crate::{
 };
 
 macro_rules! magic {
-    (pub enum { $(#[doc = $doc:expr] $variant:ident($($command:ident)::+)),* }) => {
+    (pub enum { $(#[doc = $doc:expr] $variant:ident($tag:literal $($command:ident)::+)),* }) => {
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug)]
         pub enum SendCommand {
@@ -28,16 +29,23 @@ macro_rules! magic {
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
-        #[serde(untagged)]
+        #[serde(tag = "method")]
         pub enum WebDriverBiDiRemoteEndCommandData {
-            $(#[doc = $doc] $variant($($command)::*::Command),)*
+            $(
+                #[doc = $doc]
+                #[serde(rename = $tag)]
+                $variant($($command)::*::Command)
+            ,)*
         }
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
-        #[serde(untagged)]
         pub enum ResultData {
-            $(#[doc = $doc] $variant($($command)::*::Result),)*
+            $(
+                #[doc = $doc]
+                #[serde(rename = $tag)]
+                $variant($($command)::*::Result)
+            ,)*
         }
 
         async fn handle_command(this: &mut WebDriverHandler, input: SendCommand) -> crate::result::Result<()> {
@@ -68,15 +76,15 @@ macro_rules! magic {
 magic! {
     pub enum {
         /// https://w3c.github.io/webdriver-bidi/#command-session-new
-        SessionNew(session::new),
+        SessionNew("session.new" session::new),
         /// https://w3c.github.io/webdriver-bidi/#command-session-end
-        SessionEnd(session::end),
+        SessionEnd("session.end" session::end),
         /// https://w3c.github.io/webdriver-bidi/#command-session-subscribe
-        SessionSubscribe(session::subscribe),
+        SessionSubscribe("session.subscribe" session::subscribe),
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
-        BrowsingContextGetTree(browsing_context::get_tree),
+        BrowsingContextGetTree("browsingContext.getTree" browsing_context::get_tree),
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
-        BrowsingContextNavigate(browsing_context::navigate)
+        BrowsingContextNavigate("browsingContext.navigate" browsing_context::navigate)
     }
 }
 
@@ -127,7 +135,7 @@ impl WebDriverHandler {
         }
     }
 
-    async fn handle_command_internal<C: Serialize, R>(
+    async fn handle_command_internal<C: Serialize + Debug, R>(
         &mut self,
         command_data: C,
         sender: oneshot::Sender<oneshot::Receiver<R>>,
@@ -139,17 +147,17 @@ impl WebDriverHandler {
         self.pending_commands
             .insert(self.id, respond_command_constructor(tx));
 
+        let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+            id: self.id,
+            command_data,
+        })
+        .unwrap();
+
+        println!("{}", string);
+
         // starting from here this could be done asynchronously
         // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
-        self.stream
-            .send(Message::Text(
-                serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
-                    id: self.id,
-                    command_data,
-                })
-                .unwrap(),
-            ))
-            .await?;
+        self.stream.send(Message::Text(string)).await?;
 
         sender
             .send(rx)
@@ -159,6 +167,7 @@ impl WebDriverHandler {
     }
 
     fn handle_message(&mut self, message: String) -> crate::result::Result<()> {
+        println!("{}", message);
         let parsed_message: WebDriverBiDiLocalEndMessage<ResultData> =
             serde_json::from_str(&message).map_err(crate::result::Error::ParseReceived)?;
         match parsed_message {
