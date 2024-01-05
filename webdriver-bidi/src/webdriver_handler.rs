@@ -1,25 +1,36 @@
 use std::collections::HashMap;
 
 use futures::{SinkExt as _, StreamExt as _};
+use serde::Serialize;
 use serde_json::Value;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use crate::webdriver::SendCommand;
 use crate::{
     session, ResultData, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
     WebDriverBiDiLocalEndMessageErrorResponse, WebDriverBiDiRemoteEndCommand,
 };
 
+pub enum SendCommand {
+    SessionNew(
+        (
+            crate::session::new::Command,
+            oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>,
+        ),
+    ),
+}
+
+pub enum RespondCommand {
+    SessionNew(oneshot::Sender<crate::session::new::Result>),
+}
+
 pub struct WebDriverHandler {
     id: u64,
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
     receive_command: mpsc::Receiver<SendCommand>,
-
-    pending_session_new: HashMap<u64, oneshot::Sender<session::new::Result>>,
-    pending_session_end: HashMap<u64, oneshot::Sender<session::end::Result>>,
+    pending_commands: HashMap<u64, RespondCommand>,
 }
 
 impl WebDriverHandler {
@@ -31,8 +42,7 @@ impl WebDriverHandler {
             id: 0,
             stream,
             receive_command,
-            pending_session_new: Default::default(),
-            pending_session_end: Default::default(),
+            pending_commands: Default::default(),
         };
         this.handle().await;
     }
@@ -56,27 +66,33 @@ impl WebDriverHandler {
                         }
                     }
                 }
-                Some(command_session_new) = self.command_session_new_rx.recv() => {
-                    self.handle_command_session_new(command_session_new).await;
-                }
-                Some(command_session_end) = self.command_session_end_rx.recv() => {
-                    self.handle_command_session_end(command_session_end).await;
+                Some(command_session_new) = self.receive_command.recv() => {
+                    self.handle_command(command_session_new).await;
                 }
             }
         }
     }
 
-    async fn handle_command_session_new(
+    async fn handle_command(&mut self, input: SendCommand) -> crate::result::Result<()> {
+        match input {
+            SendCommand::SessionNew((command, sender)) => {
+                let (tx, rx) = oneshot::channel();
+                self.handle_command_internal(command, sender, rx, RespondCommand::SessionNew(tx))
+                    .await
+            }
+        }
+    }
+
+    async fn handle_command_internal<C: Serialize, R>(
         &mut self,
-        input: (
-            session::new::Command,
-            oneshot::Sender<oneshot::Receiver<session::new::Result>>,
-        ),
+        command_data: C,
+        sender: oneshot::Sender<oneshot::Receiver<R>>,
+        rx: oneshot::Receiver<R>,
+        tx: RespondCommand,
     ) -> crate::result::Result<()> {
         self.id += 1;
 
-        let (tx, rx) = oneshot::channel();
-        self.pending_session_new.insert(self.id, tx);
+        self.pending_commands.insert(self.id, tx);
 
         // starting from here this could be done asynchronously
         // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
@@ -84,14 +100,13 @@ impl WebDriverHandler {
             .send(Message::Text(
                 serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
                     id: self.id,
-                    command_data: input.0,
+                    command_data,
                 })
                 .unwrap(),
             ))
             .await?;
 
-        input
-            .1
+        sender
             .send(rx)
             .map_err(|_| crate::result::Error::CommandCallerExited)?;
 
@@ -104,15 +119,22 @@ impl WebDriverHandler {
         match parsed_message {
             WebDriverBiDiLocalEndMessage::CommandResponse(
                 WebDriverBiDiLocalEndCommandResponse { id, result },
-            ) => match result {
-                ResultData::Session(session::Result::New(new)) => self
-                    .pending_session_new
+            ) => {
+                let respond_command = self
+                    .pending_commands
                     .remove(&id)
-                    .ok_or(crate::result::Error::ResponseWithoutRequest(id))?
-                    .send(new)
-                    .map_err(|_| crate::result::Error::CommandCallerExited),
-                ResultData::BrowsingContext(_) => todo!(),
-            },
+                    .ok_or(crate::result::Error::ResponseWithoutRequest(id))?;
+
+                match (result, respond_command) {
+                    (
+                        ResultData::Session(session::Result::New(result)),
+                        RespondCommand::SessionNew(session_new),
+                    ) => session_new
+                        .send(result)
+                        .map_err(|_| crate::result::Error::CommandCallerExited),
+                    _ => panic!(),
+                }
+            }
             WebDriverBiDiLocalEndMessage::ErrorResponse(
                 WebDriverBiDiLocalEndMessageErrorResponse {
                     id,

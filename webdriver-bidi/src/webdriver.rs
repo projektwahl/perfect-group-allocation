@@ -13,21 +13,12 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::browsing_context::BrowsingContext;
-use crate::webdriver_handler::WebDriverHandler;
+use crate::webdriver_handler::{SendCommand, WebDriverHandler};
 use crate::webdriver_session::WebDriverSession;
 use crate::{
     log, session, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
     WebDriverBiDiRemoteEndCommand, WebDriverBiDiRemoteEndCommandData,
 };
-
-pub enum SendCommand {
-    SessionNew(
-        (
-            crate::session::new::Command,
-            oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>,
-        ),
-    ),
-}
 
 /// <https://w3c.github.io/webdriver-bidi>
 #[derive(Debug, Clone)]
