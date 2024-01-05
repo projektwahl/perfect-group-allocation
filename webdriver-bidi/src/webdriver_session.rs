@@ -4,7 +4,7 @@ use crate::browsing_context::BrowsingContext;
 use crate::session::SubscriptionRequest;
 use crate::webdriver::WebDriver;
 use crate::webdriver_handler::SendCommand;
-use crate::{browsing_context, session, WebDriverBiDiRemoteEndCommandData};
+use crate::{browsing_context, session};
 
 #[derive(Debug)]
 pub struct WebDriverSession {

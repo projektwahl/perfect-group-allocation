@@ -17,7 +17,7 @@ use crate::webdriver_handler::{SendCommand, WebDriverHandler};
 use crate::webdriver_session::WebDriverSession;
 use crate::{
     log, session, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
-    WebDriverBiDiRemoteEndCommand, WebDriverBiDiRemoteEndCommandData,
+    WebDriverBiDiRemoteEndCommand,
 };
 
 /// <https://w3c.github.io/webdriver-bidi>
