@@ -1,24 +1,13 @@
-use std::collections::HashMap;
 use std::process::Stdio;
 
-use futures::stream::SplitSink;
-use futures::{Future, SinkExt as _, StreamExt as _};
-use serde::de::DeserializeOwned;
-use serde_json::Value;
+use futures::Future;
 use tempfile::tempdir;
 use tokio::io::{AsyncBufReadExt as _, BufReader};
-use tokio::net::TcpStream;
-use tokio::sync::{broadcast, mpsc, oneshot, Mutex};
-use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+use tokio::sync::{mpsc, oneshot};
 
-use crate::browsing_context::BrowsingContext;
+use crate::session;
 use crate::webdriver_handler::{SendCommand, WebDriverHandler};
 use crate::webdriver_session::WebDriverSession;
-use crate::{
-    log, session, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
-    WebDriverBiDiRemoteEndCommand,
-};
 
 /// <https://w3c.github.io/webdriver-bidi>
 #[derive(Debug, Clone)]
@@ -47,7 +36,7 @@ impl WebDriver {
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
     pub async fn new() -> Result<Self, crate::result::Error> {
-        let tmp_dir = tempdir().map_err(crate::result::Error::TmpDirCreateError)?;
+        let tmp_dir = tempdir().map_err(crate::result::Error::TmpDirCreate)?;
 
         let mut child = tokio::process::Command::new("firefox")
             .kill_on_drop(true)
@@ -62,7 +51,7 @@ impl WebDriver {
             ])
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(crate::result::Error::SpawnBrowserError)?;
+            .map_err(crate::result::Error::SpawnBrowser)?;
 
         let stderr = child.stderr.take().unwrap();
 
@@ -89,10 +78,7 @@ impl WebDriver {
         {
             eprintln!("{line}");
             if let Some(p) = line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:") {
-                port = Some(
-                    p.parse::<u16>()
-                        .map_err(crate::result::Error::PortDetectError)?,
-                );
+                port = Some(p.parse::<u16>().map_err(crate::result::Error::PortDetect)?);
                 break;
             }
         }
@@ -108,13 +94,13 @@ impl WebDriver {
             Ok::<(), std::io::Error>(())
         });
 
-        let (mut stream, _response) =
+        let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session")).await?;
 
-        let (command_session_new, mut command_session_new_rx) = mpsc::channel(1);
+        let (command_session_new, command_session_new_rx) = mpsc::channel(1);
         //let (event_handlers_log, event_handlers_log_rx) = mpsc::channel(10);
 
-        tokio::spawn(WebDriverHandler::new(stream, command_session_new_rx));
+        tokio::spawn(WebDriverHandler::handle(stream, command_session_new_rx));
 
         Ok(Self {
             send_command: command_session_new,

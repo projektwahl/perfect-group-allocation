@@ -2,7 +2,6 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::time::sleep;

@@ -98,7 +98,7 @@ pub struct WebDriverHandler {
 }
 
 impl WebDriverHandler {
-    pub async fn new(
+    pub async fn handle(
         stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
         receive_command: mpsc::Receiver<SendCommand>,
     ) {
@@ -106,19 +106,19 @@ impl WebDriverHandler {
             id: 0,
             stream,
             receive_command,
-            pending_commands: Default::default(),
+            pending_commands: HashMap::default(),
         };
-        this.handle().await;
+        this.handle_internal().await;
     }
 
-    pub async fn handle(&mut self) {
+    async fn handle_internal(&mut self) {
         loop {
             tokio::select! {
                 // TODO FIXME is this cancel safe?
                 message = self.stream.next() => {
                     match message {
                         Some(Ok(Message::Text(message))) => {
-                            if let Err(error) = self.handle_message(message) {
+                            if let Err(error) = self.handle_message(&message) {
                                 eprintln!("error {error:?}");
                             }
                         }
@@ -173,9 +173,9 @@ impl WebDriverHandler {
         Ok(())
     }
 
-    fn handle_message(&mut self, message: String) -> crate::result::Result<()> {
+    fn handle_message(&mut self, message: &str) -> crate::result::Result<()> {
         println!("{message}");
-        let jd = &mut serde_json::Deserializer::from_str(&message);
+        let jd = &mut serde_json::Deserializer::from_str(message);
         let parsed_message: WebDriverBiDiLocalEndMessage<Value> =
             serde_path_to_error::deserialize(jd)
                 .map_err(crate::result::Error::ParseReceivedWithPath)?;
@@ -192,11 +192,11 @@ impl WebDriverHandler {
             }
             WebDriverBiDiLocalEndMessage::ErrorResponse(
                 WebDriverBiDiLocalEndMessageErrorResponse {
-                    id,
+                    id: _,
                     error,
-                    message,
-                    stacktrace,
-                    extensible,
+                    message: _,
+                    stacktrace: _,
+                    extensible: _,
                 },
             ) => {
                 // TODO FIXME we need a id -> channel mapping bruh
