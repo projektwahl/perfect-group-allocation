@@ -23,13 +23,13 @@ impl WebDriverSession {
 
     pub async fn browsing_context_get_tree(
         &mut self,
-    ) -> Result<(), tokio_tungstenite::tungstenite::Error> {
+    ) -> Result<browsing_context::get_tree::Result, tokio_tungstenite::tungstenite::Error> {
         self.driver
             .send_command(WebDriverBiDiRemoteEndCommandData::BrowsingContext(
                 browsing_context::Command::GetTree(browsing_context::get_tree::CommandType {
                     params: browsing_context::get_tree::Parameters {
-                        max_depth: todo!(),
-                        root: todo!(),
+                        max_depth: None,
+                        root: None,
                     },
                 }),
             ))

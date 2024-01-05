@@ -28,8 +28,6 @@ impl WebDriver {
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
     pub async fn new() -> Result<Self, tokio_tungstenite::tungstenite::Error> {
-        // firefox --profile /tmp/a --new-instance --remote-debugging-port 9222
-
         let (stream, _response) =
             tokio_tungstenite::connect_async("ws://127.0.0.1:9222/session").await?;
         let (sink, mut stream) = stream.split();

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::BrowsingContext;
+
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "method")]
@@ -11,6 +13,10 @@ pub struct CommandType {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Parameters {
     pub max_depth: Option<u64>,
-    /// browsing context
-    pub root: Option<String>,
+    pub root: Option<BrowsingContext>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Result {
+    contexts: Vec<super::Info>,
 }
