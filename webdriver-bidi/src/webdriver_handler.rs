@@ -7,7 +7,10 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use crate::{session, WebDriverBiDiLocalEndMessage, WebDriverBiDiRemoteEndCommand};
+use crate::{
+    session, ResultData, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
+    WebDriverBiDiLocalEndMessageErrorResponse, WebDriverBiDiRemoteEndCommand,
+};
 
 pub struct WebDriverHandler {
     id: u64,
@@ -94,14 +97,34 @@ impl WebDriverHandler {
         Ok(())
     }
 
-    fn handle_message(&mut self, message: String) {
-        let parsed_message: WebDriverBiDiLocalEndMessage<Value> = serde_json::from_str(&message)?;
+    fn handle_message(&mut self, message: String) -> crate::result::Result<()> {
+        let parsed_message: WebDriverBiDiLocalEndMessage<ResultData> =
+            serde_json::from_str(&message).map_err(crate::result::Error::ParseReceived)?;
         match parsed_message {
-            WebDriverBiDiLocalEndMessage::CommandResponse(parsed_message) => {
-                pending_requests.remove(&parsed_message.id)?.send(message)?;
-            }
-            WebDriverBiDiLocalEndMessage::ErrorResponse(error) => {
+            WebDriverBiDiLocalEndMessage::CommandResponse(
+                WebDriverBiDiLocalEndCommandResponse { id, result },
+            ) => match result {
+                ResultData::Session(session::Result::New(new)) => self
+                    .pending_session_new
+                    .remove(&id)
+                    .ok_or(crate::result::Error::ResponseWithoutRequest(id))?
+                    .send(new)
+                    .map_err(|_| crate::result::Error::CommandCallerExited),
+                ResultData::BrowsingContext(_) => todo!(),
+            },
+            WebDriverBiDiLocalEndMessage::ErrorResponse(
+                WebDriverBiDiLocalEndMessageErrorResponse {
+                    id,
+                    error,
+                    message,
+                    stacktrace,
+                    extensible,
+                },
+            ) => {
+                // TODO FIXME we need a id -> channel mapping bruh
                 println!("error {error:#?}"); // TODO FIXME propage to command if it has an id.
+
+                Ok(())
             }
             WebDriverBiDiLocalEndMessage::Event(event) => todo!("{event:?}"),
         }

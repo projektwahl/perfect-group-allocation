@@ -19,6 +19,8 @@ pub enum Error {
     TokioOneShotReceive(tokio::sync::oneshot::error::RecvError),
     #[error("failed to detect WebDriver BiDi port")]
     PortDetectError(std::num::ParseIntError),
+    #[error("failed to parse received message {0}")]
+    ParseReceived(serde_json::Error),
     #[error("failed to find WebDriver BiDi port")]
     PortNotFound,
     #[error("the command task exited. this may be because you requested it or because it crashed")]
@@ -27,6 +29,8 @@ pub enum Error {
         "a caller that wanted to execute a command has exited. this may be because it panicked."
     )]
     CommandCallerExited,
+    #[error("got response without corresponding request for id {0}")]
+    ResponseWithoutRequest(u64),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;

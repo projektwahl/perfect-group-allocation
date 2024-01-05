@@ -77,6 +77,14 @@ pub enum WebDriverBiDiRemoteEndCommandData {
     BrowsingContext(browsing_context::Command),
 }
 
+/// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ResultData {
+    Session(session::Result),
+    BrowsingContext(browsing_context::Result),
+}
+
 #[cfg(test)]
 mod tests {
 

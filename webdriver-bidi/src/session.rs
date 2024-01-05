@@ -18,6 +18,18 @@ pub enum Command {
     Subscribe(subscribe::Command),
 }
 
+/// <https://w3c.github.io/webdriver-bidi/#module-session-definition>
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Result {
+    /// https://w3c.github.io/webdriver-bidi/#command-session-new
+    New(new::Result),
+    /// https://w3c.github.io/webdriver-bidi/#command-session-end
+    End(end::Result),
+    /// https://w3c.github.io/webdriver-bidi/#command-session-subscribe
+    Subscribe(subscribe::Result),
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SubscriptionRequest {
     pub events: Vec<String>,

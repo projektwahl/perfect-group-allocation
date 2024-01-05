@@ -13,6 +13,16 @@ pub enum Command {
     Navigate(navigate::Command),
 }
 
+/// <https://w3c.github.io/webdriver-bidi/#module-browsingContext-definition>
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Result {
+    /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
+    GetTree(get_tree::Result),
+    /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
+    Navigate(navigate::Result),
+}
+
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Info>
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Info {
