@@ -26,10 +26,9 @@ pub enum WebDriverBiDiLocalEndMessage<ResultData> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebDriverBiDiLocalEndCommandResponse<ResultData> {
     id: u64,
-    #[serde(flatten)]
     result: ResultData,
-    #[serde(flatten)]
-    extensible: Value,
+    //#[serde(flatten)]
+    //extensible: Value,
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
@@ -37,8 +36,8 @@ pub struct WebDriverBiDiLocalEndCommandResponse<ResultData> {
 pub struct WebDriverBiDiLocalEndEvent<EventData> {
     #[serde(flatten)]
     event_data: EventData,
-    #[serde(flatten)]
-    extensible: Value,
+    // #[serde(flatten)]
+    //extensible: Value,
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
