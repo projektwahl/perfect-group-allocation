@@ -56,6 +56,7 @@ impl WebDriverSession {
             .await
     }
 
+    // we don't want to subscribe twice so this needs application specific handling anyways if e.g. two subscribe concurrently
     pub async fn session_subscribe(
         &mut self,
         browsing_context: BrowsingContext,

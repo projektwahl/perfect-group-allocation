@@ -8,23 +8,42 @@ use serde_json::Value;
 use tempfile::tempdir;
 use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::net::TcpStream;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{broadcast, mpsc, oneshot, Mutex};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
+use crate::browsing_context::BrowsingContext;
 use crate::webdriver_session::WebDriverSession;
 use crate::{
-    session, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
+    log, session, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
     WebDriverBiDiRemoteEndCommand, WebDriverBiDiRemoteEndCommandData,
 };
 
 /// <https://w3c.github.io/webdriver-bidi>
+// TODO FIXME make usable from multiple threads
+// TODO FIXME implement pipelining
 #[derive(Debug)]
 pub struct WebDriver {
-    sink: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
-    current_id: u64,
-    add_pending_command: mpsc::Sender<(u64, oneshot::Sender<String>)>,
-    // TODO FIXME browsing context specific events?
+    /// send a session new command
+    command_session_new: mpsc::Sender<(
+        crate::session::new::Command,
+        oneshot::Sender<crate::session::new::Result>,
+    )>,
+    /// send a subscribe command for global log messages and receive the subscription channel.
+    /// when we have received the subscription channel we can be sure that the command has been sent (for ordering purposes).
+    /// if you don't care about the relative ordering of the commands you can join! etc. this future.
+    event_handlers_log: mpsc::Sender<((), oneshot::Sender<broadcast::Receiver<log::Entry>>)>,
+    /// channel to receive browsing context specific log messages
+    event_handlers_browsing_context_log: mpsc::Sender<(
+        BrowsingContext,
+        oneshot::Sender<broadcast::Receiver<log::Entry>>,
+    )>,
+    // wait we want to subscribe and unsubscribe per subscription and also then end the subscriber.
+    // how do we implement this?. I think we unsubscribe by dropping the receiver and
+    // then the sender realizes this and unsubscribes by itself?
+    /// send a subscribe command and then receive the subscription channel
+    event_handlers_browsing_context:
+        mpsc::Sender<(String, oneshot::Sender<broadcast::Receiver<String>>)>,
 }
 
 impl WebDriver {
@@ -123,9 +142,10 @@ impl WebDriver {
         });
 
         Ok(Self {
-            sink,
             current_id: 0,
-            add_pending_command: tx,
+            event_handlers_log: broadcast::channel(10),
+            pending_commands: Default::default(),
+            event_handlers_browsing_context: Default::default(),
         })
     }
 
@@ -158,7 +178,7 @@ impl WebDriver {
 
         let id: u64 = self.current_id;
         self.current_id += 1;
-        self.add_pending_command.send((id, tx)).await.unwrap();
+        self.pending_commands.send((id, tx)).await.unwrap();
 
         self.sink
             .send(Message::Text(

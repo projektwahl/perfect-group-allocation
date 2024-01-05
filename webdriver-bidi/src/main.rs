@@ -9,7 +9,8 @@ use webdriver_bidi::webdriver::WebDriver;
 
 #[tokio::main]
 pub async fn main() -> Result<(), tokio_tungstenite::tungstenite::Error> {
-    let driver = WebDriver::new().await?;
+    let driver = Arc::new(WebDriver::new().await?);
+    let driver = driver.clone();
     let mut session = driver.session_new().await?;
     let browsing_context = session.browsing_context_get_tree().await?;
     println!("{browsing_context:?}");

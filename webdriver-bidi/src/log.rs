@@ -20,6 +20,7 @@ pub enum Entry {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BaseLogEntry {
     level: String,
+    // TODO FIXME this contains the browsing context or realm
     source: String,
     text: Option<String>,
     timestamp: u64,
