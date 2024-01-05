@@ -2,26 +2,26 @@ use std::collections::HashMap;
 
 use futures::{SinkExt as _, StreamExt as _};
 use serde::Serialize;
-use serde_json::Value;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::{
-    session, CommandResultPair, ResultData, WebDriverBiDiLocalEndCommandResponse,
-    WebDriverBiDiLocalEndMessage, WebDriverBiDiLocalEndMessageErrorResponse,
-    WebDriverBiDiRemoteEndCommand,
+    browsing_context, session, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
+    WebDriverBiDiLocalEndMessageErrorResponse, WebDriverBiDiRemoteEndCommand,
 };
 
 macro_rules! magic {
     (pub enum { $(#[doc = $doc:expr] $variant:ident($($command:ident)::+)),* }) => {
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+        #[derive(Debug)]
         pub enum SendCommand {
             $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<oneshot::Receiver<$($command)::*::Result>>),)*
         }
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+        #[derive(Debug)]
         pub enum RespondCommand {
             $(#[doc = $doc] $variant(oneshot::Sender<$($command)::*::Result>),)*
         }
@@ -44,7 +44,7 @@ macro_rules! magic {
             match input {
                 $(
                     SendCommand::$variant(command, sender) => {
-                        this.handle_command_internal(command, sender).await
+                        this.handle_command_internal(command, sender, RespondCommand::$variant).await
                     }
                 ),*
             }
@@ -59,7 +59,7 @@ macro_rules! magic {
                             .map_err(|_| crate::result::Error::CommandCallerExited)
                     }
                 ),*
-                _ => panic!(),
+                (left, right) => panic!("{left:?} {right:?}"),
             }
         }
     };
@@ -121,28 +121,8 @@ impl WebDriverHandler {
                     }
                 }
                 Some(command_session_new) = self.receive_command.recv() => {
-                    self.handle_command(command_session_new).await;
+                    handle_command(self, command_session_new).await;
                 }
-            }
-        }
-    }
-
-    async fn handle_command(&mut self, input: SendCommand) -> crate::result::Result<()> {
-        match input {
-            SendCommand::SessionNew(command, sender) => {
-                self.handle_command_internal(command, sender).await
-            }
-            SendCommand::SessionEnd(command, sender) => {
-                self.handle_command_internal(command, sender).await
-            }
-            SendCommand::SessionSubscribe(command, sender) => {
-                self.handle_command_internal(command, sender).await
-            }
-            SendCommand::BrowsingContextGetTree(command, sender) => {
-                self.handle_command_internal(command, sender).await
-            }
-            SendCommand::BrowsingContextNavigate(command, sender) => {
-                self.handle_command_internal(command, sender).await
             }
         }
     }
