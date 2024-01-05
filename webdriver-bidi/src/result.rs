@@ -21,6 +21,8 @@ pub enum Error {
     PortDetectError(std::num::ParseIntError),
     #[error("failed to parse received message {0}")]
     ParseReceived(serde_json::Error),
+    #[error("failed to parse received message {0}")]
+    ParseReceivedWithPath(serde_path_to_error::Error<serde_json::Error>),
     #[error("failed to find WebDriver BiDi port")]
     PortNotFound,
     #[error("the command task exited. this may be because you requested it or because it crashed")]

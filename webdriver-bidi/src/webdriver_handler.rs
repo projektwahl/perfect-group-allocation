@@ -3,6 +3,7 @@ use std::fmt::Debug;
 
 use futures::{SinkExt as _, StreamExt as _};
 use serde::Serialize;
+use serde_json::Value;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
@@ -40,6 +41,7 @@ macro_rules! magic {
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+        #[serde(tag = "method")]
         pub enum ResultData {
             $(
                 #[doc = $doc]
@@ -58,16 +60,16 @@ macro_rules! magic {
             }
         }
 
-        fn send_response(result: ResultData, respond_command: RespondCommand) -> crate::result::Result<()> {
-            match (result, respond_command) {
+        fn send_response(result: Value, respond_command: RespondCommand) -> crate::result::Result<()> {
+            match (respond_command) {
                 $(
-                    (ResultData::$variant(result), RespondCommand::$variant(respond_command)) => {
+                    RespondCommand::$variant(respond_command) => {
                         respond_command
-                            .send(result)
+                            .send(serde_path_to_error::deserialize(result)
+                                .map_err(crate::result::Error::ParseReceivedWithPath)?)
                             .map_err(|_| crate::result::Error::CommandCallerExited)
                     }
                 ),*
-                (left, right) => panic!("{left:?} {right:?}"),
             }
         }
     };
@@ -173,8 +175,10 @@ impl WebDriverHandler {
 
     fn handle_message(&mut self, message: String) -> crate::result::Result<()> {
         println!("{message}");
-        let parsed_message: WebDriverBiDiLocalEndMessage<ResultData> =
-            serde_json::from_str(&message).map_err(crate::result::Error::ParseReceived)?;
+        let jd = &mut serde_json::Deserializer::from_str(&message);
+        let parsed_message: WebDriverBiDiLocalEndMessage<Value> =
+            serde_path_to_error::deserialize(jd)
+                .map_err(crate::result::Error::ParseReceivedWithPath)?;
         match parsed_message {
             WebDriverBiDiLocalEndMessage::CommandResponse(
                 WebDriverBiDiLocalEndCommandResponse { id, result },
