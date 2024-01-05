@@ -7,7 +7,7 @@ use super::{BrowsingContext, Navigation, ReadinessState};
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.navigate")]
 #[serde(rename_all = "camelCase")]
-pub struct CommandType {
+pub struct Command {
     pub params: Parameters,
 }
 

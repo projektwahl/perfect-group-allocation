@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "method")]
 #[serde(rename = "session.end")]
 #[serde(rename_all = "camelCase")]
-pub struct CommandType {
+pub struct Command {
     pub params: Parameters,
 }
 

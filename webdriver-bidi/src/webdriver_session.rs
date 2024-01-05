@@ -13,8 +13,8 @@ impl WebDriverSession {
     pub async fn session_end(mut self) -> Result<(), tokio_tungstenite::tungstenite::Error> {
         let result: session::end::Result = self
             .driver
-            .send_command(WebDriverBiDiRemoteEndCommandData::SessionCommand(
-                session::Command::SessionEnd(session::end::CommandType {
+            .send_command(WebDriverBiDiRemoteEndCommandData::Session(
+                session::Command::End(session::end::Command {
                     params: session::end::Parameters {},
                 }),
             ))
@@ -28,7 +28,7 @@ impl WebDriverSession {
     ) -> Result<browsing_context::get_tree::Result, tokio_tungstenite::tungstenite::Error> {
         self.driver
             .send_command(WebDriverBiDiRemoteEndCommandData::BrowsingContext(
-                browsing_context::Command::GetTree(browsing_context::get_tree::CommandType {
+                browsing_context::Command::GetTree(browsing_context::get_tree::Command {
                     params: browsing_context::get_tree::Parameters {
                         max_depth: None,
                         root: None,
@@ -45,7 +45,7 @@ impl WebDriverSession {
     ) -> Result<browsing_context::navigate::Result, tokio_tungstenite::tungstenite::Error> {
         self.driver
             .send_command(WebDriverBiDiRemoteEndCommandData::BrowsingContext(
-                browsing_context::Command::Navigate(browsing_context::navigate::CommandType {
+                browsing_context::Command::Navigate(browsing_context::navigate::Command {
                     params: browsing_context::navigate::Parameters {
                         context,
                         url,
@@ -61,8 +61,8 @@ impl WebDriverSession {
         browsing_context: BrowsingContext,
     ) -> Result<session::subscribe::Result, tokio_tungstenite::tungstenite::Error> {
         self.driver
-            .send_command(WebDriverBiDiRemoteEndCommandData::SessionCommand(
-                session::Command::Subscribe(session::subscribe::CommandType {
+            .send_command(WebDriverBiDiRemoteEndCommandData::Session(
+                session::Command::Subscribe(session::subscribe::Command {
                     params: SubscriptionRequest {
                         events: vec!["log.entryAdded".to_owned()],
                         contexts: vec![browsing_context],

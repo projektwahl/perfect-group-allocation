@@ -7,7 +7,7 @@ use super::BrowsingContext;
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.getTree")]
 #[serde(rename_all = "camelCase")]
-pub struct CommandType {
+pub struct Command {
     pub params: Parameters,
 }
 

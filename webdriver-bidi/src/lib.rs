@@ -71,7 +71,7 @@ pub struct WebDriverBiDiRemoteEndCommand {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum WebDriverBiDiRemoteEndCommandData {
-    SessionCommand(session::Command),
+    Session(session::Command),
     BrowsingContext(browsing_context::Command),
 }
 

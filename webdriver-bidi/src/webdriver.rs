@@ -136,8 +136,8 @@ impl WebDriver {
         mut self,
     ) -> Result<WebDriverSession, tokio_tungstenite::tungstenite::Error> {
         let result: crate::session::new::Result = self
-            .send_command(WebDriverBiDiRemoteEndCommandData::SessionCommand(
-                session::Command::SessionNew(crate::session::new::CommandType {
+            .send_command(WebDriverBiDiRemoteEndCommandData::Session(
+                session::Command::New(crate::session::new::Command {
                     params: session::new::Parameters {
                         capabilities: session::new::CapabilitiesRequest {},
                     },

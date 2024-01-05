@@ -6,7 +6,7 @@ use serde_json::Value;
 #[serde(tag = "method")]
 #[serde(rename = "session.new")]
 #[serde(rename_all = "camelCase")]
-pub struct CommandType {
+pub struct Command {
     pub params: Parameters,
 }
 

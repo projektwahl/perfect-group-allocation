@@ -8,9 +8,9 @@ pub mod navigate;
 #[serde(untagged)]
 pub enum Command {
     /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
-    GetTree(get_tree::CommandType),
+    GetTree(get_tree::Command),
     /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
-    Navigate(navigate::CommandType),
+    Navigate(navigate::Command),
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Info>

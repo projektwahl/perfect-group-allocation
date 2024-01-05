@@ -11,11 +11,11 @@ pub mod subscribe;
 #[serde(untagged)]
 pub enum Command {
     /// https://w3c.github.io/webdriver-bidi/#command-session-new
-    SessionNew(new::CommandType),
+    New(new::Command),
     /// https://w3c.github.io/webdriver-bidi/#command-session-end
-    SessionEnd(end::CommandType),
+    End(end::Command),
     /// https://w3c.github.io/webdriver-bidi/#command-session-subscribe
-    Subscribe(subscribe::CommandType),
+    Subscribe(subscribe::Command),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
