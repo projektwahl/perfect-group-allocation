@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use tokio::sync::oneshot;
 
 use super::BrowsingContext;
 use crate::CommandResultPair;
@@ -26,10 +25,7 @@ pub struct Result {
     pub contexts: Vec<super::Info>,
 }
 
-impl CommandResultPair<Command, Result> for () {
-    fn create_respond_command(
-        input: oneshot::Sender<Result>,
-    ) -> crate::webdriver_handler::RespondCommand {
-        todo!()
-    }
+impl CommandResultPair for (Command, Result) {
+    type Command = Command;
+    type Result = Result;
 }

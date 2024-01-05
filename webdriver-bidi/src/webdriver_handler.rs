@@ -9,7 +9,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use crate::{
-    browsing_context, session, CommandResultPair, WebDriverBiDiLocalEndCommandResponse,
+    session, CommandResultPair, ResultData, WebDriverBiDiLocalEndCommandResponse,
     WebDriverBiDiLocalEndMessage, WebDriverBiDiLocalEndMessageErrorResponse,
     WebDriverBiDiRemoteEndCommand,
 };
@@ -121,27 +121,43 @@ impl WebDriverHandler {
                     }
                 }
                 Some(command_session_new) = self.receive_command.recv() => {
-                    handle_command(self, command_session_new).await;
+                    self.handle_command(command_session_new).await;
                 }
             }
         }
     }
 
-    async fn handle_command_internal<Command: Serialize, Result>(
+    async fn handle_command(&mut self, input: SendCommand) -> crate::result::Result<()> {
+        match input {
+            SendCommand::SessionNew(command, sender) => {
+                self.handle_command_internal(command, sender).await
+            }
+            SendCommand::SessionEnd(command, sender) => {
+                self.handle_command_internal(command, sender).await
+            }
+            SendCommand::SessionSubscribe(command, sender) => {
+                self.handle_command_internal(command, sender).await
+            }
+            SendCommand::BrowsingContextGetTree(command, sender) => {
+                self.handle_command_internal(command, sender).await
+            }
+            SendCommand::BrowsingContextNavigate(command, sender) => {
+                self.handle_command_internal(command, sender).await
+            }
+        }
+    }
+
+    async fn handle_command_internal<C: Serialize, R>(
         &mut self,
-        command_data: Command,
-        sender: oneshot::Sender<oneshot::Receiver<Result>>,
-    ) -> crate::result::Result<()>
-    where
-        (): CommandResultPair<Command, Result>,
-    {
+        command_data: C,
+        sender: oneshot::Sender<oneshot::Receiver<R>>,
+        respond_command_constructor: impl FnOnce(oneshot::Sender<R>) -> RespondCommand,
+    ) -> crate::result::Result<()> {
         self.id += 1;
 
         let (tx, rx) = oneshot::channel();
-        self.pending_commands.insert(
-            self.id,
-            <() as CommandResultPair<Command, Result>>::create_respond_command(tx),
-        );
+        self.pending_commands
+            .insert(self.id, respond_command_constructor(tx));
 
         // starting from here this could be done asynchronously
         // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that

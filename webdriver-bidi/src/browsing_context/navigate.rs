@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
-use tokio::sync::oneshot;
 
 use super::{BrowsingContext, Navigation, ReadinessState};
-use crate::CommandResultPair;
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,12 +24,4 @@ pub struct Parameters {
 pub struct Result {
     pub navigation: Option<Navigation>,
     pub url: String,
-}
-
-impl CommandResultPair<Command, Result> for () {
-    fn create_respond_command(
-        input: oneshot::Sender<Result>,
-    ) -> crate::webdriver_handler::RespondCommand {
-        todo!()
-    }
 }

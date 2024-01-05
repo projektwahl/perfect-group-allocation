@@ -1,8 +1,5 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tokio::sync::oneshot;
-
-use crate::CommandResultPair;
 
 /// <https://w3c.github.io/webdriver-bidi/#module-session-definition>
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,12 +39,4 @@ pub struct ResultCapabilities {
     //webSocketUrl: Option<text / true>,
     #[serde(flatten)]
     pub extensible: Value,
-}
-
-impl CommandResultPair<Command, Result> for () {
-    fn create_respond_command(
-        input: oneshot::Sender<Result>,
-    ) -> crate::webdriver_handler::RespondCommand {
-        todo!()
-    }
 }
