@@ -24,3 +24,5 @@ pub enum Error {
     #[error("the command task exited. this may be because you requested it or because it crashed")]
     CommandTaskExited,
 }
+
+pub type Result<T> = core::result::Result<T, Error>;

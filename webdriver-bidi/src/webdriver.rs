@@ -22,12 +22,12 @@ use crate::{
 /// <https://w3c.github.io/webdriver-bidi>
 // TODO FIXME make usable from multiple threads
 // TODO FIXME implement pipelining
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WebDriver {
     /// send a session new command
     command_session_new: mpsc::Sender<(
         crate::session::new::Command,
-        oneshot::Sender<crate::session::new::Result>,
+        oneshot::Sender<oneshot::Receiver<crate::session::new::Result>>,
     )>,
     // send a subscribe command for global log messages and receive the subscription channel.
     // when we have received the subscription channel we can be sure that the command has been sent (for ordering purposes).
@@ -50,8 +50,8 @@ impl WebDriver {
     /// Creates a new [WebDriver BiDi](https://w3c.github.io/webdriver-bidi) connection.
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
-    pub async fn new() -> Result<Self, crate::error::Error> {
-        let tmp_dir = tempdir().map_err(crate::error::Error::TmpDirCreateError)?;
+    pub async fn new() -> Result<Self, crate::result::Error> {
+        let tmp_dir = tempdir().map_err(crate::result::Error::TmpDirCreateError)?;
 
         let mut child = tokio::process::Command::new("firefox")
             .kill_on_drop(true)
@@ -66,7 +66,7 @@ impl WebDriver {
             ])
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(crate::error::Error::SpawnBrowserError)?;
+            .map_err(crate::result::Error::SpawnBrowserError)?;
 
         let stderr = child.stderr.take().unwrap();
 
@@ -78,31 +78,31 @@ impl WebDriver {
             let status = child
                 .wait()
                 .await
-                .map_err(crate::error::Error::FailedToRunBrowser)?;
+                .map_err(crate::result::Error::FailedToRunBrowser)?;
 
             println!("child status was: {status}");
 
-            Ok::<(), crate::error::Error>(())
+            Ok::<(), crate::result::Error>(())
         });
 
         let mut port = None;
         while let Some(line) = reader
             .next_line()
             .await
-            .map_err(crate::error::Error::ReadBrowserStderr)?
+            .map_err(crate::result::Error::ReadBrowserStderr)?
         {
             eprintln!("{line}");
             if let Some(p) = line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:") {
                 port = Some(
                     p.parse::<u16>()
-                        .map_err(crate::error::Error::PortDetectError)?,
+                        .map_err(crate::result::Error::PortDetectError)?,
                 );
                 break;
             }
         }
 
         let Some(port) = port else {
-            return Err(crate::error::Error::PortNotFound);
+            return Err(crate::result::Error::PortNotFound);
         };
 
         tokio::spawn(async move {
@@ -208,34 +208,59 @@ impl WebDriver {
             }
         }
     */
-    pub async fn session_new(
-        mut self,
-    ) -> Result<
-        impl Future<Output = Result<WebDriverSession, crate::error::Error>>,
-        crate::error::Error,
+    pub fn session_new<'a>(
+        &self,
+    ) -> impl Future<
+        Output = crate::result::Result<
+            impl Future<Output = crate::result::Result<WebDriverSession>>,
+        >,
     > {
-        let (tx, rx) = oneshot::channel();
-
-        self.command_session_new
-            .send((
-                crate::session::new::Command {
-                    params: session::new::Parameters {
-                        capabilities: session::new::CapabilitiesRequest {},
+        async {
+            let result = self
+                .send_command(
+                    &self.command_session_new,
+                    crate::session::new::Command {
+                        params: session::new::Parameters {
+                            capabilities: session::new::CapabilitiesRequest {},
+                        },
                     },
-                },
-                tx,
-            ))
-            .await
-            .map_err(|_| crate::error::Error::CommandTaskExited)?;
-
-        Ok(async {
-            let result = rx
-                .await
-                .map_err(|_| crate::error::Error::CommandTaskExited)?;
-            Ok(WebDriverSession {
-                session_id: result.session_id,
-                driver: self,
+                )
+                .await?;
+            Ok(async {
+                let result = result.await?;
+                Ok(WebDriverSession {
+                    session_id: result.session_id,
+                    driver: self.clone(),
+                })
             })
-        })
+        }
+    }
+
+    pub fn send_command<'a: 'b, 'b, C: 'static, R: 'static>(
+        &'a self,
+        queue: &'b mpsc::Sender<(C, oneshot::Sender<oneshot::Receiver<R>>)>,
+        command: C,
+    ) -> impl Future<
+        Output = crate::result::Result<impl Future<Output = crate::result::Result<R>> + 'a>,
+    > + 'b {
+        let (tx, rx) = oneshot::channel();
+        let sending = queue.send((command, tx));
+        async {
+            sending
+                .await
+                .map_err(|_| crate::result::Error::CommandTaskExited)?;
+
+            // when we received the final receiver, we can be sure that our command got handled and is ordered before all commands that we sent afterwards.
+            let rx = rx
+                .await
+                .map_err(|_| crate::result::Error::CommandTaskExited)?;
+
+            Ok(async {
+                let result = rx
+                    .await
+                    .map_err(|_| crate::result::Error::CommandTaskExited)?;
+                Ok(result)
+            })
+        }
     }
 }

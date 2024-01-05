@@ -2,8 +2,8 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 pub mod browsing_context;
-pub mod error;
 pub mod log;
+pub mod result;
 pub mod session;
 pub mod webdriver;
 pub mod webdriver_session;
