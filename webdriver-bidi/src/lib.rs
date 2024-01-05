@@ -11,6 +11,8 @@ pub mod webdriver_session;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tokio::sync::oneshot;
+use webdriver_handler::RespondCommand;
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
@@ -85,9 +87,8 @@ pub enum ResultData {
     BrowsingContext(browsing_context::Result),
 }
 
-pub trait CommandResultPair {
-    type Command;
-    type Result;
+pub trait CommandResultPair<Command, Result> {
+    fn create_respond_command(input: oneshot::Sender<Result>) -> RespondCommand;
 }
 
 #[cfg(test)]
