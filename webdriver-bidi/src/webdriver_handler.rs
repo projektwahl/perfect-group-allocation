@@ -38,6 +38,10 @@ pub enum SendCommand {
 
 pub enum RespondCommand {
     SessionNew(oneshot::Sender<crate::session::new::Result>),
+    SessionEnd(oneshot::Sender<crate::session::end::Result>),
+    SessionSubscribe(oneshot::Sender<crate::session::subscribe::Result>),
+    BrowsingContextGetTree(oneshot::Sender<crate::browsing_context::get_tree::Result>),
+    BrowsingContextNavigate(oneshot::Sender<crate::browsing_context::navigate::Result>),
 }
 
 pub struct WebDriverHandler {
@@ -90,9 +94,32 @@ impl WebDriverHandler {
     async fn handle_command(&mut self, input: SendCommand) -> crate::result::Result<()> {
         match input {
             SendCommand::SessionNew(command, sender) => {
-                let (tx, rx) = oneshot::channel();
-                self.handle_command_internal(command, sender, rx, RespondCommand::SessionNew(tx))
+                self.handle_command_internal(command, sender, RespondCommand::SessionNew)
                     .await
+            }
+            SendCommand::SessionEnd(command, sender) => {
+                self.handle_command_internal(command, sender, RespondCommand::SessionEnd)
+                    .await
+            }
+            SendCommand::SessionSubscribe(command, sender) => {
+                self.handle_command_internal(command, sender, RespondCommand::SessionSubscribe)
+                    .await
+            }
+            SendCommand::BrowsingContextGetTree(command, sender) => {
+                self.handle_command_internal(
+                    command,
+                    sender,
+                    RespondCommand::BrowsingContextGetTree,
+                )
+                .await
+            }
+            SendCommand::BrowsingContextNavigate(command, sender) => {
+                self.handle_command_internal(
+                    command,
+                    sender,
+                    RespondCommand::BrowsingContextNavigate,
+                )
+                .await
             }
         }
     }
@@ -101,12 +128,13 @@ impl WebDriverHandler {
         &mut self,
         command_data: C,
         sender: oneshot::Sender<oneshot::Receiver<R>>,
-        rx: oneshot::Receiver<R>,
-        tx: RespondCommand,
+        respond_command_constructor: impl FnOnce(oneshot::Sender<R>) -> RespondCommand,
     ) -> crate::result::Result<()> {
         self.id += 1;
 
-        self.pending_commands.insert(self.id, tx);
+        let (tx, rx) = oneshot::channel();
+        self.pending_commands
+            .insert(self.id, respond_command_constructor(tx));
 
         // starting from here this could be done asynchronously
         // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
