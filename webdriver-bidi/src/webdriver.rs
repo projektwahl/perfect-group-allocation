@@ -125,16 +125,35 @@ impl WebDriver {
         &self,
     ) -> crate::result::Result<impl Future<Output = crate::result::Result<WebDriverSession>>> {
         let (tx, rx) = oneshot::channel();
-
-        self.send_command
-            .send(SendCommand::SessionNew((
-                crate::session::new::Command {
-                    params: session::new::Parameters {
-                        capabilities: session::new::CapabilitiesRequest {},
+        let test = self
+            .send_command(
+                SendCommand::SessionNew((
+                    crate::session::new::Command {
+                        params: session::new::Parameters {
+                            capabilities: session::new::CapabilitiesRequest {},
+                        },
                     },
-                },
-                tx,
-            )))
+                    tx,
+                )),
+                rx,
+            )
+            .await?;
+        Ok(async {
+            let result = test.await?;
+            Ok(WebDriverSession {
+                session_id: result.session_id,
+                driver: self.clone(),
+            })
+        })
+    }
+
+    pub(crate) async fn send_command<R>(
+        &self,
+        send_command: SendCommand,
+        rx: oneshot::Receiver<oneshot::Receiver<R>>,
+    ) -> crate::result::Result<impl Future<Output = crate::result::Result<R>>> {
+        self.send_command
+            .send(send_command)
             .await
             .map_err(|_| crate::result::Error::CommandTaskExited)?;
 
@@ -147,10 +166,7 @@ impl WebDriver {
             let result = rx
                 .await
                 .map_err(|_| crate::result::Error::CommandTaskExited)?;
-            Ok(WebDriverSession {
-                session_id: result.session_id,
-                driver: self.clone(),
-            })
+            Ok(result)
         })
     }
 }
