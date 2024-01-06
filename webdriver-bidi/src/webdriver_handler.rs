@@ -22,7 +22,7 @@ macro_rules! magic {
             $(#[doc = $doc:expr] $variant:ident($tag:literal $($command:ident)::+)),*
         }
         pub enum {
-            $(#[doc = $doc_subscription:expr] $variant_subscription:ident($tag_subscription:literal $($command_subscription:ident)::+)),*
+            $(#[doc = $doc_subscription:expr] $variant_subscription:ident($tag_subscription:literal $subscription_store:ident $($command_subscription:ident)::+)),*
         }
     ) => {
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
@@ -71,13 +71,13 @@ macro_rules! magic {
                 ),*
                 $(
                     SendCommand::$variant_subscription(command, sender) => {
-                        this.handle_subscription_internal(command, sender, RespondCommand::$variant_subscription).await
+                        this.handle_global_subscription_internal(command, sender, &mut this.$subscription_store, RespondCommand::$variant_subscription).await
                     }
                 ),*
             }
         }
 
-        fn send_response(result: Value, respond_command: RespondCommand) -> crate::result::Result<()> {
+        fn send_response(this: &mut WebDriverHandler, result: Value, respond_command: RespondCommand) -> crate::result::Result<()> {
             match (respond_command) {
                 $(
                     RespondCommand::$variant(respond_command) => {
@@ -92,7 +92,7 @@ macro_rules! magic {
                         // result here is the result of the subscribe command which should be empty
                         // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
                         respond_command
-                            .send()
+                            .send(this.$subscription_store.unwrap().0.subscribe())
                             .map_err(|_| crate::result::Error::CommandCallerExited)
                     }
                 ),*
@@ -116,7 +116,7 @@ magic! {
     }
     pub enum {
         /// tmp
-        SubscribeGlobalLogs("log.entryAdded" log::Entry)
+        SubscribeGlobalLogs("log.entryAdded" global_log_subscriptions log::Entry)
     }
 }
 
