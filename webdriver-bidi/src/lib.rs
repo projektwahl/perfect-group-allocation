@@ -11,6 +11,7 @@ pub mod webdriver_session;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use webdriver_handler::EventData;
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,7 +22,7 @@ pub enum WebDriverBiDiLocalEndMessage<ResultData> {
     #[serde(rename = "error")]
     ErrorResponse(WebDriverBiDiLocalEndMessageErrorResponse),
     #[serde(rename = "event")]
-    Event(WebDriverBiDiLocalEndEvent<Value>),
+    Event(EventData),
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
@@ -31,21 +32,6 @@ pub struct WebDriverBiDiLocalEndCommandResponse<ResultData> {
     result: ResultData,
     //#[serde(flatten)]
     //extensible: Value,
-}
-
-// https://w3c.github.io/webdriver-bidi/#protocol-definition
-#[derive(Debug, Serialize, Deserialize)]
-pub struct WebDriverBiDiLocalEndEvent<EventData> {
-    #[serde(flatten)]
-    event_data: EventData,
-    // #[serde(flatten)]
-    //extensible: Value,
-}
-
-// https://w3c.github.io/webdriver-bidi/#protocol-definition
-#[derive(Debug, Serialize, Deserialize)]
-pub enum WebDriverBiDiLocalEndEventData {
-    LogEvent(log::Event),
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
@@ -67,13 +53,4 @@ pub struct WebDriverBiDiRemoteEndCommand<T> {
     command_data: T,
     //#[serde(flatten)]
     //extensible: Value,
-}
-
-#[cfg(test)]
-mod tests {
-
-    #[tokio::test]
-    async fn it_works() -> Result<(), tokio_tungstenite::tungstenite::Error> {
-        Ok(())
-    }
 }

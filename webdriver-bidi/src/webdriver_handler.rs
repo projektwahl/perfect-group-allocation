@@ -43,11 +43,22 @@ macro_rules! magic {
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
         #[serde(tag = "method")]
-        pub enum WebDriverBiDiRemoteEndCommandData {
+        pub enum CommandData {
             $(
                 #[doc = $doc]
                 #[serde(rename = $tag)]
                 $variant($($command)::*::Command)
+            ,)*
+        }
+
+        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+        #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+        #[serde(tag = "method")]
+        pub enum EventData {
+            $(
+                #[doc = $doc_subscription]
+                #[serde(rename = $tag_subscription)]
+                $variant_subscription($($command_subscription)::*)
             ,)*
         }
 
@@ -286,7 +297,7 @@ impl WebDriverHandler {
 
                 Ok(())
             }
-            WebDriverBiDiLocalEndMessage::Event(event) => todo!("{event:?}"),
+            WebDriverBiDiLocalEndMessage::Event(event) => {}
         }
     }
 }
