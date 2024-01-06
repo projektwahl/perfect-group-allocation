@@ -116,6 +116,7 @@ macro_rules! magic {
                         // TODO FIXME don't unwrap but unsubscribe in this case
                         // TODO FIXME extract method
                        this.global_subscriptions.$variant_subscription.as_ref().unwrap().0.send(event).unwrap();
+                       // TODO FIXME we first need to find out how to get the browsing context from eventdata
                     }
                 ),*
             }
