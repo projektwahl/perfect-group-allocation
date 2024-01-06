@@ -71,7 +71,7 @@ macro_rules! magic {
                 ),*
                 $(
                     SendCommand::$variant_subscription(command, sender) => {
-                        this.handle_global_subscription_internal(command, sender, &mut this.$subscription_store, RespondCommand::$variant_subscription).await
+                        this.handle_global_subscription_internal(command, sender, |this| &mut this.$subscription_store, RespondCommand::$variant_subscription).await
                     }
                 ),*
             }
@@ -92,7 +92,7 @@ macro_rules! magic {
                         // result here is the result of the subscribe command which should be empty
                         // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
                         respond_command
-                            .send(this.$subscription_store.unwrap().0.subscribe())
+                            .send(this.$subscription_store.as_mut().unwrap().0.subscribe())
                             .map_err(|_| crate::result::Error::CommandCallerExited)
                     }
                 ),*
@@ -190,13 +190,16 @@ impl WebDriverHandler {
         &mut self,
         command_data: C,
         sender: oneshot::Sender<broadcast::Receiver<R>>,
-        global_subscriptions: &mut Option<(broadcast::Sender<R>, broadcast::Receiver<R>)>,
+        global_subscriptions: impl Fn(
+            &mut WebDriverHandler,
+        )
+            -> &mut Option<(broadcast::Sender<R>, broadcast::Receiver<R>)>,
         respond_command_constructor: impl FnOnce(
             oneshot::Sender<broadcast::Receiver<R>>,
         ) -> RespondCommand
         + Send,
     ) -> crate::result::Result<()> {
-        let subscription = match &global_subscriptions {
+        let subscription = match global_subscriptions(self) {
             Some(subscription) => subscription,
             None => {
                 self.id += 1;
@@ -222,7 +225,7 @@ impl WebDriverHandler {
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
                 self.stream.send(Message::Text(string)).await?;
 
-                global_subscriptions.insert(broadcast::channel(10))
+                global_subscriptions(self).insert(broadcast::channel(10))
             }
         };
         sender.send(subscription.0.subscribe());
@@ -268,7 +271,7 @@ impl WebDriverHandler {
                     .remove(&id)
                     .ok_or(crate::result::Error::ResponseWithoutRequest(id))?;
 
-                send_response(result, respond_command)
+                send_response(self, result, respond_command)
             }
             WebDriverBiDiLocalEndMessage::ErrorResponse(
                 WebDriverBiDiLocalEndMessageErrorResponse {
