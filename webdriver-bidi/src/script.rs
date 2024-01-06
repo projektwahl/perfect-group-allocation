@@ -41,6 +41,10 @@ pub struct Handle(String);
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InternalId(String);
 
+/// <https://w3c.github.io/webdriver-bidi/#type-script-SharedId>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SharedId(String);
+
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
@@ -51,46 +55,70 @@ pub enum RemoteValue {
     #[serde(rename = "null")]
     PrimitiveProtocolValueNull,
     #[serde(rename = "string")]
-    PrimitiveProtocolValueString {
-        value: String,
-    },
+    PrimitiveProtocolValueString { value: String },
     #[serde(rename = "number")]
     PrimitiveProtocolValueNumber {
         value: f64, // TODO FIXME
     },
     #[serde(rename = "boolean")]
-    PrimitiveProtocolValueBoolean {
-        value: bool,
-    },
+    PrimitiveProtocolValueBoolean { value: bool },
     #[serde(rename = "bigint")]
-    PrimitiveProtocolValueBigInt {
-        value: String,
-    },
+    PrimitiveProtocolValueBigInt { value: String },
     #[serde(rename = "symbol")]
     Symbol(SymbolRemoteValue),
+    #[serde(rename = "array")]
     Array(ArrayRemoteValue),
+    #[serde(rename = "object")]
     Object(ObjectRemoteValue),
+    #[serde(rename = "function")]
     Function(FunctionRemoteValue),
+    #[serde(rename = "regexp")]
     RegExp(RegExpRemoteValue),
+    #[serde(rename = "date")]
     Date(DateRemoteValue),
+    #[serde(rename = "map")]
     Map(MapRemoteValue),
+    #[serde(rename = "set")]
     Set(SetRemoteValue),
+    #[serde(rename = "weakmap")]
     WeakMap(WeakMapRemoteValue),
+    #[serde(rename = "weakset")]
     WeakSet(WeakSetRemoteValue),
+    #[serde(rename = "iterator")]
     Iterator(IteratorRemoteValue),
+    #[serde(rename = "generator")]
     Generator(GeneratorRemoteValue),
+    #[serde(rename = "error")]
     Error(ErrorRemoteValue),
+    #[serde(rename = "proxy")]
     Proxy(ProxyRemoteValue),
+    #[serde(rename = "promise")]
     Promise(PromiseRemoteValue),
+    #[serde(rename = "typedarray")]
     TypedArray(TypedArrayRemoteValue),
+    #[serde(rename = "arraybuffer")]
     ArrayBuffer(ArrayBufferRemoteValue),
+    #[serde(rename = "nodelist")]
     NodeList(NodeListRemoteValue),
+    #[serde(rename = "htmlcollection")]
     HTMLCollection(HTMLCollectionRemoteValue),
+    #[serde(rename = "node")]
     Node(NodeRemoteValue),
+    #[serde(rename = "window")]
     WindowProxy(WindowProxyRemoteValue),
 }
 
 // TODO FIXME Option
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ListRemoteValue(Vec<RemoteValue>);
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct MappingRemoteValue(Vec<Vec<(RemoteValue, RemoteValue)>>); // TODO FIXME
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -132,7 +160,16 @@ pub struct FunctionRemoteValue {
 pub struct RegExpRemoteValue {
     handle: Option<Handle>,
     internal_id: Option<InternalId>,
-} // .and script.RegExpLocalValue
+    value: RegExpValue,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RegExpValue {
+    pattern: String,
+    flags: Option<String>,
+}
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -140,7 +177,8 @@ pub struct RegExpRemoteValue {
 pub struct DateRemoteValue {
     handle: Option<Handle>,
     internal_id: Option<InternalId>,
-} // .and script.DateLocalValue
+    value: String,
+}
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -283,4 +321,11 @@ pub struct WindowProxyRemoteValue {
     value: WindowProxyProperties,
     handle: Option<Handle>,
     internal_id: Option<InternalId>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowProxyProperties {
+    context: BrowsingContext,
 }
