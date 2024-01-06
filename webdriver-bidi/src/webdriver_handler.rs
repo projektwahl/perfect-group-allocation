@@ -64,14 +64,14 @@ macro_rules! magic {
             ,)*
         }
 
-         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-         #[derive(Debug)]
-         pub enum GlobalEventSubscription {
-             $(
+        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+        #[derive(Debug, Default)]
+        pub struct GlobalEventSubscription {
+            $(
                 #[doc = $doc_subscription]
-                $variant_subscription(Option<(broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>)
-             ,)*
-         }
+                $variant_subscription: Option<(broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>
+            ,)*
+        }
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
@@ -93,7 +93,7 @@ macro_rules! magic {
                 ),*
                 $(
                     SendCommand::$variant_subscription(command, sender) => {
-                        this.handle_global_subscription_internal(command, sender, RespondCommand::$variant_subscription).await?;
+                        this.handle_global_subscription_internal(command, sender, |ges| &mut ges.$variant_subscription, RespondCommand::$variant_subscription).await?;
                     }
                 ),*
             }
@@ -106,7 +106,7 @@ macro_rules! magic {
                     EventData::$variant_subscription(event) => {
                         // TODO FIXME don't unwrap but unsubscribe in this case
                         // TODO FIXME extract method
-                       // this.$subscription_store.as_ref().unwrap().0.send(event).unwrap();
+                       this.global_subscriptions.$variant_subscription.as_ref().unwrap().0.send(event).unwrap();
                     }
                 ),*
             }
@@ -127,35 +127,15 @@ macro_rules! magic {
                     RespondCommand::$variant_subscription(respond_command) => {
                         // result here is the result of the subscribe command which should be empty
                         // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
-                        //respond_command
-                        //    .send(this.$subscription_store.as_mut().unwrap().0.subscribe())
-                        //    .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
+                        respond_command
+                            .send(this.global_subscriptions.$variant_subscription.as_mut().unwrap().0.subscribe())
+                            .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
                     }
                 ),*
             }
             Ok(())
         }
     };
-}
-
-impl PartialEq for GlobalEventSubscription {
-    fn eq(&self, other: &Self) -> bool {
-        core::mem::discriminant(self) == core::mem::discriminant(other)
-    }
-}
-
-impl Eq for GlobalEventSubscription {}
-
-impl Hash for GlobalEventSubscription {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        core::mem::discriminant(self).hash(state);
-    }
-}
-
-impl Borrow<String> for GlobalEventSubscription {
-    fn borrow(&self) -> &String {
-        todo!()
-    }
 }
 
 magic! {
@@ -192,7 +172,7 @@ pub struct WebDriverHandler {
             broadcast::Receiver<log::EntryAdded>,
         ),
     >,
-    global_subscriptions: HashSet<GlobalEventSubscription>,
+    global_subscriptions: GlobalEventSubscription,
 }
 
 impl WebDriverHandler {
@@ -207,7 +187,7 @@ impl WebDriverHandler {
             magic: HashMap::default(),
             pending_commands: HashMap::default(),
             log_subscriptions: HashMap::default(),
-            global_subscriptions: HashSet::default(),
+            global_subscriptions: GlobalEventSubscription::default(),
         };
         this.handle_internal().await;
     }
@@ -248,12 +228,18 @@ impl WebDriverHandler {
         &mut self,
         command_data: C,
         sender: oneshot::Sender<broadcast::Receiver<R>>,
+        global_event_subscription: impl Fn(
+            &mut GlobalEventSubscription,
+        ) -> &mut Option<(
+            broadcast::Sender<R>,
+            broadcast::Receiver<R>,
+        )> + Send,
         respond_command_constructor: impl FnOnce(
             oneshot::Sender<broadcast::Receiver<R>>,
         ) -> RespondCommand
         + Send,
     ) -> crate::result::Result<()> {
-        match self.global_subscriptions.get(&"test".to_string()) {
+        match global_event_subscription(&mut self.global_subscriptions) {
             Some(subscription) => {
                 sender.send(subscription.0.subscribe());
             }
@@ -276,7 +262,8 @@ impl WebDriverHandler {
 
                 println!("{string}");
 
-                global_subscriptions(self).insert(broadcast::channel(10));
+                global_event_subscription(&mut self.global_subscriptions)
+                    .insert(broadcast::channel(10));
 
                 // starting from here this could be done asynchronously
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
