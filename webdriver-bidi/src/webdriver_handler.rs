@@ -29,13 +29,15 @@ macro_rules! magic {
         #[derive(Debug)]
         pub enum SendCommand {
             $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<$($command)::*::Result>),)*
+            // TODO FIXME somehow handle subscribing to multiple events at once
+            $(#[doc = $doc_subscription] $variant_subscription(Vec<BrowsingContext>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
         }
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug)]
         pub enum RespondCommand {
             $(#[doc = $doc] $variant(oneshot::Sender<$($command)::*::Result>),)*
-            $(#[doc = $doc_subscription] $variant_subscription(oneshot::Sender<$($command_subscription)::*>),)*
+            $(#[doc = $doc_subscription] $variant_subscription(oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
         }
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
@@ -65,6 +67,11 @@ macro_rules! magic {
                 $(
                     SendCommand::$variant(command, sender) => {
                         this.handle_command_internal(command, sender, RespondCommand::$variant).await
+                    }
+                ),*
+                $(
+                    SendCommand::$variant_subscription(command, sender) => {
+                        this.handle_subscription_internal(command, sender, RespondCommand::$variant_subscription).await
                     }
                 ),*
             }
@@ -112,16 +119,11 @@ magic! {
     }
 }
 
-pub enum SendSubscribeGlobalEvent {
-    Log(oneshot::Sender<broadcast::Receiver<log::Entry>>),
-}
-
 pub struct WebDriverHandler {
     id: u64,
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
     receive_command: mpsc::UnboundedReceiver<SendCommand>,
-    pending_commands: HashMap<u64, RespondCommand>, // TODO FIXME RespondCommand should contain some special things for subscriptions?
-    receive_subscription: mpsc::UnboundedReceiver<SendSubscribeGlobalEvent>,
+    pending_commands: HashMap<u64, RespondCommand>,
     log_subscriptions: HashMap<
         BrowsingContext,
         (
@@ -139,13 +141,11 @@ impl WebDriverHandler {
     pub async fn handle(
         stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
         receive_command: mpsc::UnboundedReceiver<SendCommand>,
-        receive_subscription: mpsc::UnboundedReceiver<SendSubscribeGlobalEvent>,
     ) {
         let mut this = Self {
             id: 0,
             stream,
             receive_command,
-            receive_subscription,
             pending_commands: HashMap::default(),
             log_subscriptions: HashMap::default(),
             global_log_subscriptions: None,
@@ -156,9 +156,7 @@ impl WebDriverHandler {
     async fn handle_internal(&mut self) {
         loop {
             tokio::select! {
-                // TODO FIXME for requests use only one queue so the request order is guaranteed
-
-                // TODO FIXME is this cancel safe?
+                // TODO FIXME make this truly parallel. e.g. if receiving a message while sending hangs
                 message = self.stream.next() => {
                     match message {
                         Some(Ok(Message::Text(message))) => {
@@ -182,54 +180,50 @@ impl WebDriverHandler {
                         eprintln!("error {error:?}");
                     }
                 }
-                Some(receive_subscription) = self.receive_subscription.recv() => {
-                    if let Err(error) = self.handle_subscription(receive_subscription).await {
-                        eprintln!("error {error:?}");
-                    }
-                }
             }
         }
         println!("handle closed");
     }
 
-    async fn handle_subscription(
+    async fn handle_subscription_internal<C: Serialize + Debug + Send, R: Send>(
         &mut self,
-        handle_subscription: SendSubscribeGlobalEvent,
+        command_data: C,
+        sender: oneshot::Sender<broadcast::Receiver<R>>,
+        respond_command_constructor: impl FnOnce(
+            oneshot::Sender<broadcast::Receiver<R>>,
+        ) -> RespondCommand
+        + Send,
     ) -> crate::result::Result<()> {
-        match handle_subscription {
-            SendSubscribeGlobalEvent::Log(response) => {
-                let subscription = match &self.global_log_subscriptions {
-                    Some(subscription) => subscription,
-                    None => {
-                        self.id += 1;
+        let subscription = match &self.global_log_subscriptions {
+            Some(subscription) => subscription,
+            None => {
+                self.id += 1;
 
-                        let (tx, rx) = oneshot::channel();
-                        self.pending_commands
-                            .insert(self.id, RespondCommand::SubscribeGlobalLogs(tx));
+                let (tx, rx) = oneshot::channel();
+                self.pending_commands
+                    .insert(self.id, RespondCommand::SubscribeGlobalLogs(tx));
 
-                        let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
-                            id: self.id,
-                            command_data: session::subscribe::Command {
-                                params: session::SubscriptionRequest {
-                                    events: vec!["log.entryAdded".to_owned()],
-                                    contexts: vec![],
-                                },
-                            },
-                        })
-                        .unwrap();
+                let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+                    id: self.id,
+                    command_data: session::subscribe::Command {
+                        params: session::SubscriptionRequest {
+                            events: vec!["log.entryAdded".to_owned()],
+                            contexts: vec![],
+                        },
+                    },
+                })
+                .unwrap();
 
-                        println!("{string}");
+                println!("{string}");
 
-                        // starting from here this could be done asynchronously
-                        // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
-                        self.stream.send(Message::Text(string)).await?;
+                // starting from here this could be done asynchronously
+                // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
+                self.stream.send(Message::Text(string)).await?;
 
-                        self.global_log_subscriptions.insert(broadcast::channel(10))
-                    }
-                };
-                response.send(subscription.0.subscribe());
+                self.global_log_subscriptions.insert(broadcast::channel(10))
             }
-        }
+        };
+        response.send(subscription.0.subscribe());
         Ok(())
     }
 

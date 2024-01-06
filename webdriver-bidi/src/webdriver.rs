@@ -6,7 +6,7 @@ use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::session;
-use crate::webdriver_handler::{SendCommand, SendSubscribeGlobalEvent, WebDriverHandler};
+use crate::webdriver_handler::{SendCommand, WebDriverHandler};
 use crate::webdriver_session::WebDriverSession;
 
 /// <https://w3c.github.io/webdriver-bidi>
@@ -14,8 +14,6 @@ use crate::webdriver_session::WebDriverSession;
 pub struct WebDriver {
     /// send a command
     send_command: mpsc::UnboundedSender<SendCommand>,
-    // send a subscribe command and receive the subscription channel.
-    event_handlers_log: mpsc::UnboundedSender<SendSubscribeGlobalEvent>,
 }
 
 impl WebDriver {
@@ -85,17 +83,11 @@ impl WebDriver {
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session")).await?;
 
         let (command_sender, command_receiver) = mpsc::unbounded_channel();
-        let (subscription_sender, subscription_receiver) = mpsc::unbounded_channel();
 
-        tokio::spawn(WebDriverHandler::handle(
-            stream,
-            command_receiver,
-            subscription_receiver,
-        ));
+        tokio::spawn(WebDriverHandler::handle(stream, command_receiver));
 
         Ok(Self {
             send_command: command_sender,
-            event_handlers_log: subscription_sender,
         })
     }
 
