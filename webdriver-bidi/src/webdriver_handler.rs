@@ -1,3 +1,5 @@
+use core::hash::Hash;
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
@@ -91,7 +93,7 @@ macro_rules! magic {
                 ),*
                 $(
                     SendCommand::$variant_subscription(command, sender) => {
-                        // this.handle_global_subscription_internal(command, sender, RespondCommand::$variant_subscription).await
+                        this.handle_global_subscription_internal(command, sender, RespondCommand::$variant_subscription).await?;
                     }
                 ),*
             }
@@ -134,6 +136,26 @@ macro_rules! magic {
             Ok(())
         }
     };
+}
+
+impl PartialEq for GlobalEventSubscription {
+    fn eq(&self, other: &Self) -> bool {
+        core::mem::discriminant(self) == core::mem::discriminant(other)
+    }
+}
+
+impl Eq for GlobalEventSubscription {}
+
+impl Hash for GlobalEventSubscription {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+    }
+}
+
+impl Borrow<String> for GlobalEventSubscription {
+    fn borrow(&self) -> &String {
+        todo!()
+    }
 }
 
 magic! {
@@ -226,16 +248,12 @@ impl WebDriverHandler {
         &mut self,
         command_data: C,
         sender: oneshot::Sender<broadcast::Receiver<R>>,
-        global_subscriptions: impl Fn(
-            &mut WebDriverHandler,
-        )
-            -> &mut Option<(broadcast::Sender<R>, broadcast::Receiver<R>)>,
         respond_command_constructor: impl FnOnce(
             oneshot::Sender<broadcast::Receiver<R>>,
         ) -> RespondCommand
         + Send,
     ) -> crate::result::Result<()> {
-        match global_subscriptions(self) {
+        match self.global_subscriptions.get(&"test".to_string()) {
             Some(subscription) => {
                 sender.send(subscription.0.subscribe());
             }
