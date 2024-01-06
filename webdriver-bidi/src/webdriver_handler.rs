@@ -30,6 +30,7 @@ macro_rules! magic {
         pub enum SendCommand {
             $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<$($command)::*::Result>),)*
             // TODO FIXME somehow handle subscribing to multiple events at once
+            // TODO FIXME if first not empty we should subscribe to specific browsing contexts
             $(#[doc = $doc_subscription] $variant_subscription(Vec<BrowsingContext>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
         }
 
@@ -132,7 +133,7 @@ magic! {
         /// https://w3c.github.io/webdriver-bidi/#command-session-end
         SessionEnd("session.end" session::end),
         /// https://w3c.github.io/webdriver-bidi/#command-session-subscribe
-        SessionSubscribe("session.subscribe" session::subscribe),
+        SessionSubscribe("session.subscribe" session::subscribe), // TODO FIXME this should not be in sendcommand
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
         BrowsingContextGetTree("browsingContext.getTree" browsing_context::get_tree),
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
@@ -140,7 +141,7 @@ magic! {
     }
     pub enum {
         /// tmp
-        SubscribeGlobalLogs("log.entryAdded" global_log_subscriptions log::Entry)
+        SubscribeGlobalLogs("log.entryAdded" global_log_subscriptions log::EntryAdded)
     }
 }
 
@@ -152,13 +153,13 @@ pub struct WebDriverHandler {
     log_subscriptions: HashMap<
         BrowsingContext,
         (
-            broadcast::Sender<log::Entry>,
-            broadcast::Receiver<log::Entry>,
+            broadcast::Sender<log::EntryAdded>,
+            broadcast::Receiver<log::EntryAdded>,
         ),
     >,
     global_log_subscriptions: Option<(
-        broadcast::Sender<log::Entry>,
-        broadcast::Receiver<log::Entry>,
+        broadcast::Sender<log::EntryAdded>,
+        broadcast::Receiver<log::EntryAdded>,
     )>,
 }
 
@@ -245,11 +246,13 @@ impl WebDriverHandler {
 
                 println!("{string}");
 
+                global_subscriptions(self).insert(broadcast::channel(10));
+
                 // starting from here this could be done asynchronously
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
                 self.stream.send(Message::Text(string)).await?;
 
-                global_subscriptions(self).insert(broadcast::channel(10))
+                global_subscriptions(self).as_mut().unwrap() // TODO FIXME
             }
         };
         sender.send(subscription.0.subscribe());

@@ -127,4 +127,24 @@ impl WebDriver {
             Ok(result)
         }
     }
+
+    pub(crate) fn request_subscribe<C: Send, R: Send>(
+        &self,
+        command: C,
+        send_command_constructor: impl FnOnce(C, oneshot::Sender<broadcast::Receiver<R>>) -> SendCommand
+        + Send,
+    ) -> impl Future<Output = crate::result::Result<broadcast::Receiver<R>>> {
+        let (tx, rx) = oneshot::channel();
+
+        self.send_command
+            .send(send_command_constructor(command, tx))
+            .unwrap();
+
+        async {
+            let result = rx
+                .await
+                .map_err(|_| crate::result::Error::CommandTaskExited)?;
+            Ok(result)
+        }
+    }
 }

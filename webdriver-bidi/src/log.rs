@@ -29,7 +29,7 @@ pub struct Entry {
     source: Source,
     text: Option<String>,
     timestamp: u64,
-    stack_trace: StackTrace,
+    stack_trace: Option<StackTrace>,
     #[serde(flatten)]
     inner: InnerLogEntry,
 }

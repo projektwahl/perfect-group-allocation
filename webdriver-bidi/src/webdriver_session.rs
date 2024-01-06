@@ -1,10 +1,11 @@
 use futures::Future;
+use tokio::sync::broadcast;
 
 use crate::browsing_context::BrowsingContext;
 use crate::session::SubscriptionRequest;
 use crate::webdriver::WebDriver;
 use crate::webdriver_handler::SendCommand;
-use crate::{browsing_context, session};
+use crate::{browsing_context, log, session};
 
 #[derive(Debug)]
 pub struct WebDriverSession {
@@ -59,15 +60,8 @@ impl WebDriverSession {
     pub fn session_subscribe(
         &mut self,
         browsing_context: BrowsingContext,
-    ) -> impl Future<Output = crate::result::Result<session::subscribe::Result>> {
-        self.driver.send_command(
-            session::subscribe::Command {
-                params: SubscriptionRequest {
-                    events: vec!["log.entryAdded".to_owned()],
-                    contexts: vec![browsing_context],
-                },
-            },
-            SendCommand::SessionSubscribe,
-        )
+    ) -> impl Future<Output = crate::result::Result<broadcast::Receiver<log::EntryAdded>>> {
+        self.driver
+            .request_subscribe(vec![], SendCommand::SubscribeGlobalLogs)
     }
 }
