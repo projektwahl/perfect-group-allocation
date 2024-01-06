@@ -232,9 +232,8 @@ impl WebDriverHandler {
             None => {
                 self.id += 1;
 
-                let (tx, rx) = oneshot::channel();
                 self.pending_commands
-                    .insert(self.id, respond_command_constructor(tx));
+                    .insert(self.id, respond_command_constructor(sender));
 
                 let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
                     id: self.id,

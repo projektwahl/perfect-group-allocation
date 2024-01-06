@@ -8,7 +8,13 @@ use tokio::time::sleep;
 use webdriver_bidi::webdriver::WebDriver;
 
 #[tokio::main]
-pub async fn main() -> Result<(), webdriver_bidi::result::Error> {
+pub async fn main() {
+    if let Err(error) = inner_main().await {
+        eprintln!("{error}");
+    }
+}
+
+pub async fn inner_main() -> Result<(), webdriver_bidi::result::Error> {
     let driver = WebDriver::new().await?;
     println!("test");
     let mut session = driver.session_new().await?;
