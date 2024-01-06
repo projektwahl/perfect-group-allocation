@@ -22,7 +22,7 @@ pub async fn inner_main() -> Result<(), webdriver_bidi::result::Error> {
     let browsing_context = session.browsing_context_get_tree().await?;
     println!("{browsing_context:?}");
     let browsing_context = browsing_context.contexts[0].context.clone();
-    let mut subscription = session.session_subscribe().await?;
+    let mut subscription = session.subscribe_global_logs().await?;
     let navigation = session
         .browsing_context_navigate(browsing_context, "https://www.google.com/".to_owned())
         .await?;

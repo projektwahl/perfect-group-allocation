@@ -150,8 +150,11 @@ pub struct WebDriverHandler {
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
     receive_command: mpsc::UnboundedReceiver<SendCommand>,
     pending_commands: HashMap<u64, RespondCommand>,
+    // we need an inverted index because every client should get a single broadcast channel with the browsing contexts
+    // they are interested about and therefore events need to be sent to multiple channels
+    magic: HashMap<(String, BrowsingContext), Vec<broadcast::Sender<String>>>,
     log_subscriptions: HashMap<
-        BrowsingContext,
+        (String, BrowsingContext),
         (
             broadcast::Sender<log::EntryAdded>,
             broadcast::Receiver<log::EntryAdded>,
@@ -172,6 +175,7 @@ impl WebDriverHandler {
             id: 0,
             stream,
             receive_command,
+            magic: HashMap::default(),
             pending_commands: HashMap::default(),
             log_subscriptions: HashMap::default(),
             global_log_subscriptions: None,

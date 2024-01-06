@@ -56,10 +56,18 @@ impl WebDriverSession {
         )
     }
 
-    pub fn session_subscribe(
+    pub fn subscribe_global_logs(
         &mut self,
     ) -> impl Future<Output = crate::result::Result<broadcast::Receiver<log::EntryAdded>>> {
         self.driver
             .request_subscribe(None, SendCommand::SubscribeGlobalLogs)
+    }
+
+    pub fn subscribe_logs(
+        &mut self,
+        browsing_contexts: Vec<BrowsingContext>,
+    ) -> impl Future<Output = crate::result::Result<broadcast::Receiver<log::EntryAdded>>> {
+        self.driver
+            .request_subscribe(Some(browsing_contexts), SendCommand::SubscribeGlobalLogs)
     }
 }
