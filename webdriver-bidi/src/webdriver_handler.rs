@@ -148,6 +148,8 @@ impl WebDriverHandler {
     async fn handle_internal(&mut self) {
         loop {
             tokio::select! {
+                // TODO FIXME for requests use only one queue so the request order is guaranteed
+
                 // TODO FIXME is this cancel safe?
                 message = self.stream.next() => {
                     match message {
@@ -187,28 +189,36 @@ impl WebDriverHandler {
     ) -> crate::result::Result<()> {
         match handle_subscription {
             SendSubscribeGlobalEvent::Log(response) => {
-                let subscription = self
-                    .global_log_subscriptions
-                    .get_or_insert(broadcast::channel(10));
+                let subscription = match &self.global_log_subscriptions {
+                    Some(subscription) => subscription,
+                    None => {
+                        self.id += 1;
+
+                        let (tx, rx) = oneshot::channel();
+                        self.pending_commands
+                            .insert(self.id, RespondCommand::SubscribeGlobalLogs(tx));
+
+                        let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+                            id: self.id,
+                            command_data: session::subscribe::Command {
+                                params: session::SubscriptionRequest {
+                                    events: vec!["log.entryAdded".to_owned()],
+                                    contexts: vec![],
+                                },
+                            },
+                        })
+                        .unwrap();
+
+                        println!("{string}");
+
+                        // starting from here this could be done asynchronously
+                        // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
+                        self.stream.send(Message::Text(string)).await?;
+
+                        self.global_log_subscriptions.insert(broadcast::channel(10))
+                    }
+                };
                 response.send(subscription.0.subscribe());
-                self.pending_commands
-                    .insert(self.id, RespondCommand::SubscribeGlobalLogs(tx));
-
-                self.id += 1;
-
-                let (tx, rx) = oneshot::channel();
-
-                let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
-                    id: self.id,
-                    command_data,
-                })
-                .unwrap();
-
-                println!("{string}");
-
-                // starting from here this could be done asynchronously
-                // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
-                self.stream.send(Message::Text(string)).await?;
             }
         }
         Ok(())

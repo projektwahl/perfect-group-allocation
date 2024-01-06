@@ -128,11 +128,14 @@ impl WebDriver {
         + Send,
     ) -> crate::result::Result<impl Future<Output = crate::result::Result<R>>> {
         let (tx, rx) = oneshot::channel();
+
+        // maybe use an unbounded sender, then we don't need async here
         self.send_command
             .send(send_command_constructor(command, tx))
             .await
             .map_err(|_| crate::result::Error::CommandTaskExited)?;
 
+        // TODO FIXME I think we don't need this intermediate part as send already guarantees order
         // when we received the final receiver, we can be sure that our command got handled and is ordered before all commands that we sent afterwards.
         let rx = rx
             .await
