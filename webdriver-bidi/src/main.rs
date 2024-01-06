@@ -13,9 +13,7 @@ pub async fn main() {
 
 pub async fn inner_main() -> Result<(), webdriver_bidi::result::Error> {
     let driver = WebDriver::new().await?;
-    println!("test");
     let mut session = driver.session_new().await?;
-    println!("new session");
     let browsing_context = session.browsing_context_get_tree().await?;
     println!("{browsing_context:?}");
     let browsing_context = browsing_context.contexts[0].context.clone();
@@ -24,6 +22,8 @@ pub async fn inner_main() -> Result<(), webdriver_bidi::result::Error> {
         .browsing_context_navigate(browsing_context, "https://www.google.com/".to_owned())
         .await?;
     println!("{navigation:?}");
+    let browsing_context = session.browsing_context_get_tree().await?;
+    println!("{browsing_context:?}");
 
     while let Ok(log) = subscription.recv().await {
         println!("received log message: {log:?}");

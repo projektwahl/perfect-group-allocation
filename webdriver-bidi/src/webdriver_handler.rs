@@ -301,8 +301,6 @@ impl WebDriverHandler {
                 })
                 .unwrap();
 
-                println!("{string}");
-
                 *global_event_subscription(&mut self.global_subscriptions) = Some(ch);
 
                 // starting from here this could be done asynchronously
@@ -358,7 +356,7 @@ impl WebDriverHandler {
             })
             .unwrap();
 
-            println!("{string}");
+            ("{string}");
 
             event_subscription(&mut self.subscriptions).insert(command_data, ch);
 
@@ -389,7 +387,7 @@ impl WebDriverHandler {
         })
         .unwrap();
 
-        println!("{string}");
+        ("{string}");
 
         self.stream
             .send(Message::Text(string))
@@ -400,7 +398,6 @@ impl WebDriverHandler {
     }
 
     fn handle_message(&mut self, message: &str) -> crate::result::Result<()> {
-        println!("{message}");
         let jd = &mut serde_json::Deserializer::from_str(message);
         let parsed_message: WebDriverBiDiLocalEndMessage<Value> =
             serde_path_to_error::deserialize(jd)
