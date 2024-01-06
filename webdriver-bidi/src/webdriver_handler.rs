@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 use futures::{SinkExt as _, StreamExt as _};
+use paste::paste;
 use serde::Serialize;
 use serde_json::Value;
 use tokio::net::TcpStream;
@@ -25,154 +26,158 @@ macro_rules! magic {
             $(#[doc = $doc_subscription:expr] $variant_subscription:ident($tag_subscription:literal $($command_subscription:ident)::+)),*
         }
     ) => {
-        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-        #[derive(Debug)]
-        pub enum SendCommand {
-            $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<$($command)::*::Result>),)*
-            $(#[doc = $doc_subscription] $variant_subscription(Option<BrowsingContext>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
-        }
+        paste! {
 
-        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-        #[derive(Debug)]
-        pub enum RespondCommand {
-            $(#[doc = $doc] $variant(oneshot::Sender<$($command)::*::Result>),)*
-            $(#[doc = $doc_subscription] $variant_subscription(broadcast::Receiver<$($command_subscription)::*>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
-        }
+            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            #[derive(Debug)]
+            pub enum SendCommand {
+                $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<$($command)::*::Result>),)*
+                $(#[doc = $doc_subscription] $variant_subscription(Option<BrowsingContext>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
+            }
 
-        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-        #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
-        #[serde(tag = "method")]
-        pub enum CommandData {
-            $(
-                #[doc = $doc]
-                #[serde(rename = $tag)]
-                $variant($($command)::*::Command)
-            ,)*
-        }
+            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            #[derive(Debug)]
+            pub enum RespondCommand {
+                $(#[doc = $doc] $variant(oneshot::Sender<$($command)::*::Result>),)*
+                $(#[doc = $doc_subscription] $variant_subscription(broadcast::Receiver<$($command_subscription)::*>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
+            }
 
-        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-        #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
-        #[serde(tag = "method")]
-        pub enum EventData {
-            $(
-                #[doc = $doc_subscription]
-                #[serde(rename = $tag_subscription)]
-                $variant_subscription($($command_subscription)::*)
-            ,)*
-        }
+            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+            #[serde(tag = "method")]
+            pub enum CommandData {
+                $(
+                    #[doc = $doc]
+                    #[serde(rename = $tag)]
+                    $variant($($command)::*::Command)
+                ,)*
+            }
 
-        impl crate::ExtractBrowsingContext for EventData {
-            fn browsing_context(&self) -> Option<&crate::browsing_context::BrowsingContext> {
-                match self {
+            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+            #[serde(tag = "method")]
+            pub enum EventData {
+                $(
+                    #[doc = $doc_subscription]
+                    #[serde(rename = $tag_subscription)]
+                    $variant_subscription($($command_subscription)::*)
+                ,)*
+            }
+
+            impl crate::ExtractBrowsingContext for EventData {
+                fn browsing_context(&self) -> Option<&crate::browsing_context::BrowsingContext> {
+                    match self {
+                        $(
+                            EventData::$variant_subscription(event) => {
+                                event.browsing_context()
+                            }
+                        ),*
+                    }
+                }
+            }
+
+            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            #[derive(Debug, Default)]
+            pub struct GlobalEventSubscription {
+                $(
+                    #[doc = $doc_subscription]
+                    [<$variant_subscription:snake>]: Option<(broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>
+                ,)*
+            }
+
+            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            #[derive(Debug, Default)]
+            pub struct EventSubscription {
+                $(
+                    #[doc = $doc_subscription]
+                    [<$variant_subscription:snake>]:
+                        HashMap<BrowsingContext, (broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>
+                ,)*
+            }
+
+
+            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+            #[serde(tag = "method")]
+            pub enum ResultData {
+                $(
+                    #[doc = $doc]
+                    #[serde(rename = $tag)]
+                    $variant($($command)::*::Result)
+                ,)*
+            }
+
+            async fn handle_command(this: &mut WebDriverHandler, input: SendCommand) -> crate::result::Result<()> {
+                match input {
                     $(
-                        EventData::$variant_subscription(event) => {
-                            event.browsing_context()
+                        SendCommand::$variant(command, sender) => {
+                            this.handle_command_internal(command, sender, RespondCommand::$variant).await?;
+                        }
+                    ),*
+                    $(
+                        SendCommand::$variant_subscription(command, sender) => {
+                            match command {
+                                Some(browsing_context) => {
+                                    this.handle_subscription_internal($tag_subscription.to_owned(), browsing_context, sender, |ges| &mut ges.[<$variant_subscription:snake>], RespondCommand::$variant_subscription).await?;
+                                }
+                                None => {
+                                    this.handle_global_subscription_internal($tag_subscription.to_owned(), sender, |ges| &mut ges.[<$variant_subscription:snake>], RespondCommand::$variant_subscription).await?;
+                                }
+                            }
                         }
                     ),*
                 }
+                Ok(())
             }
-        }
 
-        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-        #[derive(Debug, Default)]
-        pub struct GlobalEventSubscription {
-            $(
-                #[doc = $doc_subscription]
-                $variant_subscription: Option<(broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>
-            ,)*
-        }
+            fn handle_event(this: &mut WebDriverHandler, input: EventData) -> crate::result::Result<()> {
+                match input {
+                    $(
+                        EventData::$variant_subscription(event) => {
+                            // TODO FIXME extract method
 
-        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-        #[derive(Debug, Default)]
-        pub struct EventSubscription {
-            $(
-                #[doc = $doc_subscription]
-                $variant_subscription:
-                    HashMap<BrowsingContext, (broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>
-            ,)*
-        }
-
-        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-        #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
-        #[serde(tag = "method")]
-        pub enum ResultData {
-            $(
-                #[doc = $doc]
-                #[serde(rename = $tag)]
-                $variant($($command)::*::Result)
-            ,)*
-        }
-
-        async fn handle_command(this: &mut WebDriverHandler, input: SendCommand) -> crate::result::Result<()> {
-            match input {
-                $(
-                    SendCommand::$variant(command, sender) => {
-                        this.handle_command_internal(command, sender, RespondCommand::$variant).await?;
-                    }
-                ),*
-                $(
-                    SendCommand::$variant_subscription(command, sender) => {
-                        match command {
-                            Some(browsing_context) => {
-                                this.handle_subscription_internal($tag_subscription.to_owned(), browsing_context, sender, |ges| &mut ges.$variant_subscription, RespondCommand::$variant_subscription).await?;
-                            }
-                            None => {
-                                this.handle_global_subscription_internal($tag_subscription.to_owned(), sender, |ges| &mut ges.$variant_subscription, RespondCommand::$variant_subscription).await?;
-                            }
-                        }
-                    }
-                ),*
-            }
-            Ok(())
-        }
-
-        fn handle_event(this: &mut WebDriverHandler, input: EventData) -> crate::result::Result<()> {
-            match input {
-                $(
-                    EventData::$variant_subscription(event) => {
-                        // TODO FIXME extract method
-
-                        // maybe no global but only browsercontext subscription
-                        if let Some(sub) = this.global_subscriptions.$variant_subscription.as_ref() {
-                            // TODO FIXME don't unwrap but unsubscribe in this case
-                            sub.0.send(event.clone()).unwrap();
-                        }
-                        // we should find out in which cases there is no browsing context
-                        if let Some(browsing_context) = <$($command_subscription)::* as crate::ExtractBrowsingContext>::browsing_context(&event) {
-                            // maybe global but no browsercontext subscription
-                            if let Some(sub) = this.subscriptions.$variant_subscription.get(browsing_context) {
+                            // maybe no global but only browsercontext subscription
+                            if let Some(sub) = this.global_subscriptions.[<$variant_subscription:snake>].as_ref() {
                                 // TODO FIXME don't unwrap but unsubscribe in this case
-                                sub.0.send(event).unwrap();
+                                sub.0.send(event.clone()).unwrap();
+                            }
+                            // we should find out in which cases there is no browsing context
+                            if let Some(browsing_context) = <$($command_subscription)::* as crate::ExtractBrowsingContext>::browsing_context(&event) {
+                                // maybe global but no browsercontext subscription
+                                if let Some(sub) = this.subscriptions.[<$variant_subscription:snake>].get(browsing_context) {
+                                    // TODO FIXME don't unwrap but unsubscribe in this case
+                                    sub.0.send(event).unwrap();
+                                }
                             }
                         }
-                    }
-                ),*
+                    ),*
+                }
+                Ok(())
             }
-            Ok(())
-        }
 
-        fn send_response(_this: &mut WebDriverHandler, result: Value, respond_command: RespondCommand) -> crate::result::Result<()> {
-            match (respond_command) {
-                $(
-                    RespondCommand::$variant(respond_command) => {
-                        respond_command
-                            .send(serde_path_to_error::deserialize(result)
-                                .map_err(crate::result::ErrorInner::ParseReceivedWithPath)?)
-                            .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
-                    }
-                ),*
-                $(
-                    RespondCommand::$variant_subscription(value, channel) => {
-                        // result here is the result of the subscribe command which should be empty
-                        // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
+            fn send_response(_this: &mut WebDriverHandler, result: Value, respond_command: RespondCommand) -> crate::result::Result<()> {
+                match (respond_command) {
+                    $(
+                        RespondCommand::$variant(respond_command) => {
+                            respond_command
+                                .send(serde_path_to_error::deserialize(result)
+                                    .map_err(crate::result::ErrorInner::ParseReceivedWithPath)?)
+                                .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
+                        }
+                    ),*
+                    $(
+                        RespondCommand::$variant_subscription(value, channel) => {
+                            // result here is the result of the subscribe command which should be empty
+                            // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
 
-                        // TODO FIXME we need to know whether this was a global or local subscription. maybe store that directly in the respond command?
-                        channel.send(value)
-                            .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
-                    }
-                ),*
+                            // TODO FIXME we need to know whether this was a global or local subscription. maybe store that directly in the respond command?
+                            channel.send(value)
+                                .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
+                        }
+                    ),*
+                }
+                Ok(())
             }
-            Ok(())
         }
     };
 }
@@ -271,7 +276,9 @@ impl WebDriverHandler {
     ) -> crate::result::Result<()> {
         match global_event_subscription(&mut self.global_subscriptions) {
             Some(subscription) => {
-                sender.send(subscription.0.subscribe());
+                sender
+                    .send(subscription.0.subscribe())
+                    .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?;
             }
             None => {
                 self.id += 1;
@@ -296,7 +303,7 @@ impl WebDriverHandler {
 
                 println!("{string}");
 
-                global_event_subscription(&mut self.global_subscriptions).insert(ch);
+                *global_event_subscription(&mut self.global_subscriptions) = Some(ch);
 
                 // starting from here this could be done asynchronously
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
@@ -326,42 +333,41 @@ impl WebDriverHandler {
         ) -> RespondCommand
         + Send,
     ) -> crate::result::Result<()> {
-        match event_subscription(&mut self.subscriptions).get(&command_data) {
-            Some(subscription) => {
-                sender.send(subscription.0.subscribe()); // TODO FIXME this would return before the request command is actually done
-            }
-            None => {
-                self.id += 1;
+        if let Some(subscription) = event_subscription(&mut self.subscriptions).get(&command_data) {
+            sender
+                .send(subscription.0.subscribe())
+                .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?; // TODO FIXME this would return before the request command is actually done
+        } else {
+            self.id += 1;
 
-                let ch = broadcast::channel(10);
+            let ch = broadcast::channel(10);
 
-                self.pending_commands.insert(
-                    self.id,
-                    respond_command_constructor(ch.0.subscribe(), sender),
-                );
+            self.pending_commands.insert(
+                self.id,
+                respond_command_constructor(ch.0.subscribe(), sender),
+            );
 
-                let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
-                    id: self.id,
-                    command_data: session::subscribe::Command {
-                        params: session::SubscriptionRequest {
-                            events: vec![event],
-                            contexts: vec![command_data.clone()],
-                        },
+            let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+                id: self.id,
+                command_data: session::subscribe::Command {
+                    params: session::SubscriptionRequest {
+                        events: vec![event],
+                        contexts: vec![command_data.clone()],
                     },
-                })
-                .unwrap();
+                },
+            })
+            .unwrap();
 
-                println!("{string}");
+            println!("{string}");
 
-                event_subscription(&mut self.subscriptions).insert(command_data, ch);
+            event_subscription(&mut self.subscriptions).insert(command_data, ch);
 
-                // starting from here this could be done asynchronously
-                // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
-                self.stream
-                    .send(Message::Text(string))
-                    .await
-                    .map_err(crate::result::ErrorInner::WebSocket)?;
-            }
+            // starting from here this could be done asynchronously
+            // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
+            self.stream
+                .send(Message::Text(string))
+                .await
+                .map_err(crate::result::ErrorInner::WebSocket)?;
         };
         Ok(())
     }
