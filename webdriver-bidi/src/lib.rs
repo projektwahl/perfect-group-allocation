@@ -1,6 +1,8 @@
+#![feature(error_generic_member_access)]
 #![feature(lint_reasons)]
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
+
 pub mod browsing_context;
 pub mod log;
 pub mod result;

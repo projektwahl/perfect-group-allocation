@@ -108,8 +108,8 @@ macro_rules! magic {
                     RespondCommand::$variant(respond_command) => {
                         respond_command
                             .send(serde_path_to_error::deserialize(result)
-                                .map_err(crate::result::Error::ParseReceivedWithPath)?)
-                            .map_err(|_| crate::result::Error::CommandCallerExited)
+                                .map_err(crate::result::ErrorInner::ParseReceivedWithPath)?)
+                            .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
                     }
                 ),*
                 $(
@@ -118,10 +118,11 @@ macro_rules! magic {
                         // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
                         respond_command
                             .send(this.$subscription_store.as_mut().unwrap().0.subscribe())
-                            .map_err(|_| crate::result::Error::CommandCallerExited)
+                            .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
                     }
                 ),*
             }
+            Ok(())
         }
     };
 }
@@ -187,7 +188,7 @@ impl WebDriverHandler {
                     match message {
                         Some(Ok(Message::Text(message))) => {
                             if let Err(error) = self.handle_message(&message) {
-                                eprintln!("error when parsing incoming message {message} {error:?}");
+                                eprintln!("error when parsing incoming message {message} {error}");
                             }
                         }
                         Some(Ok(message)) => {
@@ -250,7 +251,10 @@ impl WebDriverHandler {
 
                 // starting from here this could be done asynchronously
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
-                self.stream.send(Message::Text(string)).await?;
+                self.stream
+                    .send(Message::Text(string))
+                    .await
+                    .map_err(crate::result::ErrorInner::WebSocket)?;
 
                 global_subscriptions(self).as_mut().unwrap() // TODO FIXME
             }
@@ -278,7 +282,10 @@ impl WebDriverHandler {
 
         println!("{string}");
 
-        self.stream.send(Message::Text(string)).await?;
+        self.stream
+            .send(Message::Text(string))
+            .await
+            .map_err(crate::result::ErrorInner::WebSocket)?;
 
         Ok(())
     }
@@ -288,7 +295,7 @@ impl WebDriverHandler {
         let jd = &mut serde_json::Deserializer::from_str(message);
         let parsed_message: WebDriverBiDiLocalEndMessage<Value> =
             serde_path_to_error::deserialize(jd)
-                .map_err(crate::result::Error::ParseReceivedWithPath)?;
+                .map_err(crate::result::ErrorInner::ParseReceivedWithPath)?;
         match parsed_message {
             WebDriverBiDiLocalEndMessage::CommandResponse(
                 WebDriverBiDiLocalEndCommandResponse { id, result },
@@ -296,7 +303,7 @@ impl WebDriverHandler {
                 let respond_command = self
                     .pending_commands
                     .remove(&id)
-                    .ok_or(crate::result::Error::ResponseWithoutRequest(id))?;
+                    .ok_or(crate::result::ErrorInner::ResponseWithoutRequest(id))?;
 
                 send_response(self, result, respond_command)
             }

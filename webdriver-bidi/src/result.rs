@@ -1,7 +1,17 @@
+use std::backtrace::Backtrace;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum Error {
+#[error("{inner}\n{backtrace}")]
+pub struct Error {
+    #[from]
+    inner: ErrorInner,
+    backtrace: Backtrace,
+}
+
+#[derive(Error, Debug)]
+pub enum ErrorInner {
     #[error("WebSocket connection failure {0}")]
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
     #[error("Failed to create temporary directory {0}")]
