@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
 use futures::{SinkExt as _, StreamExt as _};
@@ -22,7 +22,7 @@ macro_rules! magic {
             $(#[doc = $doc:expr] $variant:ident($tag:literal $($command:ident)::+)),*
         }
         pub enum {
-            $(#[doc = $doc_subscription:expr] $variant_subscription:ident($tag_subscription:literal $subscription_store:ident $($command_subscription:ident)::+)),*
+            $(#[doc = $doc_subscription:expr] $variant_subscription:ident($tag_subscription:literal $($command_subscription:ident)::+)),*
         }
     ) => {
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
@@ -62,6 +62,15 @@ macro_rules! magic {
             ,)*
         }
 
+         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+         #[derive(Debug)]
+         pub enum GlobalEventSubscription {
+             $(
+                #[doc = $doc_subscription]
+                $variant_subscription(Option<(broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>)
+             ,)*
+         }
+
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
         #[serde(tag = "method")]
@@ -77,15 +86,16 @@ macro_rules! magic {
             match input {
                 $(
                     SendCommand::$variant(command, sender) => {
-                        this.handle_command_internal(command, sender, RespondCommand::$variant).await
+                        this.handle_command_internal(command, sender, RespondCommand::$variant).await?;
                     }
                 ),*
                 $(
                     SendCommand::$variant_subscription(command, sender) => {
-                        this.handle_global_subscription_internal(command, sender, |this| &mut this.$subscription_store, RespondCommand::$variant_subscription).await
+                        // this.handle_global_subscription_internal(command, sender, RespondCommand::$variant_subscription).await
                     }
                 ),*
             }
+            Ok(())
         }
 
         fn handle_event(this: &mut WebDriverHandler, input: EventData) -> crate::result::Result<()> {
@@ -94,7 +104,7 @@ macro_rules! magic {
                     EventData::$variant_subscription(event) => {
                         // TODO FIXME don't unwrap but unsubscribe in this case
                         // TODO FIXME extract method
-                       this.$subscription_store.as_ref().unwrap().0.send(event).unwrap();
+                       // this.$subscription_store.as_ref().unwrap().0.send(event).unwrap();
                     }
                 ),*
             }
@@ -115,9 +125,9 @@ macro_rules! magic {
                     RespondCommand::$variant_subscription(respond_command) => {
                         // result here is the result of the subscribe command which should be empty
                         // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
-                        respond_command
-                            .send(this.$subscription_store.as_mut().unwrap().0.subscribe())
-                            .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
+                        //respond_command
+                        //    .send(this.$subscription_store.as_mut().unwrap().0.subscribe())
+                        //    .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
                     }
                 ),*
             }
@@ -141,7 +151,7 @@ magic! {
     }
     pub enum {
         /// tmp
-        SubscribeGlobalLogs("log.entryAdded" global_log_subscriptions log::EntryAdded)
+        SubscribeGlobalLogs("log.entryAdded" log::EntryAdded)
     }
 }
 
@@ -160,10 +170,7 @@ pub struct WebDriverHandler {
             broadcast::Receiver<log::EntryAdded>,
         ),
     >,
-    global_log_subscriptions: Option<(
-        broadcast::Sender<log::EntryAdded>,
-        broadcast::Receiver<log::EntryAdded>,
-    )>,
+    global_subscriptions: HashSet<GlobalEventSubscription>,
 }
 
 impl WebDriverHandler {
@@ -178,7 +185,7 @@ impl WebDriverHandler {
             magic: HashMap::default(),
             pending_commands: HashMap::default(),
             log_subscriptions: HashMap::default(),
-            global_log_subscriptions: None,
+            global_subscriptions: HashSet::default(),
         };
         this.handle_internal().await;
     }
