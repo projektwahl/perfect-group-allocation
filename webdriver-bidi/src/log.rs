@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub type Event = EntryAdded;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "method")]
 #[serde(rename = "log.entryAdded")]
 pub struct EntryAdded {
@@ -10,14 +10,14 @@ pub struct EntryAdded {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#types-log-logentry>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Entry {
     Log(GenericLogEntry),
     Console(ConsoleLogEntry),
     Javascript(JavascriptLogEntry),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BaseLogEntry {
     level: String,
     // TODO FIXME this contains the browsing context or realm
@@ -27,14 +27,14 @@ pub struct BaseLogEntry {
     stack_trace: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GenericLogEntry {
     #[serde(flatten)]
     base: BaseLogEntry,
     r#type: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConsoleLogEntry {
     #[serde(flatten)]
     base: BaseLogEntry,
@@ -42,7 +42,7 @@ pub struct ConsoleLogEntry {
     args: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct JavascriptLogEntry {
     #[serde(flatten)]
     base: BaseLogEntry,

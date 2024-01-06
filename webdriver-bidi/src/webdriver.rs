@@ -3,10 +3,10 @@ use std::process::Stdio;
 use futures::Future;
 use tempfile::tempdir;
 use tokio::io::{AsyncBufReadExt as _, BufReader};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::session;
-use crate::webdriver_handler::{SendCommand, WebDriverHandler};
+use crate::webdriver_handler::{SendCommand, SendSubscribeGlobalEvent, WebDriverHandler};
 use crate::webdriver_session::WebDriverSession;
 
 /// <https://w3c.github.io/webdriver-bidi>
@@ -14,21 +14,8 @@ use crate::webdriver_session::WebDriverSession;
 pub struct WebDriver {
     /// send a command
     send_command: mpsc::Sender<SendCommand>,
-    // send a subscribe command for global log messages and receive the subscription channel.
-    // when we have received the subscription channel we can be sure that the command has been sent (for ordering purposes).
-    // if you don't care about the relative ordering of the commands you can join! etc. this future.
-    //event_handlers_log: mpsc::Sender<((), oneshot::Sender<broadcast::Receiver<log::Entry>>)>,
-    // channel to receive browsing context specific log messages
-    //event_handlers_browsing_context_log: mpsc::Sender<(
-    //    BrowsingContext,
-    //    oneshot::Sender<broadcast::Receiver<log::Entry>>,
-    //)>,
-    // wait we want to subscribe and unsubscribe per subscription and also then end the subscriber.
-    // how do we implement this?. I think we unsubscribe by dropping the receiver and
-    // then the sender realizes this and unsubscribes by itself?
-    // send a subscribe command and then receive the subscription channel
-    //event_handlers_browsing_context:
-    //    mpsc::Sender<(String, oneshot::Sender<broadcast::Receiver<String>>)>,
+    // send a subscribe command and receive the subscription channel.
+    event_handlers_log: mpsc::Sender<SendSubscribeGlobalEvent>,
 }
 
 impl WebDriver {
@@ -97,13 +84,18 @@ impl WebDriver {
         let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session")).await?;
 
-        let (command_session_new, command_session_new_rx) = mpsc::channel(1);
-        //let (event_handlers_log, event_handlers_log_rx) = mpsc::channel(10);
+        let (command_sender, command_receiver) = mpsc::channel(10);
+        let (subscription_sender, subscription_receiver) = mpsc::channel(10);
 
-        tokio::spawn(WebDriverHandler::handle(stream, command_session_new_rx));
+        tokio::spawn(WebDriverHandler::handle(
+            stream,
+            command_receiver,
+            subscription_receiver,
+        ));
 
         Ok(Self {
-            send_command: command_session_new,
+            send_command: command_sender,
+            event_handlers_log: subscription_sender,
         })
     }
 
