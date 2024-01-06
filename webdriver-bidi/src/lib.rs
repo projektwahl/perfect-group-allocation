@@ -12,6 +12,7 @@ pub mod webdriver;
 pub mod webdriver_handler;
 pub mod webdriver_session;
 
+use browsing_context::BrowsingContext;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use webdriver_handler::EventData;
@@ -56,4 +57,8 @@ pub struct WebDriverBiDiRemoteEndCommand<T> {
     command_data: T,
     //#[serde(flatten)]
     //extensible: Value,
+}
+
+pub trait ExtractBrowsingContext {
+    fn browsing_context(&self) -> Option<&BrowsingContext>;
 }

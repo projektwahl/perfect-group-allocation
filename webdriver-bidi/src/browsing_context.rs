@@ -14,7 +14,7 @@ pub struct Info {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Browsingcontext>
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
 pub struct BrowsingContext(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-ReadinessState>

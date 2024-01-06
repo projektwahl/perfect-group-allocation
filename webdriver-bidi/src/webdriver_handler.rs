@@ -63,6 +63,18 @@ macro_rules! magic {
             ,)*
         }
 
+        impl crate::ExtractBrowsingContext for EventData {
+            fn browsing_context(&self) -> Option<&crate::browsing_context::BrowsingContext> {
+                match self {
+                    $(
+                        EventData::$variant_subscription(event) => {
+                            event.browsing_context()
+                        }
+                    ),*
+                }
+            }
+        }
+
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug, Default)]
         pub struct GlobalEventSubscription {
@@ -113,10 +125,21 @@ macro_rules! magic {
             match input {
                 $(
                     EventData::$variant_subscription(event) => {
-                        // TODO FIXME don't unwrap but unsubscribe in this case
                         // TODO FIXME extract method
-                       this.global_subscriptions.$variant_subscription.as_ref().unwrap().0.send(event).unwrap();
-                       // TODO FIXME we first need to find out how to get the browsing context from eventdata
+
+                        // maybe no global but only browsercontext subscription
+                        if let Some(sub) = this.global_subscriptions.$variant_subscription.as_ref() {
+                            // TODO FIXME don't unwrap but unsubscribe in this case
+                            sub.0.send(event.clone()).unwrap();
+                        }
+                        // we should find out in which cases there is no browsing context
+                        if let Some(browsing_context) = <$($command_subscription)::* as crate::ExtractBrowsingContext>::browsing_context(&event) {
+                            // maybe global but no browsercontext subscription
+                            if let Some(sub) = this.subscriptions.$variant_subscription.get(browsing_context) {
+                                // TODO FIXME don't unwrap but unsubscribe in this case
+                                sub.0.send(event).unwrap();
+                            }
+                        }
                     }
                 ),*
             }

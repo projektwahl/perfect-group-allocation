@@ -25,8 +25,8 @@ pub struct StackFrame {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Source {
-    realm: Realm,
-    context: Option<BrowsingContext>,
+    pub realm: Realm,
+    pub context: Option<BrowsingContext>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-Realm>

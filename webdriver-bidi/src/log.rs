@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::script::{RemoteValue, Source, StackTrace};
+use crate::ExtractBrowsingContext;
 
 pub type Event = EntryAdded;
 
@@ -9,6 +10,12 @@ pub type Event = EntryAdded;
 #[serde(rename = "log.entryAdded")]
 pub struct EntryAdded {
     pub params: Entry,
+}
+
+impl ExtractBrowsingContext for EntryAdded {
+    fn browsing_context(&self) -> Option<&crate::browsing_context::BrowsingContext> {
+        self.params.source.context.as_ref()
+    }
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#types-log-logentry>
