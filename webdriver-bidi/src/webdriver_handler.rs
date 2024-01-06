@@ -31,8 +31,7 @@ macro_rules! magic {
         #[derive(Debug)]
         pub enum SendCommand {
             $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<$($command)::*::Result>),)*
-            /// the list should not be empty because then you subscribe to nothing
-            $(#[doc = $doc_subscription] $variant_subscription(Option<Vec<BrowsingContext>>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
+            $(#[doc = $doc_subscription] $variant_subscription(Option<BrowsingContext>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
         }
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
@@ -70,6 +69,16 @@ macro_rules! magic {
             $(
                 #[doc = $doc_subscription]
                 $variant_subscription: Option<(broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>
+            ,)*
+        }
+
+        /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+        #[derive(Debug, Default)]
+        pub struct EventSubscription {
+            $(
+                #[doc = $doc_subscription]
+                $variant_subscription:
+                    HashMap<BrowsingContext, (broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>
             ,)*
         }
 
@@ -162,16 +171,7 @@ pub struct WebDriverHandler {
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
     receive_command: mpsc::UnboundedReceiver<SendCommand>,
     pending_commands: HashMap<u64, RespondCommand>,
-    // we need an inverted index because every client should get a single broadcast channel with the browsing contexts
-    // they are interested about and therefore events need to be sent to multiple channels
-    magic: HashMap<(String, BrowsingContext), Vec<broadcast::Sender<String>>>,
-    log_subscriptions: HashMap<
-        (String, BrowsingContext),
-        (
-            broadcast::Sender<log::EntryAdded>,
-            broadcast::Receiver<log::EntryAdded>,
-        ),
-    >,
+    subscriptions: EventSubscription,
     global_subscriptions: GlobalEventSubscription,
 }
 
@@ -184,9 +184,8 @@ impl WebDriverHandler {
             id: 0,
             stream,
             receive_command,
-            magic: HashMap::default(),
             pending_commands: HashMap::default(),
-            log_subscriptions: HashMap::default(),
+            subscriptions: EventSubscription::default(),
             global_subscriptions: GlobalEventSubscription::default(),
         };
         this.handle_internal().await;
