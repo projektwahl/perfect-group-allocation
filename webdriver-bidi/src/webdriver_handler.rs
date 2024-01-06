@@ -313,15 +313,16 @@ impl WebDriverHandler {
         sender: oneshot::Sender<broadcast::Receiver<R>>,
         event_subscription: impl Fn(
             &mut EventSubscription,
-        )
-            -> &mut Option<(broadcast::Sender<R>, broadcast::Receiver<R>)>
-        + Send,
+        ) -> &mut HashMap<
+            BrowsingContext,
+            (broadcast::Sender<R>, broadcast::Receiver<R>),
+        > + Send,
         respond_command_constructor: impl FnOnce(
             oneshot::Sender<broadcast::Receiver<R>>,
         ) -> RespondCommand
         + Send,
     ) -> crate::result::Result<()> {
-        match event_subscription(&mut self.subscriptions) {
+        match event_subscription(&mut self.subscriptions).get(&command_data) {
             Some(subscription) => {
                 sender.send(subscription.0.subscribe());
             }
@@ -336,7 +337,7 @@ impl WebDriverHandler {
                     command_data: session::subscribe::Command {
                         params: session::SubscriptionRequest {
                             events: vec![event],
-                            contexts: vec![command_data],
+                            contexts: vec![command_data.clone()],
                         },
                     },
                 })
@@ -344,7 +345,8 @@ impl WebDriverHandler {
 
                 println!("{string}");
 
-                event_subscription(&mut self.subscriptions).insert(broadcast::channel(10));
+                event_subscription(&mut self.subscriptions)
+                    .insert(command_data, broadcast::channel(10));
 
                 // starting from here this could be done asynchronously
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
