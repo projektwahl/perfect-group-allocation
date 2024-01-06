@@ -114,7 +114,14 @@ macro_rules! magic {
                 ),*
                 $(
                     SendCommand::$variant_subscription(command, sender) => {
-                        this.handle_global_subscription_internal(command, sender, |ges| &mut ges.$variant_subscription, RespondCommand::$variant_subscription).await?;
+                        match command {
+                            Some(browsing_context) => {
+                                this.handle_subscription_internal($tag_subscription.to_owned(), browsing_context, sender, |ges| &mut ges.$variant_subscription, RespondCommand::$variant_subscription).await?;
+                            }
+                            None => {
+                                this.handle_global_subscription_internal($tag_subscription.to_owned(), sender, |ges| &mut ges.$variant_subscription, RespondCommand::$variant_subscription).await?;
+                            }
+                        }
                     }
                 ),*
             }
@@ -247,9 +254,9 @@ impl WebDriverHandler {
         println!("handle closed");
     }
 
-    async fn handle_global_subscription_internal<C: Serialize + Debug + Send, R: Clone + Send>(
+    async fn handle_global_subscription_internal<R: Clone + Send>(
         &mut self,
-        command_data: C,
+        event: String,
         sender: oneshot::Sender<broadcast::Receiver<R>>,
         global_event_subscription: impl Fn(
             &mut GlobalEventSubscription,
@@ -276,7 +283,7 @@ impl WebDriverHandler {
                     id: self.id,
                     command_data: session::subscribe::Command {
                         params: session::SubscriptionRequest {
-                            events: vec!["log.entryAdded".to_owned()],
+                            events: vec![event],
                             contexts: vec![],
                         },
                     },
@@ -287,6 +294,57 @@ impl WebDriverHandler {
 
                 global_event_subscription(&mut self.global_subscriptions)
                     .insert(broadcast::channel(10));
+
+                // starting from here this could be done asynchronously
+                // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
+                self.stream
+                    .send(Message::Text(string))
+                    .await
+                    .map_err(crate::result::ErrorInner::WebSocket)?;
+            }
+        };
+        Ok(())
+    }
+
+    async fn handle_subscription_internal<R: Clone + Send>(
+        &mut self,
+        event: String,
+        command_data: BrowsingContext,
+        sender: oneshot::Sender<broadcast::Receiver<R>>,
+        event_subscription: impl Fn(
+            &mut EventSubscription,
+        )
+            -> &mut Option<(broadcast::Sender<R>, broadcast::Receiver<R>)>
+        + Send,
+        respond_command_constructor: impl FnOnce(
+            oneshot::Sender<broadcast::Receiver<R>>,
+        ) -> RespondCommand
+        + Send,
+    ) -> crate::result::Result<()> {
+        match event_subscription(&mut self.subscriptions) {
+            Some(subscription) => {
+                sender.send(subscription.0.subscribe());
+            }
+            None => {
+                self.id += 1;
+
+                self.pending_commands
+                    .insert(self.id, respond_command_constructor(sender));
+
+                let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+                    id: self.id,
+                    command_data: session::subscribe::Command {
+                        params: session::SubscriptionRequest {
+                            events: vec![event],
+                            contexts: vec![command_data],
+                        },
+                    },
+                })
+                .unwrap();
+
+                println!("{string}");
+
+                event_subscription(&mut self.subscriptions).insert(broadcast::channel(10));
 
                 // starting from here this could be done asynchronously
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
