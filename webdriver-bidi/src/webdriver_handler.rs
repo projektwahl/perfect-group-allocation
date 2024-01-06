@@ -88,6 +88,19 @@ macro_rules! magic {
             }
         }
 
+        fn handle_event(this: &mut WebDriverHandler, input: EventData) -> crate::result::Result<()> {
+            match input {
+                $(
+                    EventData::$variant_subscription(event) => {
+                        // TODO FIXME don't unwrap but unsubscribe in this case
+                        // TODO FIXME extract method
+                       this.$subscription_store.as_ref().unwrap().0.send(event).unwrap();
+                    }
+                ),*
+            }
+            Ok(())
+        }
+
         fn send_response(this: &mut WebDriverHandler, result: Value, respond_command: RespondCommand) -> crate::result::Result<()> {
             match (respond_command) {
                 $(
@@ -173,13 +186,13 @@ impl WebDriverHandler {
                     match message {
                         Some(Ok(Message::Text(message))) => {
                             if let Err(error) = self.handle_message(&message) {
-                                eprintln!("error {error:?}");
+                                eprintln!("error when parsing incoming message {message} {error:?}");
                             }
                         }
                         Some(Ok(message)) => {
                             println!("Unknown message: {message:#?}");
                         }
-                        Some(Err(error)) => println!("Error {error:#?}"),
+                        Some(Err(error)) => println!("Error in receive {error:#?}"),
                         None => {
                             println!("connection closed");
                             break;
@@ -189,7 +202,7 @@ impl WebDriverHandler {
                 // TODO FIXME use the receive many functions
                 Some(receive_command) = self.receive_command.recv() => {
                     if let Err(error) = handle_command(self, receive_command).await {
-                        eprintln!("error {error:?}");
+                        eprintln!("error when handling incoming command {error:?}");
                     }
                 }
             }
@@ -293,11 +306,11 @@ impl WebDriverHandler {
                     extensible: _,
                 },
             ) => {
-                eprintln!("error {error:#?}"); // TODO FIXME propage to command if it has an id.
+                eprintln!("error response received {error:#?}"); // TODO FIXME propage to command if it has an id.
 
                 Ok(())
             }
-            WebDriverBiDiLocalEndMessage::Event(event) => {}
+            WebDriverBiDiLocalEndMessage::Event(event) => handle_event(self, event),
         }
     }
 }

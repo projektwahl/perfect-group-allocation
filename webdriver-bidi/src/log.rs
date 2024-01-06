@@ -11,39 +11,37 @@ pub struct EntryAdded {
 
 /// <https://w3c.github.io/webdriver-bidi/#types-log-logentry>
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum Entry {
-    Log(GenericLogEntry),
-    Console(ConsoleLogEntry),
-    Javascript(JavascriptLogEntry),
+pub struct Entry {
+    level: Level,
+    // TODO FIXME this contains the browsing context or realm
+    source: Source,
+    text: Option<String>,
+    timestamp: u64,
+    stack_trace: StackTrace,
+    #[serde(flatten)]
+    inner: InnerLogEntry,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct BaseLogEntry {
-    level: String,
-    // TODO FIXME this contains the browsing context or realm
-    source: String,
-    text: Option<String>,
-    timestamp: u64,
-    stack_trace: String,
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+pub enum InnerLogEntry {
+    Console(ConsoleLogEntry),
+    Javascript(JavascriptLogEntry),
+    #[serde(untagged)]
+    Log(GenericLogEntry),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GenericLogEntry {
-    #[serde(flatten)]
-    base: BaseLogEntry,
     r#type: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ConsoleLogEntry {
-    #[serde(flatten)]
-    base: BaseLogEntry,
     method: String,
-    args: Vec<String>,
+    args: Vec<RemoteValue>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct JavascriptLogEntry {
-    #[serde(flatten)]
-    base: BaseLogEntry,
-}
+pub struct JavascriptLogEntry {}
