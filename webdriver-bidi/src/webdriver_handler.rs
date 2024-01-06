@@ -192,9 +192,9 @@ impl WebDriverHandler {
                             }
                         }
                         Some(Ok(message)) => {
-                            println!("Unknown message: {message:#?}");
+                            println!("Unknown message: {message}");
                         }
-                        Some(Err(error)) => println!("Error in receive {error:#?}"),
+                        Some(Err(error)) => println!("Error in receive {error}"),
                         None => {
                             println!("connection closed");
                             break;
@@ -204,7 +204,7 @@ impl WebDriverHandler {
                 // TODO FIXME use the receive many functions
                 Some(receive_command) = self.receive_command.recv() => {
                     if let Err(error) = handle_command(self, receive_command).await {
-                        eprintln!("error when handling incoming command {error:?}");
+                        eprintln!("error when handling incoming command {error}");
                     }
                 }
             }
@@ -225,8 +225,10 @@ impl WebDriverHandler {
         ) -> RespondCommand
         + Send,
     ) -> crate::result::Result<()> {
-        let subscription = match global_subscriptions(self) {
-            Some(subscription) => subscription,
+        match global_subscriptions(self) {
+            Some(subscription) => {
+                sender.send(subscription.0.subscribe());
+            }
             None => {
                 self.id += 1;
 
@@ -255,11 +257,8 @@ impl WebDriverHandler {
                     .send(Message::Text(string))
                     .await
                     .map_err(crate::result::ErrorInner::WebSocket)?;
-
-                global_subscriptions(self).as_mut().unwrap() // TODO FIXME
             }
         };
-        sender.send(subscription.0.subscribe());
         Ok(())
     }
 
@@ -316,7 +315,7 @@ impl WebDriverHandler {
                     extensible: _,
                 },
             ) => {
-                eprintln!("error response received {error:#?}"); // TODO FIXME propage to command if it has an id.
+                eprintln!("error response received {error}"); // TODO FIXME propage to command if it has an id.
 
                 Ok(())
             }
