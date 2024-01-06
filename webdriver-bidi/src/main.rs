@@ -2,9 +2,6 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-use std::time::Duration;
-
-use tokio::time::sleep;
 use webdriver_bidi::webdriver::WebDriver;
 
 #[tokio::main]

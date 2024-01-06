@@ -1,10 +1,7 @@
-use core::hash::Hash;
-use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 use futures::{SinkExt as _, StreamExt as _};
-use paste::paste;
 use serde::Serialize;
 use serde_json::Value;
 use tokio::net::TcpStream;
@@ -154,7 +151,7 @@ macro_rules! magic {
             Ok(())
         }
 
-        fn send_response(this: &mut WebDriverHandler, result: Value, respond_command: RespondCommand) -> crate::result::Result<()> {
+        fn send_response(_this: &mut WebDriverHandler, result: Value, respond_command: RespondCommand) -> crate::result::Result<()> {
             match (respond_command) {
                 $(
                     RespondCommand::$variant(respond_command) => {

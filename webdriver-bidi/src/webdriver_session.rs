@@ -2,7 +2,6 @@ use futures::Future;
 use tokio::sync::broadcast;
 
 use crate::browsing_context::BrowsingContext;
-use crate::session::SubscriptionRequest;
 use crate::webdriver::WebDriver;
 use crate::webdriver_handler::SendCommand;
 use crate::{browsing_context, log, session};
