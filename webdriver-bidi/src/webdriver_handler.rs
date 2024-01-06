@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
 use futures::{SinkExt as _, StreamExt as _};
+use paste::paste;
 use serde::Serialize;
 use serde_json::Value;
 use tokio::net::TcpStream;
@@ -38,7 +39,7 @@ macro_rules! magic {
         #[derive(Debug)]
         pub enum RespondCommand {
             $(#[doc = $doc] $variant(oneshot::Sender<$($command)::*::Result>),)*
-            $(#[doc = $doc_subscription] $variant_subscription(oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
+            $(#[doc = $doc_subscription] $variant_subscription(broadcast::Receiver<$($command_subscription)::*>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
         }
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
@@ -164,11 +165,12 @@ macro_rules! magic {
                     }
                 ),*
                 $(
-                    RespondCommand::$variant_subscription(respond_command) => {
+                    RespondCommand::$variant_subscription(value, channel) => {
                         // result here is the result of the subscribe command which should be empty
                         // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
-                        respond_command
-                            .send(this.global_subscriptions.$variant_subscription.as_mut().unwrap().0.subscribe())
+
+                        // TODO FIXME we need to know whether this was a global or local subscription. maybe store that directly in the respond command?
+                        channel.send(value)
                             .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
                     }
                 ),*
@@ -265,6 +267,7 @@ impl WebDriverHandler {
             broadcast::Receiver<R>,
         )> + Send,
         respond_command_constructor: impl FnOnce(
+            broadcast::Receiver<R>,
             oneshot::Sender<broadcast::Receiver<R>>,
         ) -> RespondCommand
         + Send,
@@ -276,8 +279,12 @@ impl WebDriverHandler {
             None => {
                 self.id += 1;
 
-                self.pending_commands
-                    .insert(self.id, respond_command_constructor(sender));
+                let ch = broadcast::channel(10);
+
+                self.pending_commands.insert(
+                    self.id,
+                    respond_command_constructor(ch.0.subscribe(), sender),
+                );
 
                 let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
                     id: self.id,
@@ -292,8 +299,7 @@ impl WebDriverHandler {
 
                 println!("{string}");
 
-                global_event_subscription(&mut self.global_subscriptions)
-                    .insert(broadcast::channel(10));
+                global_event_subscription(&mut self.global_subscriptions).insert(ch);
 
                 // starting from here this could be done asynchronously
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
@@ -318,19 +324,24 @@ impl WebDriverHandler {
             (broadcast::Sender<R>, broadcast::Receiver<R>),
         > + Send,
         respond_command_constructor: impl FnOnce(
+            broadcast::Receiver<R>,
             oneshot::Sender<broadcast::Receiver<R>>,
         ) -> RespondCommand
         + Send,
     ) -> crate::result::Result<()> {
         match event_subscription(&mut self.subscriptions).get(&command_data) {
             Some(subscription) => {
-                sender.send(subscription.0.subscribe());
+                sender.send(subscription.0.subscribe()); // TODO FIXME this would return before the request command is actually done
             }
             None => {
                 self.id += 1;
 
-                self.pending_commands
-                    .insert(self.id, respond_command_constructor(sender));
+                let ch = broadcast::channel(10);
+
+                self.pending_commands.insert(
+                    self.id,
+                    respond_command_constructor(ch.0.subscribe(), sender),
+                );
 
                 let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
                     id: self.id,
@@ -345,8 +356,7 @@ impl WebDriverHandler {
 
                 println!("{string}");
 
-                event_subscription(&mut self.subscriptions)
-                    .insert(command_data, broadcast::channel(10));
+                event_subscription(&mut self.subscriptions).insert(command_data, ch);
 
                 // starting from here this could be done asynchronously
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
@@ -413,6 +423,8 @@ impl WebDriverHandler {
                 },
             ) => {
                 eprintln!("error response received {error}"); // TODO FIXME propage to command if it has an id.
+
+                // TODO unsubscribe, send error etc
 
                 Ok(())
             }
