@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::script::{RemoteValue, Source, StackTrace};
+
 pub type Event = EntryAdded;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -11,9 +13,19 @@ pub struct EntryAdded {
 
 /// <https://w3c.github.io/webdriver-bidi/#types-log-logentry>
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum Level {
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#types-log-logentry>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Entry {
     level: Level,
-    // TODO FIXME this contains the browsing context or realm
     source: Source,
     text: Option<String>,
     timestamp: u64,

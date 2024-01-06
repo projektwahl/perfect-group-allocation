@@ -4,6 +4,7 @@
 pub mod browsing_context;
 pub mod log;
 pub mod result;
+pub mod script;
 pub mod session;
 pub mod webdriver;
 pub mod webdriver_handler;
