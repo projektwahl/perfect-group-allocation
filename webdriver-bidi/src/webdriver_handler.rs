@@ -89,9 +89,10 @@ macro_rules! magic {
                 ),*
                 $(
                     RespondCommand::$variant_subscription(respond_command) => {
+                        // result here is the result of the subscribe command which should be empty
+                        // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
                         respond_command
-                            .send(serde_path_to_error::deserialize(result)
-                                .map_err(crate::result::Error::ParseReceivedWithPath)?)
+                            .send()
                             .map_err(|_| crate::result::Error::CommandCallerExited)
                     }
                 ),*
@@ -185,23 +186,24 @@ impl WebDriverHandler {
         println!("handle closed");
     }
 
-    async fn handle_subscription_internal<C: Serialize + Debug + Send, R: Send>(
+    async fn handle_global_subscription_internal<C: Serialize + Debug + Send, R: Clone + Send>(
         &mut self,
         command_data: C,
         sender: oneshot::Sender<broadcast::Receiver<R>>,
+        global_subscriptions: &mut Option<(broadcast::Sender<R>, broadcast::Receiver<R>)>,
         respond_command_constructor: impl FnOnce(
             oneshot::Sender<broadcast::Receiver<R>>,
         ) -> RespondCommand
         + Send,
     ) -> crate::result::Result<()> {
-        let subscription = match &self.global_log_subscriptions {
+        let subscription = match &global_subscriptions {
             Some(subscription) => subscription,
             None => {
                 self.id += 1;
 
                 let (tx, rx) = oneshot::channel();
                 self.pending_commands
-                    .insert(self.id, RespondCommand::SubscribeGlobalLogs(tx));
+                    .insert(self.id, respond_command_constructor(tx));
 
                 let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
                     id: self.id,
@@ -220,10 +222,10 @@ impl WebDriverHandler {
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
                 self.stream.send(Message::Text(string)).await?;
 
-                self.global_log_subscriptions.insert(broadcast::channel(10))
+                global_subscriptions.insert(broadcast::channel(10))
             }
         };
-        response.send(subscription.0.subscribe());
+        sender.send(subscription.0.subscribe());
         Ok(())
     }
 
@@ -246,7 +248,6 @@ impl WebDriverHandler {
 
         println!("{string}");
 
-        // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
         self.stream.send(Message::Text(string)).await?;
 
         Ok(())
@@ -278,7 +279,6 @@ impl WebDriverHandler {
                     extensible: _,
                 },
             ) => {
-                // TODO FIXME we need a id -> channel mapping bruh
                 eprintln!("error {error:#?}"); // TODO FIXME propage to command if it has an id.
 
                 Ok(())
