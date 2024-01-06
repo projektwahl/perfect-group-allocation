@@ -13,9 +13,9 @@ use crate::webdriver_session::WebDriverSession;
 #[derive(Debug, Clone)]
 pub struct WebDriver {
     /// send a command
-    send_command: mpsc::Sender<SendCommand>,
+    send_command: mpsc::UnboundedSender<SendCommand>,
     // send a subscribe command and receive the subscription channel.
-    event_handlers_log: mpsc::Sender<SendSubscribeGlobalEvent>,
+    event_handlers_log: mpsc::UnboundedSender<SendSubscribeGlobalEvent>,
 }
 
 impl WebDriver {
@@ -84,8 +84,8 @@ impl WebDriver {
         let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session")).await?;
 
-        let (command_sender, command_receiver) = mpsc::channel(10);
-        let (subscription_sender, subscription_receiver) = mpsc::channel(10);
+        let (command_sender, command_receiver) = mpsc::unbounded_channel();
+        let (subscription_sender, subscription_receiver) = mpsc::unbounded_channel();
 
         tokio::spawn(WebDriverHandler::handle(
             stream,
@@ -99,53 +99,40 @@ impl WebDriver {
         })
     }
 
-    pub async fn session_new(
-        &self,
-    ) -> crate::result::Result<impl Future<Output = crate::result::Result<WebDriverSession>>> {
-        let test = self
-            .send_command(
-                crate::session::new::Command {
-                    params: session::new::Parameters {
-                        capabilities: session::new::CapabilitiesRequest {},
-                    },
+    pub fn session_new(&self) -> impl Future<Output = crate::result::Result<WebDriverSession>> {
+        let test = self.send_command(
+            crate::session::new::Command {
+                params: session::new::Parameters {
+                    capabilities: session::new::CapabilitiesRequest {},
                 },
-                SendCommand::SessionNew,
-            )
-            .await?;
-        Ok(async {
+            },
+            SendCommand::SessionNew,
+        );
+        async {
             let result: session::new::Result = test.await?;
             Ok(WebDriverSession {
                 session_id: result.session_id,
                 driver: self.clone(),
             })
-        })
+        }
     }
 
-    pub(crate) async fn send_command<C: Send, R: Send>(
+    pub(crate) fn send_command<C: Send, R: Send>(
         &self,
         command: C,
-        send_command_constructor: impl FnOnce(C, oneshot::Sender<oneshot::Receiver<R>>) -> SendCommand
-        + Send,
-    ) -> crate::result::Result<impl Future<Output = crate::result::Result<R>>> {
+        send_command_constructor: impl FnOnce(C, oneshot::Sender<R>) -> SendCommand + Send,
+    ) -> impl Future<Output = crate::result::Result<R>> {
         let (tx, rx) = oneshot::channel();
 
-        // maybe use an unbounded sender, then we don't need async here
         self.send_command
             .send(send_command_constructor(command, tx))
-            .await
-            .map_err(|_| crate::result::Error::CommandTaskExited)?;
+            .unwrap();
 
-        // TODO FIXME I think we don't need this intermediate part as send already guarantees order
-        // when we received the final receiver, we can be sure that our command got handled and is ordered before all commands that we sent afterwards.
-        let rx = rx
-            .await
-            .map_err(|_| crate::result::Error::CommandTaskExited)?;
-
-        Ok(async {
+        async {
             let result = rx
                 .await
                 .map_err(|_| crate::result::Error::CommandTaskExited)?;
             Ok(result)
-        })
+        }
     }
 }

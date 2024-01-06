@@ -28,7 +28,7 @@ macro_rules! magic {
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
         #[derive(Debug)]
         pub enum SendCommand {
-            $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<oneshot::Receiver<$($command)::*::Result>>),)*
+            $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<$($command)::*::Result>),)*
         }
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
@@ -80,6 +80,14 @@ macro_rules! magic {
                             .map_err(|_| crate::result::Error::CommandCallerExited)
                     }
                 ),*
+                $(
+                    RespondCommand::$variant_subscription(respond_command) => {
+                        respond_command
+                            .send(serde_path_to_error::deserialize(result)
+                                .map_err(crate::result::Error::ParseReceivedWithPath)?)
+                            .map_err(|_| crate::result::Error::CommandCallerExited)
+                    }
+                ),*
             }
         }
     };
@@ -111,9 +119,9 @@ pub enum SendSubscribeGlobalEvent {
 pub struct WebDriverHandler {
     id: u64,
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
-    receive_command: mpsc::Receiver<SendCommand>,
+    receive_command: mpsc::UnboundedReceiver<SendCommand>,
     pending_commands: HashMap<u64, RespondCommand>, // TODO FIXME RespondCommand should contain some special things for subscriptions?
-    receive_subscription: mpsc::Receiver<SendSubscribeGlobalEvent>,
+    receive_subscription: mpsc::UnboundedReceiver<SendSubscribeGlobalEvent>,
     log_subscriptions: HashMap<
         BrowsingContext,
         (
@@ -130,8 +138,8 @@ pub struct WebDriverHandler {
 impl WebDriverHandler {
     pub async fn handle(
         stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
-        receive_command: mpsc::Receiver<SendCommand>,
-        receive_subscription: mpsc::Receiver<SendSubscribeGlobalEvent>,
+        receive_command: mpsc::UnboundedReceiver<SendCommand>,
+        receive_subscription: mpsc::UnboundedReceiver<SendSubscribeGlobalEvent>,
     ) {
         let mut this = Self {
             id: 0,
@@ -168,6 +176,7 @@ impl WebDriverHandler {
                         }
                     }
                 }
+                // TODO FIXME use the receive many functions
                 Some(receive_command) = self.receive_command.recv() => {
                     if let Err(error) = handle_command(self, receive_command).await {
                         eprintln!("error {error:?}");
@@ -227,14 +236,13 @@ impl WebDriverHandler {
     async fn handle_command_internal<C: Serialize + Debug + Send, R: Send>(
         &mut self,
         command_data: C,
-        sender: oneshot::Sender<oneshot::Receiver<R>>,
+        sender: oneshot::Sender<R>,
         respond_command_constructor: impl FnOnce(oneshot::Sender<R>) -> RespondCommand + Send,
     ) -> crate::result::Result<()> {
         self.id += 1;
 
-        let (tx, rx) = oneshot::channel();
         self.pending_commands
-            .insert(self.id, respond_command_constructor(tx));
+            .insert(self.id, respond_command_constructor(sender));
 
         let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
             id: self.id,
@@ -244,13 +252,8 @@ impl WebDriverHandler {
 
         println!("{string}");
 
-        // starting from here this could be done asynchronously
         // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
         self.stream.send(Message::Text(string)).await?;
-
-        sender
-            .send(rx)
-            .map_err(|_| crate::result::Error::CommandCallerExited)?;
 
         Ok(())
     }

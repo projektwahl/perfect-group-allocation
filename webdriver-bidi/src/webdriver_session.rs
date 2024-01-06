@@ -13,76 +13,61 @@ pub struct WebDriverSession {
 }
 
 impl WebDriverSession {
-    pub async fn session_end(
+    pub fn session_end(
         &mut self,
-    ) -> crate::result::Result<impl Future<Output = crate::result::Result<session::end::Result>>>
-    {
-        self.driver
-            .send_command(
-                session::end::Command {
-                    params: session::end::Parameters {},
-                },
-                SendCommand::SessionEnd,
-            )
-            .await
+    ) -> impl Future<Output = crate::result::Result<session::end::Result>> {
+        self.driver.send_command(
+            session::end::Command {
+                params: session::end::Parameters {},
+            },
+            SendCommand::SessionEnd,
+        )
     }
 
-    pub async fn browsing_context_get_tree(
+    pub fn browsing_context_get_tree(
         &mut self,
-    ) -> crate::result::Result<
-        impl Future<Output = crate::result::Result<browsing_context::get_tree::Result>>,
-    > {
-        self.driver
-            .send_command(
-                browsing_context::get_tree::Command {
-                    params: browsing_context::get_tree::Parameters {
-                        max_depth: None,
-                        root: None,
-                    },
+    ) -> impl Future<Output = crate::result::Result<browsing_context::get_tree::Result>> {
+        self.driver.send_command(
+            browsing_context::get_tree::Command {
+                params: browsing_context::get_tree::Parameters {
+                    max_depth: None,
+                    root: None,
                 },
-                SendCommand::BrowsingContextGetTree,
-            )
-            .await
+            },
+            SendCommand::BrowsingContextGetTree,
+        )
     }
 
-    pub async fn browsing_context_navigate(
+    pub fn browsing_context_navigate(
         &mut self,
         context: BrowsingContext,
         url: String,
-    ) -> crate::result::Result<
-        impl Future<Output = crate::result::Result<browsing_context::navigate::Result>>,
-    > {
-        self.driver
-            .send_command(
-                browsing_context::navigate::Command {
-                    params: browsing_context::navigate::Parameters {
-                        context,
-                        url,
-                        wait: browsing_context::ReadinessState::Complete,
-                    },
+    ) -> impl Future<Output = crate::result::Result<browsing_context::navigate::Result>> {
+        self.driver.send_command(
+            browsing_context::navigate::Command {
+                params: browsing_context::navigate::Parameters {
+                    context,
+                    url,
+                    wait: browsing_context::ReadinessState::Complete,
                 },
-                SendCommand::BrowsingContextNavigate,
-            )
-            .await
+            },
+            SendCommand::BrowsingContextNavigate,
+        )
     }
 
     // we don't want to subscribe twice so this needs application specific handling anyways if e.g. two subscribe concurrently
-    pub async fn session_subscribe(
+    pub fn session_subscribe(
         &mut self,
         browsing_context: BrowsingContext,
-    ) -> crate::result::Result<
-        impl Future<Output = crate::result::Result<session::subscribe::Result>>,
-    > {
-        self.driver
-            .send_command(
-                session::subscribe::Command {
-                    params: SubscriptionRequest {
-                        events: vec!["log.entryAdded".to_owned()],
-                        contexts: vec![browsing_context],
-                    },
+    ) -> impl Future<Output = crate::result::Result<session::subscribe::Result>> {
+        self.driver.send_command(
+            session::subscribe::Command {
+                params: SubscriptionRequest {
+                    events: vec!["log.entryAdded".to_owned()],
+                    contexts: vec![browsing_context],
                 },
-                SendCommand::SessionSubscribe,
-            )
-            .await
+            },
+            SendCommand::SessionSubscribe,
+        )
     }
 }
