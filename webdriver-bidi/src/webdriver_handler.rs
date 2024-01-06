@@ -29,9 +29,8 @@ macro_rules! magic {
         #[derive(Debug)]
         pub enum SendCommand {
             $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<$($command)::*::Result>),)*
-            // TODO FIXME somehow handle subscribing to multiple events at once
-            // TODO FIXME if first not empty we should subscribe to specific browsing contexts
-            $(#[doc = $doc_subscription] $variant_subscription(Vec<BrowsingContext>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
+            /// the list should not be empty because then you subscribe to nothing
+            $(#[doc = $doc_subscription] $variant_subscription(Option<Vec<BrowsingContext>>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
         }
 
         /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
