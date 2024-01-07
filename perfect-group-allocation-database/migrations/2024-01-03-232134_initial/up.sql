@@ -7,7 +7,7 @@
 
 -- append only tables have high security guarantees
 
-CREATE TABLE IF NOT EXISTS projects_history (
+CREATE TABLE IF NOT EXISTS project_history (
   history_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY NOT NULL,
   id INTEGER NOT NULL,
   title VARCHAR(255) NOT NULL,
@@ -23,4 +23,4 @@ CREATE TABLE IF NOT EXISTS projects_history (
   last_updated_by INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS projects_history_index ON projects_history (id, history_id);
+CREATE INDEX IF NOT EXISTS project_history_index ON project_history (id, history_id);
