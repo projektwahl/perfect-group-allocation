@@ -22,8 +22,9 @@ pub fn initialize_index_css() {
     // @import would produce a flash of unstyled content and also is less efficient
     let fs = FileProvider::new();
     let mut bundler = Bundler::new(&fs, None, ParserOptions::default());
+    // TODO FIXME project independent path
     let stylesheet = bundler
-        .bundle(Path::new("frontend/index.css"))
+        .bundle(Path::new("../frontend/index.css"))
         .map_err(|error| lightningcss::error::Error {
             kind: error.kind.to_string(),
             loc: error.loc,

@@ -13,7 +13,6 @@
 extern crate alloc;
 
 pub mod csrf_protection;
-mod entities;
 mod error;
 mod openid;
 pub mod router;
@@ -35,13 +34,13 @@ use http::{Request, StatusCode};
 use hyper::body::Incoming;
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
+use perfect_group_allocation_database::{get_database_connection_from_env, Pool};
 use routes::download::handler;
 use routes::favicon::{favicon_ico, initialize_favicon_ico};
 use routes::index::index;
 use routes::indexcss::{indexcss, initialize_index_css};
 use routes::openid_login::openid_login;
 use routes::projects::create::create;
-use sea_orm::{Database, DatabaseConnection};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
@@ -66,7 +65,7 @@ pub trait CsrfSafeExtractor {}
 
 #[derive(Clone, FromRef)]
 pub struct MyState {
-    database: DatabaseConnection,
+    pool: Pool,
     key: Key,
 }
 
@@ -107,7 +106,7 @@ pub trait CsrfToken {
 // TODO FIXME also provide session and request id through this so there is no duplicate extraction
 #[derive(Deserialize)]
 pub struct CsrfSafeForm<T: CsrfToken> {
-    value: T,
+    pub value: T,
 }
 
 #[async_trait]
@@ -152,14 +151,6 @@ where
 }
 
 impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
-
-pub async fn get_database_connection() -> Result<DatabaseConnection, AppError> {
-    let database_url = std::env::var("DATABASE_URL")?;
-
-    let db = Database::connect(&database_url).await?;
-
-    Ok(db)
-}
 
 //fn layers(_app: Router<MyState>, _db: DatabaseConnection) -> Router<()> {
 // layers are in reverse order
@@ -249,7 +240,7 @@ async fn program() -> Result<(), AppError> {
     initialize_index_css();
     initialize_openid_client().await;
 
-    let db = get_database_connection().await?;
+    let pool = get_database_connection_from_env()?;
 
     let service = ServeDir::new("frontend");
 
@@ -276,7 +267,7 @@ async fn program() -> Result<(), AppError> {
         .fallback_service(service);
 
     let app: Router<()> = app.with_state(MyState {
-        database: db,
+        pool,
         key: Key::generate(),
     });
     let app = app.layer(CatchPanicLayer::new()).layer(MyTraceLayer);
