@@ -15,7 +15,7 @@ pub async fn main() {
     }
 }
 
-pub async fn inner_main() -> Result<(), webdriver_bidi::result::Error> {
+pub async fn inner_main() -> Result<(), webdriver_bidi::Error> {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::TRACE)
         .finish();

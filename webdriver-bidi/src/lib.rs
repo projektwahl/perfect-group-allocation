@@ -25,7 +25,7 @@
 //! |--------------|-------------------------------------|
 //! | `js-uint`    | [`u64`]                             |
 //! | `js-int`     | [`i64`]                             |
-//! | `Extensible` | [`protocol_definition::Extensible`] |
+//! | `Extensible` | [`protocol::Extensible`] |
 //!
 //! ### Serde rules
 //! All types will (at some point) be annotated with:
@@ -53,7 +53,7 @@ pub mod browsing_context;
 pub mod generated;
 pub mod log;
 pub mod protocol;
-pub mod result;
+mod result;
 pub mod script;
 pub mod session;
 pub mod webdriver;
@@ -62,6 +62,7 @@ pub mod webdriver_session;
 
 use browsing_context::BrowsingContext;
 use generated::EventData;
+pub use result::{Error, ErrorInner, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -91,7 +92,7 @@ pub struct WebDriverBiDiLocalEndCommandResponse<ResultData> {
     //extensible: Value,
 }
 
-fn deserialize_broken_chromium_id<'de, D>(deserializer: D) -> Result<u64, D::Error>
+fn deserialize_broken_chromium_id<'de, D>(deserializer: D) -> core::result::Result<u64, D::Error>
 where
     D: serde::de::Deserializer<'de>,
 {
@@ -106,14 +107,14 @@ where
             formatter.write_str("a string containing json data")
         }
 
-        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        fn visit_u64<E>(self, v: u64) -> core::result::Result<Self::Value, E>
         where
             E: serde::de::Error,
         {
             Ok(v)
         }
 
-        fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+        fn visit_f64<E>(self, v: f64) -> core::result::Result<Self::Value, E>
         where
             E: serde::de::Error,
         {
