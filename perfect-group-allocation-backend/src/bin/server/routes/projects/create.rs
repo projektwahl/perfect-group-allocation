@@ -4,9 +4,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use axum::extract::State;
 use axum::response::IntoResponse;
 use bytes::Bytes;
+use diesel::prelude::*;
+use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
 use futures_util::StreamExt;
 use http::header;
+use perfect_group_allocation_database::models::{NewProject, ProjectHistoryEntry};
+use perfect_group_allocation_database::schema::project_history;
 use perfect_group_allocation_database::DatabaseConnection;
+use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
 
@@ -16,7 +21,7 @@ use crate::session::Session;
 use crate::{CreateProjectPayload, CsrfSafeForm};
 
 pub async fn create(
-    DatabaseConnection(db): DatabaseConnection,
+    DatabaseConnection(mut connection): DatabaseConnection,
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> (Session, impl IntoResponse) {
@@ -61,21 +66,22 @@ pub async fn create(
             return;
         }
 
-        let project = project_history::ActiveModel {
-            id: ActiveValue::Set(
-                SystemTime::now()
+        if let Err(error) = diesel::insert_into(project_history::table)
+            .values(NewProject {
+                id: SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
                     .subsec_nanos()
                     .try_into()
                     .unwrap(),
-            ), // TODO FIXME
-            title: ActiveValue::Set(form.value.title.clone()),
-            description: ActiveValue::Set(form.value.description.clone()),
-            ..Default::default()
-        };
-        if let Err(err) = project_history::Entity::insert(project).exec(&db).await {
-            yield Err::<Cow<'static, str>, AppError>(err.into());
+                title: form.value.title.clone(),
+                info: form.value.description.clone(),
+            })
+            .execute(&mut connection)
+            .await
+        {
+            error!("{:?}", error);
+            yield Ok::<Cow<'static, str>, AppError>("TODO FIXME database error".into());
         };
 
         // we can't stream the response and then redirect so probably add a button or so and use javascript? or maybe don't stream this page?
@@ -107,7 +113,9 @@ mod tests {
     use axum_extra::extract::cookie::Key;
     use axum_extra::extract::PrivateCookieJar;
     use http_body_util::BodyExt;
-    use perfect_group_allocation_database::{get_database_connection_from_env, DatabaseConnection};
+    use perfect_group_allocation_database::{
+        get_database_connection_from_env, DatabaseConnection, DatabaseError,
+    };
 
     use crate::error::AppError;
     use crate::session::Session;
@@ -125,8 +133,12 @@ mod tests {
             },
         };
 
-        let (_session, response) =
-            create(DatabaseConnection(database.get().await?), session, form).await;
+        let (_session, response) = create(
+            DatabaseConnection(database.get().await.map_err(DatabaseError::from)?),
+            session,
+            form,
+        )
+        .await;
         let response = response.into_response();
         let binding = response.into_body().collect().await.unwrap().to_bytes();
         let response = from_utf8(&binding).unwrap();

@@ -61,10 +61,10 @@ https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html
 
 # otel-v1-apm-span-*
 
-psql postgres://postgres:password@localhost
-DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
+psql postgres://postgres:password@localhost/pga?sslmode=disable
+DATABASE_URL="postgres://postgres:password@localhost/pga?sslmode=disable" cargo run --release --bin server
 
-DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable" OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_BACKTRACE=1 cargo run --bin server
+DATABASE_URL="postgres://postgres:password@localhost/pga?sslmode=disable" OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
 
 tokio-console
