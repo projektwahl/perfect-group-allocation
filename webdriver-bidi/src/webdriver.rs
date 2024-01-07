@@ -24,10 +24,10 @@ impl WebDriver {
     /// Creates a new [WebDriver BiDi](https://w3c.github.io/webdriver-bidi) connection.
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
-    pub async fn new(browser: Browser) -> Result<Self, crate::result::Error> {
+    pub async fn new(browser: Browser) -> Result<Self, crate::error::Error> {
         let port = match browser {
             Browser::Firefox => {
-                let tmp_dir = tempdir().map_err(crate::result::ErrorInner::TmpDirCreate)?;
+                let tmp_dir = tempdir().map_err(crate::error::ErrorInner::TmpDirCreate)?;
 
                 let mut child = tokio::process::Command::new("firefox")
                     .kill_on_drop(true)
@@ -42,7 +42,7 @@ impl WebDriver {
                     ])
                     .stderr(Stdio::piped())
                     .spawn()
-                    .map_err(crate::result::ErrorInner::SpawnBrowser)?;
+                    .map_err(crate::error::ErrorInner::SpawnBrowser)?;
 
                 let stderr = child.stderr.take().unwrap();
 
@@ -54,18 +54,18 @@ impl WebDriver {
                     let status = child
                         .wait()
                         .await
-                        .map_err(crate::result::ErrorInner::FailedToRunBrowser)?;
+                        .map_err(crate::error::ErrorInner::FailedToRunBrowser)?;
 
                     println!("child status was: {status}");
 
-                    Ok::<(), crate::result::Error>(())
+                    Ok::<(), crate::error::Error>(())
                 });
 
                 let mut port = None;
                 while let Some(line) = reader
                     .next_line()
                     .await
-                    .map_err(crate::result::ErrorInner::ReadBrowserStderr)?
+                    .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
                 {
                     eprintln!("{line}");
                     if let Some(p) =
@@ -73,14 +73,14 @@ impl WebDriver {
                     {
                         port = Some(
                             p.parse::<u16>()
-                                .map_err(crate::result::ErrorInner::PortDetect)?,
+                                .map_err(crate::error::ErrorInner::PortDetect)?,
                         );
                         break;
                     }
                 }
 
                 let Some(port) = port else {
-                    return Err(crate::result::ErrorInner::PortNotFound)?;
+                    return Err(crate::error::ErrorInner::PortNotFound)?;
                 };
 
                 tokio::spawn(async move {
@@ -97,7 +97,7 @@ impl WebDriver {
                     .kill_on_drop(true)
                     .stdout(Stdio::piped())
                     .spawn()
-                    .map_err(crate::result::ErrorInner::SpawnBrowser)?;
+                    .map_err(crate::error::ErrorInner::SpawnBrowser)?;
 
                 let stderr = child.stdout.take().unwrap();
 
@@ -109,17 +109,17 @@ impl WebDriver {
                     let status = child
                         .wait()
                         .await
-                        .map_err(crate::result::ErrorInner::FailedToRunBrowser)?;
+                        .map_err(crate::error::ErrorInner::FailedToRunBrowser)?;
 
                     println!("child status was: {status}");
 
-                    Ok::<(), crate::result::Error>(())
+                    Ok::<(), crate::error::Error>(())
                 });
 
                 while let Some(line) = reader
                     .next_line()
                     .await
-                    .map_err(crate::result::ErrorInner::ReadBrowserStderr)?
+                    .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
                 {
                     eprintln!("line: {line}");
                     if line == "ChromeDriver was started successfully." {
@@ -140,7 +140,7 @@ impl WebDriver {
         let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session"))
                 .await
-                .map_err(crate::result::ErrorInner::WebSocket)?;
+                .map_err(crate::error::ErrorInner::WebSocket)?;
 
         let (command_sender, command_receiver) = mpsc::unbounded_channel();
 
@@ -155,7 +155,7 @@ impl WebDriver {
         &self,
         send_command_constructor: impl FnOnce(C, oneshot::Sender<R>) -> SendCommand + Send,
         command: C,
-    ) -> impl Future<Output = crate::result::Result<R>> {
+    ) -> impl Future<Output = crate::error::Result<R>> {
         let (tx, rx) = oneshot::channel();
 
         self.send_command
@@ -165,7 +165,7 @@ impl WebDriver {
         async {
             let result = rx
                 .await
-                .map_err(|_| crate::result::ErrorInner::CommandTaskExited)?;
+                .map_err(|_| crate::error::ErrorInner::CommandTaskExited)?;
             Ok(result)
         }
     }
@@ -175,7 +175,7 @@ impl WebDriver {
         send_command_constructor: impl FnOnce(C, oneshot::Sender<broadcast::Receiver<R>>) -> SendCommand
         + Send,
         command: C,
-    ) -> impl Future<Output = crate::result::Result<broadcast::Receiver<R>>> {
+    ) -> impl Future<Output = crate::error::Result<broadcast::Receiver<R>>> {
         let (tx, rx) = oneshot::channel();
 
         self.send_command
@@ -185,7 +185,7 @@ impl WebDriver {
         async {
             let result = rx
                 .await
-                .map_err(|_| crate::result::ErrorInner::CommandTaskExited)?;
+                .map_err(|_| crate::error::ErrorInner::CommandTaskExited)?;
             Ok(result)
         }
     }

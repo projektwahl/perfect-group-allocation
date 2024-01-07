@@ -96,7 +96,7 @@ macro_rules! magic {
                 ,)*
             }
 
-            pub async fn handle_command(this: &mut crate::webdriver_handler::WebDriverHandler, input: SendCommand) -> crate::result::Result<()> {
+            pub async fn handle_command(this: &mut crate::webdriver_handler::WebDriverHandler, input: SendCommand) -> crate::Result<()> {
                 match input {
                     $(
                         SendCommand::$variant(command, sender) => {
@@ -119,7 +119,7 @@ macro_rules! magic {
                 Ok(())
             }
 
-            pub fn handle_event(this: &mut crate::webdriver_handler::WebDriverHandler, input: EventData) -> crate::result::Result<()> {
+            pub fn handle_event(this: &mut crate::webdriver_handler::WebDriverHandler, input: EventData) -> crate::Result<()> {
                 match input {
                     $(
                         EventData::$variant_subscription(event) => {
@@ -144,14 +144,14 @@ macro_rules! magic {
                 Ok(())
             }
 
-            pub fn send_response(_this: &mut crate::webdriver_handler::WebDriverHandler, result: ::serde_json::Value, respond_command: RespondCommand) -> crate::result::Result<()> {
+            pub fn send_response(_this: &mut crate::webdriver_handler::WebDriverHandler, result: ::serde_json::Value, respond_command: RespondCommand) -> crate::Result<()> {
                 match (respond_command) {
                     $(
                         RespondCommand::$variant(respond_command) => {
                             respond_command
                                 .send(serde_path_to_error::deserialize(result)
-                                    .map_err(crate::result::ErrorInner::ParseReceivedWithPath)?)
-                                .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
+                                    .map_err(crate::ErrorInner::ParseReceivedWithPath)?)
+                                .map_err(|_| crate::ErrorInner::CommandCallerExited)?
                         }
                     ),*
                     $(
@@ -161,7 +161,7 @@ macro_rules! magic {
 
                             // TODO FIXME we need to know whether this was a global or local subscription. maybe store that directly in the respond command?
                             channel.send(value)
-                                .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
+                                .map_err(|_| crate::ErrorInner::CommandCallerExited)?
                         }
                     ),*
                 }

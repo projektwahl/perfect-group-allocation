@@ -11,9 +11,10 @@ pub struct Error {
 }
 
 #[derive(Error, Debug)]
+#[allow(clippy::module_name_repetitions)]
 pub enum ErrorInner {
     #[error("WebSocket connection failure {0}")]
-    WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
+    WebSocket(tokio_tungstenite::tungstenite::Error),
     #[error("Failed to create temporary directory {0}")]
     TmpDirCreate(std::io::Error),
     #[error("Failed to spawn browser {0}")]

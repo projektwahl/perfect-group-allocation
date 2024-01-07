@@ -91,12 +91,12 @@ impl WebDriverHandler {
             oneshot::Sender<broadcast::Receiver<R>>,
         ) -> RespondCommand
         + Send,
-    ) -> crate::result::Result<()> {
+    ) -> crate::error::Result<()> {
         match global_event_subscription(&mut self.global_subscriptions) {
             Some(subscription) => {
                 sender
                     .send(subscription.0.subscribe())
-                    .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?;
+                    .map_err(|_| crate::error::ErrorInner::CommandCallerExited)?;
             }
             None => {
                 self.id += 1;
@@ -129,7 +129,7 @@ impl WebDriverHandler {
                 self.stream
                     .send(Message::Text(string))
                     .await
-                    .map_err(crate::result::ErrorInner::WebSocket)?;
+                    .map_err(crate::error::ErrorInner::WebSocket)?;
             }
         };
         Ok(())
@@ -151,11 +151,11 @@ impl WebDriverHandler {
             oneshot::Sender<broadcast::Receiver<R>>,
         ) -> RespondCommand
         + Send,
-    ) -> crate::result::Result<()> {
+    ) -> crate::error::Result<()> {
         if let Some(subscription) = event_subscription(&mut self.subscriptions).get(&command_data) {
             sender
                 .send(subscription.0.subscribe())
-                .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?; // TODO FIXME this would return before the request command is actually done
+                .map_err(|_| crate::error::ErrorInner::CommandCallerExited)?; // TODO FIXME this would return before the request command is actually done
         } else {
             self.id += 1;
 
@@ -187,7 +187,7 @@ impl WebDriverHandler {
             self.stream
                 .send(Message::Text(string))
                 .await
-                .map_err(crate::result::ErrorInner::WebSocket)?;
+                .map_err(crate::error::ErrorInner::WebSocket)?;
         };
         Ok(())
     }
@@ -197,7 +197,7 @@ impl WebDriverHandler {
         command_data: C,
         sender: oneshot::Sender<R>,
         respond_command_constructor: impl FnOnce(oneshot::Sender<R>) -> RespondCommand + Send,
-    ) -> crate::result::Result<()> {
+    ) -> crate::error::Result<()> {
         self.id += 1;
 
         self.pending_commands
@@ -215,21 +215,21 @@ impl WebDriverHandler {
         self.stream
             .send(Message::Text(string))
             .await
-            .map_err(crate::result::ErrorInner::WebSocket)?;
+            .map_err(crate::error::ErrorInner::WebSocket)?;
 
         Ok(())
     }
 
-    fn handle_message(&mut self, message: &str) -> crate::result::Result<()> {
+    fn handle_message(&mut self, message: &str) -> crate::error::Result<()> {
         let jd = &mut serde_json::Deserializer::from_str(message);
         let parsed_message: protocol::Message<Value> = serde_path_to_error::deserialize(jd)
-            .map_err(crate::result::ErrorInner::ParseReceivedWithPath)?;
+            .map_err(crate::error::ErrorInner::ParseReceivedWithPath)?;
         match parsed_message {
             protocol::Message::CommandResponse(CommandResponse { id, result }) => {
                 let respond_command = self
                     .pending_commands
                     .remove(&id)
-                    .ok_or(crate::result::ErrorInner::ResponseWithoutRequest(id))?;
+                    .ok_or(crate::error::ErrorInner::ResponseWithoutRequest(id))?;
 
                 send_response(self, result, respond_command)
             }

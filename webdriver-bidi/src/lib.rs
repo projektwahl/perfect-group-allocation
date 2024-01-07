@@ -60,18 +60,18 @@
 
 pub mod browser;
 pub mod browsing_context;
+mod error;
 mod generated;
 pub mod log;
 pub mod protocol;
-mod result;
 pub mod script;
 pub mod session;
 mod webdriver;
 mod webdriver_handler;
 
 use browsing_context::BrowsingContext;
+pub use error::{Error, ErrorInner, Result};
 pub use generated::SendCommand;
-pub use result::{Error, ErrorInner, Result};
 pub use webdriver::{Browser, WebDriver};
 
 pub trait ExtractBrowsingContext {

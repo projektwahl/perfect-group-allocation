@@ -1,6 +1,5 @@
 //! <https://w3c.github.io/webdriver-bidi/#command-session-new>
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use super::{CapabilitiesRequest, ProxyConfiguration};
 use crate::protocol::Extensible;
