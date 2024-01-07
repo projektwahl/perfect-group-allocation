@@ -2,8 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::generated::EventData;
-
 /// <https://w3c.github.io/webdriver-bidi/#protocol>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -103,6 +101,21 @@ pub use crate::generated::ResultData;
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct EmptyResult(pub Extensible);
+
+// https://w3c.github.io/webdriver-bidi/#protocol
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[serde(rename = "event")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct Event {
+    #[serde(flatten)]
+    pub data: EventData,
+    #[serde(flatten)]
+    pub extensible: Extensible,
+}
+
+pub use crate::generated::EventData;
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol>
 #[derive(Debug, Serialize, Deserialize, Default)]

@@ -11,21 +11,21 @@ macro_rules! magic {
     ) => {
         paste! {
 
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            /// <https://w3c.github.io/webdriver-bidi/#protocol>
             #[derive(Debug)]
             pub enum SendCommand {
                 $(#[doc = $doc] $variant($($command)::*::Command, ::tokio::sync::oneshot::Sender<$($command)::*::Result>),)*
                 $(#[doc = $doc_subscription] $variant_subscription(Option<crate::BrowsingContext>, ::tokio::sync::oneshot::Sender<::tokio::sync::broadcast::Receiver<$($command_subscription)::*>>),)*
             }
 
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            /// <https://w3c.github.io/webdriver-bidi/#protocol>
             #[derive(Debug)]
             pub enum RespondCommand {
                 $(#[doc = $doc] $variant(::tokio::sync::oneshot::Sender<$($command)::*::Result>),)*
                 $(#[doc = $doc_subscription] $variant_subscription(::tokio::sync::broadcast::Receiver<$($command_subscription)::*>, ::tokio::sync::oneshot::Sender<::tokio::sync::broadcast::Receiver<$($command_subscription)::*>>),)*
             }
 
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            /// <https://w3c.github.io/webdriver-bidi/#protocol>
             #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
             #[serde(tag = "method")]
             #[serde(rename_all = "camelCase")]
@@ -38,7 +38,7 @@ macro_rules! magic {
                 ,)*
             }
 
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            /// <https://w3c.github.io/webdriver-bidi/#protocol>
             #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
             #[serde(tag = "method")]
             #[serde(rename_all = "camelCase")]
@@ -63,7 +63,7 @@ macro_rules! magic {
                 }
             }
 
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            /// <https://w3c.github.io/webdriver-bidi/#protocol>
             #[derive(Debug, Default)]
             pub struct GlobalEventSubscription {
                 $(
@@ -72,7 +72,7 @@ macro_rules! magic {
                 ,)*
             }
 
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            /// <https://w3c.github.io/webdriver-bidi/#protocol>
             #[derive(Debug, Default)]
             pub struct EventSubscription {
                 $(
@@ -83,7 +83,7 @@ macro_rules! magic {
             }
 
 
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
+            /// <https://w3c.github.io/webdriver-bidi/#protocol>
             #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
             #[serde(tag = "method")]
             #[serde(rename_all = "camelCase")]

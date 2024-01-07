@@ -1,3 +1,5 @@
+//! <https://w3c.github.io/webdriver-bidi/#session>
+
 use serde::{Deserialize, Serialize};
 
 use crate::browsing_context::BrowsingContext;

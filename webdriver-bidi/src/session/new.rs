@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// <https://w3c.github.io/webdriver-bidi/#module-session-definition>
+/// <https://w3c.github.io/webdriver-bidi/#module-session>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "method")]
 #[serde(rename = "session.new")]
