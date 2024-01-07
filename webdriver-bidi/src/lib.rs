@@ -50,8 +50,9 @@
 //! Types combined in the spec with `( A // B // ... )` are represented as enum though usually as a tagged enum for performance.
 
 pub mod browsing_context;
+pub mod generated;
 pub mod log;
-pub mod protocol_definition;
+pub mod protocol;
 pub mod result;
 pub mod script;
 pub mod session;
@@ -60,9 +61,10 @@ pub mod webdriver_handler;
 pub mod webdriver_session;
 
 use browsing_context::BrowsingContext;
+use generated::EventData;
+use paste::paste;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
-use webdriver_handler::EventData;
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]

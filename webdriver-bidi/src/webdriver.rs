@@ -5,8 +5,9 @@ use tempfile::tempdir;
 use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::sync::{broadcast, mpsc, oneshot};
 
+use crate::generated::SendCommand;
 use crate::session;
-use crate::webdriver_handler::{SendCommand, WebDriverHandler};
+use crate::webdriver_handler::WebDriverHandler;
 use crate::webdriver_session::WebDriverSession;
 
 /// <https://w3c.github.io/webdriver-bidi>

@@ -12,211 +12,23 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::trace;
 
 use crate::browsing_context::BrowsingContext;
-use crate::protocol_definition::{self, Command, Extensible};
+use crate::generated::{
+    handle_command, handle_event, send_response, EventSubscription, GlobalEventSubscription,
+    RespondCommand, SendCommand,
+};
+use crate::protocol::{self, Command, Extensible};
 use crate::{
     browsing_context, log, session, WebDriverBiDiLocalEndCommandResponse,
     WebDriverBiDiLocalEndMessage, WebDriverBiDiLocalEndMessageErrorResponse,
 };
-
-macro_rules! magic {
-    (
-        pub enum {
-            $(#[doc = $doc:expr] $variant:ident($tag:literal $($command:ident)::+)),*
-        }
-        pub enum {
-            $(#[doc = $doc_subscription:expr] $variant_subscription:ident($tag_subscription:literal $($command_subscription:ident)::+)),*
-        }
-    ) => {
-        paste! {
-
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-            #[derive(Debug)]
-            pub enum SendCommand {
-                $(#[doc = $doc] $variant($($command)::*::Command, oneshot::Sender<$($command)::*::Result>),)*
-                $(#[doc = $doc_subscription] $variant_subscription(Option<BrowsingContext>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
-            }
-
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-            #[derive(Debug)]
-            pub enum RespondCommand {
-                $(#[doc = $doc] $variant(oneshot::Sender<$($command)::*::Result>),)*
-                $(#[doc = $doc_subscription] $variant_subscription(broadcast::Receiver<$($command_subscription)::*>, oneshot::Sender<broadcast::Receiver<$($command_subscription)::*>>),)*
-            }
-
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
-            #[serde(tag = "method")]
-            #[serde(rename_all = "camelCase")]
-            #[serde(deny_unknown_fields)]
-            pub enum CommandData {
-                $(
-                    #[doc = $doc]
-                    #[serde(rename = $tag)]
-                    $variant($($command)::*::Command)
-                ,)*
-            }
-
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
-            #[serde(tag = "method")]
-            #[serde(rename_all = "camelCase")]
-            #[serde(deny_unknown_fields)]
-            pub enum EventData {
-                $(
-                    #[doc = $doc_subscription]
-                    #[serde(rename = $tag_subscription)]
-                    $variant_subscription($($command_subscription)::*)
-                ,)*
-            }
-
-            impl crate::ExtractBrowsingContext for EventData {
-                fn browsing_context(&self) -> Option<&crate::browsing_context::BrowsingContext> {
-                    match self {
-                        $(
-                            EventData::$variant_subscription(event) => {
-                                event.browsing_context()
-                            }
-                        ),*
-                    }
-                }
-            }
-
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-            #[derive(Debug, Default)]
-            pub struct GlobalEventSubscription {
-                $(
-                    #[doc = $doc_subscription]
-                    [<$variant_subscription:snake>]: Option<(broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>
-                ,)*
-            }
-
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-            #[derive(Debug, Default)]
-            pub struct EventSubscription {
-                $(
-                    #[doc = $doc_subscription]
-                    [<$variant_subscription:snake>]:
-                        HashMap<BrowsingContext, (broadcast::Sender<$($command_subscription)::*>, broadcast::Receiver<$($command_subscription)::*>)>
-                ,)*
-            }
-
-
-            /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
-            #[serde(tag = "method")]
-            #[serde(rename_all = "camelCase")]
-            #[serde(deny_unknown_fields)]
-            pub enum ResultData {
-                $(
-                    #[doc = $doc]
-                    #[serde(rename = $tag)]
-                    $variant($($command)::*::Result)
-                ,)*
-            }
-
-            async fn handle_command(this: &mut WebDriverHandler, input: SendCommand) -> crate::result::Result<()> {
-                match input {
-                    $(
-                        SendCommand::$variant(command, sender) => {
-                            this.handle_command_internal(command, sender, RespondCommand::$variant).await?;
-                        }
-                    ),*
-                    $(
-                        SendCommand::$variant_subscription(command, sender) => {
-                            match command {
-                                Some(browsing_context) => {
-                                    this.handle_subscription_internal($tag_subscription.to_owned(), browsing_context, sender, |ges| &mut ges.[<$variant_subscription:snake>], RespondCommand::$variant_subscription).await?;
-                                }
-                                None => {
-                                    this.handle_global_subscription_internal($tag_subscription.to_owned(), sender, |ges| &mut ges.[<$variant_subscription:snake>], RespondCommand::$variant_subscription).await?;
-                                }
-                            }
-                        }
-                    ),*
-                }
-                Ok(())
-            }
-
-            fn handle_event(this: &mut WebDriverHandler, input: EventData) -> crate::result::Result<()> {
-                match input {
-                    $(
-                        EventData::$variant_subscription(event) => {
-                            // TODO FIXME extract method
-
-                            // maybe no global but only browsercontext subscription
-                            if let Some(sub) = this.global_subscriptions.[<$variant_subscription:snake>].as_ref() {
-                                // TODO FIXME don't unwrap but unsubscribe in this case
-                                sub.0.send(event.clone()).unwrap();
-                            }
-                            // we should find out in which cases there is no browsing context
-                            if let Some(browsing_context) = <$($command_subscription)::* as crate::ExtractBrowsingContext>::browsing_context(&event) {
-                                // maybe global but no browsercontext subscription
-                                if let Some(sub) = this.subscriptions.[<$variant_subscription:snake>].get(browsing_context) {
-                                    // TODO FIXME don't unwrap but unsubscribe in this case
-                                    sub.0.send(event).unwrap();
-                                }
-                            }
-                        }
-                    ),*
-                }
-                Ok(())
-            }
-
-            fn send_response(_this: &mut WebDriverHandler, result: Value, respond_command: RespondCommand) -> crate::result::Result<()> {
-                match (respond_command) {
-                    $(
-                        RespondCommand::$variant(respond_command) => {
-                            respond_command
-                                .send(serde_path_to_error::deserialize(result)
-                                    .map_err(crate::result::ErrorInner::ParseReceivedWithPath)?)
-                                .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
-                        }
-                    ),*
-                    $(
-                        RespondCommand::$variant_subscription(value, channel) => {
-                            // result here is the result of the subscribe command which should be empty
-                            // serde_path_to_error::deserialize(result).map_err(crate::result::Error::ParseReceivedWithPath)?
-
-                            // TODO FIXME we need to know whether this was a global or local subscription. maybe store that directly in the respond command?
-                            channel.send(value)
-                                .map_err(|_| crate::result::ErrorInner::CommandCallerExited)?
-                        }
-                    ),*
-                }
-                Ok(())
-            }
-        }
-    };
-}
-
-magic! {
-    pub enum {
-        /// <https://w3c.github.io/webdriver-bidi/#command-session-new>
-        SessionNew("session.new" session::new),
-        /// <https://w3c.github.io/webdriver-bidi/#command-session-end>
-        SessionEnd("session.end" session::end),
-        /// <https://w3c.github.io/webdriver-bidi/#command-session-subscribe>
-        SessionSubscribe("session.subscribe" session::subscribe), // TODO FIXME this should not be in sendcommand
-        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
-        BrowsingContextGetTree("browsingContext.getTree" browsing_context::get_tree),
-        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
-        BrowsingContextNavigate("browsingContext.navigate" browsing_context::navigate),
-        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
-        BrowsingContextCreate("browsingContext.create" browsing_context::create)
-    }
-    pub enum {
-        /// tmp
-        SubscribeGlobalLogs("log.entryAdded" log::EntryAdded)
-    }
-}
 
 pub struct WebDriverHandler {
     id: u64,
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
     receive_command: mpsc::UnboundedReceiver<SendCommand>,
     pending_commands: HashMap<u64, RespondCommand>,
-    subscriptions: EventSubscription,
-    global_subscriptions: GlobalEventSubscription,
+    pub(crate) subscriptions: EventSubscription,
+    pub(crate) global_subscriptions: GlobalEventSubscription,
 }
 
 impl WebDriverHandler {
@@ -268,7 +80,7 @@ impl WebDriverHandler {
         println!("handle closed");
     }
 
-    async fn handle_global_subscription_internal<R: Clone + Send>(
+    pub(crate) async fn handle_global_subscription_internal<R: Clone + Send>(
         &mut self,
         event: String,
         sender: oneshot::Sender<broadcast::Receiver<R>>,
@@ -300,7 +112,7 @@ impl WebDriverHandler {
                     respond_command_constructor(ch.0.subscribe(), sender),
                 );
 
-                let string = serde_json::to_string(&protocol_definition::Command {
+                let string = serde_json::to_string(&protocol::Command {
                     id: self.id,
                     command_data: session::subscribe::Command {
                         params: session::SubscriptionRequest {
@@ -327,7 +139,7 @@ impl WebDriverHandler {
         Ok(())
     }
 
-    async fn handle_subscription_internal<R: Clone + Send>(
+    pub(crate) async fn handle_subscription_internal<R: Clone + Send>(
         &mut self,
         event: String,
         command_data: BrowsingContext,
@@ -358,7 +170,7 @@ impl WebDriverHandler {
                 respond_command_constructor(ch.0.subscribe(), sender),
             );
 
-            let string = serde_json::to_string(&protocol_definition::Command {
+            let string = serde_json::to_string(&protocol::Command {
                 id: self.id,
                 command_data: session::subscribe::Command {
                     params: session::SubscriptionRequest {
@@ -386,7 +198,7 @@ impl WebDriverHandler {
         Ok(())
     }
 
-    async fn handle_command_internal<C: Serialize + Debug + Send, R: Send>(
+    pub(crate) async fn handle_command_internal<C: Serialize + Debug + Send, R: Send>(
         &mut self,
         command_data: C,
         sender: oneshot::Sender<R>,
