@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+pub mod activate;
+pub mod capture_screenshot;
 pub mod create;
 pub mod get_tree;
 pub mod navigate;
