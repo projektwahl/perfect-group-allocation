@@ -67,6 +67,8 @@ pub enum ProxyConfiguration {
     PacProxy(PacProxyConfiguration),
     #[serde(rename = "system")]
     System(SystemProxyConfiguration),
+    #[serde(untagged)]
+    EmptyBrokenChrome(Extensible),
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-ProxyConfiguration>

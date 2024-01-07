@@ -1,5 +1,6 @@
 //! <https://w3c.github.io/webdriver-bidi/#command-session-new>
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::{CapabilitiesRequest, ProxyConfiguration};
 use crate::protocol::Extensible;
@@ -34,7 +35,6 @@ pub struct Result {
 /// <https://w3c.github.io/webdriver-bidi/#command-session-new>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
 pub struct Capabilities {
     pub accept_insecure_certs: bool,
     pub browser_name: String,
@@ -48,5 +48,5 @@ pub struct Capabilities {
     #[serde(default)]
     web_socket_url: Option<String>,
     #[serde(flatten)]
-    pub extensible: Extensible,
+    pub extensible: Value,
 }

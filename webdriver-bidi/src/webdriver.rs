@@ -125,7 +125,6 @@ impl WebDriver {
                 {
                     eprintln!("line: {line}");
                     if line == "ChromeDriver was started successfully." {
-                        println!("detected that browser started");
                         break;
                     }
                 }
