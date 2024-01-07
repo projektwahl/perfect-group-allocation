@@ -6,7 +6,7 @@ use crate::protocol::EmptyResult;
 use crate::script::{NodeRemoteValue, ResultOwnership, SerializationOptions, SharedReference};
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-locateNodes>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.handleUserPrompt")]
 #[serde(rename_all = "camelCase")]
@@ -16,7 +16,7 @@ pub struct Command {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-locateNodes>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
@@ -42,7 +42,7 @@ pub struct Parameters {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-locateNodes>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Result {

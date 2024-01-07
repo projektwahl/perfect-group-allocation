@@ -12,7 +12,7 @@ pub mod subscribe;
 pub mod unsubscribe;
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-CapabilitiesRequest>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct CapabilitiesRequest {
@@ -25,7 +25,7 @@ pub struct CapabilitiesRequest {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-CapabilityRequest>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct CapabilityRequest {
@@ -52,7 +52,7 @@ pub struct CapabilityRequest {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-ProxyConfiguration>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "proxyType")]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
@@ -70,7 +70,7 @@ pub enum ProxyConfiguration {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-ProxyConfiguration>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct AutodetectProxyConfiguration {
@@ -79,7 +79,7 @@ pub struct AutodetectProxyConfiguration {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-ProxyConfiguration>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct DirectProxyConfiguration {
@@ -88,7 +88,7 @@ pub struct DirectProxyConfiguration {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-ProxyConfiguration>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ManualProxyConfiguration {
@@ -111,7 +111,7 @@ pub struct ManualProxyConfiguration {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-ProxyConfiguration>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SocksProxyConfiguration {
@@ -120,7 +120,7 @@ pub struct SocksProxyConfiguration {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-ProxyConfiguration>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PacProxyConfiguration {
@@ -130,7 +130,7 @@ pub struct PacProxyConfiguration {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-ProxyConfiguration>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SystemProxyConfiguration {
@@ -139,7 +139,7 @@ pub struct SystemProxyConfiguration {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-SubscriptionRequest>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SubscriptionRequest {

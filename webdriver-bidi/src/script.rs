@@ -748,3 +748,32 @@ pub struct Source {
     pub realm: Realm,
     pub context: Option<BrowsingContext>,
 }
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-Target>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct RealmTarget {
+    pub realm: Realm,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-Target>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct ContextTarget {
+    pub context: Option<BrowsingContext>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub sandbox: Option<String>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-Target>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub enum Target {
+    Realm(RealmTarget),
+    Context(ContextTarget),
+}

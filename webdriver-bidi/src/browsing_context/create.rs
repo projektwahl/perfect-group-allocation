@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use super::BrowsingContext;
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.create")]
 #[serde(rename_all = "camelCase")]
@@ -14,7 +14,7 @@ pub struct Command {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub enum CreateType {
@@ -23,7 +23,7 @@ pub enum CreateType {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
@@ -38,7 +38,7 @@ pub struct Parameters {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Result {

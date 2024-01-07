@@ -23,13 +23,13 @@ pub mod traverse_history;
 pub struct BrowsingContext(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Info>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct InfoList(pub Vec<Info>);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Info>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Info {
@@ -42,7 +42,7 @@ pub struct Info {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Locator>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
@@ -56,7 +56,7 @@ pub enum Locator {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Locator>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct CssLocator {
@@ -64,7 +64,7 @@ pub struct CssLocator {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Locator>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct InnerTextLocator {
@@ -81,7 +81,7 @@ pub struct InnerTextLocator {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Locator>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub enum MatchType {
@@ -90,7 +90,7 @@ pub enum MatchType {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Locator>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct XPathLocator {
@@ -99,13 +99,13 @@ pub struct XPathLocator {
 
 /// The `Navigation` type is a unique string identifying an ongoing navigation.
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Navigation>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Navigation(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-NavigationInfo>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NavigationInfo {
@@ -116,7 +116,7 @@ pub struct NavigationInfo {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-ReadinessState>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub enum ReadinessState {

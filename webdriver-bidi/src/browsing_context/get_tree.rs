@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::{BrowsingContext, InfoList};
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.getTree")]
 #[serde(rename_all = "camelCase")]
@@ -15,7 +15,7 @@ pub struct Command {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
@@ -28,7 +28,7 @@ pub struct Parameters {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Result {

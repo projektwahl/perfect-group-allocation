@@ -6,7 +6,7 @@ use super::BrowsingContext;
 use crate::protocol::EmptyResult;
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-print>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.activate")]
 #[serde(rename_all = "camelCase")]
@@ -16,7 +16,7 @@ pub struct Command {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-print>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
@@ -47,7 +47,7 @@ pub struct Parameters {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-print>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub enum Orientation {
@@ -56,7 +56,7 @@ pub enum Orientation {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-print>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
@@ -66,7 +66,7 @@ pub enum PageRange {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-print>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PrintMarginParameters {
@@ -95,7 +95,7 @@ pub struct PrintMarginParameters {
 /// Minimum size is 1pt x 1pt. Conversion follows from
 /// https://www.w3.org/TR/css3-values/#absolute-lengths
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-print>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PrintPageParameters {
@@ -112,7 +112,7 @@ pub struct PrintPageParameters {
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-print>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Result(pub EmptyResult);

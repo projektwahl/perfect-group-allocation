@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Command<T> {
@@ -17,13 +17,13 @@ pub struct Command<T> {
 pub use crate::generated::CommandData;
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol>
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct EmptyParams(pub Extensible);
 
 // https://w3c.github.io/webdriver-bidi/#protocol
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
@@ -37,7 +37,7 @@ pub enum Message<ResultData> {
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct CommandResponse<ResultData> {
@@ -82,7 +82,7 @@ where
 }
 
 // https://w3c.github.io/webdriver-bidi/#protocol
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ErrorResponse {
@@ -97,13 +97,13 @@ pub struct ErrorResponse {
 pub use crate::generated::ResultData;
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol>
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct EmptyResult(pub Extensible);
 
 // https://w3c.github.io/webdriver-bidi/#protocol
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 #[serde(rename = "event")]
 #[serde(rename_all = "camelCase")]
@@ -118,7 +118,7 @@ pub struct Event {
 pub use crate::generated::EventData;
 
 /// <https://w3c.github.io/webdriver-bidi/#protocol>
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Extensible(pub serde_json::Map<String, serde_json::Value>);

@@ -26,7 +26,7 @@ macro_rules! magic {
             }
 
             /// <https://w3c.github.io/webdriver-bidi/#protocol>
-            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize, Clone)]
             #[serde(tag = "method")]
             #[serde(rename_all = "camelCase")]
             #[serde(deny_unknown_fields)]
@@ -39,7 +39,7 @@ macro_rules! magic {
             }
 
             /// <https://w3c.github.io/webdriver-bidi/#protocol>
-            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize, Clone)]
             #[serde(tag = "method")]
             #[serde(rename_all = "camelCase")]
             #[serde(deny_unknown_fields)]
@@ -84,7 +84,7 @@ macro_rules! magic {
 
 
             /// <https://w3c.github.io/webdriver-bidi/#protocol>
-            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+            #[derive(Debug, ::serde::Serialize, ::serde::Deserialize, Clone)]
             #[serde(tag = "method")]
             #[serde(rename_all = "camelCase")]
             #[serde(deny_unknown_fields)]
