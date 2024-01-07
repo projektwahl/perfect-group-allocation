@@ -12,11 +12,11 @@ use error::DatabaseError;
 
 pub async fn main() -> Result<(), DatabaseError> {
    // create a new connection pool with the default config
-    let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(std::env::var("DATABASE_URL").map_err(|_| DatabaseError::DatabaseEnvUrl)?);
-    let pool = Pool::builder(config).build().map_err(DatabaseError::Deadpool)?;
+    let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(std::env::var("DATABASE_URL")?);
+    let pool = Pool::builder(config).build()?;
 
     // checkout a connection from the pool
-    let mut conn = pool.get().await.map_err(DatabaseError::Deadpool)?;
+    let mut conn = pool.get().await?;
 
     // use the connection as ordinary diesel-async connection
     let res = users::table.select(User::as_select()).load::(&mut conn).await?;
