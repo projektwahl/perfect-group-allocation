@@ -3,9 +3,14 @@ use alloc::borrow::Cow;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use bytes::Bytes;
+use diesel::prelude::*;
+use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
 use futures_util::StreamExt;
 use hyper::header;
-use perfect_group_allocation_database::DatabaseConnection;
+use perfect_group_allocation_database::models::ProjectHistoryEntry;
+use perfect_group_allocation_database::schema::project_history;
+use perfect_group_allocation_database::{DatabaseConnection, DatabaseError};
+use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{template_stream, yieldoki, yieldokv};
 
@@ -14,7 +19,7 @@ use crate::session::Session;
 
 #[template_stream("templates")]
 async gen fn list_internal(
-    DatabaseConnection(db): DatabaseConnection,
+    DatabaseConnection(connection): DatabaseConnection,
     session: Session,
 ) -> Result<alloc::borrow::Cow<'static, str>, AppError> {
     let template = yieldoki!(list_projects());
@@ -28,7 +33,23 @@ async gen fn list_internal(
     let template = yieldoki!(template.next());
     let template = yieldoki!(template.next());
     let mut template = yieldoki!(template.next());
-    let mut stream = project_history::Entity::find().stream(&db).await.unwrap();
+    let mut stream = match project_history::table
+        .group_by(project_history::id)
+        .select((
+            project_history::id,
+            diesel::dsl::max(project_history::history_id).assume_not_null(),
+        ))
+        .load_stream::<ProjectHistoryEntry>(&mut connection)
+        .await
+    {
+        Ok(value) => value,
+        Err(error) => {
+            error!("{:?}", error);
+            let template = yieldoki!(template.next_end_loop());
+            yieldoki!(template.next());
+            return;
+        }
+    };
     while let Some(x) = stream.next().await {
         let inner_template = yieldoki!(template.next_enter_loop());
         let x = x.unwrap();
@@ -42,10 +63,7 @@ async gen fn list_internal(
 }
 
 #[axum::debug_handler(state=crate::MyState)]
-pub async fn list(
-    DatabaseConnection(db): DatabaseConnection,
-    session: Session,
-) -> (Session, impl IntoResponse) {
+pub async fn list(db: DatabaseConnection, session: Session) -> (Session, impl IntoResponse) {
     let stream = AsyncIteratorStream(list_internal(db, session.clone())).map(|elem| match elem {
         Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
             // TODO FIXME use template here
