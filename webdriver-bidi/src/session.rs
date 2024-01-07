@@ -1,4 +1,4 @@
-//! <https://w3c.github.io/webdriver-bidi/#session>
+//! <https://w3c.github.io/webdriver-bidi/#module-session>
 
 use serde::{Deserialize, Serialize};
 

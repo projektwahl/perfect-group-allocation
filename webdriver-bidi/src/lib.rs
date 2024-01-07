@@ -59,6 +59,7 @@
 //!
 //! Types combined in the spec with `( A // B // ... )` are represented as enum though usually as a tagged enum for performance.
 
+pub mod browser;
 pub mod browsing_context;
 mod generated;
 pub mod log;
