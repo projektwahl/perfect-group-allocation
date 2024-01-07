@@ -73,7 +73,7 @@ mod webdriver_session;
 use browsing_context::BrowsingContext;
 pub use generated::SendCommand;
 pub use result::{Error, ErrorInner, Result};
-pub use webdriver::WebDriver;
+pub use webdriver::{Browser, WebDriver};
 
 pub trait ExtractBrowsingContext {
     fn browsing_context(&self) -> Option<&BrowsingContext>;

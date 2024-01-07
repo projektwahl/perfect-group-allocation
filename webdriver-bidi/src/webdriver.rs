@@ -1,4 +1,8 @@
+use std::process::Stdio;
+
 use futures::Future;
+use tempfile::tempdir;
+use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::generated::SendCommand;
@@ -13,75 +17,128 @@ pub struct WebDriver {
     send_command: mpsc::UnboundedSender<SendCommand>,
 }
 
+pub enum Browser {
+    Firefox,
+    Chromium,
+}
+
 impl WebDriver {
     /// Creates a new [WebDriver BiDi](https://w3c.github.io/webdriver-bidi) connection.
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
-    pub async fn new() -> Result<Self, crate::result::Error> {
-        /*let tmp_dir = tempdir().map_err(crate::result::ErrorInner::TmpDirCreate)?;
+    pub async fn new(browser: Browser) -> Result<Self, crate::result::Error> {
+        let port = match browser {
+            Browser::Firefox => {
+                let tmp_dir = tempdir().map_err(crate::result::ErrorInner::TmpDirCreate)?;
 
-        let mut child = tokio::process::Command::new("firefox")
-            .kill_on_drop(true)
-            .args([
-                "--profile",
-                &tmp_dir.path().to_string_lossy(),
-                "--no-remote",
-                "--new-instance",
-                //"--headless",
-                "--remote-debugging-port",
-                "0",
-            ])
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(crate::result::ErrorInner::SpawnBrowser)?;
+                let mut child = tokio::process::Command::new("firefox")
+                    .kill_on_drop(true)
+                    .args([
+                        "--profile",
+                        &tmp_dir.path().to_string_lossy(),
+                        "--no-remote",
+                        "--new-instance",
+                        //"--headless",
+                        "--remote-debugging-port",
+                        "0",
+                    ])
+                    .stderr(Stdio::piped())
+                    .spawn()
+                    .map_err(crate::result::ErrorInner::SpawnBrowser)?;
 
-        let stderr = child.stderr.take().unwrap();
+                let stderr = child.stderr.take().unwrap();
 
-        let mut reader = BufReader::new(stderr).lines();
+                let mut reader = BufReader::new(stderr).lines();
 
-        // Ensure the child process is spawned in the runtime so it can
-        // make progress on its own while we await for any output.
-        tokio::spawn(async move {
-            let status = child
-                .wait()
-                .await
-                .map_err(crate::result::ErrorInner::FailedToRunBrowser)?;
+                // Ensure the child process is spawned in the runtime so it can
+                // make progress on its own while we await for any output.
+                tokio::spawn(async move {
+                    let status = child
+                        .wait()
+                        .await
+                        .map_err(crate::result::ErrorInner::FailedToRunBrowser)?;
 
-            println!("child status was: {status}");
+                    println!("child status was: {status}");
 
-            Ok::<(), crate::result::Error>(())
-        });
+                    Ok::<(), crate::result::Error>(())
+                });
 
-        let mut port = None;
-        while let Some(line) = reader
-            .next_line()
-            .await
-            .map_err(crate::result::ErrorInner::ReadBrowserStderr)?
-        {
-            eprintln!("{line}");
-            if let Some(p) = line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:") {
-                port = Some(
-                    p.parse::<u16>()
-                        .map_err(crate::result::ErrorInner::PortDetect)?,
-                );
-                break;
+                let mut port = None;
+                while let Some(line) = reader
+                    .next_line()
+                    .await
+                    .map_err(crate::result::ErrorInner::ReadBrowserStderr)?
+                {
+                    eprintln!("{line}");
+                    if let Some(p) =
+                        line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:")
+                    {
+                        port = Some(
+                            p.parse::<u16>()
+                                .map_err(crate::result::ErrorInner::PortDetect)?,
+                        );
+                        break;
+                    }
+                }
+
+                let Some(port) = port else {
+                    return Err(crate::result::ErrorInner::PortNotFound)?;
+                };
+
+                tokio::spawn(async move {
+                    while let Some(line) = reader.next_line().await? {
+                        eprintln!("{line}");
+                    }
+                    Ok::<(), std::io::Error>(())
+                });
+
+                port
             }
-        }
+            Browser::Chromium => {
+                let mut child = tokio::process::Command::new("chromedriver")
+                    .kill_on_drop(true)
+                    .stdout(Stdio::piped())
+                    .spawn()
+                    .map_err(crate::result::ErrorInner::SpawnBrowser)?;
 
-        let Some(port) = port else {
-            return Err(crate::result::ErrorInner::PortNotFound)?;
+                let stderr = child.stdout.take().unwrap();
+
+                let mut reader = BufReader::new(stderr).lines();
+
+                // Ensure the child process is spawned in the runtime so it can
+                // make progress on its own while we await for any output.
+                tokio::spawn(async move {
+                    let status = child
+                        .wait()
+                        .await
+                        .map_err(crate::result::ErrorInner::FailedToRunBrowser)?;
+
+                    println!("child status was: {status}");
+
+                    Ok::<(), crate::result::Error>(())
+                });
+
+                while let Some(line) = reader
+                    .next_line()
+                    .await
+                    .map_err(crate::result::ErrorInner::ReadBrowserStderr)?
+                {
+                    eprintln!("line: {line}");
+                    if line == "ChromeDriver was started successfully." {
+                        println!("detected that browser started");
+                        break;
+                    }
+                }
+
+                tokio::spawn(async move {
+                    while let Some(line) = reader.next_line().await? {
+                        eprintln!("{line}");
+                    }
+                    Ok::<(), std::io::Error>(())
+                });
+                9515
+            }
         };
-
-         tokio::spawn(async move {
-            while let Some(line) = reader.next_line().await? {
-                eprintln!("{line}");
-            }
-            Ok::<(), std::io::Error>(())
-        });
-
-        */
-
-        let port = 9515;
 
         let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session"))
