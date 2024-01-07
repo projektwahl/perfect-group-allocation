@@ -113,7 +113,7 @@ impl WebDriverHandler {
                     data: session::subscribe::Command {
                         params: session::SubscriptionRequest {
                             events: vec![event],
-                            contexts: vec![],
+                            contexts: None,
                         },
                     },
                     extensible: Extensible::default(),
@@ -171,7 +171,7 @@ impl WebDriverHandler {
                 data: session::subscribe::Command {
                     params: session::SubscriptionRequest {
                         events: vec![event],
-                        contexts: vec![command_data.clone()],
+                        contexts: Some(vec![command_data.clone()]),
                     },
                 },
                 extensible: Extensible::default(),
