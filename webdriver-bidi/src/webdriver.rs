@@ -6,9 +6,7 @@ use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::generated::SendCommand;
-use crate::session::{self, CapabilitiesRequest};
 use crate::webdriver_handler::WebDriverHandler;
-use crate::webdriver_session::WebDriverSession;
 
 /// <https://w3c.github.io/webdriver-bidi>
 #[derive(Debug, Clone)]
@@ -153,31 +151,10 @@ impl WebDriver {
         })
     }
 
-    pub fn session_new(&self) -> impl Future<Output = crate::result::Result<WebDriverSession>> {
-        let test = self.send_command(
-            crate::session::new::Command {
-                params: session::new::Parameters {
-                    capabilities: CapabilitiesRequest {
-                        always_match: None,
-                        first_match: None,
-                    },
-                },
-            },
-            SendCommand::SessionNew,
-        );
-        async {
-            let result: session::new::Result = test.await?;
-            Ok(WebDriverSession {
-                session_id: result.session_id,
-                driver: self.clone(),
-            })
-        }
-    }
-
     pub fn send_command<C: Send, R: Send>(
         &self,
-        command: C,
         send_command_constructor: impl FnOnce(C, oneshot::Sender<R>) -> SendCommand + Send,
+        command: C,
     ) -> impl Future<Output = crate::result::Result<R>> {
         let (tx, rx) = oneshot::channel();
 
@@ -195,9 +172,9 @@ impl WebDriver {
 
     pub fn request_subscribe<C: Send, R: Send>(
         &self,
-        command: C,
         send_command_constructor: impl FnOnce(C, oneshot::Sender<broadcast::Receiver<R>>) -> SendCommand
         + Send,
+        command: C,
     ) -> impl Future<Output = crate::result::Result<broadcast::Receiver<R>>> {
         let (tx, rx) = oneshot::channel();
 

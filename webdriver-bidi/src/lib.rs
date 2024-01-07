@@ -68,7 +68,6 @@ pub mod script;
 pub mod session;
 mod webdriver;
 mod webdriver_handler;
-mod webdriver_session;
 
 use browsing_context::BrowsingContext;
 pub use generated::SendCommand;

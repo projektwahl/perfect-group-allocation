@@ -48,5 +48,5 @@ pub struct Capabilities {
     #[serde(default)]
     web_socket_url: Option<String>,
     #[serde(flatten)]
-    pub extensible: Value,
+    pub extensible: Extensible,
 }
