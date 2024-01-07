@@ -1,8 +1,310 @@
+//! <https://w3c.github.io/webdriver-bidi/#module-script>
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
 use crate::browsing_context::BrowsingContext;
+
+/// The script.Channel type represents the id of a specific channel used to send custom messages from the remote end to the local end.
+///
+/// <https://w3c.github.io/webdriver-bidi/#type-script-Channel>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct Channel(pub String);
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-ChannelValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
+#[serde(rename = "channel")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct ChannelValue {
+    pub value: ChannelProperties,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-ChannelValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
+#[serde(rename = "channel")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct ChannelProperties {
+    pub channel: Channel,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub serialization_options: Option<SerializationOptions>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub ownership: Option<ResultOwnership>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-EvaluateResult>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub enum EvaluateResult {
+    Success(EvaluateResultSuccess),
+    Exception(EvaluateResultException),
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-EvaluateResult>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
+#[serde(rename = "success")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct EvaluateResultSuccess {
+    result: RemoteValue,
+    realm: Realm,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-EvaluateResult>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
+#[serde(rename = "exception")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct EvaluateResultException {
+    exception_details: ExceptionDetails,
+    realm: Realm,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-ExceptionDetails>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct ExceptionDetails {
+    pub column_number: u64,
+    pub exception: RemoteValue,
+    pub line_number: u64,
+    pub stack_trace: StackTrace,
+    pub text: String,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-Handle>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct Handle(pub String);
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-InternalId>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct InternalId(pub String);
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub enum LocalValue {
+    #[serde(rename = "undefined")]
+    PrimitiveProtocolValueUndefined,
+    #[serde(rename = "null")]
+    PrimitiveProtocolValueNull,
+    #[serde(rename = "string")]
+    PrimitiveProtocolValueString { value: String },
+    #[serde(rename = "number")]
+    PrimitiveProtocolValueNumber {
+        value: f64, // TODO FIXME
+    },
+    #[serde(rename = "boolean")]
+    PrimitiveProtocolValueBoolean { value: bool },
+    #[serde(rename = "bigint")]
+    PrimitiveProtocolValueBigInt { value: String },
+    #[serde(rename = "channel")]
+    Channel(ChannelValue),
+    #[serde(rename = "array")]
+    Array(ArrayLocalValue),
+    #[serde(rename = "date")]
+    Date(DateLocalValue),
+    #[serde(rename = "map")]
+    Map(MapLocalValue),
+    #[serde(rename = "object")]
+    Object(ObjectLocalValue),
+    #[serde(rename = "regexp")]
+    RegExp(RegExpLocalValue),
+    #[serde(rename = "set")]
+    Set(SetLocalValue),
+    #[serde(untagged)]
+    RemoteReference(RemoteReference),
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct ListLocalValue(Vec<LocalValue>);
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct ArrayLocalValue {
+    value: ListLocalValue,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct DateLocalValue {
+    value: String,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+// TODO FIXME first value may be a string
+pub struct MappingLocalValue(Vec<(LocalValue, LocalValue)>);
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct MapLocalValue {
+    value: MappingLocalValue,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct ObjectLocalValue {
+    value: MappingLocalValue,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct RegExpValue {
+    pattern: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    flags: Option<String>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct RegExpLocalValue {
+    value: RegExpValue,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct SetLocalValue {
+    value: ListLocalValue,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-PreloadScript>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct PreloadScript(pub String);
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-Realm>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct Realm(pub String);
+
+// TODO FIXME https://w3c.github.io/webdriver-bidi/#type-script-PrimitiveProtocolValue?
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct RealmInfo {
+    realm: Realm,
+    origin: String,
+    #[serde(flatten)]
+    inner: RealmInfoInner,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub enum RealmInfoInner {
+    Window(WindowRealmInfo),
+    DedicatedWorker(DedicatedWorkerRealmInfo),
+    SharedWorker(SharedWorkerRealmInfo),
+    ServiceWorker(ServiceWorkerRealmInfo),
+    Worker(WorkerRealmInfo),
+    PaintWorklet(PaintWorkletRealmInfo),
+    AudioWorklet(AudioWorkletRealmInfo),
+    Worklet(WorkletRealmInfo),
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct WindowRealmInfo {
+    context: BrowsingContext,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    sandbox: Option<String>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct DedicatedWorkerRealmInfo {
+    owners: Vec<Realm>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct SharedWorkerRealmInfo {
+    owners: Vec<Realm>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct ServiceWorkerRealmInfo {
+    owners: Vec<Realm>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct WorkerRealmInfo {}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct PaintWorkletRealmInfo {}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct AudioWorkletRealmInfo {}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct WorkletRealmInfo {}
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-StackTrace>
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -31,24 +333,6 @@ pub struct Source {
     pub realm: Realm,
     pub context: Option<BrowsingContext>,
 }
-
-/// <https://w3c.github.io/webdriver-bidi/#type-script-Realm>
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct Realm(pub String);
-
-/// <https://w3c.github.io/webdriver-bidi/#type-script-Handle>
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct Handle(pub String);
-
-/// <https://w3c.github.io/webdriver-bidi/#type-script-InternalId>
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct InternalId(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-SharedId>
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -180,15 +464,6 @@ pub struct RegExpRemoteValue {
     pub handle: Option<Handle>,
     pub internal_id: Option<InternalId>,
     pub value: RegExpValue,
-}
-
-/// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct RegExpValue {
-    pub pattern: String,
-    pub flags: Option<String>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>

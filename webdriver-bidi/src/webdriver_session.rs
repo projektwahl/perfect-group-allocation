@@ -27,13 +27,12 @@ impl WebDriverSession {
 
     pub fn browsing_context_get_tree(
         &mut self,
-        browsing_context: BrowsingContext,
     ) -> impl Future<Output = crate::result::Result<browsing_context::get_tree::Result>> {
         self.driver.send_command(
             browsing_context::get_tree::Command {
                 params: browsing_context::get_tree::Parameters {
-                    max_depth: 0,
-                    root: browsing_context,
+                    max_depth: None,
+                    root: None,
                 },
             },
             SendCommand::BrowsingContextGetTree,
@@ -50,7 +49,7 @@ impl WebDriverSession {
                 params: browsing_context::navigate::Parameters {
                     context,
                     url,
-                    wait: browsing_context::ReadinessState::Complete,
+                    wait: Some(browsing_context::ReadinessState::Complete),
                 },
             },
             SendCommand::BrowsingContextNavigate,
