@@ -185,11 +185,11 @@ macro_rules! magic {
 
 magic! {
     pub enum {
-        /// https://w3c.github.io/webdriver-bidi/#command-session-new
+        /// <https://w3c.github.io/webdriver-bidi/#command-session-new>
         SessionNew("session.new" session::new),
-        /// https://w3c.github.io/webdriver-bidi/#command-session-end
+        /// <https://w3c.github.io/webdriver-bidi/#command-session-end>
         SessionEnd("session.end" session::end),
-        /// https://w3c.github.io/webdriver-bidi/#command-session-subscribe
+        /// <https://w3c.github.io/webdriver-bidi/#command-session-subscribe>
         SessionSubscribe("session.subscribe" session::subscribe), // TODO FIXME this should not be in sendcommand
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
         BrowsingContextGetTree("browsingContext.getTree" browsing_context::get_tree),
