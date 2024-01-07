@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::browsing_context::BrowsingContext;
+use crate::protocol::Extensible;
 
 /// The script.Channel type represents the id of a specific channel used to send custom messages from the remote end to the local end.
 ///
@@ -237,13 +238,21 @@ pub struct RealmInfo {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub enum RealmInfoInner {
+    #[serde(rename = "window")]
     Window(WindowRealmInfo),
+    #[serde(rename = "dedicated-worker")]
     DedicatedWorker(DedicatedWorkerRealmInfo),
+    #[serde(rename = "shared-worker")]
     SharedWorker(SharedWorkerRealmInfo),
+    #[serde(rename = "service-worker")]
     ServiceWorker(ServiceWorkerRealmInfo),
+    #[serde(rename = "worker")]
     Worker(WorkerRealmInfo),
+    #[serde(rename = "paint-worklet")]
     PaintWorklet(PaintWorkletRealmInfo),
+    #[serde(rename = "audio-worklet")]
     AudioWorklet(AudioWorkletRealmInfo),
+    #[serde(rename = "worklet")]
     Worklet(WorkletRealmInfo),
 }
 
@@ -306,39 +315,64 @@ pub struct AudioWorkletRealmInfo {}
 #[serde(deny_unknown_fields)]
 pub struct WorkletRealmInfo {}
 
-/// <https://w3c.github.io/webdriver-bidi/#type-script-StackTrace>
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RealmType>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct StackTrace {
-    pub call_frames: Vec<StackFrame>,
+pub enum RealmType {
+    #[serde(rename = "window")]
+    Window,
+    #[serde(rename = "dedicated-worker")]
+    DedicatedWorker,
+    #[serde(rename = "shared-worker")]
+    SharedWorker,
+    #[serde(rename = "service-worker")]
+    ServiceWorker,
+    #[serde(rename = "worker")]
+    Worker,
+    #[serde(rename = "paint-worklet")]
+    PaintWorklet,
+    #[serde(rename = "audio-worklet")]
+    AudioWorklet,
+    #[serde(rename = "worklet")]
+    Worklet,
 }
 
-/// <https://w3c.github.io/webdriver-bidi/#type-script-StackFrame>
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteReference>
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct StackFrame {
-    pub column_number: u64,
-    pub function_name: String,
-    pub line_number: u64,
-    pub url: String,
+pub enum RemoteReference {
+    Shared(SharedReference),
+    RemoteObject(RemoteObjectReference),
 }
 
-/// <https://w3c.github.io/webdriver-bidi/#type-script-Source>
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteReference>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct Source {
-    pub realm: Realm,
-    pub context: Option<BrowsingContext>,
+pub struct SharedReference {
+    pub shared_id: SharedId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub handle: Option<Handle>,
+    #[serde(flatten)]
+    pub extensible: Extensible,
 }
 
-/// <https://w3c.github.io/webdriver-bidi/#type-script-SharedId>
+/// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteReference>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct SharedId(pub String);
+pub struct RemoteObjectReference {
+    pub handle: Handle,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub shared_id: Option<SharedId>,
+    #[serde(flatten)]
+    pub extensible: Extensible,
+}
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -641,4 +675,76 @@ pub struct WindowProxyRemoteValue {
 #[serde(deny_unknown_fields)]
 pub struct WindowProxyProperties {
     pub context: BrowsingContext,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-ResultOwnership>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub enum ResultOwnership {
+    Root,
+    None,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-SerializationOptions>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct SerializationOptions {
+    // TODO FIXME default
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    max_dom_depth: Option<u64>,
+    // TODO FIXME default
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    max_object_depth: Option<u64>,
+    // TODO FIXME default
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    include_shadow_tree: Option<ShadowTreeType>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-SerializationOptions>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub enum ShadowTreeType {
+    None,
+    Open,
+    All,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-SharedId>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct SharedId(pub String);
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-StackFrame>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct StackFrame {
+    pub column_number: u64,
+    pub function_name: String,
+    pub line_number: u64,
+    pub url: String,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-StackTrace>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct StackTrace {
+    pub call_frames: Vec<StackFrame>,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#type-script-Source>
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct Source {
+    pub realm: Realm,
+    pub context: Option<BrowsingContext>,
 }

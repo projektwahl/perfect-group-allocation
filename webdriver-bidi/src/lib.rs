@@ -50,7 +50,6 @@
 //!
 //! `Extensible` type is represented as:
 //! ```
-//! #
 //! #[serde(flatten)]
 //! pub extensible: protocol::Extensible
 //! ```

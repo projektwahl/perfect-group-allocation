@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::BrowsingContext;
+use crate::script::SharedReference;
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-captureScreenshot>
 #[derive(Debug, Serialize, Deserialize)]
