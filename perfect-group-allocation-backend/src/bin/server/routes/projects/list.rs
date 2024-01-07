@@ -19,7 +19,7 @@ use crate::session::Session;
 
 #[template_stream("templates")]
 async gen fn list_internal(
-    DatabaseConnection(connection): DatabaseConnection,
+    DatabaseConnection(mut connection): DatabaseConnection,
     session: Session,
 ) -> Result<alloc::borrow::Cow<'static, str>, AppError> {
     let template = yieldoki!(list_projects());
@@ -34,10 +34,16 @@ async gen fn list_internal(
     let template = yieldoki!(template.next());
     let mut template = yieldoki!(template.next());
     let mut stream = match project_history::table
-        .group_by(project_history::id)
+        .group_by((
+            project_history::id,
+            project_history::title,
+            project_history::info,
+        ))
         .select((
             project_history::id,
             diesel::dsl::max(project_history::history_id).assume_not_null(),
+            project_history::title,
+            project_history::info,
         ))
         .load_stream::<ProjectHistoryEntry>(&mut connection)
         .await
@@ -55,7 +61,7 @@ async gen fn list_internal(
         let x = x.unwrap();
         let inner_template = yieldokv!(inner_template.title(x.title));
         let inner_template = yieldoki!(inner_template.next());
-        let inner_template = yieldokv!(inner_template.description(x.description));
+        let inner_template = yieldokv!(inner_template.description(x.info));
         template = yieldoki!(inner_template.next());
     }
     let template = yieldoki!(template.next_end_loop());

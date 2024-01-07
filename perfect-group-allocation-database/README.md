@@ -13,7 +13,7 @@ psql postgres://postgres:password@localhost/pga
 
 ```sql
 -- https://stackoverflow.com/questions/25536422/optimize-group-by-query-to-retrieve-latest-row-per-user
-INSERT INTO projects_history (id) SELECT generate_series(1, 1000000) / 10;
+INSERT INTO project_history (id) SELECT generate_series(1, 1000000) / 10;
 ANALYZE VERBOSE;
-EXPLAIN ANALYZE SELECT id, MAX(history_id) FROM projects_history GROUP BY id;
+EXPLAIN ANALYZE SELECT id, MAX(history_id) FROM project_history GROUP BY id;
 ```
