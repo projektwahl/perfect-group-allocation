@@ -17,6 +17,9 @@ readme.workspace = true
 diesel = "2"
 diesel-async = { version = "0.4", features = ["postgres", "deadpool"] }
 thiserror = "1"
+http = "1"
+axum-core = "0.4"
+async-trait = "0.1"
 
 [lints]
 workspace = true

@@ -4,11 +4,15 @@ pub mod error;
 pub mod models;
 pub mod schema;
 
+use async_trait::async_trait;
+use axum_core::extract::{FromRef, FromRequestParts};
 use diesel::prelude::*;
-use diesel_async::pooled_connection::deadpool::Pool;
+use diesel_async::pooled_connection::deadpool::{Object, Pool};
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use error::DatabaseError;
+use http::request::Parts;
+use http::StatusCode;
 use schema::project_history;
 
 use crate::models::ProjectHistoryEntry;
@@ -25,6 +29,34 @@ pub fn get_database_connection(
 pub fn get_database_connection_from_env() -> Result<Pool<AsyncPgConnection>, DatabaseError> {
     let database_url = std::env::var("DATABASE_URL")?;
     get_database_connection(&database_url)
+}
+
+struct DatabaseConnection(Object<AsyncPgConnection>);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for DatabaseConnection
+where
+    S: Send + Sync,
+    Pool<AsyncPgConnection>: FromRef<S>,
+{
+    type Rejection = (StatusCode, String);
+
+    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let pool = Pool::<AsyncPgConnection>::from_ref(state);
+
+        let conn = pool.get().await.map_err(internal_error)?;
+
+        Ok(Self(conn))
+    }
+}
+
+/// Utility function for mapping any error into a `500 Internal Server Error`
+/// response.
+fn internal_error<E>(err: E) -> (StatusCode, String)
+where
+    E: std::error::Error,
+{
+    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
 
 pub async fn example() -> Result<(), DatabaseError> {
