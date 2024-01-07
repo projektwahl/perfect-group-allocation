@@ -107,7 +107,6 @@ mod tests {
     use axum_extra::extract::PrivateCookieJar;
     use http_body_util::BodyExt;
 
-    use crate::database::{get_offline_test_database, get_test_database};
     use crate::error::AppError;
     use crate::session::Session;
     use crate::{create, CreateProjectPayload, CsrfSafeForm};

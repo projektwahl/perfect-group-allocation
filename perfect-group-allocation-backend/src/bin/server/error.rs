@@ -18,8 +18,6 @@ pub enum AppError {
     Multipart(#[from] MultipartError),
     #[error("webserver error: {0}")]
     Axum(#[from] axum::Error),
-    #[error("database error: {0}")]
-    Database(#[from] sea_orm::DbErr),
     #[error("request token error: {0}")]
     RequestToken(
         #[from]

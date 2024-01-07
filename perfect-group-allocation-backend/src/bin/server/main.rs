@@ -55,7 +55,6 @@ use tower_http::services::ServeDir;
 use tracing::{info, warn, Instrument as _};
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
-use crate::database::get_database_connection_from_env;
 use crate::openid::initialize_openid_client;
 use crate::router::MyRouter;
 use crate::routes::openid_redirect::openid_redirect;
