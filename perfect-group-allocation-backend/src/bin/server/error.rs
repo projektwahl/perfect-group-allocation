@@ -6,6 +6,7 @@ use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 use opentelemetry::trace::TraceError;
+use perfect_group_allocation_database::DatabaseError;
 use serde::Serialize;
 
 use crate::session::Session;
@@ -56,6 +57,8 @@ pub enum AppError {
     Join(#[from] tokio::task::JoinError),
     #[error("trace error: {0}")]
     Trace(#[from] TraceError),
+    #[error("database error: {0}")]
+    Database(#[from] DatabaseError),
     #[error("wrong csrf token")]
     WrongCsrfToken,
     #[error("no accept remaining")]

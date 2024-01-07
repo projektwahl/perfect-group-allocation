@@ -3,6 +3,7 @@ use axum::response::{IntoResponse, Redirect};
 use oauth2::PkceCodeChallenge;
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::Nonce;
+use perfect_group_allocation_database::DatabaseConnection;
 use serde::Deserialize;
 
 use crate::error::{to_error_result, AppError};
@@ -23,7 +24,7 @@ impl CsrfToken for OpenIdLoginPayload {
 
 #[axum::debug_handler(state=crate::MyState)]
 pub async fn openid_login(
-    State(_db): State<DatabaseConnection>,
+    DatabaseConnection(db): DatabaseConnection,
     mut session: Session,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {

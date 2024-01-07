@@ -23,7 +23,6 @@ itertools = { default-features = false, version = "0.12", features = [ "use_allo
 tokio = { version = "1", features = ["full"] }
 log = { version = "0.4", features = ["release_max_level_off"] }
 axum = { version = "0.7", features = [ "http2", "macros", "multipart", "tracing" ] }
-axum-server = { version = "0.6", features = ["tls-rustls"] }
 tokio-rustls = "0.25"
 hyper = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["full"] }
@@ -31,7 +30,6 @@ tower-http = { version = "0.5", features = ["full"] }
 http-body = "1"
 tokio-util = { version = "0.7", features = ["io"] }
 anyhow = "1"
-sqlx = "0.7"
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 axum-extra = { version = "0.9", features = ["cookie", "cookie-private", "cookie-signed", "typed-header"] }
@@ -54,6 +52,7 @@ pin-project = "1"
 crossbeam = "0.8"
 hyper-util = "0.1"
 http-body-util = "0.1.0"
+perfect-group-allocation-database = { path = "../perfect-group-allocation-database" }
 
 # https://github.com/open-telemetry/opentelemetry-rust/pull/1410
 opentelemetry = { version = "0.21", features = ["metrics"] }

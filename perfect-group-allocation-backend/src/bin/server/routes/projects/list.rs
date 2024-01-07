@@ -5,6 +5,7 @@ use axum::response::IntoResponse;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use hyper::header;
+use perfect_group_allocation_database::DatabaseConnection;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{template_stream, yieldoki, yieldokv};
 
@@ -13,7 +14,7 @@ use crate::session::Session;
 
 #[template_stream("templates")]
 async gen fn list_internal(
-    db: DatabaseConnection,
+    DatabaseConnection(db): DatabaseConnection,
     session: Session,
 ) -> Result<alloc::borrow::Cow<'static, str>, AppError> {
     let template = yieldoki!(list_projects());
@@ -42,7 +43,7 @@ async gen fn list_internal(
 
 #[axum::debug_handler(state=crate::MyState)]
 pub async fn list(
-    State(db): State<DatabaseConnection>,
+    DatabaseConnection(db): DatabaseConnection,
     session: Session,
 ) -> (Session, impl IntoResponse) {
     let stream = AsyncIteratorStream(list_internal(db, session.clone())).map(|elem| match elem {

@@ -6,6 +6,7 @@ use axum::response::IntoResponse;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;
+use perfect_group_allocation_database::DatabaseConnection;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
 
@@ -15,7 +16,7 @@ use crate::session::Session;
 use crate::{CreateProjectPayload, CsrfSafeForm};
 
 pub async fn create(
-    State(db): State<DatabaseConnection>,
+    DatabaseConnection(db): DatabaseConnection,
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
 ) -> (Session, impl IntoResponse) {
@@ -106,6 +107,7 @@ mod tests {
     use axum_extra::extract::cookie::Key;
     use axum_extra::extract::PrivateCookieJar;
     use http_body_util::BodyExt;
+    use perfect_group_allocation_database::{get_database_connection_from_env, DatabaseConnection};
 
     use crate::error::AppError;
     use crate::session::Session;
@@ -113,7 +115,7 @@ mod tests {
 
     #[tokio::test]
     async fn hello_world() -> Result<(), AppError> {
-        let database = get_offline_test_database().await?;
+        let database = get_database_connection_from_env()?;
         let session = Session::new(PrivateCookieJar::new(Key::generate()));
         let form = CsrfSafeForm {
             value: CreateProjectPayload {
@@ -123,8 +125,8 @@ mod tests {
             },
         };
 
-        let state = axum::extract::State(database);
-        let (_session, response) = create(state, session, form).await;
+        let (_session, response) =
+            create(DatabaseConnection(database.get().await?), session, form).await;
         let response = response.into_response();
         let binding = response.into_body().collect().await.unwrap().to_bytes();
         let response = from_utf8(&binding).unwrap();

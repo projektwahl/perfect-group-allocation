@@ -1,48 +1,47 @@
 #![feature(error_generic_member_access)]
 
-pub mod error;
+mod error;
 pub mod models;
 pub mod schema;
 
 use async_trait::async_trait;
 use axum_core::extract::{FromRef, FromRequestParts};
 use diesel::prelude::*;
-use diesel_async::pooled_connection::deadpool::{Object, Pool};
+use diesel_async::pooled_connection::deadpool::{Object, Pool as DeadPool};
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use error::DatabaseError;
+pub use error::DatabaseError;
 use http::request::Parts;
 use http::StatusCode;
 use schema::project_history;
 
 use crate::models::ProjectHistoryEntry;
 
+pub type Pool = DeadPool<AsyncPgConnection>;
+
 // https://github.com/tokio-rs/axum/tree/main/examples/diesel-async-postgres
 
-pub fn get_database_connection(
-    database_url: &str,
-) -> Result<Pool<AsyncPgConnection>, DatabaseError> {
+pub fn get_database_connection(database_url: &str) -> Result<Pool, DatabaseError> {
     let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);
-    Ok(Pool::builder(config).build()?)
+    Ok(DeadPool::builder(config).build()?)
 }
 
-pub fn get_database_connection_from_env() -> Result<Pool<AsyncPgConnection>, DatabaseError> {
+pub fn get_database_connection_from_env() -> Result<DeadPool<AsyncPgConnection>, DatabaseError> {
     let database_url = std::env::var("DATABASE_URL")?;
     get_database_connection(&database_url)
 }
-
-struct DatabaseConnection(Object<AsyncPgConnection>);
+pub struct DatabaseConnection(pub Object<AsyncPgConnection>);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for DatabaseConnection
 where
     S: Send + Sync,
-    Pool<AsyncPgConnection>: FromRef<S>,
+    Pool: FromRef<S>,
 {
     type Rejection = (StatusCode, String);
 
     async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let pool = Pool::<AsyncPgConnection>::from_ref(state);
+        let pool = Pool::from_ref(state);
 
         let conn = pool.get().await.map_err(internal_error)?;
 
