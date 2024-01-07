@@ -27,14 +27,14 @@ pub struct Parameters {
     pub background: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub margin: Option<PrintMarginParameters>,
+    pub margin: Option<MarginParameters>,
     // TODO FIXME default
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub orientation: Option<Orientation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub page: Option<PrintPageParameters>,
+    pub page: Option<PageParameters>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub page_ranges: Option<Vec<PageRange>>,
@@ -69,7 +69,7 @@ pub enum PageRange {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct PrintMarginParameters {
+pub struct MarginParameters {
     // TODO FIXME default
     /// must be >= 0
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -93,12 +93,12 @@ pub struct PrintMarginParameters {
 }
 
 /// Minimum size is 1pt x 1pt. Conversion follows from
-/// https://www.w3.org/TR/css3-values/#absolute-lengths
+/// <https://www.w3.org/TR/css3-values/#absolute-lengths>
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-print>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct PrintPageParameters {
+pub struct PageParameters {
     // TODO FIXME default
     /// must be >= 0.0352
     #[serde(skip_serializing_if = "Option::is_none")]

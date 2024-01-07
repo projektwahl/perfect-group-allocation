@@ -71,11 +71,8 @@ mod webdriver_handler;
 mod webdriver_session;
 
 use browsing_context::BrowsingContext;
-use generated::EventData;
 pub use generated::SendCommand;
 pub use result::{Error, ErrorInner, Result};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 pub use webdriver::WebDriver;
 
 pub trait ExtractBrowsingContext {

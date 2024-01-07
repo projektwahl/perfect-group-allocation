@@ -211,7 +211,7 @@ pub struct SetLocalValue {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct PreloadScript(pub String);
+pub struct Preload(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-Realm>
 #[derive(Debug, Serialize, Deserialize, Clone)]

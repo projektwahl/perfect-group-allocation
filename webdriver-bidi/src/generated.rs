@@ -96,7 +96,7 @@ macro_rules! magic {
                 ,)*
             }
 
-            pub(crate) async fn handle_command(this: &mut crate::webdriver_handler::WebDriverHandler, input: SendCommand) -> crate::result::Result<()> {
+            pub async fn handle_command(this: &mut crate::webdriver_handler::WebDriverHandler, input: SendCommand) -> crate::result::Result<()> {
                 match input {
                     $(
                         SendCommand::$variant(command, sender) => {
@@ -119,7 +119,7 @@ macro_rules! magic {
                 Ok(())
             }
 
-            pub(crate) fn handle_event(this: &mut crate::webdriver_handler::WebDriverHandler, input: EventData) -> crate::result::Result<()> {
+            pub fn handle_event(this: &mut crate::webdriver_handler::WebDriverHandler, input: EventData) -> crate::result::Result<()> {
                 match input {
                     $(
                         EventData::$variant_subscription(event) => {
@@ -144,7 +144,7 @@ macro_rules! magic {
                 Ok(())
             }
 
-            pub(crate) fn send_response(_this: &mut crate::webdriver_handler::WebDriverHandler, result: ::serde_json::Value, respond_command: RespondCommand) -> crate::result::Result<()> {
+            pub fn send_response(_this: &mut crate::webdriver_handler::WebDriverHandler, result: ::serde_json::Value, respond_command: RespondCommand) -> crate::result::Result<()> {
                 match (respond_command) {
                     $(
                         RespondCommand::$variant(respond_command) => {

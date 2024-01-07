@@ -17,7 +17,7 @@ pub struct Command {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub enum CreateType {
+pub enum Type {
     Tab,
     Window,
 }
@@ -27,7 +27,7 @@ pub enum CreateType {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
-    pub r#type: CreateType,
+    pub r#type: Type,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub reference_context: Option<BrowsingContext>,

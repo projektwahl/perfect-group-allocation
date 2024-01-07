@@ -4,7 +4,9 @@
 
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-use webdriver_bidi::{browsing_context, SendCommand, WebDriver};
+use webdriver_bidi::browsing_context::create::Type;
+use webdriver_bidi::browsing_context::{self};
+use webdriver_bidi::{SendCommand, WebDriver};
 
 #[tokio::main]
 pub async fn main() {
@@ -26,9 +28,9 @@ pub async fn inner_main() -> Result<(), webdriver_bidi::Error> {
         .send_command(
             browsing_context::create::Command {
                 params: browsing_context::create::Parameters {
-                    r#type: "window".to_owned(),
+                    r#type: Type::Window,
                     reference_context: None,
-                    background: false,
+                    background: Some(false),
                 },
             },
             SendCommand::BrowsingContextCreate,

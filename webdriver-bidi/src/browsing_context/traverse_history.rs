@@ -3,7 +3,6 @@
 use serde::{Deserialize, Serialize};
 
 use super::BrowsingContext;
-use crate::protocol::EmptyResult;
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-traverseHistory>
 #[derive(Debug, Serialize, Deserialize, Clone)]
