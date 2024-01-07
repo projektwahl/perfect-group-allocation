@@ -36,13 +36,13 @@ pub enum Level {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Entry {
-    level: Level,
-    source: Source,
-    text: Option<String>,
-    timestamp: u64,
-    stack_trace: Option<StackTrace>,
+    pub level: Level,
+    pub source: Source,
+    pub text: Option<String>,
+    pub timestamp: u64,
+    pub stack_trace: Option<StackTrace>,
     #[serde(flatten)]
-    inner: InnerLogEntry,
+    pub inner: InnerLogEntry,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -60,15 +60,15 @@ pub enum InnerLogEntry {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct GenericLogEntry {
-    r#type: String,
+    pub r#type: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ConsoleLogEntry {
-    method: String,
-    args: Vec<RemoteValue>,
+    pub method: String,
+    pub args: Vec<RemoteValue>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

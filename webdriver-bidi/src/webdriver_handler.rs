@@ -12,10 +12,10 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::trace;
 
 use crate::browsing_context::BrowsingContext;
+use crate::protocol_definition::{self, Command, Extensible};
 use crate::{
     browsing_context, log, session, WebDriverBiDiLocalEndCommandResponse,
     WebDriverBiDiLocalEndMessage, WebDriverBiDiLocalEndMessageErrorResponse,
-    WebDriverBiDiRemoteEndCommand,
 };
 
 macro_rules! magic {
@@ -300,7 +300,7 @@ impl WebDriverHandler {
                     respond_command_constructor(ch.0.subscribe(), sender),
                 );
 
-                let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+                let string = serde_json::to_string(&protocol_definition::Command {
                     id: self.id,
                     command_data: session::subscribe::Command {
                         params: session::SubscriptionRequest {
@@ -308,6 +308,7 @@ impl WebDriverHandler {
                             contexts: vec![],
                         },
                     },
+                    extensible: Extensible::default(),
                 })
                 .unwrap();
 
@@ -357,7 +358,7 @@ impl WebDriverHandler {
                 respond_command_constructor(ch.0.subscribe(), sender),
             );
 
-            let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+            let string = serde_json::to_string(&protocol_definition::Command {
                 id: self.id,
                 command_data: session::subscribe::Command {
                     params: session::SubscriptionRequest {
@@ -365,6 +366,7 @@ impl WebDriverHandler {
                         contexts: vec![command_data.clone()],
                     },
                 },
+                extensible: Extensible::default(),
             })
             .unwrap();
 
@@ -395,9 +397,10 @@ impl WebDriverHandler {
         self.pending_commands
             .insert(self.id, respond_command_constructor(sender));
 
-        let string = serde_json::to_string(&WebDriverBiDiRemoteEndCommand {
+        let string = serde_json::to_string(&Command {
             id: self.id,
             command_data,
+            extensible: Extensible::default(),
         })
         .unwrap();
 

@@ -7,9 +7,13 @@
 //!
 //! <div class="warning">This crate is in a very early stage of development! Expect frequent breaking changes.</div>
 //!
+//! The currently implemented version is Editor’s Draft, 5 January 2024.
+//!
 //! ## Implementation Notes
 //!
 //! The types in <https://w3c.github.io/webdriver-bidi/> are converted with the following in mind:
+//!
+//! The specification uses the [Concise Data Definition Language (CDDL)](https://www.rfc-editor.org/rfc/rfc8610).
 //!
 //! They are converted as much as possible as-is to make it easy to update them.
 //!
@@ -17,11 +21,11 @@
 //! For example tagged unions are converted in a way that only one parsing attempt is needed (so no untagged).
 //!
 //! ### Type conversion rules
-//! | Spec type    | Rust type                    |
-//! |--------------|------------------------------|
-//! | `js-uint`    | [`u64`]                      |
-//! | `js-int`     | [`i64`]                      |
-//! | `Extensible` | [`serde_json::value::Value`] |
+//! | Spec type    | Rust type                           |
+//! |--------------|-------------------------------------|
+//! | `js-uint`    | [`u64`]                             |
+//! | `js-int`     | [`i64`]                             |
+//! | `Extensible` | [`protocol_definition::Extensible`] |
 //!
 //! ### Serde rules
 //! All types will (at some point) be annotated with:
@@ -47,6 +51,7 @@
 
 pub mod browsing_context;
 pub mod log;
+pub mod protocol_definition;
 pub mod result;
 pub mod script;
 pub mod session;
@@ -62,6 +67,8 @@ use webdriver_handler::EventData;
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub enum WebDriverBiDiLocalEndMessage<ResultData> {
     #[serde(rename = "success")]
     CommandResponse(WebDriverBiDiLocalEndCommandResponse<ResultData>),
@@ -73,10 +80,12 @@ pub enum WebDriverBiDiLocalEndMessage<ResultData> {
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct WebDriverBiDiLocalEndCommandResponse<ResultData> {
     #[serde(deserialize_with = "deserialize_broken_chromium_id")]
-    id: u64,
-    result: ResultData,
+    pub id: u64,
+    pub result: ResultData,
     //#[serde(flatten)]
     //extensible: Value,
 }
@@ -117,23 +126,15 @@ where
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct WebDriverBiDiLocalEndMessageErrorResponse {
-    id: Option<u64>,
-    error: String,
-    message: String,
-    stacktrace: Option<String>,
+    pub id: Option<u64>,
+    pub error: String,
+    pub message: String,
+    pub stacktrace: Option<String>,
     #[serde(flatten)]
-    extensible: Value,
-}
-
-/// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
-#[derive(Debug, Serialize, Deserialize)]
-pub struct WebDriverBiDiRemoteEndCommand<T> {
-    id: u64,
-    #[serde(flatten)]
-    command_data: T,
-    //#[serde(flatten)]
-    //extensible: Value,
+    pub extensible: Value,
 }
 
 pub trait ExtractBrowsingContext {

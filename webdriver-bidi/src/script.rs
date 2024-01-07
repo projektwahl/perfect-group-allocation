@@ -9,7 +9,7 @@ use crate::browsing_context::BrowsingContext;
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct StackTrace {
-    call_frames: Vec<StackFrame>,
+    pub call_frames: Vec<StackFrame>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-StackFrame>
@@ -17,10 +17,10 @@ pub struct StackTrace {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct StackFrame {
-    column_number: u64,
-    function_name: String,
-    line_number: u64,
-    url: String,
+    pub column_number: u64,
+    pub function_name: String,
+    pub line_number: u64,
+    pub url: String,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-Source>
@@ -36,25 +36,25 @@ pub struct Source {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct Realm(String);
+pub struct Realm(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-Handle>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct Handle(String);
+pub struct Handle(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-InternalId>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct InternalId(String);
+pub struct InternalId(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-SharedId>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct SharedId(String);
+pub struct SharedId(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -126,21 +126,21 @@ pub enum RemoteValue {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct ListRemoteValue(Vec<RemoteValue>);
+pub struct ListRemoteValue(pub Vec<RemoteValue>);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct MappingRemoteValue(Vec<Vec<(RemoteValue, RemoteValue)>>); // TODO FIXME
+pub struct MappingRemoteValue(pub Vec<Vec<(RemoteValue, RemoteValue)>>); // TODO FIXME
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SymbolRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -148,9 +148,9 @@ pub struct SymbolRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ArrayRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
-    value: ListRemoteValue,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
+    pub value: ListRemoteValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -158,9 +158,9 @@ pub struct ArrayRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ObjectRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
-    value: MappingRemoteValue,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
+    pub value: MappingRemoteValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -168,8 +168,8 @@ pub struct ObjectRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct FunctionRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -177,9 +177,9 @@ pub struct FunctionRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct RegExpRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
-    value: RegExpValue,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
+    pub value: RegExpValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -187,8 +187,8 @@ pub struct RegExpRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct RegExpValue {
-    pattern: String,
-    flags: Option<String>,
+    pub pattern: String,
+    pub flags: Option<String>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -196,9 +196,9 @@ pub struct RegExpValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct DateRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
-    value: String,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
+    pub value: String,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -206,9 +206,9 @@ pub struct DateRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct MapRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
-    value: MappingRemoteValue,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
+    pub value: MappingRemoteValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -216,9 +216,9 @@ pub struct MapRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SetRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
-    value: ListRemoteValue,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
+    pub value: ListRemoteValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -226,8 +226,8 @@ pub struct SetRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WeakMapRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -235,8 +235,8 @@ pub struct WeakMapRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WeakSetRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -244,8 +244,8 @@ pub struct WeakSetRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct IteratorRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -253,8 +253,8 @@ pub struct IteratorRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct GeneratorRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -262,8 +262,8 @@ pub struct GeneratorRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ErrorRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -271,8 +271,8 @@ pub struct ErrorRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ProxyRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -280,8 +280,8 @@ pub struct ProxyRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PromiseRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -289,8 +289,8 @@ pub struct PromiseRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct TypedArrayRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -298,8 +298,8 @@ pub struct TypedArrayRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ArrayBufferRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -307,9 +307,9 @@ pub struct ArrayBufferRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NodeListRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
-    value: Option<ListRemoteValue>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
+    pub value: Option<ListRemoteValue>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -317,9 +317,9 @@ pub struct NodeListRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct HTMLCollectionRemoteValue {
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
-    value: Option<ListRemoteValue>,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
+    pub value: Option<ListRemoteValue>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -327,10 +327,10 @@ pub struct HTMLCollectionRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NodeRemoteValue {
-    shared_id: SharedId,
-    handle: Handle,
-    internal_id: InternalId,
-    value: NodeProperties,
+    pub shared_id: SharedId,
+    pub handle: Handle,
+    pub internal_id: InternalId,
+    pub value: NodeProperties,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -338,16 +338,16 @@ pub struct NodeRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NodeProperties {
-    node_type: u64,
-    child_node_count: u64,
-    attributes: Option<HashMap<String, String>>,
-    children: Option<Vec<NodeRemoteValue>>,
-    local_name: Option<String>,
-    mode: Option<String>, // TODO open/closed
+    pub node_type: u64,
+    pub child_node_count: u64,
+    pub attributes: Option<HashMap<String, String>>,
+    pub children: Option<Vec<NodeRemoteValue>>,
+    pub local_name: Option<String>,
+    pub mode: Option<String>, // TODO open/closed
     #[serde(rename = "namespaceURI")]
-    namespace_uri: Option<String>,
-    node_value: Option<String>,
-    shadow_root: Option<Box<NodeRemoteValue>>,
+    pub namespace_uri: Option<String>,
+    pub node_value: Option<String>,
+    pub shadow_root: Option<Box<NodeRemoteValue>>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -355,9 +355,9 @@ pub struct NodeProperties {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WindowProxyRemoteValue {
-    value: WindowProxyProperties,
-    handle: Option<Handle>,
-    internal_id: Option<InternalId>,
+    pub value: WindowProxyProperties,
+    pub handle: Option<Handle>,
+    pub internal_id: Option<InternalId>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -365,5 +365,5 @@ pub struct WindowProxyRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WindowProxyProperties {
-    context: BrowsingContext,
+    pub context: BrowsingContext,
 }
