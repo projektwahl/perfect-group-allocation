@@ -4,9 +4,7 @@
 
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-use webdriver_bidi::browsing_context;
-use webdriver_bidi::generated::SendCommand;
-use webdriver_bidi::webdriver::WebDriver;
+use webdriver_bidi::{browsing_context, WebDriver};
 
 #[tokio::main]
 pub async fn main() {

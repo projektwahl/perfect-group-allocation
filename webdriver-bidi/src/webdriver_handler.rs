@@ -15,11 +15,8 @@ use crate::generated::{
     handle_command, handle_event, send_response, EventSubscription, GlobalEventSubscription,
     RespondCommand, SendCommand,
 };
-use crate::protocol::{self, Command, Extensible};
-use crate::{
-    session, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
-    WebDriverBiDiLocalEndMessageErrorResponse,
-};
+use crate::protocol::{self, Command, CommandResponse, ErrorResponse, Extensible};
+use crate::session;
 
 pub struct WebDriverHandler {
     id: u64,
@@ -225,13 +222,10 @@ impl WebDriverHandler {
 
     fn handle_message(&mut self, message: &str) -> crate::result::Result<()> {
         let jd = &mut serde_json::Deserializer::from_str(message);
-        let parsed_message: WebDriverBiDiLocalEndMessage<Value> =
-            serde_path_to_error::deserialize(jd)
-                .map_err(crate::result::ErrorInner::ParseReceivedWithPath)?;
+        let parsed_message: protocol::Message<Value> = serde_path_to_error::deserialize(jd)
+            .map_err(crate::result::ErrorInner::ParseReceivedWithPath)?;
         match parsed_message {
-            WebDriverBiDiLocalEndMessage::CommandResponse(
-                WebDriverBiDiLocalEndCommandResponse { id, result },
-            ) => {
+            protocol::Message::CommandResponse(CommandResponse { id, result }) => {
                 let respond_command = self
                     .pending_commands
                     .remove(&id)
@@ -239,22 +233,20 @@ impl WebDriverHandler {
 
                 send_response(self, result, respond_command)
             }
-            WebDriverBiDiLocalEndMessage::ErrorResponse(
-                WebDriverBiDiLocalEndMessageErrorResponse {
-                    id: _,
-                    error,
-                    message: _,
-                    stacktrace: _,
-                    extensible: _,
-                },
-            ) => {
+            protocol::Message::ErrorResponse(ErrorResponse {
+                id: _,
+                error,
+                message: _,
+                stacktrace: _,
+                extensible: _,
+            }) => {
                 eprintln!("error response received {error}"); // TODO FIXME propage to command if it has an id.
 
                 // TODO unsubscribe, send error etc
 
                 Ok(())
             }
-            WebDriverBiDiLocalEndMessage::Event(event) => handle_event(self, event),
+            protocol::Message::Event(event) => handle_event(self, event),
         }
     }
 }

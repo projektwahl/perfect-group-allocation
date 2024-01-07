@@ -25,7 +25,6 @@
 //! |--------------|-------------------------------------|
 //! | `js-uint`    | [`u64`]                             |
 //! | `js-int`     | [`i64`]                             |
-//! | `Extensible` | [`protocol::Extensible`] |
 //!
 //! ### Serde rules
 //! All types will (at some point) be annotated with:
@@ -45,100 +44,34 @@
 //! #[serde(default)]
 //! ```
 //!
+//! `Extensible`` type is represented as:
+//! ```
+//! #
+//! #[serde(flatten)]
+//! pub extensible: protocol::Extensible
+//! ```
+//!
 //! Otherwise `Type / null` is represented with an `Option<Type>`.
 //!
 //! Types combined in the spec with `( A // B // ... )` are represented as enum though usually as a tagged enum for performance.
 
 pub mod browsing_context;
-pub mod generated;
+mod generated;
 pub mod log;
 pub mod protocol;
 mod result;
 pub mod script;
 pub mod session;
-pub mod webdriver;
-pub mod webdriver_handler;
-pub mod webdriver_session;
+mod webdriver;
+mod webdriver_handler;
+mod webdriver_session;
 
 use browsing_context::BrowsingContext;
 use generated::EventData;
 pub use result::{Error, ErrorInner, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-// https://w3c.github.io/webdriver-bidi/#protocol-definition
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub enum WebDriverBiDiLocalEndMessage<ResultData> {
-    #[serde(rename = "success")]
-    CommandResponse(WebDriverBiDiLocalEndCommandResponse<ResultData>),
-    #[serde(rename = "error")]
-    ErrorResponse(WebDriverBiDiLocalEndMessageErrorResponse),
-    #[serde(rename = "event")]
-    Event(EventData),
-}
-
-// https://w3c.github.io/webdriver-bidi/#protocol-definition
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct WebDriverBiDiLocalEndCommandResponse<ResultData> {
-    #[serde(deserialize_with = "deserialize_broken_chromium_id")]
-    pub id: u64,
-    pub result: ResultData,
-    //#[serde(flatten)]
-    //extensible: Value,
-}
-
-fn deserialize_broken_chromium_id<'de, D>(deserializer: D) -> core::result::Result<u64, D::Error>
-where
-    D: serde::de::Deserializer<'de>,
-{
-    // define a visitor that deserializes
-    // `ActualData` encoded as json within a string
-    struct JsonStringVisitor;
-
-    impl<'de> serde::de::Visitor<'de> for JsonStringVisitor {
-        type Value = u64;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("a string containing json data")
-        }
-
-        fn visit_u64<E>(self, v: u64) -> core::result::Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            Ok(v)
-        }
-
-        fn visit_f64<E>(self, v: f64) -> core::result::Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            Ok(v as u64)
-        }
-    }
-
-    // use our visitor to deserialize an `ActualValue`
-    deserializer.deserialize_any(JsonStringVisitor)
-}
-
-// https://w3c.github.io/webdriver-bidi/#protocol-definition
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
-pub struct WebDriverBiDiLocalEndMessageErrorResponse {
-    pub id: Option<u64>,
-    pub error: String,
-    pub message: String,
-    pub stacktrace: Option<String>,
-    #[serde(flatten)]
-    pub extensible: Value,
-}
+pub use webdriver::WebDriver;
 
 pub trait ExtractBrowsingContext {
     fn browsing_context(&self) -> Option<&BrowsingContext>;
