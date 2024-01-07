@@ -1,6 +1,8 @@
+//! <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
+
 use serde::{Deserialize, Serialize};
 
-use super::BrowsingContext;
+use super::{BrowsingContext, InfoList};
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
 #[derive(Debug, Serialize, Deserialize)]
@@ -12,17 +14,23 @@ pub struct Command {
     pub params: Parameters,
 }
 
+/// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
-    pub max_depth: u64,
-    pub root: BrowsingContext,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub max_depth: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub root: Option<BrowsingContext>,
 }
 
+/// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Result {
-    pub contexts: Vec<super::Info>,
+    pub contexts: InfoList,
 }

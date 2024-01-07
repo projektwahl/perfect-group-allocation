@@ -1,8 +1,9 @@
+//! <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
 use serde::{Deserialize, Serialize};
 
 use super::BrowsingContext;
 
-/// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
+/// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.create")]
@@ -12,17 +13,31 @@ pub struct Command {
     pub params: Parameters,
 }
 
+/// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub enum CreateType {
+    Tab,
+    Window,
+}
+
+/// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
-    pub r#type: String, // TODO FIXME tab or window
+    pub r#type: CreateType,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub reference_context: Option<BrowsingContext>,
-    pub background: bool,
+    // TODO FIXME default
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub background: Option<bool>,
 }
 
+/// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
