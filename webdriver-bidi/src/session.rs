@@ -7,7 +7,9 @@ use crate::protocol::Extensible;
 
 pub mod end;
 pub mod new;
+pub mod status;
 pub mod subscribe;
+pub mod unsubscribe;
 
 /// <https://w3c.github.io/webdriver-bidi/#type-session-CapabilitiesRequest>
 #[derive(Debug, Serialize, Deserialize)]

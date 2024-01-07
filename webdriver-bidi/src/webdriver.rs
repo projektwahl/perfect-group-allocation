@@ -2,7 +2,7 @@ use futures::Future;
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::generated::SendCommand;
-use crate::session;
+use crate::session::{self, CapabilitiesRequest};
 use crate::webdriver_handler::WebDriverHandler;
 use crate::webdriver_session::WebDriverSession;
 
@@ -101,7 +101,10 @@ impl WebDriver {
         let test = self.send_command(
             crate::session::new::Command {
                 params: session::new::Parameters {
-                    capabilities: session::new::CapabilitiesRequest {},
+                    capabilities: CapabilitiesRequest {
+                        always_match: None,
+                        first_match: None,
+                    },
                 },
             },
             SendCommand::SessionNew,

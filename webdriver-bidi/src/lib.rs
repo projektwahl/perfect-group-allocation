@@ -7,6 +7,10 @@
 //!
 //! <div class="warning">This crate is in a very early stage of development! Expect frequent breaking changes.</div>
 //!
+//! This software or document includes material copied from or derived from [WebDriver BiDi Editor’s Draft, 5 January 2024](https://w3c.github.io/webdriver-bidi/).
+//! Copyright © 2024 [World Wide Web Consortium](https://www.w3.org/).
+//! See <https://www.w3.org/copyright/software-license-2023/> or ``LICENSE_W3.md`` for licensing.
+//!
 //! The currently implemented version is Editor’s Draft, 5 January 2024.
 //!
 //! ## Implementation Notes
@@ -44,7 +48,7 @@
 //! #[serde(default)]
 //! ```
 //!
-//! `Extensible`` type is represented as:
+//! `Extensible` type is represented as:
 //! ```
 //! #
 //! #[serde(flatten)]

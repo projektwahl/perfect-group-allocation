@@ -3,6 +3,7 @@ use tokio::sync::broadcast;
 
 use crate::browsing_context::BrowsingContext;
 use crate::generated::SendCommand;
+use crate::protocol::EmptyParams;
 use crate::webdriver::WebDriver;
 use crate::{browsing_context, log, session};
 
@@ -18,7 +19,7 @@ impl WebDriverSession {
     ) -> impl Future<Output = crate::result::Result<session::end::Result>> {
         self.driver.send_command(
             session::end::Command {
-                params: session::end::Parameters {},
+                params: EmptyParams::default(),
             },
             SendCommand::SessionEnd,
         )
