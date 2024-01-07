@@ -17,19 +17,20 @@
 //! For example tagged unions are converted in a way that only one parsing attempt is needed (so no untagged).
 //!
 //! ### Type conversion rules
-//! | Spec type  | Rust type                    |
-//! |------------|------------------------------|
-//! | js-uint    | [`u64`]                      |
-//! | js-int     | [`i64`]                     |
-//! | Extensible | [`serde_json::value::Value`] |
+//! | Spec type    | Rust type                    |
+//! |--------------|------------------------------|
+//! | `js-uint`    | [`u64`]                      |
+//! | `js-int`     | [`i64`]                      |
+//! | `Extensible` | [`serde_json::value::Value`] |
 //!
 //! ### Serde rules
-//! All structs will (at some point) be annotated with:
+//! All types will (at some point) be annotated with:
 //! ```
+//! #[serde(rename_all = "camelCase")]
 //! #[serde(deny_unknown_fields)]
 //! ```
 //!
-//! To specify a fallback type on a tagged enum variant, use:
+//! To specify a fallback type on a tagged enum **variant**, use:
 //! ```
 //! #[serde(untagged)]
 //! ```

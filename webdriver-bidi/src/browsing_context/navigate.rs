@@ -7,12 +7,14 @@ use super::{BrowsingContext, Navigation, ReadinessState};
 #[serde(tag = "method")]
 #[serde(rename = "browsingContext.navigate")]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct Command {
     pub params: Parameters,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct Parameters {
     pub context: BrowsingContext,
     pub url: String,
@@ -21,6 +23,7 @@ pub struct Parameters {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct Result {
     pub navigation: Option<Navigation>,
     pub url: String,

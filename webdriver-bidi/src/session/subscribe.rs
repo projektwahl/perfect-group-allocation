@@ -7,10 +7,12 @@ use super::SubscriptionRequest;
 #[serde(tag = "method")]
 #[serde(rename = "session.subscribe")]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct Command {
     pub params: SubscriptionRequest,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct Result {}

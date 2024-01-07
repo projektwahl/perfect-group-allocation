@@ -8,6 +8,8 @@ pub type Event = EntryAdded;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "method")]
 #[serde(rename = "log.entryAdded")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct EntryAdded {
     pub params: Entry,
 }
@@ -21,6 +23,7 @@ impl ExtractBrowsingContext for EntryAdded {
 /// <https://w3c.github.io/webdriver-bidi/#types-log-logentry>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub enum Level {
     Debug,
     Info,
@@ -31,6 +34,7 @@ pub enum Level {
 /// <https://w3c.github.io/webdriver-bidi/#types-log-logentry>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct Entry {
     level: Level,
     source: Source,
@@ -44,6 +48,7 @@ pub struct Entry {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub enum InnerLogEntry {
     Console(ConsoleLogEntry),
     Javascript(JavascriptLogEntry),
@@ -52,15 +57,21 @@ pub enum InnerLogEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct GenericLogEntry {
     r#type: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct ConsoleLogEntry {
     method: String,
     args: Vec<RemoteValue>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct JavascriptLogEntry {}

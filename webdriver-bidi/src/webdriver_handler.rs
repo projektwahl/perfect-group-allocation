@@ -46,6 +46,8 @@ macro_rules! magic {
             /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
             #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
             #[serde(tag = "method")]
+            #[serde(rename_all = "camelCase")]
+            #[serde(deny_unknown_fields)]
             pub enum CommandData {
                 $(
                     #[doc = $doc]
@@ -57,6 +59,8 @@ macro_rules! magic {
             /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
             #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
             #[serde(tag = "method")]
+            #[serde(rename_all = "camelCase")]
+            #[serde(deny_unknown_fields)]
             pub enum EventData {
                 $(
                     #[doc = $doc_subscription]
@@ -100,6 +104,8 @@ macro_rules! magic {
             /// <https://w3c.github.io/webdriver-bidi/#protocol-definition>
             #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
             #[serde(tag = "method")]
+            #[serde(rename_all = "camelCase")]
+            #[serde(deny_unknown_fields)]
             pub enum ResultData {
                 $(
                     #[doc = $doc]

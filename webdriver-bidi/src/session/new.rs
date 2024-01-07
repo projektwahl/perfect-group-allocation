@@ -22,6 +22,7 @@ pub struct CapabilitiesRequest {}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct Result {
     pub session_id: String,
     pub capabilities: ResultCapabilities,
@@ -29,6 +30,7 @@ pub struct Result {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct ResultCapabilities {
     pub accept_insecure_certs: bool,
     pub browser_name: String,
