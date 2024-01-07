@@ -7,7 +7,10 @@ pub mod capture_screenshot;
 pub mod close;
 pub mod create;
 pub mod get_tree;
+pub mod handle_user_prompt;
+pub mod locate_nodes;
 pub mod navigate;
+pub mod print;
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Browsingcontext>
 #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
