@@ -6,11 +6,15 @@ pub mod activate;
 pub mod capture_screenshot;
 pub mod close;
 pub mod create;
+pub mod event;
 pub mod get_tree;
 pub mod handle_user_prompt;
 pub mod locate_nodes;
 pub mod navigate;
 pub mod print;
+pub mod reload;
+pub mod set_viewport;
+pub mod traverse_history;
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Browsingcontext>
 #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]

@@ -3,8 +3,6 @@ use serde::{Deserialize, Serialize};
 use crate::script::{RemoteValue, Source, StackTrace};
 use crate::ExtractBrowsingContext;
 
-pub type Event = EntryAdded;
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "method")]
 #[serde(rename = "log.entryAdded")]
