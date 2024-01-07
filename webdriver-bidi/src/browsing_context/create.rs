@@ -5,21 +5,24 @@ use super::BrowsingContext;
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "method")]
-#[serde(rename = "browsingContext.getTree")]
+#[serde(rename = "browsingContext.create")]
 #[serde(rename_all = "camelCase")]
 pub struct Command {
-    pub params: Parameters,
+    pub params: CreateParameters,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Parameters {
-    pub max_depth: u64,
-    pub root: BrowsingContext,
+pub struct CreateParameters {
+    pub r#type: String, // TODO FIXME tab or window
+    #[serde(skip_serializing_if = "Option::is_none")] // TODO FIXME put these everywhere where the spec uses ?
+    #[serde(default)]
+    pub reference_context: Option<BrowsingContext>,
+    pub background: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Result {
-    pub contexts: Vec<super::Info>,
+    pub context: BrowsingContext,
 }

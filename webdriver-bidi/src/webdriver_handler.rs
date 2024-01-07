@@ -9,6 +9,7 @@ use tokio::net::TcpStream;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+use tracing::trace;
 
 use crate::browsing_context::BrowsingContext;
 use crate::{
@@ -193,7 +194,9 @@ magic! {
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
         BrowsingContextGetTree("browsingContext.getTree" browsing_context::get_tree),
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
-        BrowsingContextNavigate("browsingContext.navigate" browsing_context::navigate)
+        BrowsingContextNavigate("browsingContext.navigate" browsing_context::navigate),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
+        BrowsingContextCreate("browsingContext.create" browsing_context::create)
     }
     pub enum {
         /// tmp
@@ -233,6 +236,7 @@ impl WebDriverHandler {
                 message = self.stream.next() => {
                     match message {
                         Some(Ok(Message::Text(message))) => {
+                            trace!("received {message}");
                             if let Err(error) = self.handle_message(&message) {
                                 eprintln!("error when parsing incoming message {message} {error}");
                             }
@@ -303,6 +307,8 @@ impl WebDriverHandler {
 
                 *global_event_subscription(&mut self.global_subscriptions) = Some(ch);
 
+                trace!("sent {string}");
+
                 // starting from here this could be done asynchronously
                 // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
                 self.stream
@@ -360,6 +366,8 @@ impl WebDriverHandler {
 
             event_subscription(&mut self.subscriptions).insert(command_data, ch);
 
+            trace!("sent {string}");
+
             // starting from here this could be done asynchronously
             // TODO FIXME I don't think we need the flushing requirement here specifically. maybe flush if no channel is ready or something like that
             self.stream
@@ -387,7 +395,7 @@ impl WebDriverHandler {
         })
         .unwrap();
 
-        ("{string}");
+        trace!("sent {string}");
 
         self.stream
             .send(Message::Text(string))

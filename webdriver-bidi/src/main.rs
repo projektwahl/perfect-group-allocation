@@ -2,7 +2,11 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
+use tracing::{trace, Level};
+use tracing_subscriber::FmtSubscriber;
+use webdriver_bidi::browsing_context;
 use webdriver_bidi::webdriver::WebDriver;
+use webdriver_bidi::webdriver_handler::SendCommand;
 
 #[tokio::main]
 pub async fn main() {
@@ -12,18 +16,33 @@ pub async fn main() {
 }
 
 pub async fn inner_main() -> Result<(), webdriver_bidi::result::Error> {
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::TRACE)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+
     let driver = WebDriver::new().await?;
     let mut session = driver.session_new().await?;
-    let browsing_context = session.browsing_context_get_tree().await?;
+    let browsing_context = driver
+        .send_command(
+            browsing_context::create::Command {
+                params: browsing_context::create::CreateParameters {
+                    r#type: "window".to_owned(),
+                    reference_context: None,
+                    background: false,
+                },
+            },
+            SendCommand::BrowsingContextCreate,
+        )
+        .await?;
     println!("{browsing_context:?}");
-    let browsing_context = browsing_context.contexts[0].context.clone();
+    let browsing_context = browsing_context.context.clone();
     let mut subscription = session.subscribe_logs(browsing_context.clone()).await?;
     let navigation = session
         .browsing_context_navigate(browsing_context, "https://www.google.com/".to_owned())
         .await?;
     println!("{navigation:?}");
-    let browsing_context = session.browsing_context_get_tree().await?;
-    println!("{browsing_context:?}");
 
     while let Ok(log) = subscription.recv().await {
         println!("received log message: {log:?}");

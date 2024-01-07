@@ -21,7 +21,7 @@ impl WebDriver {
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
     pub async fn new() -> Result<Self, crate::result::Error> {
-        let tmp_dir = tempdir().map_err(crate::result::ErrorInner::TmpDirCreate)?;
+        /*let tmp_dir = tempdir().map_err(crate::result::ErrorInner::TmpDirCreate)?;
 
         let mut child = tokio::process::Command::new("firefox")
             .kill_on_drop(true)
@@ -75,12 +75,16 @@ impl WebDriver {
             return Err(crate::result::ErrorInner::PortNotFound)?;
         };
 
-        tokio::spawn(async move {
+         tokio::spawn(async move {
             while let Some(line) = reader.next_line().await? {
                 eprintln!("{line}");
             }
             Ok::<(), std::io::Error>(())
         });
+
+        */
+
+        let port = 9515;
 
         let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session"))
@@ -114,7 +118,7 @@ impl WebDriver {
         }
     }
 
-    pub(crate) fn send_command<C: Send, R: Send>(
+    pub fn send_command<C: Send, R: Send>(
         &self,
         command: C,
         send_command_constructor: impl FnOnce(C, oneshot::Sender<R>) -> SendCommand + Send,
@@ -133,7 +137,7 @@ impl WebDriver {
         }
     }
 
-    pub(crate) fn request_subscribe<C: Send, R: Send>(
+    pub fn request_subscribe<C: Send, R: Send>(
         &self,
         command: C,
         send_command_constructor: impl FnOnce(C, oneshot::Sender<broadcast::Receiver<R>>) -> SendCommand
