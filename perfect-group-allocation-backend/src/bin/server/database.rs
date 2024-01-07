@@ -1,10 +1,6 @@
 use std::str::FromStr;
 use std::time::Duration;
 
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
-use sqlx::any::AnyConnectOptions;
-use sqlx::pool::PoolOptions;
-use sqlx::Postgres;
 
 use crate::error::AppError;
 

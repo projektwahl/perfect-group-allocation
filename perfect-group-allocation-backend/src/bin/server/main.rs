@@ -14,7 +14,6 @@ extern crate alloc;
 
 pub mod csrf_protection;
 pub mod database;
-mod entities;
 mod error;
 mod openid;
 pub mod router;
@@ -42,7 +41,6 @@ use routes::index::index;
 use routes::indexcss::{indexcss, initialize_index_css};
 use routes::openid_login::openid_login;
 use routes::projects::create::create;
-use sea_orm::DatabaseConnection;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;

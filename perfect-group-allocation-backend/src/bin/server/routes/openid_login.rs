@@ -3,7 +3,6 @@ use axum::response::{IntoResponse, Redirect};
 use oauth2::PkceCodeChallenge;
 use openidconnect::core::CoreAuthenticationFlow;
 use openidconnect::Nonce;
-use sea_orm::DatabaseConnection;
 use serde::Deserialize;
 
 use crate::error::{to_error_result, AppError};

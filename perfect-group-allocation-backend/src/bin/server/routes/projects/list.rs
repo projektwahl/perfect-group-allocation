@@ -5,11 +5,9 @@ use axum::response::IntoResponse;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use hyper::header;
-use sea_orm::{DatabaseConnection, EntityTrait};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{template_stream, yieldoki, yieldokv};
 
-use crate::entities::project_history;
 use crate::error::AppError;
 use crate::session::Session;
 
