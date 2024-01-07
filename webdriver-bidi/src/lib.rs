@@ -62,8 +62,7 @@ pub mod webdriver_session;
 
 use browsing_context::BrowsingContext;
 use generated::EventData;
-use paste::paste;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 // https://w3c.github.io/webdriver-bidi/#protocol-definition
@@ -118,6 +117,7 @@ where
         where
             E: serde::de::Error,
         {
+            #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             Ok(v as u64)
         }
     }

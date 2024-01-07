@@ -9,13 +9,13 @@ use super::BrowsingContext;
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Command {
-    pub params: CreateParameters,
+    pub params: Parameters,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct CreateParameters {
+pub struct Parameters {
     pub r#type: String, // TODO FIXME tab or window
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]

@@ -1,8 +1,4 @@
-use std::process::Stdio;
-
 use futures::Future;
-use tempfile::tempdir;
-use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::generated::SendCommand;

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct Command<T> {
     pub id: u64,
     #[serde(flatten)]
-    pub command_data: T,
+    pub data: T,
     #[serde(flatten)]
     pub extensible: Extensible,
 }

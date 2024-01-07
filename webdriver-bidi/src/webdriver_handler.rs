@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 use futures::{SinkExt as _, StreamExt as _};
-use paste::paste;
 use serde::Serialize;
 use serde_json::Value;
 use tokio::net::TcpStream;
@@ -18,8 +17,8 @@ use crate::generated::{
 };
 use crate::protocol::{self, Command, Extensible};
 use crate::{
-    browsing_context, log, session, WebDriverBiDiLocalEndCommandResponse,
-    WebDriverBiDiLocalEndMessage, WebDriverBiDiLocalEndMessageErrorResponse,
+    session, WebDriverBiDiLocalEndCommandResponse, WebDriverBiDiLocalEndMessage,
+    WebDriverBiDiLocalEndMessageErrorResponse,
 };
 
 pub struct WebDriverHandler {
@@ -114,7 +113,7 @@ impl WebDriverHandler {
 
                 let string = serde_json::to_string(&protocol::Command {
                     id: self.id,
-                    command_data: session::subscribe::Command {
+                    data: session::subscribe::Command {
                         params: session::SubscriptionRequest {
                             events: vec![event],
                             contexts: vec![],
@@ -172,7 +171,7 @@ impl WebDriverHandler {
 
             let string = serde_json::to_string(&protocol::Command {
                 id: self.id,
-                command_data: session::subscribe::Command {
+                data: session::subscribe::Command {
                     params: session::SubscriptionRequest {
                         events: vec![event],
                         contexts: vec![command_data.clone()],
@@ -181,8 +180,6 @@ impl WebDriverHandler {
                 extensible: Extensible::default(),
             })
             .unwrap();
-
-            ("{string}");
 
             event_subscription(&mut self.subscriptions).insert(command_data, ch);
 
@@ -211,7 +208,7 @@ impl WebDriverHandler {
 
         let string = serde_json::to_string(&Command {
             id: self.id,
-            command_data,
+            data: command_data,
             extensible: Extensible::default(),
         })
         .unwrap();

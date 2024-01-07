@@ -2,11 +2,11 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-use tracing::{trace, Level};
+use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 use webdriver_bidi::browsing_context;
+use webdriver_bidi::generated::SendCommand;
 use webdriver_bidi::webdriver::WebDriver;
-use webdriver_bidi::webdriver_handler::SendCommand;
 
 #[tokio::main]
 pub async fn main() {
@@ -27,7 +27,7 @@ pub async fn inner_main() -> Result<(), webdriver_bidi::result::Error> {
     let browsing_context = driver
         .send_command(
             browsing_context::create::Command {
-                params: browsing_context::create::CreateParameters {
+                params: browsing_context::create::Parameters {
                     r#type: "window".to_owned(),
                     reference_context: None,
                     background: false,
