@@ -20,6 +20,13 @@ rustup component add rustc-codegen-cranelift-preview --toolchain nightly
 warning blocks in rustdoc
 <div class="warning">A big warning!</div>
 
+## Testing
+
+```bash
+podman run --rm --name postgres-testing --env POSTGRES_PASSWORD=password --publish 5431:5432 docker.io/postgres
+cargo test
+```
+
 ## Dev
 
 ```bash
@@ -54,15 +61,10 @@ https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html
 
 # otel-v1-apm-span-*
 
-podman run --rm --detach --name postgres --volume pga-postgres:/var/lib/postgresql/data --env POSTGRES_PASSWORD=password --publish 5432:5432 docker.io/postgres
-psql postgres://postgres:password@localhost
-DATABASE_URL="postgres://postgres:password@localhost" sea-orm-cli migrate refresh
-sea-orm-cli generate entity -u postgres://postgres:password@localhost/postgres -o src/bin/server/entities
-DATABASE_URL="postgres://postgres:password@localhost" cargo run --release --bin server
+psql postgres://postgres:password@localhost/pga?sslmode=disable
+DATABASE_URL="postgres://postgres:password@localhost/pga?sslmode=disable" cargo run --release --bin server
 
-
-export DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable"
-OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_BACKTRACE=1 cargo run --bin server
+DATABASE_URL="postgres://postgres:password@localhost/pga?sslmode=disable" OTEL_METRIC_EXPORT_INTERVAL=1000 RUST_BACKTRACE=1 cargo run --bin server
 RUST_BACKTRACE=1 RUSTFLAGS="-Zthreads=8 -Zcodegen-backend=cranelift --cfg tokio_unstable" cargo run --bin server
 
 tokio-console
@@ -93,12 +95,24 @@ awesome help for performance issues
 https://valgrind.org/docs/manual/cl-manual.html
 Callgrind
 
+# DO NOT USE TRUST AUTHENTICATION IN PRODUCTION! For profiling we don't want to measure sha2 hashing overhead
+podman run --rm --detach --name postgres-profiling --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
+
+export DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
+diesel database reset
+
+https://nnethercote.github.io/perf-book/profiling.html
+
 # rebuild std to get debug symbols and same settings?
 cargo build --target=x86_64-unknown-linux-gnu -Z build-std --profile=release-with-debug --bin server
 
+28% http
+router clone seems to do heap allocs
+
 # https://github.com/launchbadge/sqlx/blob/929af41745a9434ae83417dcf2571685cecca6f0/sqlx-postgres/src/options/mod.rs#L15
 # WARNING: Only connect without ssl over localhost. This makes the profiling better as there is not countless ssl stuff in there.
-DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release-with-debug/server
+# I think you need to run this from the workspace root for debug symbols?
+DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable" valgrind --tool=callgrind --cache-sim=yes --simulate-wb=yes --simulate-hwpref=yes --branch-sim=yes --dump-instr=yes --collect-jumps=yes --collect-bus=yes --collect-systime=nsec ./target/x86_64-unknown-linux-gnu/release-with-debug/server #  --cacheuse=yes
 
 use zed attack proxy to create some requests
 
@@ -240,18 +254,6 @@ openssl rsa -inform pem -in example.com.key.pem -outform der -out example.com.ke
 openssl x509 -outform der -in example.com.cert.pem -out example.com.cert.der
 
 cargo run --bin server -- --cert example.com.crt --key example.com.key.der
-```
-
-https://github.com/SeaQL/sea-orm
-
-https://www.sea-ql.org/SeaORM/
-
-https://www.sea-ql.org/sea-orm-tutorial/
-
-https://www.sea-ql.org/sea-orm-cookbook/
-
-```
-cargo install sea-orm-cli
 ```
 
 ```bash

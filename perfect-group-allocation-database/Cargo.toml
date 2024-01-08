@@ -1,0 +1,25 @@
+cargo-features = ["edition2024"]
+
+[package]
+name = "perfect-group-allocation-database"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+diesel = "2"
+diesel-async = { version = "0.4", features = ["postgres", "deadpool"] }
+thiserror = "1"
+http = "1"
+axum-core = "0.4"
+async-trait = "0.1"
+
+[lints]
+workspace = true

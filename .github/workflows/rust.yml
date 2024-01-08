@@ -9,21 +9,34 @@ on:
 env: 
   CARGO_TERM_COLOR: always
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain:
-          - nightly
     steps:
       - run: sudo apt install -y coinor-libcbc-dev
-      - run: rustup toolchain install ${{ matrix.toolchain }} --component rustfmt --component clippy
-      - run: rustup default ${{ matrix.toolchain }}
-      - run: cargo install --locked cargo-deny
+      - run: rustup default nightly
       - uses: actions/checkout@v3
       - run: cargo build
       - run: cargo test
-      - run: cargo fmt --check
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt install -y coinor-libcbc-dev
+      - run: rustup toolchain install nightly --component clippy
+      - run: rustup default nightly
+      - uses: actions/checkout@v3
       - run: cargo clippy --all-targets --all-features -- -D warnings
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt install -y coinor-libcbc-dev
+      - run: rustup toolchain install nightly --component rustfmt
+      - run: rustup default nightly
+      - run: cargo install --locked cargo-deny
+      - uses: actions/checkout@v3
+      - run: cargo fmt --check
       - run: cargo deny check

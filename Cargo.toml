@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "perfect-group-allocation-backend", "perfect-group-allocation-e2e", "migration"
+    "perfect-group-allocation-backend", "perfect-group-allocation-database", "perfect-group-allocation-telemetry", "perfect-group-allocation-e2e", "webdriver-bidi"
 ]
 
 [workspace.package]
@@ -25,6 +25,5 @@ unsafe_code = "forbid"
 pedantic = "warn"
 nursery = "warn"
 cargo = "warn"
-
-[patch.crates-io]
-proc-macro-crate = { git = "https://github.com/westy92/proc-macro-crate", rev = "89166accf43a380a7a8e66c2eea20ce4fd9dae8f" }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
