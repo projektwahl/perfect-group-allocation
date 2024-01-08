@@ -1,2 +1,5 @@
 [build]
 rustflags = [ "-Zmacro-backtrace"] # disable "--cfg", "tokio_unstable", for perf
+
+[profile.release]
+debug = true
