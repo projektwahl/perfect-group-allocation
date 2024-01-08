@@ -106,12 +106,13 @@ https://nnethercote.github.io/perf-book/profiling.html
 # rebuild std to get debug symbols and same settings?
 cargo build --target=x86_64-unknown-linux-gnu -Z build-std --profile=release-with-debug --bin server
 
-DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/debug/server
+28% http
+router clone seems to do heap allocs
 
 # https://github.com/launchbadge/sqlx/blob/929af41745a9434ae83417dcf2571685cecca6f0/sqlx-postgres/src/options/mod.rs#L15
 # WARNING: Only connect without ssl over localhost. This makes the profiling better as there is not countless ssl stuff in there.
 # I think you need to run this from the workspace root for debug symbols?
-DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release-with-debug/server
+DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable" valgrind --tool=callgrind --cache-sim=yes --simulate-wb=yes --simulate-hwpref=yes --branch-sim=yes --dump-instr=yes --collect-jumps=yes --collect-bus=yes --collect-systime=nsec ./target/x86_64-unknown-linux-gnu/release-with-debug/server #  --cacheuse=yes
 
 use zed attack proxy to create some requests
 

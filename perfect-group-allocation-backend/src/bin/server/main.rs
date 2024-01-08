@@ -12,6 +12,9 @@
 
 extern crate alloc;
 
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 pub mod csrf_protection;
 mod error;
 mod openid;
@@ -43,6 +46,7 @@ use routes::projects::create::create;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
+use tikv_jemallocator::Jemalloc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::sync::watch;
@@ -254,7 +258,7 @@ impl MyRouter {
     }
 }
 
-#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
+//#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 async fn program() -> Result<(), AppError> {
     info!("starting up server...");
 
