@@ -7,19 +7,18 @@ use opentelemetry::metrics::Unit;
 use opentelemetry::KeyValue;
 use tokio_metrics::TaskMonitor;
 
-use crate::telemetry::tokio_metrics::{BorrowedMethodAndPath, TokioTaskMetricsLayer};
-use crate::MyState;
+use crate::tokio_metrics::{BorrowedMethodAndPath, TokioTaskMetricsLayer};
 
 #[derive(Default)]
-pub struct MyRouter {
-    router: Router<MyState>,
+pub struct MyRouter<S: Clone + Sync + Send + 'static> {
+    router: Router<S>,
     task_monitors: HashMap<BorrowedMethodAndPath<'static>, TaskMonitor>,
 }
 
-impl MyRouter {
+impl<S: Clone + Sync + Send + 'static> MyRouter<S> {
     #[track_caller]
     #[must_use]
-    pub fn route<T: 'static, H: Handler<T, MyState>>(
+    pub fn route<T: 'static, H: Handler<T, S>>(
         mut self,
         method: &'static Method,
         path: &'static str,
@@ -264,7 +263,7 @@ impl MyRouter {
         }
     }
 
-    pub fn finish(self) -> Router<MyState> {
+    pub fn finish(self) -> Router<S> {
         self.router.layer(TokioTaskMetricsLayer {
             task_monitors: self.task_monitors,
         })

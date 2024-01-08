@@ -11,7 +11,7 @@ static FAVICON_ICO: OnceLock<Vec<u8>> = OnceLock::new();
 pub async fn initialize_favicon_ico() {
     // TODO FIXME pwd independent path
     FAVICON_ICO
-        .set(tokio::fs::read("../frontend/favicon.ico").await.unwrap())
+        .set(tokio::fs::read("./frontend/favicon.ico").await.unwrap())
         .unwrap();
 }
 

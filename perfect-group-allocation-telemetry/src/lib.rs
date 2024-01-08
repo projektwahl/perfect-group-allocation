@@ -1,3 +1,4 @@
+#![feature(hash_raw_entry)]
 pub mod router;
 pub mod tokio_metrics;
 pub mod trace_layer;
@@ -16,7 +17,7 @@ use opentelemetry_sdk::resource::{
     EnvResourceDetector, OsResourceDetector, ProcessResourceDetector, TelemetryResourceDetector,
 };
 use opentelemetry_sdk::Resource;
-use tracing_opentelemetry::MetricsLayer;
+use tracing_opentelemetry::{MetricsLayer, OpenTelemetrySpanExt};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;

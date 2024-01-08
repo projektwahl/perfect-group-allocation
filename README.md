@@ -95,12 +95,19 @@ awesome help for performance issues
 https://valgrind.org/docs/manual/cl-manual.html
 Callgrind
 
+# DO NOT USE TRUST AUTHENTICATION IN PRODUCTION! For profiling we don't want to measure sha2 hashing overhead
+podman run --rm --detach --name postgres-profiling --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
+
+export DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
+diesel database reset
+
 # rebuild std to get debug symbols and same settings?
 cargo build --target=x86_64-unknown-linux-gnu -Z build-std --profile=release-with-debug --bin server
 
 # https://github.com/launchbadge/sqlx/blob/929af41745a9434ae83417dcf2571685cecca6f0/sqlx-postgres/src/options/mod.rs#L15
 # WARNING: Only connect without ssl over localhost. This makes the profiling better as there is not countless ssl stuff in there.
-DATABASE_URL="postgres://postgres:password@localhost?sslmode=disable" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release-with-debug/server
+# I think you need to run this from the workspace root for debug symbols?
+DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/release-with-debug/server
 
 use zed attack proxy to create some requests
 
