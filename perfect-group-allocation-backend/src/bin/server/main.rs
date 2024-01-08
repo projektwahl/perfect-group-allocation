@@ -3,5 +3,5 @@ use perfect_group_allocation_backend::run_server;
 
 #[tokio::main]
 pub async fn main() -> Result<(), AppError> {
-    run_server().await
+    run_server().await?.await
 }

@@ -31,7 +31,7 @@ use axum::http::{self};
 use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
 use error::{to_error_result, AppError};
-use futures_util::pin_mut;
+use futures_util::{pin_mut, Future};
 use http::{Request, StatusCode};
 use hyper::body::Incoming;
 use hyper::Method;
@@ -260,7 +260,7 @@ impl MyRouter {
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 
 #[allow(clippy::cognitive_complexity)]
-pub async fn run_server() -> Result<(), AppError> {
+pub async fn run_server() -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     info!("starting up server...");
 
     initialize_index_css();
@@ -345,74 +345,76 @@ pub async fn run_server() -> Result<(), AppError> {
 
     info!("started up server...");
 
-    #[allow(clippy::redundant_pub_crate)]
-    loop {
-        select! {
-            accept = listener.accept() => {
+    Ok(async move {
+        #[allow(clippy::redundant_pub_crate)]
+        loop {
+            select! {
+                accept = listener.accept() => {
 
-                let (socket, remote_addr) = accept.unwrap();
+                    let (socket, remote_addr) = accept.unwrap();
 
-                // We don't need to call `poll_ready` because `IntoMakeServiceWithConnectInfo` is always
-                // ready.
-                let tower_service = unwrap_infallible(make_service.call(remote_addr).await);
+                    // We don't need to call `poll_ready` because `IntoMakeServiceWithConnectInfo` is always
+                    // ready.
+                    let tower_service = unwrap_infallible(make_service.call(remote_addr).await);
 
 
-                let shutdown_tx = Arc::clone(&shutdown_tx);
-                let closed_rx = closed_rx.clone();
+                    let shutdown_tx = Arc::clone(&shutdown_tx);
+                    let closed_rx = closed_rx.clone();
 
-                let fut = async move {
-                    let socket = TokioIo::new(socket);
+                    let fut = async move {
+                        let socket = TokioIo::new(socket);
 
-                    let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
-                        tower_service.clone().oneshot(request)
-                    });
+                        let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
+                            tower_service.clone().oneshot(request)
+                        });
 
-                    let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
-                    let connection = builder.serve_connection_with_upgrades(socket, hyper_service);
-                    pin_mut!(connection);
+                        let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
+                        let connection = builder.serve_connection_with_upgrades(socket, hyper_service);
+                        pin_mut!(connection);
 
-                    // TODO FIXME https://github.com/tokio-rs/axum/blob/main/axum/src/serve.rs#L279 maybe its more performance to store and pin_mut!?
+                        // TODO FIXME https://github.com/tokio-rs/axum/blob/main/axum/src/serve.rs#L279 maybe its more performance to store and pin_mut!?
 
-                    loop {
-                        select! {
-                            connection_result = connection.as_mut() => {
-                                if let Err(err) = connection_result
-                                {
-                                    eprintln!("failed to serve connection: {err:#}");
+                        loop {
+                            select! {
+                                connection_result = connection.as_mut() => {
+                                    if let Err(err) = connection_result
+                                    {
+                                        eprintln!("failed to serve connection: {err:#}");
+                                    }
+                                    break; // (gracefully) finished connection
                                 }
-                                break; // (gracefully) finished connection
-                            }
-                            () = shutdown_tx.closed() => {
-                                println!("signal received, shutting down");
-                                connection.as_mut().graceful_shutdown();
+                                () = shutdown_tx.closed() => {
+                                    println!("signal received, shutting down");
+                                    connection.as_mut().graceful_shutdown();
+                                }
                             }
                         }
-                    }
-                    println!("gracefully shut down");
+                        println!("gracefully shut down");
 
-                    tracing::info!("hi");
+                        tracing::info!("hi");
 
+                        drop(closed_rx);
+                    };
+                    #[cfg(feature = "perfect-group-allocation-telemetry")]
+                    let child_span = tracing::debug_span!("child");
+                    #[cfg(feature = "perfect-group-allocation-telemetry")]
+                    let fut = tracing::Instrument::instrument(fut, child_span.or_current());
+                    tokio::spawn(fut);
+                }
+                () = shutdown_signal() => {
+                    // TODO FIXME "graceful shutdown"
+                    warn!("SHUTDOWN");
+                    drop(shutdown_rx); // initiate shutdown
                     drop(closed_rx);
-                };
-                #[cfg(feature = "perfect-group-allocation-telemetry")]
-                let child_span = tracing::debug_span!("child");
-                #[cfg(feature = "perfect-group-allocation-telemetry")]
-                let fut = tracing::Instrument::instrument(fut, child_span.or_current());
-                tokio::spawn(fut);
-            }
-            () = shutdown_signal() => {
-                // TODO FIXME "graceful shutdown"
-                warn!("SHUTDOWN");
-                drop(shutdown_rx); // initiate shutdown
-                drop(closed_rx);
-                // should we drop the tcp listener here? (write a test)
-                closed_tx.closed().await;
-                break;
+                    // should we drop the tcp listener here? (write a test)
+                    closed_tx.closed().await;
+                    break;
+                }
             }
         }
-    }
 
-    Ok(())
+        Ok(())
+    })
 }
 
 fn unwrap_infallible<T>(result: Result<T, Infallible>) -> T {
