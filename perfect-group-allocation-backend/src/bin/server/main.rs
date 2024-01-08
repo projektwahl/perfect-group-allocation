@@ -214,7 +214,7 @@ let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding
 // https://github.com/tokio-rs/axum/tree/main/examples/tls-rustls
 // https://github.com/tokio-rs/axum/blob/main/examples/serve-with-hyper/src/main.rs
 // https://github.com/tokio-rs/axum/blob/main/examples/listen-multiple-addrs/src/main.rs
-
+/*
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     // avoid putting more code here as this is outside of all spans so doesn't get traced
@@ -225,7 +225,7 @@ async fn main() -> Result<(), AppError> {
 
     program().await
 }
-
+*/
 #[derive(Default)]
 struct MyRouter {
     router: Router<MyState>,
@@ -259,7 +259,9 @@ impl MyRouter {
 }
 
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
-async fn program() -> Result<(), AppError> {
+
+#[tokio::main] // make this directly the main function so it doesn't get inlined?
+pub async fn main() -> Result<(), AppError> {
     info!("starting up server...");
 
     initialize_favicon_ico().await;

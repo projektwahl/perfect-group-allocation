@@ -1,2 +1,2 @@
 [build]
-rustflags = ["--cfg", "tokio_unstable", "-Zmacro-backtrace"]
+rustflags = [ "-Zmacro-backtrace"] # disable "--cfg", "tokio_unstable", for perf
