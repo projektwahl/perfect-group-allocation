@@ -18,7 +18,6 @@ mod openid;
 pub mod router;
 pub mod routes;
 pub mod session;
-pub mod telemetry;
 
 use core::convert::Infallible;
 use std::net::SocketAddr;
@@ -44,8 +43,6 @@ use routes::projects::create::create;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
-use telemetry::setup_telemetry;
-use telemetry::trace_layer::MyTraceLayer;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::sync::watch;
@@ -53,13 +50,11 @@ use tower::{service_fn, Service, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
 use tracing::{info, warn, Instrument as _};
-use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 use crate::openid::initialize_openid_client;
 use crate::router::MyRouter;
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
-use crate::telemetry::tokio_metrics::tokio_runtime_metrics;
 
 pub trait CsrfSafeExtractor {}
 
@@ -227,11 +222,6 @@ async fn main() -> Result<(), AppError> {
 
 #[tracing::instrument]
 async fn program() -> Result<(), AppError> {
-    tracing::Span::current().set_attribute(
-        opentelemetry_semantic_conventions::trace::SERVER_ADDRESS,
-        "localhost",
-    );
-
     info!("starting up server...");
 
     tokio_runtime_metrics();

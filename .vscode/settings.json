@@ -1,7 +1,4 @@
 {
     "editor.formatOnSave": true,
     "rust-analyzer.check.command": "clippy",
-    "rust-analyzer.linkedProjects": [
-        "./perfect-group-allocation-e2e/Cargo.toml"
-    ],
 }

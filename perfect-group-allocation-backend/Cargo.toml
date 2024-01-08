@@ -21,7 +21,6 @@ futures-util = "0.3"
 good_lp = { default-features = false, version = "1", features = [ "coin_cbc" ] }
 itertools = { default-features = false, version = "0.12", features = [ "use_alloc", "use_std" ] }
 tokio = { version = "1", features = ["full"] }
-log = { version = "0.4", features = ["release_max_level_off"] }
 axum = { version = "0.7", features = [ "http2", "macros", "multipart", "tracing" ] }
 tokio-rustls = "0.25"
 hyper = { version = "1", features = ["full"] }
@@ -45,7 +44,6 @@ chrono = "0.4"
 miniserde = "0.1"
 http = "1"
 console-subscriber = "0.2"
-tokio-metrics = { version = "0.3" }
 zero-cost-templating = { git = "https://github.com/mohe2015/zero-cost-templating.git" }
 bytes = "1"
 pin-project = "1"
@@ -56,13 +54,5 @@ perfect-group-allocation-database = { path = "../perfect-group-allocation-databa
 diesel = "2"
 diesel-async = { version = "0.4", features = ["postgres", "deadpool"] }
 
-# https://github.com/open-telemetry/opentelemetry-rust/pull/1410
-opentelemetry = { version = "0.21", features = ["metrics"] }
-opentelemetry_sdk = { version = "0.21", features = ["metrics", "rt-tokio"] }
-opentelemetry-otlp = { version = "0.14", features = ["metrics", "http-proto", "reqwest-client", "logs"] }
-opentelemetry-semantic-conventions = { version = "0.13" }
-opentelemetry-appender-log = { version = "0.2" }
-opentelemetry-appender-tracing = { version = "0.2" }
-tracing = "0.1"
-tracing-opentelemetry = { version = "0.22" }
-tracing-subscriber = "0.3"
+log = { version = "0.4", features = ["release_max_level_off"] }
+tracing = { version = "0.1", features = ["release_max_level_off"] }

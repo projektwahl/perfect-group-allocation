@@ -5,7 +5,6 @@ use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
-use opentelemetry::trace::TraceError;
 use perfect_group_allocation_database::DatabaseError;
 use serde::Serialize;
 

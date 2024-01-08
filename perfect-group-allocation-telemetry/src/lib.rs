@@ -123,5 +123,10 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
     let logger_provider = logger_provider();
     OpenTelemetryTracingBridge::new(&logger_provider);
 
+    tracing::Span::current().set_attribute(
+        opentelemetry_semantic_conventions::trace::SERVER_ADDRESS,
+        "localhost",
+    );
+
     OpenTelemetryGuard { meter_provider }
 }

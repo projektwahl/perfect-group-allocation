@@ -2,7 +2,8 @@
 resolver = "2"
 members = [
     "perfect-group-allocation-backend", "perfect-group-allocation-database"
-, "webdriver-bidi"]
+, "perfect-group-allocation-telemetry", "webdriver-bidi"]
+exclude = [ "perfect-group-allocation-e2e" ]
 
 [workspace.package]
 edition = "2024"
