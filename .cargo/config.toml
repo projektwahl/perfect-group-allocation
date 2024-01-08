@@ -1,10 +1,2 @@
 [build]
 rustflags = ["--cfg", "tokio_unstable", "-Zmacro-backtrace"]
-
-[unstable.gitoxide]
-fetch = true
-shallow_index = true
-shallow_deps = true
-checkout = false
-internal_use_git2 = false
-

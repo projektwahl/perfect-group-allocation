@@ -111,7 +111,7 @@ mod tests {
 
     use axum::response::IntoResponse as _;
     use axum_extra::extract::cookie::Key;
-    use axum_extra::extract::PrivateCookieJar;
+    use axum_extra::extract::{CookieJar, PrivateCookieJar};
     use http_body_util::BodyExt;
     use perfect_group_allocation_database::{
         get_database_connection_from_env, DatabaseConnection, DatabaseError,
@@ -124,7 +124,7 @@ mod tests {
     #[tokio::test]
     async fn hello_world() -> Result<(), AppError> {
         let database = get_database_connection_from_env()?;
-        let session = Session::new(PrivateCookieJar::new(Key::generate()));
+        let session = Session::new(CookieJar::new()); // TODO FIXME Key::generate()
         let form = CsrfSafeForm {
             value: CreateProjectPayload {
                 csrf_token: String::new(),

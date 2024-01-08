@@ -19,7 +19,7 @@ pub mod routes;
 pub mod session;
 
 use core::convert::Infallible;
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
 
 use axum::extract::{FromRef, FromRequest};
@@ -254,13 +254,13 @@ impl MyRouter {
     }
 }
 
-#[tracing::instrument]
+#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 async fn program() -> Result<(), AppError> {
     info!("starting up server...");
 
     initialize_favicon_ico().await;
     initialize_index_css();
-    initialize_openid_client().await;
+    //initialize_openid_client().await; // for performance measurement, this also needs tls
 
     let pool = get_database_connection_from_env()?;
 
@@ -325,7 +325,9 @@ async fn program() -> Result<(), AppError> {
 
     let mut make_service = app.into_make_service_with_connect_info::<SocketAddr>();
 
-    let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000))
+        .await
+        .unwrap();
     let mut _accept: (TcpStream, SocketAddr);
 
     // https://github.com/tokio-rs/axum/blob/af13c539386463b04b82f58155ee04702527212b/axum/src/serve.rs#L279
@@ -350,12 +352,11 @@ async fn program() -> Result<(), AppError> {
                 // ready.
                 let tower_service = unwrap_infallible(make_service.call(remote_addr).await);
 
-                let child_span = tracing::debug_span!("child");
 
                 let shutdown_tx = Arc::clone(&shutdown_tx);
                 let closed_rx = closed_rx.clone();
 
-                tokio::spawn(async move {
+                let fut = async move {
                     let socket = TokioIo::new(socket);
 
                     let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
@@ -388,7 +389,12 @@ async fn program() -> Result<(), AppError> {
                     tracing::info!("hi");
 
                     drop(closed_rx);
-                }.instrument(child_span.or_current()));
+                };
+                #[cfg(feature = "perfect-group-allocation-telemetry")]
+                let child_span = tracing::debug_span!("child");
+                #[cfg(feature = "perfect-group-allocation-telemetry")]
+                let fut = fut.instrument(child_span.or_current());
+                tokio::spawn(fut);
             }
             () = shutdown_signal() => {
                 // TODO FIXME "graceful shutdown"

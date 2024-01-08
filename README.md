@@ -101,8 +101,12 @@ podman run --rm --detach --name postgres-profiling --env POSTGRES_HOST_AUTH_METH
 export DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
 diesel database reset
 
+https://nnethercote.github.io/perf-book/profiling.html
+
 # rebuild std to get debug symbols and same settings?
 cargo build --target=x86_64-unknown-linux-gnu -Z build-std --profile=release-with-debug --bin server
+
+DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable" valgrind --tool=callgrind ./target/x86_64-unknown-linux-gnu/debug/server
 
 # https://github.com/launchbadge/sqlx/blob/929af41745a9434ae83417dcf2571685cecca6f0/sqlx-postgres/src/options/mod.rs#L15
 # WARNING: Only connect without ssl over localhost. This makes the profiling better as there is not countless ssl stuff in there.

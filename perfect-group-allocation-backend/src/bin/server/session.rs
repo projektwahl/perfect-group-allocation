@@ -4,7 +4,7 @@ use axum::extract::FromRequestParts;
 use axum::response::IntoResponseParts;
 use axum::{async_trait, RequestPartsExt};
 use axum_extra::extract::cookie::Cookie;
-use axum_extra::extract::PrivateCookieJar;
+use axum_extra::extract::{CookieJar, PrivateCookieJar};
 use chrono::{DateTime, Utc};
 use oauth2::{PkceCodeVerifier, RefreshToken};
 use openidconnect::{EndUserEmail, Nonce};
@@ -33,7 +33,7 @@ fn test_to_string(value: &(String, Option<SessionCookieStrings>)) -> String {
 #[derive(Clone)]
 #[must_use]
 pub struct Session {
-    private_cookies: PrivateCookieJar,
+    private_cookies: CookieJar, // TODO FIXME
 }
 
 #[async_trait]
@@ -49,9 +49,7 @@ where
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         Ok(Self::new(
-            parts
-                .extract_with_state::<PrivateCookieJar, S>(state)
-                .await?,
+            parts.extract_with_state::<CookieJar, S>(state).await?,
         ))
     }
 }
@@ -62,7 +60,7 @@ impl Session {
     const COOKIE_NAME_OPENIDCONNECT: &'static str = "openidconnect";
     const COOKIE_NAME_SESSION: &'static str = "session";
 
-    pub fn new(private_cookies: PrivateCookieJar) -> Self {
+    pub fn new(private_cookies: CookieJar) -> Self {
         let mut session = Self { private_cookies };
         if session.optional_session().is_none() {
             session.set_session(None);
