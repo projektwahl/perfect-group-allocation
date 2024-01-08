@@ -8,6 +8,8 @@ use perfect_group_allocation_backend::run_server;
 
 // podman run --rm --detach --name postgres-testing --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
 
+// TODO FIXME use black_box
+
 pub async fn test_as_client(repeat: u64) {
     for _ in 0..repeat {
         fetch_url("http://localhost:3000/".parse::<hyper::Uri>().unwrap())
@@ -49,8 +51,8 @@ fn bench_client_server(value: u64) {
 }
 
 library_benchmark_group!(
-    name = bench_fibonacci_group;
+    name = bench_client_server_http;
     benchmarks = bench_client_server
 );
 
-main!(library_benchmark_groups = bench_fibonacci_group);
+main!(library_benchmark_groups = bench_client_server_http);

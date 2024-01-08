@@ -257,10 +257,10 @@ impl MyRouter {
     }
 }
 
-//#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
-
-#[allow(clippy::cognitive_complexity)]
-pub async fn run_server() -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
+pub async fn setup_server() -> Result<
+    axum::extract::connect_info::IntoMakeServiceWithConnectInfo<axum::Router, std::net::SocketAddr>,
+    AppError,
+> {
     info!("starting up server...");
 
     initialize_index_css();
@@ -327,7 +327,14 @@ pub async fn run_server() -> Result<impl Future<Output = Result<(), AppError>>, 
     // TODO FIXME for every accepted connection trace
     // https://opentelemetry.io/docs/specs/semconv/attributes-registry/network/
 
-    let mut make_service = app.into_make_service_with_connect_info::<SocketAddr>();
+    Ok(app.into_make_service_with_connect_info::<SocketAddr>())
+}
+
+//#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
+
+#[allow(clippy::cognitive_complexity)]
+pub async fn run_server() -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
+    let mut make_service = setup_server().await?;
 
     let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000))
         .await
