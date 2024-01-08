@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt install -y coinor-libcbc-dev
+      - run: rustup toolchain install nightly --component rustfmt
       - run: rustup default nightly
       - run: cargo install --locked cargo-deny
       - uses: actions/checkout@v3
