@@ -32,24 +32,24 @@
 //!
 //! ### Serde rules
 //! All types will (at some point) be annotated with:
-//! ```
+//! ```ignore
 //! #[serde(rename_all = "camelCase")]
 //! #[serde(deny_unknown_fields)]
 //! ```
 //!
 //! To specify a fallback type on a tagged enum **variant**, use:
-//! ```
+//! ```ignore
 //! #[serde(untagged)]
 //! ```
 //!
 //! All fields in the spec starting with `? ` are optional and are represented as `Option<T>` and annotated with:
-//! ```rust
+//! ```ignore
 //! #[serde(skip_serializing_if = "Option::is_none")]
 //! #[serde(default)]
 //! ```
 //!
 //! `Extensible` type is represented as:
-//! ```
+//! ```ignore
 //! #[serde(flatten)]
 //! pub extensible: protocol::Extensible
 //! ```
