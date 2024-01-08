@@ -24,7 +24,7 @@ pub fn initialize_index_css() {
     let mut bundler = Bundler::new(&fs, None, ParserOptions::default());
     // TODO FIXME project independent path
     let stylesheet = bundler
-        .bundle(Path::new("./frontend/index.css"))
+        .bundle(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../frontend/index.css"))
         .map_err(|error| lightningcss::error::Error {
             kind: error.kind.to_string(),
             loc: error.loc,

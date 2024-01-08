@@ -1,37 +1,51 @@
-use http_body_util::Empty;
-use hyper::body::Bytes;
+// https://github.com/hyperium/hyper/blob/master/examples/client.rs
+use std::env;
+
+use bytes::Bytes;
+use http_body_util::{BodyExt, Empty};
 use hyper::Request;
 use hyper_util::rt::TokioIo;
+use tokio::io::{self, AsyncWriteExt as _};
 use tokio::net::TcpStream;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // This is where we will setup our HTTP client requests.
-    // Parse our URL...
-    let url = "http://httpbin.org/ip".parse::<hyper::Uri>()?;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-    // Get the host and the port
+pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
     let host = url.host().expect("uri has no host");
     let port = url.port_u16().unwrap_or(80);
-
-    let address = format!("{}:{}", host, port);
-
-    // Open a TCP connection to the remote host
-    let stream = TcpStream::connect(address).await?;
-
-    // Use an adapter to access something implementing `tokio::io` traits as if they implement
-    // `hyper::rt` IO traits.
+    let addr = format!("{}:{}", host, port);
+    let stream = TcpStream::connect(addr).await?;
     let io = TokioIo::new(stream);
 
-    // Perform a TCP handshake
     let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await?;
-
-    // Spawn a task to poll the connection, driving the HTTP state
     tokio::task::spawn(async move {
         if let Err(err) = conn.await {
             println!("Connection failed: {:?}", err);
         }
     });
+
+    let authority = url.authority().unwrap().clone();
+
+    let request = Request::builder()
+        .uri(url)
+        .header(hyper::header::HOST, authority.as_str())
+        .body(Empty::<Bytes>::new())?;
+
+    let mut response = sender.send_request(request).await?;
+
+    println!("Response: {}", response.status());
+    println!("Headers: {:#?}\n", response.headers());
+
+    // Stream the body, writing each chunk to stdout as we get it
+    // (instead of buffering and printing at the end).
+    while let Some(next) = response.frame().await {
+        let frame = next?;
+        if let Some(chunk) = frame.data_ref() {
+            io::stdout().write_all(&chunk).await?;
+        }
+    }
+
+    println!("\n\nDone!");
 
     Ok(())
 }

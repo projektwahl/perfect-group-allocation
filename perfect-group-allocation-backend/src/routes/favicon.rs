@@ -1,19 +1,10 @@
-use std::sync::OnceLock;
-
 use axum::response::IntoResponse;
 use axum_extra::{headers, TypedHeader};
 use http::{header, StatusCode};
 
 use crate::session::Session;
 
-static FAVICON_ICO: OnceLock<Vec<u8>> = OnceLock::new();
-
-pub async fn initialize_favicon_ico() {
-    // TODO FIXME pwd independent path
-    FAVICON_ICO
-        .set(tokio::fs::read("./frontend/favicon.ico").await.unwrap())
-        .unwrap();
-}
+static FAVICON_ICO: &[u8] = include_bytes!("../../../frontend/favicon.ico");
 
 // Etag and cache busting
 pub async fn favicon_ico(
@@ -32,7 +23,7 @@ pub async fn favicon_ico(
                     (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
                     (header::CONTENT_TYPE, "image/x-icon"),
                 ],
-                (&**FAVICON_ICO.get().unwrap()),
+                FAVICON_ICO,
             )
                 .into_response(),
         )
