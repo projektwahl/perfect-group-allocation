@@ -45,7 +45,7 @@ pub async fn bench_function(repeat: u64) {
 }
 
 #[library_benchmark]
-#[bench::short(1000)]
+#[bench::short(100)]
 fn bench_client_server(value: u64) {
     bench_function(value);
 }

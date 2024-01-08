@@ -1,9 +1,7 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use hyper::Request;
-use iai_callgrind::{
-    library_benchmark, library_benchmark_group, main, LibraryBenchmarkConfig, Tool, ValgrindTool,
-};
+use iai_callgrind::{library_benchmark, library_benchmark_group, main};
 use perfect_group_allocation_backend::setup_server;
 use tower_service::Service;
 
@@ -28,11 +26,11 @@ async fn hello_world(value: u64) {
             .await
             .unwrap();
 
+        // TODO FIXME check response
         service
             .call(
                 Request::builder()
-                    .uri("https://www.rust-lang.org/")
-                    .header("User-Agent", "my-awesome-agent/1.0")
+                    .uri("http://localhost:3000/")
                     .body(http_body_util::Empty::new())
                     .unwrap(),
             )
@@ -42,7 +40,7 @@ async fn hello_world(value: u64) {
 }
 
 #[library_benchmark]
-#[bench::short(1000)]
+#[bench::short(100)]
 fn bench_client_server(value: u64) {
     hello_world(value);
 }
@@ -52,7 +50,4 @@ library_benchmark_group!(
     benchmarks = bench_client_server
 );
 
-main!(
-    config = LibraryBenchmarkConfig::default()
-                .tool(Tool::new(ValgrindTool::DHAT));
-    library_benchmark_groups = bench_client_server_service);
+main!(library_benchmark_groups = bench_client_server_service);
