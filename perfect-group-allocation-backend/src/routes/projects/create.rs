@@ -1,14 +1,12 @@
 use alloc::borrow::Cow;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::extract::State;
 use axum::response::IntoResponse;
 use bytes::Bytes;
-use diesel::prelude::*;
-use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;
 use http::header;
-use perfect_group_allocation_database::models::{NewProject, ProjectHistoryEntry};
+use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
 use perfect_group_allocation_database::DatabaseConnection;
 use tracing::error;
@@ -110,8 +108,7 @@ mod tests {
     use std::str::from_utf8;
 
     use axum::response::IntoResponse as _;
-    use axum_extra::extract::cookie::Key;
-    use axum_extra::extract::{CookieJar, PrivateCookieJar};
+    use axum_extra::extract::CookieJar;
     use http_body_util::BodyExt;
     use perfect_group_allocation_database::{
         get_database_connection_from_env, DatabaseConnection, DatabaseError,

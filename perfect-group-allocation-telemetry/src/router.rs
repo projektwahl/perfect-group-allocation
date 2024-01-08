@@ -10,6 +10,7 @@ use tokio_metrics::TaskMonitor;
 use crate::tokio_metrics::{BorrowedMethodAndPath, TokioTaskMetricsLayer};
 
 #[derive(Default)]
+#[allow(clippy::module_name_repetitions)]
 pub struct MyRouter<S: Clone + Sync + Send + 'static> {
     router: Router<S>,
     task_monitors: HashMap<BorrowedMethodAndPath<'static>, TaskMonitor>,
@@ -18,6 +19,7 @@ pub struct MyRouter<S: Clone + Sync + Send + 'static> {
 impl<S: Clone + Sync + Send + 'static> MyRouter<S> {
     #[track_caller]
     #[must_use]
+    #[allow(clippy::too_many_lines)]
     pub fn route<T: 'static, H: Handler<T, S>>(
         mut self,
         method: &'static Method,

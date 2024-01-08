@@ -21,6 +21,7 @@ use tracing_opentelemetry::OpenTelemetrySpanExt;
 // inspired by https://github.com/tower-rs/tower-http/blob/main/tower-http/src/trace/service.rs
 
 #[derive(Debug, Clone)]
+#[allow(clippy::module_name_repetitions)]
 pub struct MyTraceLayer;
 
 impl<S> Layer<S> for MyTraceLayer {

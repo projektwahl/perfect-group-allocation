@@ -46,6 +46,7 @@ type OpenIdConnectClientType = openidconnect::Client<
 
 pub static OPENID_CLIENT: OnceLock<Result<OpenIdConnectClientType, AppError>> = OnceLock::new();
 
+#[allow(unused)]
 pub async fn initialize_openid_client() {
     let client = async {
         let provider_metadata = CoreProviderMetadata::discover_async(

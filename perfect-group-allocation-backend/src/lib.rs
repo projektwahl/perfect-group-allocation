@@ -53,9 +53,8 @@ use tokio::sync::watch;
 use tower::{service_fn, Service, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
-use tracing::{info, warn, Instrument as _};
+use tracing::{info, warn};
 
-use crate::openid::initialize_openid_client;
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
 
@@ -235,7 +234,7 @@ impl MyRouter {
     #[track_caller]
     #[must_use]
     pub fn route<T: 'static, H: Handler<T, MyState>>(
-        mut self,
+        self,
         method: &'static Method,
         path: &'static str,
         handler: H,
@@ -260,6 +259,7 @@ impl MyRouter {
 
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 
+#[allow(clippy::cognitive_complexity)]
 pub async fn run_server() -> Result<(), AppError> {
     info!("starting up server...");
 
@@ -298,7 +298,7 @@ pub async fn run_server() -> Result<(), AppError> {
     });
     let app = app.layer(CatchPanicLayer::new());
     #[cfg(feature = "perfect-group-allocation-telemetry")]
-    let app = app.layer(MyTraceLayer);
+    let app = app.layer(perfect_group_allocation_telemetry::trace_layer::MyTraceLayer);
     /*    let config = OpenSSLConfig::from_pem_file(
             ".lego/certificates/h3.selfmade4u.de.crt",
             ".lego/certificates/h3.selfmade4u.de.key",
@@ -397,7 +397,7 @@ pub async fn run_server() -> Result<(), AppError> {
                 #[cfg(feature = "perfect-group-allocation-telemetry")]
                 let child_span = tracing::debug_span!("child");
                 #[cfg(feature = "perfect-group-allocation-telemetry")]
-                let fut = fut.instrument(child_span.or_current());
+                let fut = tracing::Instrument::instrument(fut, child_span.or_current());
                 tokio::spawn(fut);
             }
             () = shutdown_signal() => {

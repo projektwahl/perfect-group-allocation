@@ -54,9 +54,9 @@ pub enum AppError {
     Poison(#[from] std::sync::PoisonError<()>),
     #[error("join error: {0}")]
     Join(#[from] tokio::task::JoinError),
-    #[cfg(feature = "perfect-group-allocation-telemetry")]
-    #[error("trace error: {0}")]
-    Trace(#[from] TraceError),
+    // #[cfg(feature = "perfect-group-allocation-telemetry")]
+    //#[error("trace error: {0}")]
+    //Trace(#[from] TraceError),
     #[error("database error: {0}")]
     Database(#[from] DatabaseError),
     #[error("wrong csrf token")]

@@ -1,15 +1,14 @@
 use alloc::borrow::Cow;
 
-use axum::extract::State;
 use axum::response::IntoResponse;
 use bytes::Bytes;
 use diesel::prelude::*;
-use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
+use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;
 use hyper::header;
 use perfect_group_allocation_database::models::ProjectHistoryEntry;
 use perfect_group_allocation_database::schema::project_history;
-use perfect_group_allocation_database::{DatabaseConnection, DatabaseError};
+use perfect_group_allocation_database::DatabaseConnection;
 use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{template_stream, yieldoki, yieldokv};

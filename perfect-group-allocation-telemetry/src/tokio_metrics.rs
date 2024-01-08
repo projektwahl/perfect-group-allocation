@@ -94,6 +94,7 @@ where
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn tokio_runtime_metrics() {
     let meter = opentelemetry::global::meter("perfect-group-allocation");
     let handle = tokio::runtime::Handle::current();
