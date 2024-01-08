@@ -1,3 +1,4 @@
+pub mod router;
 pub mod tokio_metrics;
 pub mod trace_layer;
 

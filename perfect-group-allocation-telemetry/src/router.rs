@@ -17,11 +17,6 @@ pub struct MyRouter {
 }
 
 impl MyRouter {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     #[track_caller]
     #[must_use]
     pub fn route<T: 'static, H: Handler<T, MyState>>(

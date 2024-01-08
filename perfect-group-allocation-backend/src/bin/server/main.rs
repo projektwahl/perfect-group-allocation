@@ -15,7 +15,6 @@ extern crate alloc;
 pub mod csrf_protection;
 mod error;
 mod openid;
-pub mod router;
 pub mod routes;
 pub mod session;
 
@@ -24,6 +23,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::extract::{FromRef, FromRequest};
+use axum::handler::Handler;
 use axum::http::{self};
 use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
@@ -52,7 +52,6 @@ use tower_http::services::ServeDir;
 use tracing::{info, warn, Instrument as _};
 
 use crate::openid::initialize_openid_client;
-use crate::router::MyRouter;
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
 
@@ -216,15 +215,46 @@ let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding
 async fn main() -> Result<(), AppError> {
     // avoid putting more code here as this is outside of all spans so doesn't get traced
     let _guard = setup_telemetry();
+    tokio_runtime_metrics();
 
     program().await
+}
+
+#[derive(Default)]
+struct MyRouter {
+    router: Router<MyState>,
+}
+
+impl MyRouter {
+    #[track_caller]
+    #[must_use]
+    pub fn route<T: 'static, H: Handler<T, MyState>>(
+        mut self,
+        method: &'static Method,
+        path: &'static str,
+        handler: H,
+    ) -> Self {
+        Self {
+            // maybe don't use middleware but just add in here direcctly?
+            router: self.router.route(
+                path,
+                match *method {
+                    Method::GET => axum::routing::get(handler),
+                    Method::POST => axum::routing::post(handler),
+                    _ => unreachable!(),
+                },
+            ),
+        }
+    }
+
+    pub fn finish(self) -> Router<MyState> {
+        self.router
+    }
 }
 
 #[tracing::instrument]
 async fn program() -> Result<(), AppError> {
     info!("starting up server...");
-
-    tokio_runtime_metrics();
 
     initialize_favicon_ico().await;
     initialize_index_css();
@@ -234,7 +264,7 @@ async fn program() -> Result<(), AppError> {
 
     let service = ServeDir::new("frontend");
 
-    let my_router = MyRouter::new()
+    let my_router = MyRouter::default()
         .route(&Method::GET, "/", index)
         .route(&Method::POST, "/", create)
         .route(&Method::GET, "/index.css", indexcss)
