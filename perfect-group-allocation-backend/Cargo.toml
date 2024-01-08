@@ -56,3 +56,4 @@ diesel-async = { version = "0.4", features = ["postgres", "deadpool"] }
 
 log = { version = "0.4", features = ["release_max_level_off"] }
 tracing = { version = "0.1", features = ["release_max_level_off"] }
+perfect-group-allocation-telemetry = { path = "../perfect-group-allocation-telemetry", optional = true }

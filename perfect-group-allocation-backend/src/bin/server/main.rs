@@ -214,7 +214,9 @@ let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     // avoid putting more code here as this is outside of all spans so doesn't get traced
+    #[cfg(feature = "perfect-group-allocation-telemetry")]
     let _guard = setup_telemetry();
+    #[cfg(feature = "perfect-group-allocation-telemetry")]
     tokio_runtime_metrics();
 
     program().await
@@ -290,7 +292,9 @@ async fn program() -> Result<(), AppError> {
         pool,
         key: Key::generate(),
     });
-    let app = app.layer(CatchPanicLayer::new()).layer(MyTraceLayer);
+    let app = app.layer(CatchPanicLayer::new());
+    #[cfg(feature = "perfect-group-allocation-telemetry")]
+    let app = app.layer(MyTraceLayer);
     /*    let config = OpenSSLConfig::from_pem_file(
             ".lego/certificates/h3.selfmade4u.de.crt",
             ".lego/certificates/h3.selfmade4u.de.key",

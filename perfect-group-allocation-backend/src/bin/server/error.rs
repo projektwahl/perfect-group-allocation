@@ -54,6 +54,7 @@ pub enum AppError {
     Poison(#[from] std::sync::PoisonError<()>),
     #[error("join error: {0}")]
     Join(#[from] tokio::task::JoinError),
+    #[cfg(feature = "perfect-group-allocation-telemetry")]
     #[error("trace error: {0}")]
     Trace(#[from] TraceError),
     #[error("database error: {0}")]
@@ -106,7 +107,6 @@ pub async fn to_error_result(
         | AppError::Rustls(_)
         | AppError::Poison(_)
         | AppError::Join(_)
-        | AppError::Trace(_)
         | AppError::OpenIdTokenNotFound
         | AppError::OpenIdNotConfigured
         | AppError::NoAcceptRemaining
