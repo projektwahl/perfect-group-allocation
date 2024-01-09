@@ -60,7 +60,9 @@ pub async fn test_as_client(repeat: u64) {
 }
 
 pub async fn test_server() -> impl Future<Output = ()> {
-    let fut = run_server().await.unwrap();
+    let fut = run_server("postgres://postgres@localhost/pga?sslmode=disable")
+        .await
+        .unwrap();
     async move {
         fut.await.unwrap();
     }
@@ -69,10 +71,6 @@ pub async fn test_server() -> impl Future<Output = ()> {
 #[tokio::main(flavor = "current_thread")]
 #[allow(clippy::redundant_pub_crate)]
 pub async fn bench_client_server_function(repeat: u64) {
-    std::env::set_var(
-        "DATABASE_URL",
-        "postgres://postgres@localhost/pga?sslmode=disable",
-    );
     let server_fut = test_server().await; // server doesn't terminate
     let client_fut = test_as_client(repeat);
     tokio::select! {
