@@ -26,10 +26,6 @@ pub fn get_database_connection(database_url: &str) -> Result<Pool, DatabaseError
     Ok(DeadPool::builder(config).build()?)
 }
 
-pub fn get_database_connection_from_env() -> Result<DeadPool<AsyncPgConnection>, DatabaseError> {
-    let database_url = std::env::var("DATABASE_URL")?;
-    get_database_connection(&database_url)
-}
 pub struct DatabaseConnection(pub Object<AsyncPgConnection>);
 
 #[async_trait]
@@ -59,7 +55,8 @@ where
 }
 
 pub async fn example() -> Result<(), DatabaseError> {
-    let pool = get_database_connection_from_env()?;
+    let database_url = std::env::var("DATABASE_URL")?;
+    let pool = get_database_connection(&database_url)?;
 
     // checkout a connection from the pool
     let mut connection = pool.get().await?;

@@ -36,7 +36,7 @@ use http::{Request, StatusCode};
 use hyper::body::Incoming;
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
-use perfect_group_allocation_database::{get_database_connection_from_env, Pool};
+use perfect_group_allocation_database::{get_database_connection, Pool};
 use routes::download::handler;
 use routes::favicon::favicon_ico;
 use routes::index::index;
@@ -257,7 +257,9 @@ impl MyRouter {
     }
 }
 
-pub async fn setup_server() -> Result<
+pub async fn setup_server(
+    database_url: &str,
+) -> Result<
     axum::extract::connect_info::IntoMakeServiceWithConnectInfo<axum::Router, std::net::SocketAddr>,
     AppError,
 > {
@@ -266,7 +268,7 @@ pub async fn setup_server() -> Result<
     initialize_index_css();
     //initialize_openid_client().await; // for performance measurement, this also needs tls
 
-    let pool = get_database_connection_from_env()?;
+    let pool = get_database_connection(database_url)?;
 
     let service = ServeDir::new("frontend");
 
@@ -335,8 +337,10 @@ pub async fn setup_server() -> Result<
 // TODO FIXME https://github.com/tokio-rs/axum/issues/2449
 
 #[allow(clippy::cognitive_complexity)]
-pub async fn run_server() -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let mut make_service = setup_server().await?;
+pub async fn run_server(
+    database_url: &str,
+) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
+    let mut make_service = setup_server(database_url).await?;
 
     let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000))
         .await
