@@ -1,5 +1,12 @@
 //! <https://w3c.github.io/webdriver-bidi/#module-script>
 
+pub mod add_preload_script;
+pub mod call_function;
+pub mod disown;
+pub mod evaluate;
+pub mod get_realms;
+pub mod remove_preload_script;
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -211,7 +218,7 @@ pub struct SetLocalValue {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct Preload(pub String);
+pub struct PreloadScript(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-Realm>
 #[derive(Debug, Serialize, Deserialize, Clone)]

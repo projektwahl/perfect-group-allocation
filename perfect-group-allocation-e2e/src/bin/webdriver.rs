@@ -4,7 +4,8 @@ use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 use webdriver_bidi::browsing_context::{self, CssLocator};
-use webdriver_bidi::{session, Browser, SendCommand, WebDriver};
+use webdriver_bidi::script::ContextTarget;
+use webdriver_bidi::{script, session, Browser, SendCommand, WebDriver};
 
 #[tokio::main]
 pub async fn main() -> Result<(), webdriver_bidi::Error> {
@@ -74,19 +75,16 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
 
     let nodes = driver
         .send_command(
-            SendCommand::BrowsingContextLocateNodes,
-            browsing_context::locate_nodes::Command {
-                params: browsing_context::locate_nodes::Parameters {
-                    context: browsing_context.clone(),
-                    locator: browsing_context::Locator::Css(CssLocator {
-                        value: r#"form[action="/openidconnect-login"] button[type="submit"]"#
-                            .to_owned(),
-                    }),
-                    max_node_count: None,
-                    ownership: None,
-                    sandbox: None,
+            SendCommand::ScriptEvaluate,
+            script::evaluate::Command {
+                params: script::evaluate::Parameters {
+                    expression: r#"document.querySelector(`form[action="/openidconnect-login"] button[type="submit"]`)"#
+                        .to_owned(),
+                    target: script::Target::Context(ContextTarget { context: Some(browsing_context.clone()), sandbox: None }),
+                    await_promise: false,
+                    result_ownership: None,
                     serialization_options: None,
-                    start_nodes: None,
+                    user_activation: None,
                 },
             },
         )

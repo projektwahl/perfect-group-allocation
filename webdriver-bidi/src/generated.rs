@@ -3,10 +3,10 @@ use paste::paste;
 macro_rules! magic {
     (
         pub enum {
-            $(#[doc = $doc:expr] $variant:ident($tag:literal $($command:ident)::+)),*
+            $(#[doc = $doc:expr] $variant:ident($tag:literal $($command:ident)::+)),*,
         }
         pub enum {
-            $(#[doc = $doc_subscription:expr] $variant_subscription:ident($tag_subscription:literal $($command_subscription:ident)::+)),*
+            $(#[doc = $doc_subscription:expr] $variant_subscription:ident($tag_subscription:literal $($command_subscription:ident)::+)),*,
         }
     ) => {
         paste! {
@@ -210,10 +210,23 @@ magic! {
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-setViewport>
         BrowsingContextSetViewport("browsingContext.setViewport" crate::browsing_context::set_viewport),
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-traverseHistory>
-        BrowsingContextTraverseHistory("browsingContext.traverseHistory" crate::browsing_context::traverse_history)
+        BrowsingContextTraverseHistory("browsingContext.traverseHistory" crate::browsing_context::traverse_history),
+
+        /// <https://w3c.github.io/webdriver-bidi/#command-script-addPreloadScript>
+        ScriptAddPreloadScript("script.addPreloadScript" crate::script::add_preload_script),
+        /// <https://w3c.github.io/webdriver-bidi/#command-script-disown>
+        ScriptDisown("script.disown" crate::script::disown),
+        /// <https://w3c.github.io/webdriver-bidi/#command-script-callFunction>
+        ScriptCallFunction("script.callFunction" crate::script::call_function),
+        /// <https://w3c.github.io/webdriver-bidi/#command-script-evaluate>
+        ScriptEvaluate("script.evaluate" crate::script::evaluate),
+        /// <https://w3c.github.io/webdriver-bidi/#command-script-getRealms>
+        ScriptGetRealms("script.getRealms" crate::script::get_realms),
+        /// <https://w3c.github.io/webdriver-bidi/#command-script-removePreloadScript>
+        ScriptRemovePreloadScript("script.removePreloadScript" crate::script::remove_preload_script),
     }
     pub enum {
         /// tmp
-        SubscribeGlobalLogs("log.entryAdded" crate::log::EntryAdded)
+        SubscribeGlobalLogs("log.entryAdded" crate::log::EntryAdded),
     }
 }

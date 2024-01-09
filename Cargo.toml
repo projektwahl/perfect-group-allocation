@@ -27,6 +27,8 @@ nursery = "warn"
 cargo = "warn"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+
 
 [patch.crates-io]
 axum = { git = "https://github.com/tokio-rs/axum.git", branch = "david/arc-router-2" }
