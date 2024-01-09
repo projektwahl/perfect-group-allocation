@@ -66,7 +66,7 @@ pub async fn test_server() -> impl Future<Output = ()> {
 
 #[tokio::main(flavor = "current_thread")]
 #[allow(clippy::redundant_pub_crate)]
-pub async fn bench_client_server_function(repeat: u64) {
+pub async fn bench_client_server_function_http(repeat: u64) {
     let server_fut = test_server().await; // server doesn't terminate
     let client_fut = test_as_client(repeat);
     tokio::select! {

@@ -10,7 +10,7 @@ use tower_service::Service;
 // TODO FIXME use black_box
 
 #[tokio::main(flavor = "current_thread")]
-async fn bench_client_server_function(value: u64) {
+pub async fn bench_client_server_function_service(value: u64) {
     let mut service = setup_server("postgres://postgres@localhost/pga?sslmode=disable".to_owned())
         .await
         .unwrap();
