@@ -12,8 +12,9 @@
 
 extern crate alloc;
 
-#[global_allocator]
-static GLOBAL: Jemalloc = Jemalloc;
+// determinism?
+//#[global_allocator]
+//static GLOBAL: Jemalloc = Jemalloc;
 
 pub mod csrf_protection;
 pub mod error;
@@ -53,7 +54,7 @@ use tokio::sync::watch;
 use tower::{service_fn, Service, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::list::list;
@@ -258,7 +259,7 @@ impl MyRouter {
 }
 
 pub async fn setup_server(
-    database_url: &str,
+    database_url: String,
 ) -> Result<
     axum::extract::connect_info::IntoMakeServiceWithConnectInfo<axum::Router, std::net::SocketAddr>,
     AppError,
@@ -268,7 +269,7 @@ pub async fn setup_server(
     initialize_index_css();
     //initialize_openid_client().await; // for performance measurement, this also needs tls
 
-    let pool = get_database_connection(database_url)?;
+    let pool = get_database_connection(&database_url)?;
 
     let service = ServeDir::new("frontend");
 
@@ -316,7 +317,6 @@ pub async fn setup_server(
         .unwrap();
     */
     //let addr = SocketAddr::from(([127, 0, 0, 1], 8443));
-    //println!("listening on {}", addr);
     /* axum_server::bind_rustls(addr, config)
     .serve(app.into_make_service())
     .await
@@ -338,7 +338,7 @@ pub async fn setup_server(
 
 #[allow(clippy::cognitive_complexity)]
 pub async fn run_server(
-    database_url: &str,
+    database_url: String,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let mut make_service = setup_server(database_url).await?;
 
@@ -394,17 +394,15 @@ pub async fn run_server(
                                 connection_result = connection.as_mut() => {
                                     if let Err(err) = connection_result
                                     {
-                                        eprintln!("failed to serve connection: {err:#}");
+                                        error!("failed to serve connection: {err:#}");
                                     }
                                     break; // (gracefully) finished connection
                                 }
                                 () = shutdown_tx.closed() => {
-                                    println!("signal received, shutting down");
                                     connection.as_mut().graceful_shutdown();
                                 }
                             }
                         }
-                        println!("gracefully shut down");
 
                         tracing::info!("hi");
 

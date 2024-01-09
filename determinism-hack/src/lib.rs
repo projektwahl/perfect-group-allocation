@@ -6,7 +6,12 @@ use libc::{c_uint, c_void, memset, size_t, ssize_t};
 /// Totally unsafe.
 #[allow(unsafe_code)]
 #[no_mangle]
-pub unsafe extern "C" fn getrandom(buf: *mut c_void, buflen: size_t, _flags: c_uint) -> ssize_t {
-    unsafe { memset(buf, 0, buflen) };
+pub unsafe extern "C" fn getrandom(buf: *mut u8, buflen: size_t, _flags: c_uint) -> ssize_t {
+    #[allow(clippy::cast_possible_truncation)]
+    unsafe {
+        for i in 0..buflen {
+            *(buf.add(i)) = (buf as usize + 33 + 1) as u8;
+        }
+    };
     buflen.try_into().unwrap()
 }

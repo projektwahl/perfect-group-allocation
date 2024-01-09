@@ -17,11 +17,7 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
     let io = TokioIo::new(stream);
 
     let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await?;
-    tokio::task::spawn(async move {
-        if let Err(err) = conn.await {
-            println!("Connection failed: {err:?}");
-        }
-    });
+    tokio::task::spawn(async move { if let Err(err) = conn.await {} });
 
     let authority = url.authority().unwrap().clone();
 
@@ -60,7 +56,7 @@ pub async fn test_as_client(repeat: u64) {
 }
 
 pub async fn test_server() -> impl Future<Output = ()> {
-    let fut = run_server("postgres://postgres@localhost/pga?sslmode=disable")
+    let fut = run_server("postgres://postgres@localhost/pga?sslmode=disable".to_owned())
         .await
         .unwrap();
     async move {
@@ -75,10 +71,8 @@ pub async fn bench_client_server_function(repeat: u64) {
     let client_fut = test_as_client(repeat);
     tokio::select! {
         val = server_fut => {
-            println!("server completed first with {val:?}");
         }
         val = client_fut => {
-            println!("client completed first with {val:?}");
         }
     };
 }

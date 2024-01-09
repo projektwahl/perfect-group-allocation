@@ -11,7 +11,7 @@ use tower_service::Service;
 
 #[tokio::main(flavor = "current_thread")]
 async fn bench_client_server_function(value: u64) {
-    let mut service = setup_server("postgres://postgres@localhost/pga?sslmode=disable")
+    let mut service = setup_server("postgres://postgres@localhost/pga?sslmode=disable".to_owned())
         .await
         .unwrap();
     for _ in 0..value {

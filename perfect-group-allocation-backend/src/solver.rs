@@ -31,8 +31,6 @@ where
 }
 
 fn main() {
-    println!("Hello, world!");
-
     let mut variables = ProblemVariables::new();
 
     let requirement_outside = Requirement {
@@ -128,7 +126,7 @@ fn main() {
             )
         });
 
-    println!("{grouped_by_timeslot:#?}");
+    info!("{grouped_by_timeslot:#?}");
 
     grouped_by_timeslot.for_each(|(timeslot, (rooms_in_timeslot, workshops_in_timeslot))| {
         let combinations = rooms_in_timeslot
@@ -156,7 +154,7 @@ fn main() {
     let test = variables.add(variable().name("test").binary());
     let objective: Expression = test + 1;
 
-    println!("{}", variables.display(&objective));
+    info!("{}", variables.display(&objective));
 
     let problem = variables.optimise(Maximisation, objective);
 
@@ -166,5 +164,5 @@ fn main() {
         .solve()
         .unwrap();
 
-    println!("{}", solution.value(test));
+    info!("{}", solution.value(test));
 }

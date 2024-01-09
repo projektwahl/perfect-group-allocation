@@ -8,7 +8,7 @@ use tokio::net::TcpStream;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
-use tracing::trace;
+use tracing::{error, trace};
 
 use crate::browsing_context::BrowsingContext;
 use crate::generated::{
@@ -52,15 +52,15 @@ impl WebDriverHandler {
                         Some(Ok(Message::Text(message))) => {
                             trace!("received {message}");
                             if let Err(error) = self.handle_message(&message) {
-                                eprintln!("error when parsing incoming message {message} {error}");
+                                error!("error when parsing incoming message {message} {error}");
                             }
                         }
                         Some(Ok(message)) => {
-                            println!("Unknown message: {message}");
+                            error!("Unknown message: {message}");
                         }
-                        Some(Err(error)) => println!("Error in receive {error}"),
+                        Some(Err(error)) => error!("Error in receive {error}"),
                         None => {
-                            println!("connection closed");
+                            error!("connection closed");
                             break;
                         }
                     }
@@ -68,12 +68,12 @@ impl WebDriverHandler {
                 // TODO FIXME use the receive many functions
                 Some(receive_command) = self.receive_command.recv() => {
                     if let Err(error) = handle_command(self, receive_command).await {
-                        eprintln!("error when handling incoming command {error}");
+                        error!("error when handling incoming command {error}");
                     }
                 }
             }
         }
-        println!("handle closed");
+        error!("handle closed");
     }
 
     pub(crate) async fn handle_global_subscription_internal<R: Clone + Send>(
@@ -240,7 +240,7 @@ impl WebDriverHandler {
                 stacktrace: _,
                 extensible: _,
             }) => {
-                eprintln!("error response received {error}"); // TODO FIXME propage to command if it has an id.
+                error!("error response received {error}"); // TODO FIXME propage to command if it has an id.
 
                 // TODO unsubscribe, send error etc
 

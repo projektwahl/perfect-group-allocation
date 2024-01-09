@@ -2,7 +2,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-use tracing::Level;
+use tracing::{info, trace, Level};
 use tracing_subscriber::FmtSubscriber;
 use webdriver_bidi::browsing_context::create::Type;
 use webdriver_bidi::browsing_context::{self};
@@ -13,7 +13,7 @@ use webdriver_bidi::{session, Browser, SendCommand, WebDriver};
 #[tokio::main]
 pub async fn main() {
     if let Err(error) = inner_main().await {
-        eprintln!("{error}");
+        trace!("{error}");
     }
 }
 
@@ -38,7 +38,6 @@ pub async fn inner_main() -> Result<(), webdriver_bidi::Error> {
             },
         )
         .await?;
-    println!("{session:?}");
     let browsing_context = driver
         .send_command(
             SendCommand::BrowsingContextCreate,
@@ -51,7 +50,6 @@ pub async fn inner_main() -> Result<(), webdriver_bidi::Error> {
             },
         )
         .await?;
-    println!("{browsing_context:?}");
     let browsing_context = browsing_context.context.clone();
     let mut subscription = driver
         .request_subscribe(
@@ -71,10 +69,9 @@ pub async fn inner_main() -> Result<(), webdriver_bidi::Error> {
             },
         )
         .await?;
-    println!("{navigation:?}");
 
     while let Ok(log) = subscription.recv().await {
-        println!("received log message: {log:?}");
+        info!("received log message: {log:?}");
     }
 
     driver
