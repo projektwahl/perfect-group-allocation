@@ -26,7 +26,6 @@ hyper-util = { version = "0.1", features = ["full"] }
 bytes = "1"
 tower-service = "0.3"
 axum-core = { git = "https://github.com/tokio-rs/axum.git", branch = "david/arc-router-2" }
-tikv-jemallocator = "0.5"
 
 [[bench]]
 name = "http_e2e"

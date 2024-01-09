@@ -45,7 +45,6 @@ use routes::projects::create::create;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
-use tikv_jemallocator::Jemalloc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::sync::watch;
