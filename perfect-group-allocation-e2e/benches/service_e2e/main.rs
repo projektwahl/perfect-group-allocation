@@ -9,7 +9,7 @@ use tower_service::Service;
 
 // TODO FIXME use black_box
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn hello_world(value: u64) {
     std::env::set_var(
         "DATABASE_URL",

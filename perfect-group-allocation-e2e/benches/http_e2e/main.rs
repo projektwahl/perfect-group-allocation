@@ -25,7 +25,7 @@ pub async fn test_server() -> impl Future<Output = ()> {
     }
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 #[allow(clippy::redundant_pub_crate)]
 pub async fn bench_function(repeat: u64) {
     std::env::set_var(
