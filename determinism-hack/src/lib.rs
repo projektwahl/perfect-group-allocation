@@ -10,7 +10,7 @@ pub unsafe extern "C" fn getrandom(buf: *mut u8, buflen: size_t, _flags: c_uint)
     #[allow(clippy::cast_possible_truncation)]
     unsafe {
         for i in 0..buflen {
-            *(buf.add(i)) = (buf as usize + 33 + 1) as u8;
+            *(buf.add(i)) = (i + buflen + 1337) as u8;
         }
     };
     buflen.try_into().unwrap()
