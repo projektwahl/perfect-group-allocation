@@ -18,6 +18,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 libc = "0.2"
+rand = "0.8"
+
 
 [lints]
 workspace = true
