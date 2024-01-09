@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "perfect-group-allocation-backend", "perfect-group-allocation-database", "perfect-group-allocation-telemetry", "perfect-group-allocation-e2e", "webdriver-bidi"
-]
+, "determinism-hack"]
 
 [workspace.package]
 edition = "2024"
@@ -19,7 +19,7 @@ inherits = "release"
 debug = true
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 
 [workspace.lints.clippy]
 pedantic = "warn"
