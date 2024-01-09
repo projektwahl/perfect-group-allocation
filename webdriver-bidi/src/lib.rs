@@ -62,6 +62,7 @@ pub mod browser;
 pub mod browsing_context;
 mod error;
 mod generated;
+pub mod input;
 pub mod log;
 pub mod protocol;
 pub mod script;
