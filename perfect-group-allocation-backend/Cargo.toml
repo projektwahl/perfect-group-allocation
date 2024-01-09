@@ -16,6 +16,9 @@ readme.workspace = true
 [lints]
 workspace = true
 
+[features]
+profiling = []
+
 [dependencies]
 futures-util = "0.3"
 good_lp = { default-features = false, version = "1", features = [ "coin_cbc" ] }

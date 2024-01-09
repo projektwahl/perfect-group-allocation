@@ -173,12 +173,18 @@ macro_rules! magic {
 
 magic! {
     pub enum {
+        /// <https://w3c.github.io/webdriver-bidi/#command-session-status>
+        SessionStatus("session.status" crate::session::status),
         /// <https://w3c.github.io/webdriver-bidi/#command-session-new>
         SessionNew("session.new" crate::session::new),
         /// <https://w3c.github.io/webdriver-bidi/#command-session-end>
         SessionEnd("session.end" crate::session::end),
         /// <https://w3c.github.io/webdriver-bidi/#command-session-subscribe>
         SessionSubscribe("session.subscribe" crate::session::subscribe), // TODO FIXME this should not be in sendcommand
+        /// <https://w3c.github.io/webdriver-bidi/#command-session-unsubscribe>
+        SessionUnsubscribe("session.unsubscribe" crate::session::unsubscribe), // TODO FIXME this should not be in sendcommand
+        /// <https://w3c.github.io/webdriver-bidi/#command-browser-close>
+        BrowserClose("browser.close" crate::browser::close),
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
         BrowsingContextGetTree("browsingContext.getTree" crate::browsing_context::get_tree),
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
