@@ -13,8 +13,6 @@
 extern crate alloc;
 
 // determinism?
-//#[global_allocator]
-//static GLOBAL: Jemalloc = Jemalloc;
 
 pub mod csrf_protection;
 pub mod error;
