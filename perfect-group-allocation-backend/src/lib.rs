@@ -266,7 +266,8 @@ pub async fn setup_server(
 > {
     info!("starting up server...");
 
-    initialize_index_css();
+    // this one uses parallelism for generating the index css which is highly nondeterministic
+    // initialize_index_css();
     //initialize_openid_client().await; // for performance measurement, this also needs tls
 
     let pool = get_database_connection(&database_url)?;
