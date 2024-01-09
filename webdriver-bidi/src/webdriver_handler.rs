@@ -233,14 +233,8 @@ impl WebDriverHandler {
 
                 send_response(self, result, respond_command)
             }
-            protocol::Message::ErrorResponse(ErrorResponse {
-                id: _,
-                error,
-                message: _,
-                stacktrace: _,
-                extensible: _,
-            }) => {
-                error!("error response received {error}"); // TODO FIXME propage to command if it has an id.
+            protocol::Message::ErrorResponse(error_response) => {
+                error!("error response received {error_response:?}"); // TODO FIXME propage to command if it has an id.
 
                 // TODO unsubscribe, send error etc
 

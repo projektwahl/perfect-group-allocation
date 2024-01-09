@@ -7,7 +7,7 @@ use crate::script::{NodeRemoteValue, ResultOwnership, SerializationOptions, Shar
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-locateNodes>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "method")]
-#[serde(rename = "browsingContext.handleUserPrompt")]
+#[serde(rename = "browsingContext.locateNodes")]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Command {

@@ -1,16 +1,22 @@
 use perfect_group_allocation_backend::run_server;
 use tracing::{info, Level};
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::layer::SubscriberExt as _;
+use tracing_subscriber::util::SubscriberInitExt as _;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 use webdriver_bidi::browsing_context::{self, CssLocator};
 use webdriver_bidi::{session, Browser, SendCommand, WebDriver};
 
 #[tokio::main]
 pub async fn main() -> Result<(), webdriver_bidi::Error> {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::DEBUG)
-        .finish();
+    let fmt_layer = tracing_subscriber::fmt::layer();
+    let filter_layer = EnvFilter::try_from_default_env()
+        .or_else(|_| EnvFilter::try_new("debug,webdriver_bidi=trace"))
+        .unwrap();
 
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    tracing_subscriber::registry()
+        .with(filter_layer)
+        .with(fmt_layer)
+        .init();
 
     let fut = run_server("postgres://postgres@localhost/pga?sslmode=disable".to_owned())
         .await
@@ -19,7 +25,7 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
         fut.await.unwrap();
     });
 
-    let driver = WebDriver::new(Browser::Chromium).await?;
+    let driver = WebDriver::new(Browser::Firefox).await?;
     let _session = driver
         .send_command(
             SendCommand::SessionNew,
