@@ -1,7 +1,6 @@
 use perfect_group_allocation_backend::run_server;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
-use webdriver_bidi::browsing_context::create::Type;
 use webdriver_bidi::browsing_context::{self};
 use webdriver_bidi::{session, Browser, SendCommand, WebDriver};
 
@@ -21,7 +20,7 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
     });
 
     let driver = WebDriver::new(Browser::Chromium).await?;
-    let session = driver
+    let _session = driver
         .send_command(
             SendCommand::SessionNew,
             session::new::Command {
@@ -54,7 +53,7 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
             Some(browsing_context.clone()),
         )
         .await?;
-    let navigation = driver
+    let _navigation = driver
         .send_command(
             SendCommand::BrowsingContextNavigate,
             browsing_context::navigate::Command {

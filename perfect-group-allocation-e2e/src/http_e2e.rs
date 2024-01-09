@@ -4,7 +4,7 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, Empty};
 use hyper::Request;
 use hyper_util::rt::TokioIo;
-use tokio::io::{self, AsyncWriteExt as _};
+
 use tokio::net::TcpStream;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -17,7 +17,7 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
     let io = TokioIo::new(stream);
 
     let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await?;
-    tokio::task::spawn(async move { if let Err(err) = conn.await {} });
+    tokio::task::spawn(async move { if let Err(_err) = conn.await {} });
 
     let authority = url.authority().unwrap().clone();
 
@@ -32,7 +32,7 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
     // (instead of buffering and printing at the end).
     while let Some(next) = response.frame().await {
         let frame = next?;
-        if let Some(chunk) = frame.data_ref() {}
+        if let Some(_chunk) = frame.data_ref() {}
     }
 
     Ok(())
@@ -40,7 +40,7 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
 
 use std::future::Future;
 
-use iai_callgrind::{library_benchmark, library_benchmark_group, main};
+
 use perfect_group_allocation_backend::run_server;
 
 // podman run --rm --detach --name postgres-testing --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
@@ -70,9 +70,9 @@ pub async fn bench_client_server_function_http(repeat: u64) {
     let server_fut = test_server().await; // server doesn't terminate
     let client_fut = test_as_client(repeat);
     tokio::select! {
-        val = server_fut => {
+        _val = server_fut => {
         }
-        val = client_fut => {
+        _val = client_fut => {
         }
     };
 }

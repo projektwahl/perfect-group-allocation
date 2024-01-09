@@ -1,7 +1,6 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use hyper::Request;
-use iai_callgrind::{library_benchmark, library_benchmark_group, main};
 use perfect_group_allocation_backend::setup_server;
 use tower_service::Service;
 
@@ -11,8 +10,7 @@ use tower_service::Service;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn bench_client_server_function_service(value: u64) {
-    let mut service =
-        setup_server("postgres://postgres@localhost/pga?sslmode=disable".to_owned()).unwrap();
+    let mut service = setup_server("postgres://postgres@localhost/pga?sslmode=disable").unwrap();
     for _ in 0..value {
         let mut service = service
             .call(SocketAddr::V4(SocketAddrV4::new(

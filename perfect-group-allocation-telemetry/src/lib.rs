@@ -32,7 +32,7 @@ impl Drop for OpenTelemetryGuard {
     fn drop(&mut self) {
         global::shutdown_tracer_provider();
         global::shutdown_logger_provider();
-        if let Err(err) = self.meter_provider.shutdown() {}
+        if let Err(_err) = self.meter_provider.shutdown() {}
     }
 }
 
