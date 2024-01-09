@@ -67,7 +67,6 @@ async gen fn list_internal(
     yieldoki!(template.next());
 }
 
-#[axum::debug_handler(state=crate::MyState)]
 pub async fn list(db: DatabaseConnection, session: Session) -> (Session, impl IntoResponse) {
     let stream = AsyncIteratorStream(list_internal(db, session.clone())).map(|elem| match elem {
         Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
