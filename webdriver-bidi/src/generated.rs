@@ -182,15 +182,35 @@ magic! {
         /// <https://w3c.github.io/webdriver-bidi/#command-session-subscribe>
         SessionSubscribe("session.subscribe" crate::session::subscribe), // TODO FIXME this should not be in sendcommand
         /// <https://w3c.github.io/webdriver-bidi/#command-session-unsubscribe>
+
         SessionUnsubscribe("session.unsubscribe" crate::session::unsubscribe), // TODO FIXME this should not be in sendcommand
         /// <https://w3c.github.io/webdriver-bidi/#command-browser-close>
         BrowserClose("browser.close" crate::browser::close),
+
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-activate>
+        BrowsingContextActivate("browsingContext.activate" crate::browsing_context::activate),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-captureScreenshot>
+        BrowsingContextCaptureScreenshot("browsingContext.captureScreenshot" crate::browsing_context::capture_screenshot),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-close>
+        BrowsingContextClose("browsingContext.close" crate::browsing_context::close),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
+        BrowsingContextCreate("browsingContext.create" crate::browsing_context::create),
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-getTree>
         BrowsingContextGetTree("browsingContext.getTree" crate::browsing_context::get_tree),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-handleUserPrompt>
+        BrowsingContextHandleUserPrompt("browsingContext.handleUserPrompt" crate::browsing_context::handle_user_prompt),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-locateNodes>
+        BrowsingContextLocateNodes("browsingContext.locateNodes" crate::browsing_context::locate_nodes),
         /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-navigate>
         BrowsingContextNavigate("browsingContext.navigate" crate::browsing_context::navigate),
-        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-create>
-        BrowsingContextCreate("browsingContext.create" crate::browsing_context::create)
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-print>
+        BrowsingContextPrint("browsingContext.locateNodes" crate::browsing_context::print),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-reload>
+        BrowsingContextReload("browsingContext.reload" crate::browsing_context::reload),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-setViewport>
+        BrowsingContextSetViewport("browsingContext.setViewport" crate::browsing_context::set_viewport),
+        /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-traverseHistory>
+        BrowsingContextTraverseHistory("browsingContext.traverseHistory" crate::browsing_context::traverse_history)
     }
     pub enum {
         /// tmp
