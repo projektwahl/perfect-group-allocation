@@ -27,3 +27,7 @@ nursery = "warn"
 cargo = "warn"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
+
+[patch.crates-io]
+axum = { git = "https://github.com/tokio-rs/axum.git", branch = "david/arc-router-2" }
+axum-core = { git = "https://github.com/tokio-rs/axum.git", branch = "david/arc-router-2" }

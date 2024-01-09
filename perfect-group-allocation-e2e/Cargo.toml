@@ -24,7 +24,7 @@ http-body-util = "0.1"
 hyper-util = { version = "0.1", features = ["full"] }
 bytes = "1"
 tower-service = "0.3"
-axum-core = "0.4"
+axum-core = { git = "https://github.com/tokio-rs/axum.git", branch = "david/arc-router-2" }
 
 [dev-dependencies]
 iai-callgrind = "0.9.0"

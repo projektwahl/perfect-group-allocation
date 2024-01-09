@@ -30,7 +30,7 @@ tokio-metrics = { version = "0.3" }
 tower-layer = "0.3"
 tower-service = "0.3"
 http = "1"
-axum = "0.7"
+axum = { git = "https://github.com/tokio-rs/axum.git", branch = "david/arc-router-2" }
 pin-project = "1"
 tokio = "1"
 

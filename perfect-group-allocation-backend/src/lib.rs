@@ -332,6 +332,8 @@ pub async fn setup_server() -> Result<
 
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 
+// TODO FIXME https://github.com/tokio-rs/axum/issues/2449
+
 #[allow(clippy::cognitive_complexity)]
 pub async fn run_server() -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let mut make_service = setup_server().await?;
@@ -362,14 +364,16 @@ pub async fn run_server() -> Result<impl Future<Output = Result<(), AppError>>, 
 
                     // We don't need to call `poll_ready` because `IntoMakeServiceWithConnectInfo` is always
                     // ready.
-                    let tower_service = unwrap_infallible(make_service.call(remote_addr).await);
 
+                    let test = make_service.call(remote_addr).await;
 
                     let shutdown_tx = Arc::clone(&shutdown_tx);
                     let closed_rx = closed_rx.clone();
 
                     let fut = async move {
                         let socket = TokioIo::new(socket);
+
+                        let tower_service = unwrap_infallible(test);
 
                         let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
                             tower_service.clone().oneshot(request)
@@ -402,6 +406,9 @@ pub async fn run_server() -> Result<impl Future<Output = Result<(), AppError>>, 
 
                         drop(closed_rx);
                     };
+
+                    // to create a connection span we think we need this manual connection implementation
+
                     #[cfg(feature = "perfect-group-allocation-telemetry")]
                     let child_span = tracing::debug_span!("child");
                     #[cfg(feature = "perfect-group-allocation-telemetry")]
