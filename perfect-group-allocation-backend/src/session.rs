@@ -81,11 +81,13 @@ impl Session {
     }
 
     pub fn set_session(&mut self, input: Option<SessionCookie>) -> (String, Option<SessionCookie>) {
+        /*
         let session_id: String = thread_rng()
             .sample_iter(&rand::distributions::Alphanumeric)
             .take(30)
             .map(char::from)
-            .collect();
+            .collect();*/
+        let session_id = "1337".to_string();
 
         let value = (
             session_id.clone(),

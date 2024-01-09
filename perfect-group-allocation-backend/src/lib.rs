@@ -295,7 +295,7 @@ pub async fn setup_server(
 
     let app: Router<()> = app.with_state(MyState {
         pool,
-        key: Key::generate(),
+        key: Key::from(&[42; 64]), //TODO FIXME Key::generate(),
     });
     let app = app.layer(CatchPanicLayer::new());
     #[cfg(feature = "perfect-group-allocation-telemetry")]
