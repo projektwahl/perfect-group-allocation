@@ -32,19 +32,12 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
 
     let mut response = sender.send_request(request).await?;
 
-    println!("Response: {}", response.status());
-    println!("Headers: {:#?}\n", response.headers());
-
     // Stream the body, writing each chunk to stdout as we get it
     // (instead of buffering and printing at the end).
     while let Some(next) = response.frame().await {
         let frame = next?;
-        if let Some(chunk) = frame.data_ref() {
-            io::stdout().write_all(chunk).await?;
-        }
+        if let Some(chunk) = frame.data_ref() {}
     }
-
-    println!("\n\nDone!");
 
     Ok(())
 }

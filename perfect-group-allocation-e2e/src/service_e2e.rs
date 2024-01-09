@@ -11,6 +11,7 @@ use tower_service::Service;
 
 #[tokio::main(flavor = "current_thread")]
 async fn bench_client_server_function(value: u64) {
+    // TODO FIXME don't do this here
     std::env::set_var(
         "DATABASE_URL",
         "postgres://postgres@localhost/pga?sslmode=disable",
