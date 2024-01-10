@@ -131,11 +131,11 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
                                 common: PointerCommonProperties::default(),
                             }),
                             PointerSourceAction::PointerDown(PointerDownAction {
-                                button: 1,
+                                button: 0,
                                 common: PointerCommonProperties::default(),
                             }),
                             PointerSourceAction::PointerUp(PointerUpAction {
-                                button: 1,
+                                button: 0,
                                 common: PointerCommonProperties::default(),
                             }),
                         ],
