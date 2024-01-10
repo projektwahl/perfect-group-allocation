@@ -2,6 +2,7 @@
 #![feature(lint_reasons)]
 #![feature(let_chains)]
 #![feature(hash_raw_entry)]
+#![feature(impl_trait_in_assoc_type)]
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
@@ -32,7 +33,7 @@ use futures_util::{pin_mut, Future};
 use http::{Request, Response, StatusCode};
 use http_body_util::Full;
 use hyper::body::Incoming;
-use hyper::service::Service;
+use hyper::service::{service_fn, Service};
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use perfect_group_allocation_database::{get_database_connection, Pool};
@@ -188,15 +189,29 @@ async fn main() -> Result<(), AppError> {
 */
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
+#[derive(Clone)]
 struct Svc {
     pool: Pool,
 }
 
 impl Svc {
-    async fn call(&self, req: Request<hyper::body::Incoming>) -> Response<Full<Bytes>> {
+    async fn call(
+        &self,
+        req: Request<hyper::body::Incoming>,
+    ) -> Result<Response<Full<Bytes>>, AppError> {
         let connection = self.pool.get().await.unwrap();
 
-        Response::new(Full::new(Bytes::from_static(b"hi")))
+        Ok(Response::new(Full::new(Bytes::from_static(b"hi"))))
+    }
+}
+
+impl Service<Request<hyper::body::Incoming>> for Svc {
+    type Error = AppError;
+    type Future = Pin<Box<dyn Future<Output = Result<Response<Full<Bytes>>, AppError>> + Send>>;
+    type Response = Response<Full<Bytes>>;
+
+    fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
+        Box::pin(async move { self.call(req).await })
     }
 }
 
@@ -281,6 +296,8 @@ pub async fn run_server(
 
                     let shutdown_tx = Arc::clone(&shutdown_tx);
                     let closed_rx = closed_rx.clone();
+
+                    let service = service.clone();
 
                     let fut = async move {
                         let socket = TokioIo::new(socket);
