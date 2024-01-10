@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{BrowsingContext, ChannelValue, PreloadScript};
+use super::PreloadScript;
 use crate::protocol::EmptyResult;
 
 /// <https://w3c.github.io/webdriver-bidi/#command-script-removePreloadScript>

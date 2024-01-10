@@ -9,7 +9,6 @@ use chrono::{DateTime, Utc};
 use oauth2::{PkceCodeVerifier, RefreshToken};
 use openidconnect::{EndUserEmail, Nonce};
 
-
 use crate::error::AppError;
 
 #[derive(miniserde::Serialize)]

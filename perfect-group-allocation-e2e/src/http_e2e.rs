@@ -4,7 +4,6 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, Empty};
 use hyper::Request;
 use hyper_util::rt::TokioIo;
-
 use tokio::net::TcpStream;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -39,7 +38,6 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
 }
 
 use std::future::Future;
-
 
 use perfect_group_allocation_backend::run_server;
 

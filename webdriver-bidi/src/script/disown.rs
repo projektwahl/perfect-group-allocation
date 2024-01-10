@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{BrowsingContext, ChannelValue, Handle, PreloadScript, Target};
+use super::{Handle, Target};
 use crate::protocol::EmptyResult;
 
 /// <https://w3c.github.io/webdriver-bidi/#command-script-disown>

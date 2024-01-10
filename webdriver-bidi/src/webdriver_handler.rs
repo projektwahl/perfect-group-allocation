@@ -15,7 +15,7 @@ use crate::generated::{
     handle_command, handle_event, send_response, EventSubscription, GlobalEventSubscription,
     RespondCommand, SendCommand,
 };
-use crate::protocol::{self, Command, CommandResponse, ErrorResponse, Extensible};
+use crate::protocol::{self, Command, CommandResponse, Extensible};
 use crate::session;
 
 pub struct WebDriverHandler {

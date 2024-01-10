@@ -2,10 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{
-    BrowsingContext, ChannelValue, EvaluateResult, LocalValue, PreloadScript, ResultOwnership,
-    SerializationOptions, Target,
-};
+use super::{EvaluateResult, ResultOwnership, SerializationOptions, Target};
 
 /// <https://w3c.github.io/webdriver-bidi/#command-script-evaluate>
 #[derive(Debug, Serialize, Deserialize, Clone)]

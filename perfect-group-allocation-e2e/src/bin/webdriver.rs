@@ -1,9 +1,9 @@
 use perfect_group_allocation_backend::run_server;
-use tracing::{info, Level};
+use tracing::info;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
-use tracing_subscriber::{EnvFilter, FmtSubscriber};
-use webdriver_bidi::browsing_context::{self, CssLocator};
+use tracing_subscriber::EnvFilter;
+use webdriver_bidi::browsing_context::{self};
 use webdriver_bidi::input::perform_actions::{
     Origin, PointerCommonProperties, PointerDownAction, PointerMoveAction, PointerSourceAction,
     PointerSourceActions, PointerUpAction, SourceActions,
@@ -16,6 +16,7 @@ use webdriver_bidi::script::{
 use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 pub async fn main() -> Result<(), webdriver_bidi::Error> {
     let fmt_layer = tracing_subscriber::fmt::layer();
     let filter_layer = EnvFilter::try_from_default_env()
@@ -107,7 +108,7 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
     };
     info!("{:?}", node);
 
-    let result = driver
+    let _result = driver
         .send_command(
             SendCommand::InputPerformActions,
             input::perform_actions::Command {

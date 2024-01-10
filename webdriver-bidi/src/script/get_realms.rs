@@ -2,8 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{BrowsingContext, ChannelValue, Handle, PreloadScript, RealmInfo, RealmType, Target};
-use crate::protocol::EmptyResult;
+use super::{BrowsingContext, RealmInfo, RealmType};
 
 /// <https://w3c.github.io/webdriver-bidi/#command-script-getRealms>
 #[derive(Debug, Serialize, Deserialize, Clone)]
