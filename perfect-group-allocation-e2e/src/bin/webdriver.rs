@@ -15,6 +15,7 @@ use webdriver_bidi::script::{
 };
 use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 
+// RUST_LOG=debug,webdriver_bidi=trace cargo run --bin webdriver
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
 pub async fn main() -> Result<(), webdriver_bidi::Error> {
