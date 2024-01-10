@@ -22,13 +22,17 @@ pub mod routes;
 
 use core::convert::Infallible;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bytes::Bytes;
 use error::AppError;
 use futures_util::{pin_mut, Future};
-use http::{Request, StatusCode};
+use http::{Request, Response, StatusCode};
+use http_body_util::Full;
 use hyper::body::Incoming;
+use hyper::service::Service;
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use perfect_group_allocation_database::{get_database_connection, Pool};
@@ -37,19 +41,9 @@ use serde::{Deserialize, Serialize};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::sync::watch;
-use tower::{service_fn, Service, ServiceExt as _};
-use tower_http::catch_panic::CatchPanicLayer;
-use tower_http::services::ServeDir;
-use tower_http::timeout::RequestBodyTimeoutLayer;
 use tracing::{error, info, warn};
 
 pub trait CsrfSafeExtractor {}
-
-#[derive(Clone, FromRef)]
-pub struct MyState {
-    pool: Pool,
-    key: Key,
-}
 
 // https://handlebarsjs.com/api-reference/
 // https://handlebarsjs.com/api-reference/data-variables.html
@@ -90,7 +84,7 @@ pub trait CsrfToken {
 pub struct CsrfSafeForm<T: CsrfToken> {
     pub value: T,
 }
-
+/*
 impl<T> FromRequest<MyState> for CsrfSafeForm<T>
 where
     T: DeserializeOwned + CsrfToken + Send,
@@ -124,7 +118,7 @@ where
         Ok(Self { value: extractor.0 })
     }
 }
-
+*/
 impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
 
 //fn layers(_app: Router<MyState>, _db: DatabaseConnection) -> Router<()> {
@@ -192,44 +186,21 @@ async fn main() -> Result<(), AppError> {
     program().await
 }
 */
-#[derive(Default)]
-struct MyRouter {
-    router: Router<MyState>,
+
+// https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
+struct Svc {
+    pool: Pool,
 }
 
-impl MyRouter {
-    #[track_caller]
-    #[must_use]
-    pub fn route<T: 'static, H: Handler<T, MyState>>(
-        self,
-        method: &'static Method,
-        path: &'static str,
-        handler: H,
-    ) -> Self {
-        Self {
-            // maybe don't use middleware but just add in here direcctly?
-            router: self.router.route(
-                path,
-                match *method {
-                    Method::GET => axum::routing::get(handler),
-                    Method::POST => axum::routing::post(handler),
-                    _ => unreachable!(),
-                },
-            ),
-        }
-    }
+impl Svc {
+    async fn call(&self, req: Request<hyper::body::Incoming>) -> Response<Full<Bytes>> {
+        let connection = self.pool.get().await.unwrap();
 
-    pub fn finish(self) -> Router<MyState> {
-        self.router
+        Response::new(Full::new(Bytes::from_static(b"hi")))
     }
 }
 
-pub async fn setup_server(
-    database_url: &str,
-) -> Result<
-    axum::extract::connect_info::IntoMakeServiceWithConnectInfo<axum::Router, std::net::SocketAddr>,
-    AppError,
-> {
+pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppError> {
     info!("starting up server...");
 
     // this one uses parallelism for generating the index css which is highly nondeterministic
@@ -238,11 +209,12 @@ pub async fn setup_server(
     #[cfg(not(feature = "profiling"))]
     openid::initialize_openid_client().await;
 
+    // https://github.com/hyperium/hyper/blob/master/examples/state.rs
+
     let pool = get_database_connection(database_url)?;
 
-    let service = ServeDir::new("frontend");
+    //let service = ServeDir::new("frontend");
 
-    let my_router = MyRouter::default();
     //.route(&Method::GET, "/", index)
     //.route(&Method::POST, "/", create)
     //.route(&Method::GET, "/index.css", indexcss)
@@ -252,14 +224,9 @@ pub async fn setup_server(
     //.route(&Method::POST, "/openidconnect-login", openid_login)
     //.route(&Method::GET, "/openidconnect-redirect", openid_redirect);
 
-    let app = my_router.finish().fallback_service(service);
+    let app = Svc { pool };
 
-    let app: Router<()> = app.with_state(MyState {
-        pool,
-        key: Key::from(&[42; 64]), //TODO FIXME Key::generate(),
-    });
-    let app = app.layer(CatchPanicLayer::new());
-    let app = app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(30)));
+    //let app = app.layer(CatchPanicLayer::new());
     #[cfg(feature = "perfect-group-allocation-telemetry")]
     let app = app.layer(perfect_group_allocation_telemetry::trace_layer::MyTraceLayer);
     /*    let config = OpenSSLConfig::from_pem_file(
@@ -278,7 +245,7 @@ pub async fn setup_server(
     */
     //let addr = SocketAddr::from(([127, 0, 0, 1], 8443));
 
-    Ok(app.into_make_service_with_connect_info::<SocketAddr>())
+    Ok(app)
 }
 
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
@@ -287,7 +254,7 @@ pub async fn setup_server(
 pub async fn run_server(
     database_url: String,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let mut make_service = setup_server(&database_url).await?;
+    let mut service = setup_server(&database_url).await?;
 
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
 
@@ -312,22 +279,14 @@ pub async fn run_server(
                     // TODO FIXME don't unwrap
                     let (socket, remote_addr) = accept.unwrap();
 
-                    let test = make_service.call(remote_addr).await;
-
                     let shutdown_tx = Arc::clone(&shutdown_tx);
                     let closed_rx = closed_rx.clone();
 
                     let fut = async move {
                         let socket = TokioIo::new(socket);
 
-                        let tower_service = unwrap_infallible(test);
-
-                        let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
-                            tower_service.clone().oneshot(request)
-                        });
-
                         let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
-                        let connection = builder.serve_connection_with_upgrades(socket, hyper_service);
+                        let connection = builder.serve_connection_with_upgrades(socket, service);
                         pin_mut!(connection);
 
                         loop {

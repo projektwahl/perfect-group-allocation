@@ -27,8 +27,6 @@ opentelemetry-appender-log = { version = "0.2" }
 opentelemetry-appender-tracing = { version = "0.2" }
 tokio-metrics = { version = "0.3" }
 
-tower-layer = "0.3"
-tower-service = "0.3"
 http = "1"
 pin-project = "1"
 tokio = "1"

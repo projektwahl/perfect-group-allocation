@@ -2,7 +2,6 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use hyper::Request;
 use perfect_group_allocation_backend::setup_server;
-use tower_service::Service;
 
 // podman run --rm --detach --name postgres-testing --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
 

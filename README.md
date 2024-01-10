@@ -139,7 +139,6 @@ https://lightningcss.dev/docs.html
 # maybe create a local k3s in docker setup?
 podman run --rm docker.io/envoyproxy/envoy:v1.27-latest --version # only use using k3s and cilium
 
-https://github.com/maxcountryman/tower-sessions
 
 https://github.com/djc/askama
 https://github.com/rosetta-rs/template-benchmarks-rs

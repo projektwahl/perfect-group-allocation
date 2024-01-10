@@ -25,7 +25,6 @@ tokio = { version = "1", features = ["full"] }
 http-body-util = "0.1"
 hyper-util = { version = "0.1", features = ["full"] }
 bytes = "1"
-tower-service = "0.3"
 libc = "0.2"
 rand = "0.8"
 tracing = "0.1"
