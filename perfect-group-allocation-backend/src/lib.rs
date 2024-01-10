@@ -195,19 +195,22 @@ struct Svc {
 }
 
 impl Svc {
-    async fn call(
+    fn call(
         &self,
         req: Request<hyper::body::Incoming>,
-    ) -> Result<Response<Full<Bytes>>, AppError> {
-        let connection = self.pool.get().await.unwrap();
+    ) -> impl Future<Output = Result<Response<Full<Bytes>>, AppError>> + 'static {
+        async move {
+            let connection = self.pool.get().await.unwrap();
 
-        Ok(Response::new(Full::new(Bytes::from_static(b"hi"))))
+            Ok(Response::new(Full::new(Bytes::from_static(b"hi"))))
+        }
     }
 }
 
 impl Service<Request<hyper::body::Incoming>> for Svc {
     type Error = AppError;
-    type Future = Pin<Box<dyn Future<Output = Result<Response<Full<Bytes>>, AppError>> + Send>>;
+    type Future =
+        Pin<Box<dyn Future<Output = Result<Response<Full<Bytes>>, AppError>> + Send + 'static>>;
     type Response = Response<Full<Bytes>>;
 
     fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
