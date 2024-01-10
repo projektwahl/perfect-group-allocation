@@ -255,7 +255,7 @@ impl MyRouter {
     }
 }
 
-pub fn setup_server(
+pub async fn setup_server(
     database_url: &str,
 ) -> Result<
     axum::extract::connect_info::IntoMakeServiceWithConnectInfo<axum::Router, std::net::SocketAddr>,
@@ -266,8 +266,8 @@ pub fn setup_server(
     // this one uses parallelism for generating the index css which is highly nondeterministic
     #[cfg(not(feature = "profiling"))]
     initialize_index_css();
-
-    //initialize_openid_client().await; // for performance measurement, this also needs tls
+    #[cfg(not(feature = "profiling"))]
+    openid::initialize_openid_client().await;
 
     let pool = get_database_connection(database_url)?;
 
@@ -340,7 +340,7 @@ pub fn setup_server(
 pub async fn run_server(
     database_url: String,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let mut make_service = setup_server(&database_url)?;
+    let mut make_service = setup_server(&database_url).await?;
 
     let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000))
         .await

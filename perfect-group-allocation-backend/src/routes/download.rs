@@ -10,9 +10,7 @@ pub async fn handler(
     session: Session,
 ) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
     let result = async {
-        let file =
-            tokio::fs::File::open("/var/cache/pacman/pkg/firefox-118.0.2-1-x86_64.pkg.tar.zst")
-                .await?;
+        let file = tokio::fs::File::open("/var/cache/pacman/pkg/notfound.zst").await?;
         let stream = ReaderStream::new(file);
         let body = axum::body::Body::from_stream(stream);
 

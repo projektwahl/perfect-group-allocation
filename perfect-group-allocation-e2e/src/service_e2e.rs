@@ -10,7 +10,9 @@ use tower_service::Service;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn bench_client_server_function_service(value: u64) {
-    let mut service = setup_server("postgres://postgres@localhost/pga?sslmode=disable").unwrap();
+    let mut service = setup_server("postgres://postgres@localhost/pga?sslmode=disable")
+        .await
+        .unwrap();
     for _ in 0..value {
         let mut service = service
             .call(SocketAddr::V4(SocketAddrV4::new(
