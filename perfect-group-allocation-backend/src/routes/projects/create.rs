@@ -1,7 +1,6 @@
 use alloc::borrow::Cow;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::response::IntoResponse;
 use bytes::Bytes;
 use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;

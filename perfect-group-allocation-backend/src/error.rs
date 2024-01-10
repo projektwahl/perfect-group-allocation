@@ -1,6 +1,3 @@
-use axum::extract::multipart::MultipartError;
-use axum::extract::rejection::FormRejection;
-use axum::response::{Html, IntoResponse};
 use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
@@ -16,8 +13,6 @@ pub enum AppError {
     FormRejection(#[from] FormRejection),
     #[error("form upload error: {0}")]
     Multipart(#[from] MultipartError),
-    #[error("webserver error: {0}")]
-    Axum(#[from] axum::Error),
     #[error("request token error: {0}")]
     RequestToken(
         #[from]

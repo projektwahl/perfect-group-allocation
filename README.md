@@ -7,7 +7,6 @@
 3. Low Latency
 4. Low Resource usage on the server
 
-https://github.com/tokio-rs/axum/blob/main/ECOSYSTEM.md?plain=1
 
 ## Interesting (unstable) features
 
@@ -82,15 +81,7 @@ tokio-console
 
 TODO https://docs.rs/tracing-timing/latest/tracing_timing/ per request
 
-TODO https://github.com/tokio-rs/tokio-metrics
-
 maybe https://github.com/tokio-rs/async-backtrace
-
-https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html contains example for axum
-
-https://docs.rs/tokio-metrics/latest/tokio_metrics/struct.TaskMonitor.html#why-are-my-tasks-slow
-
-awesome help for performance issues
 
 ## Profiling
 
@@ -148,7 +139,6 @@ https://lightningcss.dev/docs.html
 # maybe create a local k3s in docker setup?
 podman run --rm docker.io/envoyproxy/envoy:v1.27-latest --version # only use using k3s and cilium
 
-https://docs.rs/axum-extra/latest/axum_extra/index.html
 https://github.com/maxcountryman/tower-sessions
 
 https://github.com/djc/askama
@@ -198,8 +188,6 @@ HETZNER_API_KEY=xxx lego --cert.timeout 180 --email Moritz.Hedtke@t-online.de --
 if using wsl in vscode, add port forward in vscode
 
 https://h3.selfmade4u.de/
-
-https://github.com/tokio-rs/axum/tree/main/examples
 
 https://docs.rs/hyper/1.0.0-rc.4/hyper/index.html
 https://hyper.rs/guides/1/

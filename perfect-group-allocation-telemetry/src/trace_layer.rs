@@ -4,7 +4,6 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::task::{ready, Context, Poll};
 
-use axum::extract::MatchedPath;
 use http::{HeaderMap, HeaderName, HeaderValue, Request, Response};
 use opentelemetry::global;
 use opentelemetry::propagation::{Extractor, Injector};

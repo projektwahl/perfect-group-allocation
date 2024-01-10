@@ -5,7 +5,6 @@ pub mod models;
 pub mod schema;
 
 use async_trait::async_trait;
-use axum_core::extract::{FromRef, FromRequestParts};
 use diesel::prelude::*;
 use diesel_async::pooled_connection::deadpool::{Object, Pool as DeadPool};
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
@@ -18,8 +17,6 @@ use schema::project_history;
 use crate::models::ProjectHistoryEntry;
 
 pub type Pool = DeadPool<AsyncPgConnection>;
-
-// https://github.com/tokio-rs/axum/tree/main/examples/diesel-async-postgres
 
 pub fn get_database_connection(database_url: &str) -> Result<Pool, DatabaseError> {
     let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);

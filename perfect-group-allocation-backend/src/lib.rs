@@ -25,11 +25,6 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::extract::{FromRef, FromRequest};
-use axum::handler::Handler;
-use axum::http::{self};
-use axum::{async_trait, RequestExt, Router};
-use axum_extra::extract::cookie::Key;
 use error::AppError;
 use futures_util::{pin_mut, Future};
 use http::{Request, StatusCode};
@@ -196,17 +191,6 @@ let app: Router<MyState, MyBody0> = app.layer(SetResponseHeaderLayer::overriding
 */
 //}
 
-// TODO https://github.com/tokio-rs/axum/tree/main/examples/auto-reload
-// TODO https://github.com/tokio-rs/axum/tree/main/examples/consume-body-in-extractor-or-middleware for body length, download time etc metrics
-// TODO https://github.com/tokio-rs/axum/blob/main/examples/error-handling/src/main.rs
-// TODO https://github.com/tokio-rs/axum/blob/main/examples/global-404-handler/src/main.rs
-// TODO https://github.com/tokio-rs/axum/blob/main/examples/graceful-shutdown/src/main.rs timeout handler
-// TODO https://github.com/tokio-rs/axum/blob/main/examples/low-level-rustls/src/main.rs allow enabling rustls
-// https://github.com/tokio-rs/axum/blob/main/examples/stream-to-file/src/main.rs
-// https://github.com/tokio-rs/axum/blob/main/examples/tls-graceful-shutdown/src/main.rs graceful shutdown
-// https://github.com/tokio-rs/axum/tree/main/examples/tls-rustls
-// https://github.com/tokio-rs/axum/blob/main/examples/serve-with-hyper/src/main.rs
-// https://github.com/tokio-rs/axum/blob/main/examples/listen-multiple-addrs/src/main.rs
 /*
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
@@ -279,17 +263,7 @@ pub async fn setup_server(
         .route(&Method::POST, "/openidconnect-login", openid_login)
         .route(&Method::GET, "/openidconnect-redirect", openid_redirect);
 
-    let app = my_router
-        .finish()
-        .route_service(
-            "/test",
-            service_fn(|req: http::Request<axum::body::Body>| async move {
-                let body = axum::body::Body::from(format!("Hi from `{} /foo`", req.method()));
-                let res = http::Response::new(body);
-                Ok::<_, Infallible>(res)
-            }),
-        )
-        .fallback_service(service);
+    let app = my_router.finish().fallback_service(service);
 
     let app: Router<()> = app.with_state(MyState {
         pool,
@@ -314,24 +288,11 @@ pub async fn setup_server(
         .unwrap();
     */
     //let addr = SocketAddr::from(([127, 0, 0, 1], 8443));
-    /* axum_server::bind_rustls(addr, config)
-    .serve(app.into_make_service())
-    .await
-    .unwrap();*/
-    /*axum_server::bind_openssl(addr, config)
-    .serve(app.into_make_service())
-    .await
-    .unwrap();*/
-
-    // TODO FIXME for every accepted connection trace
-    // https://opentelemetry.io/docs/specs/semconv/attributes-registry/network/
 
     Ok(app.into_make_service_with_connect_info::<SocketAddr>())
 }
 
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
-
-// TODO FIXME https://github.com/tokio-rs/axum/issues/2449
 
 #[allow(clippy::cognitive_complexity)]
 pub async fn run_server(
@@ -343,8 +304,6 @@ pub async fn run_server(
         .await
         .unwrap();
     let mut _accept: (TcpStream, SocketAddr);
-
-    // https://github.com/tokio-rs/axum/blob/af13c539386463b04b82f58155ee04702527212b/axum/src/serve.rs#L279
 
     // tell the connections to shutdown
     let (shutdown_tx, shutdown_rx) = watch::channel(());
@@ -383,8 +342,6 @@ pub async fn run_server(
                         let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
                         let connection = builder.serve_connection_with_upgrades(socket, hyper_service);
                         pin_mut!(connection);
-
-                        // TODO FIXME https://github.com/tokio-rs/axum/blob/main/axum/src/serve.rs#L279 maybe its more performance to store and pin_mut!?
 
                         loop {
                             select! {

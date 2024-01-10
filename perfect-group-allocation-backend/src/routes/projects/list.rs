@@ -1,6 +1,5 @@
 use alloc::borrow::Cow;
 
-use axum::response::IntoResponse;
 use bytes::Bytes;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -77,11 +76,5 @@ pub async fn list(db: DatabaseConnection, session: Session) -> (Session, impl In
         Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
         Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
     });
-    (
-        session,
-        (
-            [(header::CONTENT_TYPE, "text/html")],
-            axum::body::Body::from_stream(stream),
-        ),
-    )
+    (session, ([(header::CONTENT_TYPE, "text/html")], stream))
 }

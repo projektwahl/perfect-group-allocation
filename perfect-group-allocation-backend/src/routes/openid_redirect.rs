@@ -1,7 +1,6 @@
 use alloc::borrow::Cow;
 
 use anyhow::anyhow;
-use axum::response::{IntoResponse, Redirect};
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;
@@ -110,11 +109,7 @@ pub async fn openid_redirect(
                         Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
                     }
                 });
-            Ok((
-                [(header::CONTENT_TYPE, "text/html")],
-                axum::body::Body::from_stream(stream),
-            )
-                .into_response())
+            Ok(([(header::CONTENT_TYPE, "text/html")], stream).into_response())
         }
         OpenIdRedirectInner::Success(ok) => {
             // TODO FIXME isn't it possible to directly get the id token?

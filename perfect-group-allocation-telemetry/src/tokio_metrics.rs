@@ -5,7 +5,6 @@ use std::future::Future;
 use std::hash::{BuildHasher, Hash};
 use std::pin::Pin;
 
-use axum::extract::{MatchedPath, Request};
 use http::Method;
 use opentelemetry::metrics::Unit;
 use pin_project::pin_project;

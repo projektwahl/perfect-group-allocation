@@ -1,9 +1,6 @@
 use std::path::Path;
 use std::sync::OnceLock;
 
-use axum::response::IntoResponse;
-use axum_extra::response::Css;
-use axum_extra::{headers, TypedHeader};
 use http::{header, StatusCode};
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};

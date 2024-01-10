@@ -24,7 +24,6 @@ futures-util = "0.3"
 good_lp = { default-features = false, version = "1", features = [ "coin_cbc" ] }
 itertools = { default-features = false, version = "0.12", features = [ "use_alloc", "use_std" ] }
 tokio = { version = "1", features = ["full"] }
-axum = { git = "https://github.com/tokio-rs/axum.git", branch = "david/arc-router-2", features = [ "http2", "macros", "multipart", "tracing" ] }
 tokio-rustls = "0.25"
 hyper = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["full"] }
@@ -34,7 +33,6 @@ tokio-util = { version = "0.7", features = ["io"] }
 anyhow = "1"
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
-axum-extra = { version = "0.9", features = ["cookie", "cookie-private", "cookie-signed", "typed-header"] }
 rand = "0.8"
 lightningcss = "1.0.0-alpha.49"
 parcel_sourcemap = "2"
