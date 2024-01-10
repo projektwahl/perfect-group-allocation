@@ -7,6 +7,8 @@
 3. Low Latency
 4. Low Resource usage on the server
 
+https://github.com/tokio-rs/axum/blob/main/ECOSYSTEM.md?plain=1
+
 ## Interesting (unstable) features
 
 https://doc.rust-lang.org/nightly/unstable-book/

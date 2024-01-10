@@ -23,13 +23,14 @@ pub mod session;
 use core::convert::Infallible;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::extract::{FromRef, FromRequest};
 use axum::handler::Handler;
 use axum::http::{self};
 use axum::{async_trait, RequestExt, Router};
 use axum_extra::extract::cookie::Key;
-use error::{to_error_result, AppError};
+use error::AppError;
 use futures_util::{pin_mut, Future};
 use http::{Request, StatusCode};
 use hyper::body::Incoming;
@@ -51,6 +52,7 @@ use tokio::sync::watch;
 use tower::{service_fn, Service, ServiceExt as _};
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
+use tower_http::timeout::RequestBodyTimeoutLayer;
 use tracing::{error, info, warn};
 
 use crate::routes::openid_redirect::openid_redirect;
@@ -109,7 +111,7 @@ impl<T> FromRequest<MyState> for CsrfSafeForm<T>
 where
     T: DeserializeOwned + CsrfToken + Send,
 {
-    type Rejection = (Session, (StatusCode, axum::response::Response));
+    type Rejection = AppError;
 
     async fn from_request(
         mut req: axum::extract::Request,
@@ -125,23 +127,17 @@ where
         };
         let expected_csrf_token = session.session().0;
 
-        let result = async {
-            #[expect(clippy::disallowed_types, reason = "this is the csrf safe wrapper")]
-            let extractor = axum::Form::<T>::from_request(req, state).await?;
+        #[expect(clippy::disallowed_types, reason = "this is the csrf safe wrapper")]
+        let extractor = axum::Form::<T>::from_request(req, state).await?;
 
-            if not_get_or_head {
-                let actual_csrf_token = extractor.0.csrf_token();
+        if not_get_or_head {
+            let actual_csrf_token = extractor.0.csrf_token();
 
-                if expected_csrf_token != actual_csrf_token {
-                    return Err(AppError::WrongCsrfToken);
-                }
+            if expected_csrf_token != actual_csrf_token {
+                return Err(AppError::WrongCsrfToken);
             }
-            Ok(Self { value: extractor.0 })
-        };
-        match result.await {
-            Ok(ok) => Ok(ok),
-            Err(app_error) => Err(to_error_result(session, app_error).await),
         }
+        Ok(Self { value: extractor.0 })
     }
 }
 
@@ -300,6 +296,7 @@ pub async fn setup_server(
         key: Key::from(&[42; 64]), //TODO FIXME Key::generate(),
     });
     let app = app.layer(CatchPanicLayer::new());
+    let app = app.layer(RequestBodyTimeoutLayer::new(Duration::from_secs(30)));
     #[cfg(feature = "perfect-group-allocation-telemetry")]
     let app = app.layer(perfect_group_allocation_telemetry::trace_layer::MyTraceLayer);
     /*    let config = OpenSSLConfig::from_pem_file(
