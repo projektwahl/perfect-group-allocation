@@ -1,18 +1,10 @@
-use hyper::StatusCode;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 use perfect_group_allocation_database::DatabaseError;
-use serde::Serialize;
-
-use crate::session::Session;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
-    #[error("form submission error: {0}")]
-    FormRejection(#[from] FormRejection),
-    #[error("form upload error: {0}")]
-    Multipart(#[from] MultipartError),
     #[error("request token error: {0}")]
     RequestToken(
         #[from]

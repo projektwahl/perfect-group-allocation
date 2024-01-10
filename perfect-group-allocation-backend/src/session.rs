@@ -30,7 +30,6 @@ pub struct Session {
     private_cookies: CookieJar, // TODO FIXME
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Session
 where
     S: Send + Sync,

@@ -1,8 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "perfect-group-allocation-backend", "perfect-group-allocation-database", "perfect-group-allocation-telemetry", "perfect-group-allocation-e2e", "webdriver-bidi"
+    "perfect-group-allocation-backend", "perfect-group-allocation-database", "perfect-group-allocation-e2e", "webdriver-bidi"
 , "determinism-hack"]
+exclude = [ "perfect-group-allocation-telemetry"]
 
 [workspace.package]
 edition = "2024"

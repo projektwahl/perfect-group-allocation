@@ -1,17 +1,18 @@
 use alloc::borrow::Cow;
+use std::convert::Infallible;
 
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;
+use http_body_util::Full;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
 
 use crate::error::AppError;
-use crate::routes::projects::list::create_project;
-use crate::session::Session;
 
-pub async fn index(session: Session) -> (Session, impl IntoResponse) {
-    let session_clone = session.clone();
+async fn index(
+    _: hyper::Request<impl hyper::body::Body>,
+) -> Result<hyper::Response<Full<Bytes>>, Infallible> {
     let result = async gen move {
         let template = yieldoki!(create_project());
         let template = yieldoki!(template.next());

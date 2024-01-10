@@ -18,7 +18,7 @@ pub mod csrf_protection;
 pub mod error;
 mod openid;
 pub mod routes;
-pub mod session;
+//pub mod session;
 
 use core::convert::Infallible;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
@@ -32,15 +32,8 @@ use hyper::body::Incoming;
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use perfect_group_allocation_database::{get_database_connection, Pool};
-use routes::download::handler;
-use routes::favicon::favicon_ico;
-use routes::index::index;
-use routes::indexcss::{indexcss, initialize_index_css};
-use routes::openid_login::openid_login;
-use routes::projects::create::create;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use session::Session;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::sync::watch;
@@ -49,9 +42,6 @@ use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::services::ServeDir;
 use tower_http::timeout::RequestBodyTimeoutLayer;
 use tracing::{error, info, warn};
-
-use crate::routes::openid_redirect::openid_redirect;
-use crate::routes::projects::list::list;
 
 pub trait CsrfSafeExtractor {}
 
@@ -101,7 +91,6 @@ pub struct CsrfSafeForm<T: CsrfToken> {
     pub value: T,
 }
 
-#[async_trait]
 impl<T> FromRequest<MyState> for CsrfSafeForm<T>
 where
     T: DeserializeOwned + CsrfToken + Send,
@@ -244,8 +233,8 @@ pub async fn setup_server(
     info!("starting up server...");
 
     // this one uses parallelism for generating the index css which is highly nondeterministic
-    #[cfg(not(feature = "profiling"))]
-    initialize_index_css();
+    //#[cfg(not(feature = "profiling"))]
+    //initialize_index_css();
     #[cfg(not(feature = "profiling"))]
     openid::initialize_openid_client().await;
 
@@ -253,15 +242,15 @@ pub async fn setup_server(
 
     let service = ServeDir::new("frontend");
 
-    let my_router = MyRouter::default()
-        .route(&Method::GET, "/", index)
-        .route(&Method::POST, "/", create)
-        .route(&Method::GET, "/index.css", indexcss)
-        .route(&Method::GET, "/favicon.ico", favicon_ico)
-        .route(&Method::GET, "/list", list)
-        .route(&Method::GET, "/download", handler)
-        .route(&Method::POST, "/openidconnect-login", openid_login)
-        .route(&Method::GET, "/openidconnect-redirect", openid_redirect);
+    let my_router = MyRouter::default();
+    //.route(&Method::GET, "/", index)
+    //.route(&Method::POST, "/", create)
+    //.route(&Method::GET, "/index.css", indexcss)
+    //.route(&Method::GET, "/favicon.ico", favicon_ico)
+    //.route(&Method::GET, "/list", list)
+    //.route(&Method::GET, "/download", handler)
+    //.route(&Method::POST, "/openidconnect-login", openid_login)
+    //.route(&Method::GET, "/openidconnect-redirect", openid_redirect);
 
     let app = my_router.finish().fallback_service(service);
 
@@ -300,10 +289,11 @@ pub async fn run_server(
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let mut make_service = setup_server(&database_url).await?;
 
+    // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
+
     let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000))
         .await
         .unwrap();
-    let mut _accept: (TcpStream, SocketAddr);
 
     // tell the connections to shutdown
     let (shutdown_tx, shutdown_rx) = watch::channel(());
@@ -319,11 +309,8 @@ pub async fn run_server(
         loop {
             select! {
                 accept = listener.accept() => {
-
+                    // TODO FIXME don't unwrap
                     let (socket, remote_addr) = accept.unwrap();
-
-                    // We don't need to call `poll_ready` because `IntoMakeServiceWithConnectInfo` is always
-                    // ready.
 
                     let test = make_service.call(remote_addr).await;
 

@@ -93,11 +93,5 @@ pub async fn create(
         Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
         Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
     });
-    (
-        session,
-        (
-            [(header::CONTENT_TYPE, "text/html")],
-            axum::body::Body::from_stream(stream),
-        ),
-    )
+    (session, ([(header::CONTENT_TYPE, "text/html")], stream))
 }
