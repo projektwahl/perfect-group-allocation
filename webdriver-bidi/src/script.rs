@@ -67,8 +67,8 @@ pub enum EvaluateResult {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct EvaluateResultSuccess {
-    result: RemoteValue,
-    realm: Realm,
+    pub result: RemoteValue,
+    pub realm: Realm,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-EvaluateResult>
@@ -78,8 +78,8 @@ pub struct EvaluateResultSuccess {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct EvaluateResultException {
-    exception_details: ExceptionDetails,
-    realm: Realm,
+    pub exception_details: ExceptionDetails,
+    pub realm: Realm,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-ExceptionDetails>
@@ -148,14 +148,14 @@ pub enum LocalValue {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct ListLocalValue(Vec<LocalValue>);
+pub struct ListLocalValue(pub Vec<LocalValue>);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ArrayLocalValue {
-    value: ListLocalValue,
+    pub value: ListLocalValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -163,7 +163,7 @@ pub struct ArrayLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct DateLocalValue {
-    value: String,
+    pub value: String,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -171,14 +171,14 @@ pub struct DateLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 // TODO FIXME first value may be a string
-pub struct MappingLocalValue(Vec<(LocalValue, LocalValue)>);
+pub struct MappingLocalValue(pub Vec<(LocalValue, LocalValue)>);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct MapLocalValue {
-    value: MappingLocalValue,
+    pub value: MappingLocalValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -186,7 +186,7 @@ pub struct MapLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ObjectLocalValue {
-    value: MappingLocalValue,
+    pub value: MappingLocalValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -194,10 +194,10 @@ pub struct ObjectLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct RegExpValue {
-    pattern: String,
+    pub pattern: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    flags: Option<String>,
+    pub flags: Option<String>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -205,7 +205,7 @@ pub struct RegExpValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct RegExpLocalValue {
-    value: RegExpValue,
+    pub value: RegExpValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -213,7 +213,7 @@ pub struct RegExpLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SetLocalValue {
-    value: ListLocalValue,
+    pub value: ListLocalValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-PreloadScript>
@@ -235,10 +235,10 @@ pub struct Realm(pub String);
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct RealmInfo {
-    realm: Realm,
-    origin: String,
+    pub realm: Realm,
+    pub origin: String,
     #[serde(flatten)]
-    inner: RealmInfoInner,
+    pub inner: RealmInfoInner,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
@@ -270,10 +270,10 @@ pub enum RealmInfoInner {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WindowRealmInfo {
-    context: BrowsingContext,
+    pub context: BrowsingContext,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    sandbox: Option<String>,
+    pub sandbox: Option<String>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
@@ -281,7 +281,7 @@ pub struct WindowRealmInfo {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct DedicatedWorkerRealmInfo {
-    owners: Vec<Realm>,
+    pub owners: Vec<Realm>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
@@ -289,7 +289,7 @@ pub struct DedicatedWorkerRealmInfo {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SharedWorkerRealmInfo {
-    owners: Vec<Realm>,
+    pub owners: Vec<Realm>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
@@ -297,7 +297,7 @@ pub struct SharedWorkerRealmInfo {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ServiceWorkerRealmInfo {
-    owners: Vec<Realm>,
+    pub owners: Vec<Realm>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>

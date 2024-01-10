@@ -21,8 +21,8 @@ pub struct Command {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
-    context: BrowsingContext,
-    actions: Vec<SourceActions>,
+    pub context: BrowsingContext,
+    pub actions: Vec<SourceActions>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -54,8 +54,8 @@ pub enum SourceActions {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NoneSourceActions {
-    id: String,
-    actions: Vec<NoneSourceAction>,
+    pub id: String,
+    pub actions: Vec<NoneSourceAction>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -71,8 +71,8 @@ pub struct NoneSourceAction(pub PauseAction);
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct KeySourceActions {
-    id: String,
-    actions: Vec<KeySourceAction>,
+    pub id: String,
+    pub actions: Vec<KeySourceAction>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -94,11 +94,11 @@ pub enum KeySourceAction {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PointerSourceActions {
-    id: String,
+    pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    parameters: Option<PointerParameters>,
-    actions: Vec<PointerSourceAction>,
+    pub parameters: Option<PointerParameters>,
+    pub actions: Vec<PointerSourceAction>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -139,8 +139,8 @@ pub enum PointerSourceAction {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WheelSourceActions {
-    id: String,
-    actions: Vec<WheelSourceAction>,
+    pub id: String,
+    pub actions: Vec<WheelSourceAction>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -162,7 +162,7 @@ pub enum WheelSourceAction {
 pub struct PauseAction {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    duration: Option<u64>,
+    pub duration: Option<u64>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -172,7 +172,7 @@ pub struct PauseAction {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct KeyDownAction {
-    value: String,
+    pub value: String,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -182,7 +182,7 @@ pub struct KeyDownAction {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct KeyUpAction {
-    value: String,
+    pub value: String,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -192,9 +192,9 @@ pub struct KeyUpAction {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PointerUpAction {
-    button: u64,
+    pub button: u64,
     #[serde(flatten)]
-    common: PointerCommonProperties,
+    pub common: PointerCommonProperties,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -204,9 +204,9 @@ pub struct PointerUpAction {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PointerDownAction {
-    button: u64,
+    pub button: u64,
     #[serde(flatten)]
-    common: PointerCommonProperties,
+    pub common: PointerCommonProperties,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -216,16 +216,16 @@ pub struct PointerDownAction {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PointerMoveAction {
-    x: i64,
-    y: i64,
+    pub x: i64,
+    pub y: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    duration: Option<u64>,
+    pub duration: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    origin: Option<Origin>,
+    pub origin: Option<Origin>,
     #[serde(flatten)]
-    common: PointerCommonProperties,
+    pub common: PointerCommonProperties,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
@@ -235,21 +235,21 @@ pub struct PointerMoveAction {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WheelScrollAction {
-    x: i64,
-    y: i64,
-    delta_x: i64,
-    delta_y: i64,
+    pub x: i64,
+    pub y: i64,
+    pub delta_x: i64,
+    pub delta_y: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    duration: Option<u64>,
+    pub duration: Option<u64>,
     // TODO FIXME default
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    origin: Option<Origin>,
+    pub origin: Option<Origin>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PointerCommonProperties {
@@ -283,5 +283,6 @@ pub struct PointerCommonProperties {
 pub enum Origin {
     Viewport,
     Pointer,
+    #[serde(untagged)]
     Element(ElementOrigin),
 }

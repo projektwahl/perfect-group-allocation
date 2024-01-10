@@ -4,8 +4,16 @@ use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 use webdriver_bidi::browsing_context::{self, CssLocator};
-use webdriver_bidi::script::ContextTarget;
-use webdriver_bidi::{script, session, Browser, SendCommand, WebDriver};
+use webdriver_bidi::input::perform_actions::{
+    Origin, PointerCommonProperties, PointerDownAction, PointerMoveAction, PointerSourceAction,
+    PointerSourceActions, PointerUpAction, SourceActions,
+};
+use webdriver_bidi::input::ElementOrigin;
+use webdriver_bidi::protocol::Extensible;
+use webdriver_bidi::script::{
+    ContextTarget, EvaluateResult, EvaluateResultSuccess, RemoteValue, SharedReference,
+};
+use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 
 #[tokio::main]
 pub async fn main() -> Result<(), webdriver_bidi::Error> {
@@ -90,7 +98,52 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
         )
         .await?;
 
-    info!("{:?}", nodes);
+    let EvaluateResult::Success(EvaluateResultSuccess {
+        result: RemoteValue::Node(node),
+        ..
+    }) = nodes.0
+    else {
+        panic!();
+    };
+    info!("{:?}", node);
+
+    let result = driver
+        .send_command(
+            SendCommand::InputPerformActions,
+            input::perform_actions::Command {
+                params: input::perform_actions::Parameters {
+                    context: browsing_context.clone(),
+                    actions: vec![SourceActions::Pointer(PointerSourceActions {
+                        id: "test".to_owned(),
+                        parameters: None,
+                        actions: vec![
+                            PointerSourceAction::PointerMove(PointerMoveAction {
+                                x: 0,
+                                y: 0,
+                                duration: None,
+                                origin: Some(Origin::Element(ElementOrigin {
+                                    element: SharedReference {
+                                        shared_id: node.shared_id.unwrap().clone(),
+                                        handle: node.handle.clone(),
+                                        extensible: Extensible::default(),
+                                    },
+                                })),
+                                common: PointerCommonProperties::default(),
+                            }),
+                            PointerSourceAction::PointerDown(PointerDownAction {
+                                button: 1,
+                                common: PointerCommonProperties::default(),
+                            }),
+                            PointerSourceAction::PointerUp(PointerUpAction {
+                                button: 1,
+                                common: PointerCommonProperties::default(),
+                            }),
+                        ],
+                    })],
+                },
+            },
+        )
+        .await?;
 
     while let Ok(log) = subscription.recv().await {
         info!("received log message: {log:?}");

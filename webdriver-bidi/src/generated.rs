@@ -224,6 +224,11 @@ magic! {
         ScriptGetRealms("script.getRealms" crate::script::get_realms),
         /// <https://w3c.github.io/webdriver-bidi/#command-script-removePreloadScript>
         ScriptRemovePreloadScript("script.removePreloadScript" crate::script::remove_preload_script),
+
+        /// <https://w3c.github.io/webdriver-bidi/#command-input-performActions>
+        InputPerformActions("input.performActions" crate::input::perform_actions),
+        /// <https://w3c.github.io/webdriver-bidi/#command-input-releaseActions>
+        InputReleaseActions("input.releaseActions" crate::input::release_actions),
     }
     pub enum {
         /// tmp
