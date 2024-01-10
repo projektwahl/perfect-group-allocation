@@ -188,17 +188,25 @@ async fn main() -> Result<(), AppError> {
 }
 */
 
+pub trait MyMagic {
+    fn call(
+        &self,
+        req: Request<hyper::body::Incoming>,
+    ) -> impl Future<Output = Result<Response<Full<Bytes>>, AppError>>;
+}
+
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
 #[derive(Clone)]
 struct Svc {
     pool: Pool,
 }
 
-impl Svc {
+// https://github.com/plabayo/tower-async/blob/master/tower-async-bridge/src/into_classic/classic_wrapper.rs
+impl MyMagic for Svc {
     fn call(
         &self,
         req: Request<hyper::body::Incoming>,
-    ) -> impl Future<Output = Result<Response<Full<Bytes>>, AppError>> + 'static {
+    ) -> impl Future<Output = Result<Response<Full<Bytes>>, AppError>> {
         async move {
             let connection = self.pool.get().await.unwrap();
 
@@ -214,7 +222,7 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
     type Response = Response<Full<Bytes>>;
 
     fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
-        Box::pin(async move { self.call(req).await })
+        Box::pin(async move { <Self as MyMagic>::call(self, req).await })
     }
 }
 
