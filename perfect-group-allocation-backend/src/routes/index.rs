@@ -12,7 +12,8 @@ use crate::error::AppError;
 use crate::routes::create_project;
 
 async fn index(
-    _: hyper::Request<impl hyper::body::Body>,
+    request: hyper::Request<impl hyper::body::Body>,
+    session: Session,
 ) -> Result<hyper::Response<Full<Bytes>>, Infallible> {
     let result = async gen move {
         let template = yieldoki!(create_project());

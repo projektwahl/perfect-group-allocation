@@ -19,7 +19,7 @@ pub mod csrf_protection;
 pub mod error;
 mod openid;
 pub mod routes;
-//pub mod session;
+pub mod session;
 
 use core::convert::Infallible;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
@@ -207,6 +207,9 @@ impl MyMagic for Svc {
         req: Request<hyper::body::Incoming>,
     ) -> Result<Response<Full<Bytes>>, AppError> {
         // let connection = self.pool.get().await.unwrap();
+        let session = Session {
+
+        }
 
         match (req.method(), req.uri().path()) {
             // (&Method::GET, "/") => {}
