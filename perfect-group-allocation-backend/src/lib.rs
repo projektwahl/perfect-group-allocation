@@ -222,7 +222,8 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
     type Response = Response<Full<Bytes>>;
 
     fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
-        Box::pin(async move { <Self as MyMagic>::call(self, req).await })
+        let this = self.clone();
+        Box::pin(async move { MyMagic::call(&this, req).await })
     }
 }
 
