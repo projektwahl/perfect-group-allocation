@@ -206,9 +206,16 @@ impl MyMagic for Svc {
         &self,
         req: Request<hyper::body::Incoming>,
     ) -> Result<Response<Full<Bytes>>, AppError> {
-        let connection = self.pool.get().await.unwrap();
+        // let connection = self.pool.get().await.unwrap();
 
-        Ok(Response::new(Full::new(Bytes::from_static(b"hi"))))
+        match (req.method(), req.uri().path()) {
+            // (&Method::GET, "/") => {}
+            (_, _) => {
+                let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
+                *not_found.status_mut() = StatusCode::NOT_FOUND;
+                Ok(not_found)
+            }
+        }
     }
 }
 
@@ -274,6 +281,7 @@ pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppErr
 
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 
+/// Outer future returns when server started listening. Inner future returns when server stopped.
 #[allow(clippy::cognitive_complexity)]
 pub async fn run_server(
     database_url: String,
@@ -295,8 +303,8 @@ pub async fn run_server(
 
     info!("started up server...");
 
+    #[allow(clippy::redundant_pub_crate)]
     Ok(async move {
-        #[allow(clippy::redundant_pub_crate)]
         loop {
             select! {
                 accept = listener.accept() => {
@@ -307,10 +315,9 @@ pub async fn run_server(
                     let closed_rx = closed_rx.clone();
 
                     let service = service.clone();
+                    let socket = TokioIo::new(socket);
 
                     let fut = async move {
-                        let socket = TokioIo::new(socket);
-
                         let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
                         let connection = builder.serve_connection_with_upgrades(socket, service);
                         pin_mut!(connection);
@@ -354,7 +361,6 @@ pub async fn run_server(
                 }
             }
         }
-
         Ok(())
     })
 }

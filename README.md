@@ -62,9 +62,11 @@ https://nnethercote.github.io/perf-book/profiling.html
 
 cargo build --features profiling --target=x86_64-unknown-linux-gnu -Z build-std --profile=release-with-debug --bin server
 
+# I think macros don't work well with this especially the select! macro
+
 # WARNING: Only connect without ssl over localhost. This makes the profiling better as there is not countless ssl stuff in there.
 # I think you need to run this from the workspace root for debug symbols?
-DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable" valgrind --tool=callgrind --cache-sim=yes --simulate-wb=yes --simulate-hwpref=yes --branch-sim=yes --dump-instr=yes --collect-jumps=yes --collect-bus=yes --collect-systime=nsec ./target/x86_64-unknown-linux-gnu/release-with-debug/server
+DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable" valgrind --trace-symtab=yes --tool=callgrind --cache-sim=yes --simulate-wb=yes --simulate-hwpref=yes --branch-sim=yes --dump-instr=yes --collect-jumps=yes --collect-bus=yes --collect-systime=nsec ./target/x86_64-unknown-linux-gnu/debug/server
 
 use zed attack proxy to create some requests
 
