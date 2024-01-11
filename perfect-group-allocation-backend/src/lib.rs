@@ -217,8 +217,9 @@ impl MyMagic for Svc {
             .get_all(COOKIE)
             .into_iter()
             .filter_map(|value| value.to_str().ok())
-            .flat_map(|value| Cookie::split_parse(value))
-            .filter_map(|value| value.ok());
+            .map(std::borrow::ToOwned::to_owned)
+            .flat_map(Cookie::split_parse)
+            .filter_map(std::result::Result::ok);
         let mut jar = cookie::CookieJar::new();
         for cookie in cookies {
             jar.add_original(cookie);
