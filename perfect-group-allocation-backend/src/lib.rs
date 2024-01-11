@@ -192,7 +192,7 @@ pub trait MyMagic {
     fn call(
         &self,
         req: Request<hyper::body::Incoming>,
-    ) -> impl Future<Output = Result<Response<Full<Bytes>>, AppError>>;
+    ) -> impl std::future::Future<Output = Result<Response<Full<Bytes>>, AppError>> + Send;
 }
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
@@ -201,29 +201,26 @@ struct Svc {
     pool: Pool,
 }
 
-// https://github.com/plabayo/tower-async/blob/master/tower-async-bridge/src/into_classic/classic_wrapper.rs
 impl MyMagic for Svc {
-    fn call(
+    async fn call(
         &self,
         req: Request<hyper::body::Incoming>,
-    ) -> impl Future<Output = Result<Response<Full<Bytes>>, AppError>> {
-        async move {
-            let connection = self.pool.get().await.unwrap();
+    ) -> Result<Response<Full<Bytes>>, AppError> {
+        let connection = self.pool.get().await.unwrap();
 
-            Ok(Response::new(Full::new(Bytes::from_static(b"hi"))))
-        }
+        Ok(Response::new(Full::new(Bytes::from_static(b"hi"))))
     }
 }
 
 impl Service<Request<hyper::body::Incoming>> for Svc {
     type Error = AppError;
-    type Future =
-        Pin<Box<dyn Future<Output = Result<Response<Full<Bytes>>, AppError>> + Send + 'static>>;
     type Response = Response<Full<Bytes>>;
+
+    type Future = impl Future<Output = Result<Response<Full<Bytes>>, AppError>> + Send;
 
     fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
         let this = self.clone();
-        Box::pin(async move { MyMagic::call(&this, req).await })
+        async move { MyMagic::call(&this, req).await }
     }
 }
 
@@ -281,7 +278,7 @@ pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppErr
 pub async fn run_server(
     database_url: String,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let mut service = setup_server(&database_url).await?;
+    let service = setup_server(&database_url).await?;
 
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
 
