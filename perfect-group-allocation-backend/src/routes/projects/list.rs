@@ -15,7 +15,6 @@ use zero_cost_templating::{template_stream, yieldoki, yieldokv};
 use crate::error::AppError;
 use crate::session::Session;
 
-#[template_stream("templates")]
 async gen fn list_internal(
     DatabaseConnection(mut connection): DatabaseConnection,
     session: Session,
