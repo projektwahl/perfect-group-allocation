@@ -28,17 +28,22 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::Bytes;
+use cookie::{Cookie, CookieBuilder, CookieJar};
 use error::AppError;
 use futures_util::{pin_mut, Future};
+use http::header::COOKIE;
 use http::{Request, Response, StatusCode};
 use http_body_util::Full;
 use hyper::body::Incoming;
 use hyper::service::{service_fn, Service};
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
+use itertools::Itertools;
 use perfect_group_allocation_database::{get_database_connection, Pool};
+use routes::index::index;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use session::Session;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::sync::watch;
@@ -207,12 +212,22 @@ impl MyMagic for Svc {
         req: Request<hyper::body::Incoming>,
     ) -> Result<Response<Full<Bytes>>, AppError> {
         // let connection = self.pool.get().await.unwrap();
-        let session = Session {
-
+        let cookies = req
+            .headers()
+            .get_all(COOKIE)
+            .into_iter()
+            .filter_map(|value| value.to_str().ok())
+            .flat_map(|value| Cookie::split_parse(value))
+            .filter_map(|value| value.ok());
+        let mut jar = cookie::CookieJar::new();
+        for cookie in cookies {
+            jar.add_original(cookie);
         }
 
+        let session = Session::new(jar);
+
         match (req.method(), req.uri().path()) {
-            // (&Method::GET, "/") => {}
+            (&Method::GET, "/") => index(req, session).await,
             (_, _) => {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;

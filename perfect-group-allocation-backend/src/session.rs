@@ -1,6 +1,7 @@
 use core::convert::Infallible;
 
 use chrono::{DateTime, Utc};
+use cookie::{Cookie, CookieJar, SameSite};
 use oauth2::{PkceCodeVerifier, RefreshToken};
 use openidconnect::{EndUserEmail, Nonce};
 
@@ -28,23 +29,6 @@ fn test_to_string(value: &(String, Option<SessionCookieStrings>)) -> String {
 #[must_use]
 pub struct Session {
     private_cookies: CookieJar, // TODO FIXME
-}
-
-impl<S> FromRequestParts<S> for Session
-where
-    S: Send + Sync,
-    axum_extra::extract::cookie::Key: axum::extract::FromRef<S>,
-{
-    type Rejection = Infallible;
-
-    async fn from_request_parts(
-        parts: &mut http::request::Parts,
-        state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        Ok(Self::new(
-            parts.extract_with_state::<CookieJar, S>(state).await?,
-        ))
-    }
 }
 
 impl Session {
@@ -92,9 +76,9 @@ impl Session {
         );
         let cookie = Cookie::build((Self::COOKIE_NAME_SESSION, test_to_string(&value)))
             .http_only(true)
-            .same_site(axum_extra::extract::cookie::SameSite::Lax) // openid-redirect is a cross-site-redirect
+            .same_site(SameSite::Lax) // openid-redirect is a cross-site-redirect
             /*.secure(true) */;
-        self.private_cookies = self.private_cookies.clone().add(cookie);
+        self.private_cookies.clone().add(cookie);
         (session_id, input)
     }
 
@@ -107,9 +91,9 @@ impl Session {
             serde_json::to_string(input)?,
         ))
         .http_only(true)
-        .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
+        .same_site(SameSite::Lax) // needed because top level callback is cross-site
             /*.secure(true) */;
-        self.private_cookies = self.private_cookies.clone().add(cookie);
+        self.private_cookies.clone().add(cookie);
         Ok(())
     }
 
@@ -128,20 +112,9 @@ impl Session {
         };
         let cookie = Cookie::build((Self::COOKIE_NAME_OPENIDCONNECT, ""))
             .http_only(true)
-            .same_site(axum_extra::extract::cookie::SameSite::Lax) // needed because top level callback is cross-site
+            .same_site(SameSite::Lax) // needed because top level callback is cross-site
             /*.secure(true) */;
-        self.private_cookies = self.private_cookies.clone().remove(cookie);
+        self.private_cookies.clone().remove(cookie);
         Ok(return_value)
-    }
-}
-
-impl IntoResponseParts for Session {
-    type Error = Infallible;
-
-    fn into_response_parts(
-        self,
-        res: axum::response::ResponseParts,
-    ) -> Result<axum::response::ResponseParts, Self::Error> {
-        self.private_cookies.into_response_parts(res)
     }
 }
