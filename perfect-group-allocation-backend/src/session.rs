@@ -2,6 +2,7 @@ use core::convert::Infallible;
 
 use chrono::{DateTime, Utc};
 use cookie::{Cookie, CookieJar, SameSite};
+use perfect_group_allocation_openidconnect::{EndUserEmail, OpenIdSession, RefreshToken};
 use serde::Serialize;
 
 use crate::error::AppError;
@@ -30,6 +31,7 @@ pub struct Session {
     private_cookies: CookieJar, // TODO FIXME
 }
 
+// I think the csrf token needs to be signed/encrypted
 impl Session {
     //const COOKIE_NAME_OPENIDCONNECT: &'static str = "__Host-openidconnect";
     //const COOKIE_NAME_SESSION: &'static str = "__Host-session";
@@ -81,10 +83,7 @@ impl Session {
         (session_id, input)
     }
 
-    pub fn set_openidconnect(
-        &mut self,
-        input: &(&PkceCodeVerifier, &Nonce, &oauth2::CsrfToken),
-    ) -> Result<(), AppError> {
+    pub fn set_openidconnect(&mut self, input: &OpenIdSession) -> Result<(), AppError> {
         let cookie = Cookie::build((
             Self::COOKIE_NAME_OPENIDCONNECT,
             serde_json::to_string(input)?,
@@ -96,9 +95,7 @@ impl Session {
         Ok(())
     }
 
-    pub fn get_and_remove_openidconnect(
-        &mut self,
-    ) -> Result<(PkceCodeVerifier, Nonce, oauth2::CsrfToken), AppError> {
+    pub fn get_and_remove_openidconnect(&mut self) -> Result<OpenIdSession, AppError> {
         let return_value = match self
             .private_cookies
             .get(Self::COOKIE_NAME_OPENIDCONNECT)

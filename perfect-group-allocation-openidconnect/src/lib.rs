@@ -4,17 +4,20 @@ use std::sync::OnceLock;
 
 use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
 use oauth2::reqwest::async_http_client;
+pub use oauth2::RefreshToken;
 use oauth2::{
-    ClientId, ClientSecret, EmptyExtraTokenFields, RedirectUrl, RevocationErrorResponseType,
-    StandardErrorResponse, StandardRevocableToken, StandardTokenIntrospectionResponse,
-    StandardTokenResponse,
+    ClientId, ClientSecret, EmptyExtraTokenFields, PkceCodeVerifier, RedirectUrl,
+    RevocationErrorResponseType, StandardErrorResponse, StandardRevocableToken,
+    StandardTokenIntrospectionResponse, StandardTokenResponse,
 };
 use openidconnect::core::{
     CoreAuthDisplay, CoreAuthPrompt, CoreClient, CoreGenderClaim, CoreJsonWebKey,
     CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
     CoreJwsSigningAlgorithm, CoreProviderMetadata,
 };
-use openidconnect::{EmptyAdditionalClaims, IdTokenFields, IssuerUrl};
+pub use openidconnect::EndUserEmail;
+use openidconnect::{EmptyAdditionalClaims, IdTokenFields, IssuerUrl, Nonce};
+use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 
@@ -45,6 +48,13 @@ type OpenIdConnectClientType = openidconnect::Client<
     StandardRevocableToken,
     StandardErrorResponse<RevocationErrorResponseType>,
 >;
+
+#[derive(Serialize, Deserialize)]
+pub struct OpenIdSession {
+    verifier: PkceCodeVerifier,
+    nonce: Nonce,
+    csrf_token: oauth2::CsrfToken,
+}
 
 pub static OPENID_CLIENT: OnceLock<Result<OpenIdConnectClientType, AppError>> = OnceLock::new();
 

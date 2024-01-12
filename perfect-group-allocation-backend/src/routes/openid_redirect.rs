@@ -125,6 +125,8 @@ pub async fn openid_redirect(
                 .request_async(async_http_client)
                 .await?;
 
+            // TODO FIXME store it in cookie?
+
             // Extract the ID token claims after verifying its authenticity and nonce.
             let id_token = token_response
                 .id_token()
