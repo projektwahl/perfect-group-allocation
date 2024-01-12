@@ -19,3 +19,9 @@ main {
 .container-small {
     margin: auto;
 }
+
+.error-message {
+    background-color: #f33;
+    border-radius: 1em;
+    padding: 1em;
+}

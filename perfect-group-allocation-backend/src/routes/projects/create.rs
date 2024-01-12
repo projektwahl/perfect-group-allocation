@@ -7,12 +7,13 @@ use futures_util::StreamExt;
 use http::{header, Response, StatusCode};
 use http_body::{Body, Frame};
 use http_body_util::StreamBody;
+use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
 use perfect_group_allocation_database::{DatabaseConnection, Pool};
 use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{yieldoki, yieldokv};
+use zero_cost_templating::{yieldoki, yieldokv, Unsafe};
 
 use crate::error::AppError;
 use crate::routes::create_project;
@@ -33,6 +34,10 @@ pub async fn create(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfv!(template.page_title("Create Project"));
+        let template = yieldfi!(template.next());
+        let template = yieldfv!(
+            template.indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
+        );
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_email_false());

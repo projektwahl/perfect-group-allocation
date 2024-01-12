@@ -39,7 +39,7 @@ pub fn indexcss(
                     .with_max_age(Duration::from_secs(31_536_000)),
             )
             .body(EitherBody::Left(Full::new(Bytes::from_static(
-                index_css!(),
+                index_css!().0,
             ))))
             .unwrap())
     } else {

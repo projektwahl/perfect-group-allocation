@@ -350,7 +350,7 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
                 }))
             }
             (_, _) => Either::Right(Either::Right(async move {
-                let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
+                let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
                 Ok(not_found.map(|body| EitherBody::Right(EitherBody::Right(body))))
             })),

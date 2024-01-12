@@ -9,12 +9,13 @@ use http::{Response, StatusCode};
 use http_body::{Body, Frame};
 use http_body_util::StreamBody;
 use hyper::header;
+use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::models::ProjectHistoryEntry;
 use perfect_group_allocation_database::schema::project_history;
 use perfect_group_allocation_database::{DatabaseConnection, Pool};
 use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{template_stream, yieldoki, yieldokv};
+use zero_cost_templating::{template_stream, yieldoki, yieldokv, Unsafe};
 
 use crate::error::AppError;
 use crate::routes::list_projects;
@@ -26,6 +27,10 @@ async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>,
     let template = yieldfi!(template.next());
     let template = yieldfi!(template.next());
     let template = yieldfv!(template.page_title("Projects"));
+    let template = yieldfi!(template.next());
+    let template = yieldfv!(
+        template.indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
+    );
     let template = yieldfi!(template.next());
     let template = yieldfi!(template.next());
     let template = yieldfi!(template.next_email_false());

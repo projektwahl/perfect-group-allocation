@@ -1,10 +1,14 @@
+#![feature(proc_macro_quote)]
+
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::Path;
 
 use lightningcss::bundler::{Bundler, FileProvider};
+use lightningcss::properties::custom::Token;
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
 use parcel_sourcemap::SourceMap;
-use proc_macro::{TokenStream, TokenTree};
+use proc_macro::{quote, Group, TokenStream, TokenTree};
 
 // TODO FIXME automatic recompilation
 
@@ -34,6 +38,11 @@ pub fn index_css(_item: TokenStream) -> TokenStream {
         })
         .unwrap()
         .code;
-    let tree = TokenTree::Literal(proc_macro::Literal::byte_string(result.as_bytes()));
-    tree.into()
+    let mut hasher = DefaultHasher::new();
+    result.hash(&mut hasher);
+    let hash = TokenTree::Literal(proc_macro::Literal::u64_suffixed(hasher.finish()));
+    let result = TokenTree::Literal(proc_macro::Literal::byte_string(result.as_bytes()));
+    quote! {
+        ($result, $hash)
+    }
 }
