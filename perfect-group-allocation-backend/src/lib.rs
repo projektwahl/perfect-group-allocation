@@ -319,21 +319,29 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => Either::Left(Either::Left(Either::Left(async move {
-                index(req, session).await
+                index(req, session)
+                    .await
+                    .map(|body| Either::Left(Either::Left(Either::Left(body))))
             }))),
-            (&Method::GET, "/index.css") => {
-                Either::Left(Either::Left(Either::Right(async move { indexcss(req) })))
-            }
+            (&Method::GET, "/index.css") => Either::Left(Either::Left(Either::Right(async move {
+                indexcss(req).map(|body| Either::Left(Either::Left(Either::Right(body))))
+            }))),
             (&Method::GET, "/list") => Either::Left(Either::Right(Either::Left(async move {
-                list(self.pool, session).await
+                list(self.pool, session)
+                    .await
+                    .map(|body| Either::Left(Either::Right(Either::Left(body))))
             }))),
-            (&Method::GET, "/favicon.ico") => Either::Left(Either::Right(Either::Right(
-                async move { favicon_ico(req) },
-            ))),
+            (&Method::GET, "/favicon.ico") => {
+                Either::Left(Either::Right(Either::Right(async move {
+                    favicon_ico(req).map(|body| Either::Left(Either::Right(Either::Right(body))))
+                })))
+            }
             (_, _) => Either::Right(async move {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found)
+                Ok(Either::Left(Either::Right(Either::Right(
+                    not_found.map(|body| Either::Right(body)),
+                ))))
             }),
         }
     }
