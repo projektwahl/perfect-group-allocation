@@ -6,7 +6,7 @@ use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;
 use headers::ContentType;
 use http::{Response, StatusCode};
-use http_body::Body;
+use http_body::{Body, Frame};
 use http_body_util::StreamBody;
 use hyper::header;
 use perfect_group_allocation_database::models::ProjectHistoryEntry;
@@ -19,26 +19,23 @@ use zero_cost_templating::{template_stream, yieldoki, yieldokv};
 use crate::error::AppError;
 use crate::routes::list_projects;
 use crate::session::Session;
-use crate::ResponseTypedHeaderExt as _;
+use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
-async gen fn list_internal(
-    pool: Pool,
-    session: Session,
-) -> Result<alloc::borrow::Cow<'static, str>, AppError> {
-    let template = yieldoki!(list_projects());
-    let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next());
-    let template = yieldokv!(template.page_title("Projects"));
-    let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next_email_false());
-    let template = yieldokv!(template.csrf_token(session.session().0));
-    let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next());
-    let mut template = yieldoki!(template.next());
+async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>, AppError> {
+    let template = yieldfi!(list_projects());
+    let template = yieldfi!(template.next());
+    let template = yieldfi!(template.next());
+    let template = yieldfv!(template.page_title("Projects"));
+    let template = yieldfi!(template.next());
+    let template = yieldfi!(template.next());
+    let template = yieldfi!(template.next_email_false());
+    let template = yieldfv!(template.csrf_token(session.session().0));
+    let template = yieldfi!(template.next());
+    let template = yieldfi!(template.next());
+    let mut template = yieldfi!(template.next());
     let mut connection = match pool.get().await {
         Ok(connection) => connection,
-        Err(erroro) => todo!(),
+        Err(erroro) => todo!(), // TODO FIXME find out what would happen if we would return an actual error. if the client shows a request aborted error this would be an okay way to handle it though it would be nicer if it could show an error.
     };
     let mut stream = match project_history::table
         .group_by((
@@ -58,36 +55,28 @@ async gen fn list_internal(
         Ok(value) => value,
         Err(error) => {
             error!("{:?}", error);
-            let template = yieldoki!(template.next_end_loop());
-            yieldoki!(template.next());
+            let template = yieldfi!(template.next_end_loop());
+            yieldfi!(template.next());
             return; // TODO FIXME
         }
     };
     while let Some(x) = stream.next().await {
-        let inner_template = yieldoki!(template.next_enter_loop());
+        let inner_template = yieldfi!(template.next_enter_loop());
         let x = x.unwrap();
-        let inner_template = yieldokv!(inner_template.title(x.title));
-        let inner_template = yieldoki!(inner_template.next());
-        let inner_template = yieldokv!(inner_template.description(x.info));
-        template = yieldoki!(inner_template.next());
+        let inner_template = yieldfi!(inner_template.title(x.title));
+        let inner_template = yieldfi!(inner_template.next());
+        let inner_template = yieldfi!(inner_template.description(x.info));
+        template = yieldfi!(inner_template.next());
     }
-    let template = yieldoki!(template.next_end_loop());
-    yieldoki!(template.next());
+    let template = yieldfi!(template.next_end_loop());
+    yieldfi!(template.next());
 }
 
 pub async fn list(
-    db: DatabaseConnection,
+    pool: Pool,
     session: Session,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
-    let stream = AsyncIteratorStream(list_internal(db, session.clone())).map(|elem| match elem {
-        Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
-            // TODO FIXME use template here
-            "<h1>Error {}</h1>",
-            &app_error.to_string()
-        ))),
-        Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-        Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-    });
+    let stream = AsyncIteratorStream(list_internal(pool, session.clone()));
     Ok(Response::builder()
         .status(StatusCode::OK)
         .typed_header(ContentType::html())

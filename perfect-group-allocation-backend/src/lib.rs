@@ -249,6 +249,39 @@ impl<
     }
 }
 
+// Yieldok a value.
+#[macro_export]
+macro_rules! yieldfv {
+    ($e:expr) => {{
+        let expr = $e;
+        let value = expr.1;
+        let ret = expr.0;
+        yield Ok(http_body::Frame::data(Bytes::from(value)));
+        ret
+    }};
+}
+
+/// Yieldok an iterator.
+#[macro_export]
+macro_rules! yieldfi {
+    ($e:expr) => {{
+        let expr = $e;
+        let mut iterator = expr.1;
+        let ret = expr.0;
+        loop {
+            let value = ::std::iter::Iterator::next(&mut iterator);
+            // maybe match has bad liveness analysis?
+            if value.is_some() {
+                let value = value.unwrap();
+                yield Ok(http_body::Frame::data(Bytes::from(value)));
+            } else {
+                break;
+            }
+        }
+        ret
+    }};
+}
+
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
 #[derive(Clone)]
 struct Svc {
@@ -283,20 +316,20 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
             Ok(match (req.method(), req.uri().path()) {
                 (&Method::GET, "/") => index(req, session)
                     .await?
-                    .map(|body| EitherBody::Zero(EitherBody::Zero(body))),
-                (&Method::GET, "/index.css") => {
-                    indexcss(req)?.map(|body| EitherBody::Zero(EitherBody::One(body)))
-                }
-                (&Method::GET, "/list") => {
-                    list(self.pool, session);
-                }
-                (&Method::GET, "/favicon.ico") => {
-                    favicon_ico(req)?.map(|body| EitherBody::One(EitherBody::Zero(body)))
-                }
+                    .map(|body| EitherBody::Zero(EitherBody::Zero(EitherBody::Zero(body)))),
+                (&Method::GET, "/index.css") => indexcss(req)?
+                    .map(|body| EitherBody::Zero(EitherBody::Zero(EitherBody::One(body)))),
+                (&Method::GET, "/list") => list(self.pool, session)
+                    .await?
+                    .map(|body| EitherBody::Zero(EitherBody::One(EitherBody::Zero(body)))),
+                (&Method::GET, "/favicon.ico") => favicon_ico(req)?
+                    .map(|body| EitherBody::Zero(EitherBody::One(EitherBody::One(body)))),
                 (_, _) => {
                     let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                     *not_found.status_mut() = StatusCode::NOT_FOUND;
-                    not_found.map(|body| EitherBody::One(EitherBody::One(body)))
+                    not_found.map(|body| {
+                        EitherBody::One(EitherBody::Zero(EitherBody::One(EitherBody::Zero(body))))
+                    })
                 }
             })
         }

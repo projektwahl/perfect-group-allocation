@@ -80,22 +80,22 @@ pub async fn openid_redirect(
     match form.0.inner {
         OpenIdRedirectInner::Error(err) => {
             let result = async gen move {
-                let template = yieldoki!(crate::routes::projects::list::openid_redirect());
-                let template = yieldoki!(template.next());
-                let template = yieldoki!(template.next());
-                let template = yieldokv!(template.page_title("Create Project"));
-                let template = yieldoki!(template.next());
-                let template = yieldoki!(template.next());
-                let template = yieldoki!(template.next_email_false());
-                let template = yieldokv!(template.csrf_token(expected_csrf_token));
-                let template = yieldoki!(template.next());
-                let template = yieldoki!(template.next());
-                let template = yieldoki!(template.next());
-                let template = yieldokv!(template.error(err.error));
-                let template = yieldoki!(template.next());
-                let template = yieldokv!(template.error_description(err.error_description));
-                let template = yieldoki!(template.next());
-                yieldoki!(template.next());
+                let template = yieldfi!(crate::routes::projects::list::openid_redirect());
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next());
+                let template = yieldfv!(template.page_title("Create Project"));
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next_email_false());
+                let template = yieldfv!(template.csrf_token(expected_csrf_token));
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next());
+                let template = yieldfv!(template.error(err.error));
+                let template = yieldfi!(template.next());
+                let template = yieldfv!(template.error_description(err.error_description));
+                let template = yieldfi!(template.next());
+                yieldfi!(template.next());
             };
             let stream =
                 AsyncIteratorStream(result).map(|elem: Result<Cow<'static, str>, AppError>| {
