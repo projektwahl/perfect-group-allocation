@@ -199,6 +199,7 @@ async fn main() -> Result<(), AppError> {
 use headers::{Header, HeaderMapExt};
 
 use crate::routes::favicon::favicon_ico;
+use crate::routes::projects::list::list;
 
 pub trait ResponseTypedHeaderExt {
     fn typed_header<H: Header>(self, header: H) -> Self;
@@ -262,7 +263,6 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
 
     fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
         async move {
-            // let connection = self.pool.get().await.unwrap();
             let cookies = req
                 .headers()
                 .get_all(COOKIE)
@@ -286,6 +286,9 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
                     .map(|body| EitherBody::Zero(EitherBody::Zero(body))),
                 (&Method::GET, "/index.css") => {
                     indexcss(req)?.map(|body| EitherBody::Zero(EitherBody::One(body)))
+                }
+                (&Method::GET, "/list") => {
+                    list(self.pool, session);
                 }
                 (&Method::GET, "/favicon.ico") => {
                     favicon_ico(req)?.map(|body| EitherBody::One(EitherBody::Zero(body)))
