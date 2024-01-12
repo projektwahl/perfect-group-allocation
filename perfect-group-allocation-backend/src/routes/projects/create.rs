@@ -68,7 +68,10 @@ pub async fn create(
             return;
         }
 
-        let connection = pool.get().await?;
+        let mut connection = match pool.get().await {
+            Ok(connection) => connection,
+            Err(error) => todo!(),
+        };
 
         if let Err(error) = diesel::insert_into(project_history::table)
             .values(NewProject {

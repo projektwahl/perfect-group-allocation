@@ -35,7 +35,15 @@ async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>,
     let mut template = yieldfi!(template.next());
     let mut connection = match pool.get().await {
         Ok(connection) => connection,
-        Err(erroro) => todo!(), // TODO FIXME find out what would happen if we would return an actual error. if the client shows a request aborted error this would be an okay way to handle it though it would be nicer if it could show an error.
+        Err(erroro) => {
+            let template = yieldfi!(template.next_enter_loop());
+            let template = yieldfi!(template.next_error_true());
+            let template = yieldfv!(template.error_message(AppError::from(erroro).to_string()));
+            let template = yieldfi!(template.next());
+            let template = yieldfi!(template.next_end_loop());
+            yieldfi!(template.next());
+            return;
+        }
     };
     let mut stream = match project_history::table
         .group_by((
@@ -62,6 +70,7 @@ async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>,
     };
     while let Some(x) = stream.next().await {
         let inner_template = yieldfi!(template.next_enter_loop());
+        let inner_template = yieldfi!(inner_template.next_error_false());
         let x = x.unwrap();
         let inner_template = yieldfv!(inner_template.title(x.title));
         let inner_template = yieldfi!(inner_template.next());

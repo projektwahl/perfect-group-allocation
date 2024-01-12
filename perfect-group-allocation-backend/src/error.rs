@@ -51,3 +51,9 @@ impl From<Infallible> for AppError {
         match value {}
     }
 }
+
+impl From<diesel_async::pooled_connection::deadpool::PoolError> for AppError {
+    fn from(value: diesel_async::pooled_connection::deadpool::PoolError) -> Self {
+        AppError::Database(value.into())
+    }
+}
