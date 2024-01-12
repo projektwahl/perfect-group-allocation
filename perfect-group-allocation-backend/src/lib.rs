@@ -197,7 +197,13 @@ pub trait MyMagic {
     fn call(
         &self,
         req: Request<hyper::body::Incoming>,
-    ) -> impl std::future::Future<Output = Result<impl http_body::Body, AppError>> + Send;
+    ) -> impl std::future::Future<
+        Output = Result<
+            Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send + 'static>,
+            AppError,
+        >,
+    > + Send
+    + 'static;
 }
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
@@ -207,42 +213,52 @@ struct Svc {
 }
 
 impl MyMagic for Svc {
-    async fn call(
+    fn call(
         &self,
         req: Request<hyper::body::Incoming>,
-    ) -> Result<impl http_body::Body, AppError> {
-        // let connection = self.pool.get().await.unwrap();
-        let cookies = req
-            .headers()
-            .get_all(COOKIE)
-            .into_iter()
-            .filter_map(|value| value.to_str().ok())
-            .map(std::borrow::ToOwned::to_owned)
-            .flat_map(Cookie::split_parse)
-            .filter_map(std::result::Result::ok);
-        let mut jar = cookie::CookieJar::new();
-        for cookie in cookies {
-            jar.add_original(cookie);
-        }
-
-        let session = Session::new(jar);
-
-        Ok(match (req.method(), req.uri().path()) {
-            (&Method::GET, "/") => http_body_util::Either::Left(index(req, session).await?),
-            (_, _) => {
-                let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
-                *not_found.status_mut() = StatusCode::NOT_FOUND;
-                http_body_util::Either::Right(not_found)
+    ) -> impl std::future::Future<
+        Output = Result<
+            Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send + 'static>,
+            AppError,
+        >,
+    > + Send
+    + 'static {
+        async move {
+            // let connection = self.pool.get().await.unwrap();
+            let cookies = req
+                .headers()
+                .get_all(COOKIE)
+                .into_iter()
+                .filter_map(|value| value.to_str().ok())
+                .map(std::borrow::ToOwned::to_owned)
+                .flat_map(Cookie::split_parse)
+                .filter_map(std::result::Result::ok);
+            let mut jar = cookie::CookieJar::new();
+            for cookie in cookies {
+                jar.add_original(cookie);
             }
-        })
+
+            let session = Session::new(jar);
+
+            Ok(match (req.method(), req.uri().path()) {
+                (&Method::GET, "/") => index(req, session)
+                    .await?
+                    .map(|body| http_body_util::Either::Left(body)),
+                (_, _) => {
+                    let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
+                    *not_found.status_mut() = StatusCode::NOT_FOUND;
+                    not_found.map(|body| http_body_util::Either::Right(body))
+                }
+            })
+        }
     }
 }
 
 impl Service<Request<hyper::body::Incoming>> for Svc {
     type Error = AppError;
+    type Response = Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send + 'static>;
 
-    type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send;
-    type Response = impl http_body::Body;
+    type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send + 'static;
 
     fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
         let this = self.clone();
