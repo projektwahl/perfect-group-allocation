@@ -197,7 +197,7 @@ pub trait MyMagic {
     fn call(
         &self,
         req: Request<hyper::body::Incoming>,
-    ) -> impl std::future::Future<Output = Result<Response<Full<Bytes>>, AppError>> + Send;
+    ) -> impl std::future::Future<Output = Result<impl http_body::Body, AppError>> + Send;
 }
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
@@ -210,7 +210,7 @@ impl MyMagic for Svc {
     async fn call(
         &self,
         req: Request<hyper::body::Incoming>,
-    ) -> Result<Response<Full<Bytes>>, AppError> {
+    ) -> Result<impl http_body::Body, AppError> {
         // let connection = self.pool.get().await.unwrap();
         let cookies = req
             .headers()
@@ -227,22 +227,22 @@ impl MyMagic for Svc {
 
         let session = Session::new(jar);
 
-        match (req.method(), req.uri().path()) {
-            (&Method::GET, "/") => index(req, session).await,
+        Ok(match (req.method(), req.uri().path()) {
+            (&Method::GET, "/") => http_body_util::Either::Left(index(req, session).await?),
             (_, _) => {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found)
+                http_body_util::Either::Right(not_found)
             }
-        }
+        })
     }
 }
 
 impl Service<Request<hyper::body::Incoming>> for Svc {
     type Error = AppError;
-    type Response = Response<Full<Bytes>>;
 
-    type Future = impl Future<Output = Result<Response<Full<Bytes>>, AppError>> + Send;
+    type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send;
+    type Response = impl http_body::Body;
 
     fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
         let this = self.clone();
