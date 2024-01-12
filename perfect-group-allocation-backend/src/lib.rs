@@ -33,6 +33,7 @@ use error::AppError;
 use futures_util::{pin_mut, Future};
 use http::header::COOKIE;
 use http::{Request, Response, StatusCode};
+use http_body::Body;
 use http_body_util::Full;
 use hyper::body::Incoming;
 use hyper::service::{service_fn, Service};
@@ -40,6 +41,7 @@ use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use itertools::Itertools;
 use perfect_group_allocation_database::{get_database_connection, Pool};
+use pin_project::pin_project;
 use routes::index::index;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -212,6 +214,43 @@ struct Svc {
     pool: Pool,
 }
 
+#[pin_project(project = EitherBodyProj)]
+pub enum EitherBody<
+    LE: Into<AppError>,
+    RE: Into<AppError>,
+    L: http_body::Body<Data = Bytes, Error = LE>,
+    R: http_body::Body<Data = Bytes, Error = RE>,
+> {
+    Left(#[pin] L),
+    Right(#[pin] R),
+}
+
+impl<
+    LE: Into<AppError>,
+    RE: Into<AppError>,
+    L: http_body::Body<Data = Bytes, Error = LE>,
+    R: http_body::Body<Data = Bytes, Error = RE>,
+> Body for EitherBody<LE, RE, L, R>
+{
+    type Data = Bytes;
+    type Error = AppError;
+
+    fn poll_frame(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+        let this = self.project();
+        match this {
+            EitherBodyProj::Left(l) => l
+                .poll_frame(cx)
+                .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
+            EitherBodyProj::Right(r) => r
+                .poll_frame(cx)
+                .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
+        }
+    }
+}
+
 impl MyMagic for Svc {
     fn call(
         &self,
@@ -243,11 +282,11 @@ impl MyMagic for Svc {
             Ok(match (req.method(), req.uri().path()) {
                 (&Method::GET, "/") => index(req, session)
                     .await?
-                    .map(|body| http_body_util::Either::Left(body)),
+                    .map(|body| EitherBody::Left(body)),
                 (_, _) => {
                     let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                     *not_found.status_mut() = StatusCode::NOT_FOUND;
-                    not_found.map(|body| http_body_util::Either::Right(body))
+                    not_found.map(|body| EitherBody::Right(body))
                 }
             })
         }

@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::{RequestTokenError, StandardErrorResponse};
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
@@ -63,4 +65,10 @@ pub enum AppError {
     OpenIdTokenNotFound,
     #[error("Der Serveradministrator hat OpenID nicht konfiguriert.")]
     OpenIdNotConfigured,
+}
+
+impl From<Infallible> for AppError {
+    fn from(value: Infallible) -> Self {
+        match value {}
+    }
 }
