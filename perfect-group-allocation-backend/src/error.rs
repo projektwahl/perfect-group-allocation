@@ -1,8 +1,5 @@
 use std::convert::Infallible;
 
-use oauth2::basic::BasicErrorResponseType;
-use oauth2::{RequestTokenError, StandardErrorResponse};
-use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 use perfect_group_allocation_database::DatabaseError;
 
 #[derive(thiserror::Error, Debug)]
@@ -25,10 +22,6 @@ pub enum AppError {
     //Discovery(#[from] DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>),
     #[error("IO error: {0}")]
     File(#[from] std::io::Error),
-    #[error("bundling error: {0}")]
-    Bundling(#[from] lightningcss::error::Error<String>),
-    #[error("bundling error type 2: {0}")]
-    Bundling2(#[from] lightningcss::error::Error<lightningcss::error::PrinterErrorKind>),
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("webserver error: {0}")]

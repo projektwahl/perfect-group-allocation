@@ -1,11 +1,15 @@
+use std::path::Path;
+
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
 use parcel_sourcemap::SourceMap;
+use proc_macro::{TokenStream, TokenTree};
 
-static INDEX_CSS: OnceLock<String> = OnceLock::new();
+// TODO FIXME automatic recompilation
 
-pub fn initialize_index_css() {
+#[proc_macro]
+pub fn index_css(_item: TokenStream) -> TokenStream {
     // @import would produce a flash of unstyled content and also is less efficient
     let fs = FileProvider::new();
     let mut bundler = Bundler::new(&fs, None, ParserOptions::default());
@@ -19,19 +23,17 @@ pub fn initialize_index_css() {
         .unwrap();
     let mut source_map = SourceMap::new(".");
 
-    INDEX_CSS
-        .set(
-            stylesheet
-                .to_css(PrinterOptions {
-                    minify: true,
-                    source_map: Some(&mut source_map),
-                    project_root: None,
-                    targets: Targets::default(),
-                    analyze_dependencies: None,
-                    pseudo_classes: None,
-                })
-                .unwrap()
-                .code,
-        )
-        .unwrap();
+    let result = stylesheet
+        .to_css(PrinterOptions {
+            minify: true,
+            source_map: Some(&mut source_map),
+            project_root: None,
+            targets: Targets::default(),
+            analyze_dependencies: None,
+            pseudo_classes: None,
+        })
+        .unwrap()
+        .code;
+    let tree = TokenTree::Literal(proc_macro::Literal::string(&result));
+    tree.into()
 }

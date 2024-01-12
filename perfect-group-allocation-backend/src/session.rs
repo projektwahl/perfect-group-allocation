@@ -2,8 +2,6 @@ use core::convert::Infallible;
 
 use chrono::{DateTime, Utc};
 use cookie::{Cookie, CookieJar, SameSite};
-use oauth2::{PkceCodeVerifier, RefreshToken};
-use openidconnect::{EndUserEmail, Nonce};
 use serde::Serialize;
 
 use crate::error::AppError;
