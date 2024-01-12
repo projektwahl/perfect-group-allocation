@@ -195,25 +195,6 @@ async fn main() -> Result<(), AppError> {
 }
 */
 
-pub trait MyMagic {
-    fn call(
-        &self,
-        req: Request<hyper::body::Incoming>,
-    ) -> impl std::future::Future<
-        Output = Result<
-            Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send + 'static>,
-            AppError,
-        >,
-    > + Send
-    + 'static;
-}
-
-// https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
-#[derive(Clone)]
-struct Svc {
-    pool: Pool,
-}
-
 #[pin_project(project = EitherBodyProj)]
 pub enum EitherBody<
     LE: Into<AppError>,
@@ -251,17 +232,19 @@ impl<
     }
 }
 
-impl MyMagic for Svc {
-    fn call(
-        &self,
-        req: Request<hyper::body::Incoming>,
-    ) -> impl std::future::Future<
-        Output = Result<
-            Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send + 'static>,
-            AppError,
-        >,
-    > + Send
-    + 'static {
+// https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
+#[derive(Clone)]
+struct Svc {
+    pool: Pool,
+}
+
+impl Service<Request<hyper::body::Incoming>> for Svc {
+    type Error = AppError;
+    type Response = Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send>;
+
+    type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send + 'static;
+
+    fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
         async move {
             // let connection = self.pool.get().await.unwrap();
             let cookies = req
@@ -290,18 +273,6 @@ impl MyMagic for Svc {
                 }
             })
         }
-    }
-}
-
-impl Service<Request<hyper::body::Incoming>> for Svc {
-    type Error = AppError;
-    type Response = Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send + 'static>;
-
-    type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send + 'static;
-
-    fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
-        let this = self.clone();
-        async move { MyMagic::call(&this, req).await }
     }
 }
 
