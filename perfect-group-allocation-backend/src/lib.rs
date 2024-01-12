@@ -29,6 +29,7 @@ use std::time::Duration;
 use bytes::Bytes;
 use cookie::{Cookie, CookieBuilder, CookieJar};
 use error::AppError;
+use futures_util::future::Either;
 use futures_util::{pin_mut, Future};
 use http::header::COOKIE;
 use http::{Request, Response, StatusCode};
@@ -219,8 +220,8 @@ pub enum EitherBody<
     L: http_body::Body<Data = Bytes, Error = LE>,
     R: http_body::Body<Data = Bytes, Error = RE>,
 > {
-    Zero(#[pin] L),
-    One(#[pin] R),
+    Left(#[pin] L),
+    Right(#[pin] R),
 }
 
 impl<
@@ -239,10 +240,10 @@ impl<
     ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
         let this = self.project();
         match this {
-            EitherBodyProj::Zero(l) => l
+            EitherBodyProj::Left(l) => l
                 .poll_frame(cx)
                 .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
-            EitherBodyProj::One(r) => r
+            EitherBodyProj::Right(r) => r
                 .poll_frame(cx)
                 .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
         }
@@ -317,41 +318,27 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
         println!("{} {}", req.method(), req.uri().path());
 
         match (req.method(), req.uri().path()) {
-            (&Method::GET, "/") => {
-                async move {
-                    Ok(index(req, session)
-                        .await?
-                        .map(|body| EitherBody::Zero(EitherBody::Zero(EitherBody::Zero(body)))))
-                }
-            }
-            (&Method::GET, "/index.css") => {
-                async move {
-                    Ok(indexcss(req)?
-                        .map(|body| EitherBody::Zero(EitherBody::Zero(EitherBody::One(body)))))
-                }
-            }
-            (&Method::GET, "/list") => {
-                async move {
-                    Ok(list(self.pool, session)
-                        .await?
-                        .map(|body| EitherBody::Zero(EitherBody::One(EitherBody::Zero(body)))))
-                }
-            }
+            (&Method::GET, "/") => Either::Left(Either::Left(Either::Left(async move {
+                Ok(index(req, session).await?.map(|body| body))
+            }))),
+            (&Method::GET, "/index.css") => Either::Left(Either::Left(Either::Right(async move {
+                Ok(indexcss(req)?.map(|body| body))
+            }))),
+            (&Method::GET, "/list") => Either::Left(Either::Right(Either::Left(async move {
+                Ok(list(self.pool, session).await?.map(|body| body))
+            }))),
             (&Method::GET, "/favicon.ico") => {
-                async move {
-                    Ok(favicon_ico(req)?
-                        .map(|body| EitherBody::Zero(EitherBody::One(EitherBody::One(body)))))
-                }
+                Either::Left(Either::Right(Either::Right(async move {
+                    Ok(favicon_ico(req)?.map(|body| body))
+                })))
             }
-            (_, _) => {
-                async move {
-                    Ok({
-                        let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
-                        *not_found.status_mut() = StatusCode::NOT_FOUND;
-                        not_found.map(|body| EitherBody::One(body))
-                    })
-                }
-            }
+            (_, _) => Either::Right(async move {
+                Ok({
+                    let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
+                    *not_found.status_mut() = StatusCode::NOT_FOUND;
+                    not_found.map(|body| body)
+                })
+            }),
         }
     }
 }

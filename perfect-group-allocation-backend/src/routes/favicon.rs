@@ -35,12 +35,12 @@ pub fn favicon_ico(
                     .with_public()
                     .with_max_age(Duration::from_secs(31_536_000)),
             )
-            .body(EitherBody::Zero(Full::new(Bytes::from_static(FAVICON_ICO))))
+            .body(EitherBody::Left(Full::new(Bytes::from_static(FAVICON_ICO))))
             .unwrap())
     } else {
         Ok(Response::builder()
             .status(StatusCode::NOT_MODIFIED)
-            .body(EitherBody::One(Empty::default()))
+            .body(EitherBody::Right(Empty::default()))
             .unwrap())
     }
 }
