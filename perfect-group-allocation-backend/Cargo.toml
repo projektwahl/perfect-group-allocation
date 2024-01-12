@@ -41,7 +41,8 @@ zero-cost-templating = { git = "https://github.com/mohe2015/zero-cost-templating
 bytes = "1"
 pin-project = "1"
 hyper-util = "0.1"
-http-body-util = "0.1.0"
+http-body-util = "0.1"
+serde_urlencoded = "0.7"
 diesel = "2"
 diesel-async = { version = "0.4", features = ["postgres", "deadpool"] }
 cookie = "0.18"

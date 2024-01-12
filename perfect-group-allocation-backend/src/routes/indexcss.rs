@@ -19,7 +19,7 @@ use crate::{EitherBody, ResponseTypedHeaderExt as _};
 // so maybe simply don't implement watcher at all
 
 pub fn indexcss(
-    request: hyper::Request<impl hyper::body::Body>,
+    request: hyper::Request<hyper::body::Incoming>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
     let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
     let etag_string = "\"xyzzy\"";

@@ -20,12 +20,14 @@ use crate::session::Session;
 use crate::{yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm};
 
 pub async fn create(
-    request: hyper::Request<impl hyper::body::Body>,
+    request: hyper::Request<hyper::body::Incoming>,
     pool: Pool,
     session: Session, // TODO FIXME extract in here
-                      //form: CsrfSafeForm<CreateProjectPayload>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
     let session_clone = session.clone();
+    let form = CsrfSafeForm::<CreateProjectPayload>::from_request(request, session)
+        .await
+        .unwrap();
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());

@@ -15,7 +15,7 @@ use crate::session::Session;
 use crate::{yieldfi, yieldfv};
 
 pub async fn index(
-    request: hyper::Request<impl hyper::body::Body>,
+    request: hyper::Request<hyper::body::Incoming>,
     session: Session,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
     let result = async gen move {

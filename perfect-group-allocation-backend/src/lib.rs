@@ -34,7 +34,7 @@ use futures_util::{pin_mut, Future};
 use http::header::COOKIE;
 use http::{Request, Response, StatusCode};
 use http_body::Body;
-use http_body_util::Full;
+use http_body_util::{BodyExt, Full, Limited};
 use hyper::body::Incoming;
 use hyper::service::{service_fn, Service};
 use hyper::Method;
@@ -94,41 +94,40 @@ pub trait CsrfToken {
 pub struct CsrfSafeForm<T: CsrfToken> {
     pub value: T,
 }
-/*
-impl<T> FromRequest<MyState> for CsrfSafeForm<T>
+
+impl<T> CsrfSafeForm<T>
 where
     T: DeserializeOwned + CsrfToken + Send,
 {
-    type Rejection = AppError;
-
     async fn from_request(
-        mut req: axum::extract::Request,
-        state: &MyState,
-    ) -> Result<Self, Self::Rejection> {
-        let not_get_or_head = !(req.method() == Method::GET || req.method() == Method::HEAD);
-        let session = match req
-            .extract_parts_with_state::<Session, MyState>(state)
-            .await
-        {
-            Ok(session) => session,
-            Err(infallible) => match infallible {},
-        };
+        request: hyper::Request<hyper::body::Incoming>,
+        session: Session,
+    ) -> Result<Self, AppError> {
+        let not_get_or_head =
+            !(request.method() == Method::GET || request.method() == Method::HEAD);
+
         let expected_csrf_token = session.session().0;
 
+        let body: Bytes = Limited::new(request.into_body(), 100)
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes();
+
         #[expect(clippy::disallowed_types, reason = "this is the csrf safe wrapper")]
-        let extractor = axum::Form::<T>::from_request(req, state).await?;
+        let extractor: T = serde_urlencoded::from_bytes(&body).unwrap();
 
         if not_get_or_head {
-            let actual_csrf_token = extractor.0.csrf_token();
+            let actual_csrf_token = extractor.csrf_token();
 
             if expected_csrf_token != actual_csrf_token {
                 return Err(AppError::WrongCsrfToken);
             }
         }
-        Ok(Self { value: extractor.0 })
+        Ok(Self { value: extractor })
     }
 }
-*/
+
 impl<T: CsrfToken> CsrfSafeExtractor for CsrfSafeForm<T> {}
 
 //fn layers(_app: Router<MyState>, _db: DatabaseConnection) -> Router<()> {

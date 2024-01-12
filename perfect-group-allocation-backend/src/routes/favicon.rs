@@ -16,7 +16,7 @@ static FAVICON_ICO: &[u8] = include_bytes!("../../../frontend/favicon.ico");
 
 // Etag and cache busting
 pub fn favicon_ico(
-    request: hyper::Request<impl hyper::body::Body>,
+    request: hyper::Request<hyper::body::Incoming>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
     let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
     let etag_string = "\"xyzzy\"";
