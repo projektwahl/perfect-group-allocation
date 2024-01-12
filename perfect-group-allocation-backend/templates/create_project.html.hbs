@@ -1,21 +1,26 @@
 {{#>main}}
 <h1 class="center">Create project</h1>
+
 <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
+    {{#if error}}
+    <div class="error-message">Es ist ein Fehler aufgetreten: {{error_message}}</div>
+    {{else}}{{/if}}
+
     <input type="hidden" name="csrf_token" value="{{csrf_token}}">
 
+    {{#if title_error}}
+    <div class="error-message">{{title_error}}</div>
+    {{/if}}
     <label for="title">Title:</label>
     <input {{#if title_error}} class="error" {{/if}} id="title" name="title" type="text" {{#if title}} value="{{title}}"
         {{/if}} />
-    {{#if title_error}}
-    <div class="error">{{title_error}}</div>
-    {{/if}}
 
+    {{#if description_error}}
+    <div class="error-message">{{description_error}}</div>
+    {{/if}}
     <label for="description">Description:</label>
     <input {{#if description_error}} class="error" {{/if}} id="description" name="description" type="text" {{#if
         description}} value="{{description}}" {{/if}} />
-    {{#if description_error}}
-    <div class="error">{{description_error}}</div>
-    {{/if}}
 
     <button type="submit">Create</button>
 

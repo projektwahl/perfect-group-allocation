@@ -35,14 +35,15 @@ pub async fn index(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next_error_false());
         let template = yieldfv!(template.csrf_token(session.session().0));
         let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next_title_error_false());
         let template = yieldfv!(template.title(""));
         let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next_title_error_false());
+        let template = yieldfi!(template.next_description_error_false());
         let template = yieldfv!(template.description(""));
         let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next_description_error_false());
         yieldfi!(template.next());
     };
     let stream = AsyncIteratorStream(result);

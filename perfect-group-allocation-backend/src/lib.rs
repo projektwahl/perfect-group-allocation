@@ -257,7 +257,7 @@ macro_rules! yieldfv {
         let expr = $e;
         let value = expr.1;
         let ret = expr.0;
-        yield Ok(http_body::Frame::data(match value {
+        yield Ok::<http_body::Frame<Bytes>, AppError>(http_body::Frame::data(match value {
             Cow::Owned(v) => Bytes::from(v),
             Cow::Borrowed(v) => Bytes::from(v),
         }));
@@ -277,7 +277,9 @@ macro_rules! yieldfi {
             // maybe match has bad liveness analysis?
             if value.is_some() {
                 let value = value.unwrap();
-                yield Ok(http_body::Frame::data(Bytes::from(value)));
+                yield Ok::<http_body::Frame<Bytes>, AppError>(http_body::Frame::data(Bytes::from(
+                    value,
+                )));
             } else {
                 break;
             }

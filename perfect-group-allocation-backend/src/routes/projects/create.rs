@@ -70,6 +70,12 @@ pub async fn create(
         };
     }
 
+    let status_code = if global_error.is_some() {
+        StatusCode::INTERNAL_SERVER_ERROR
+    } else {
+        StatusCode::OK
+    };
+
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());
@@ -86,9 +92,14 @@ pub async fn create(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
+        let template = if let Some(global_error) = global_error {
+            let inner_template = yieldfi!(template.next_error_true());
+            let inner_template = yieldfv!(inner_template.error_message(global_error));
+            yieldfi!(inner_template.next())
+        } else {
+            yieldfi!(template.next_error_false())
+        };
         let template = yieldfv!(template.csrf_token(session_clone.session().0));
-        let template = yieldfi!(template.next());
-        let template = yieldfv!(template.title(form.value.title.clone()));
         let template = yieldfi!(template.next());
         let template = if empty_title {
             let template = yieldfi!(template.next_title_error_true());
@@ -97,7 +108,7 @@ pub async fn create(
         } else {
             yieldfi!(template.next_title_error_false())
         };
-        let template = yieldfv!(template.description(form.value.description.clone()));
+        let template = yieldfv!(template.title(form.value.title.clone()));
         let template = yieldfi!(template.next());
         let template = if empty_description {
             let template = yieldfi!(template.next_description_error_true());
@@ -106,15 +117,14 @@ pub async fn create(
         } else {
             yieldfi!(template.next_description_error_false())
         };
+        let template = yieldfv!(template.description(form.value.description.clone()));
+        let template = yieldfi!(template.next());
+
         yieldfi!(template.next());
     };
     let stream = AsyncIteratorStream(result);
     Ok(Response::builder()
-        .status(if global_error.is_some() {
-            StatusCode::INTERNAL_SERVER_ERROR
-        } else {
-            StatusCode::OK
-        })
+        .status(status_code)
         .body(EitherBody::Right(StreamBody::new(stream)))
         .unwrap())
 }
