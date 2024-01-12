@@ -298,41 +298,60 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
     type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send + 'static;
 
     fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
-        async move {
-            let cookies = req
-                .headers()
-                .get_all(COOKIE)
-                .into_iter()
-                .filter_map(|value| value.to_str().ok())
-                .map(std::borrow::ToOwned::to_owned)
-                .flat_map(Cookie::split_parse)
-                .filter_map(std::result::Result::ok);
-            let mut jar = cookie::CookieJar::new();
-            for cookie in cookies {
-                jar.add_original(cookie);
-            }
+        // TODO FIXME only parse cookies when needed
+        let cookies = req
+            .headers()
+            .get_all(COOKIE)
+            .into_iter()
+            .filter_map(|value| value.to_str().ok())
+            .map(std::borrow::ToOwned::to_owned)
+            .flat_map(Cookie::split_parse)
+            .filter_map(std::result::Result::ok);
+        let mut jar = cookie::CookieJar::new();
+        for cookie in cookies {
+            jar.add_original(cookie);
+        }
 
-            let session = Session::new(jar);
+        let session = Session::new(jar);
 
-            println!("{} {}", req.method(), req.uri().path());
+        println!("{} {}", req.method(), req.uri().path());
 
-            Ok(match (req.method(), req.uri().path()) {
-                (&Method::GET, "/") => index(req, session)
-                    .await?
-                    .map(|body| EitherBody::Zero(EitherBody::Zero(EitherBody::Zero(body)))),
-                (&Method::GET, "/index.css") => indexcss(req)?
-                    .map(|body| EitherBody::Zero(EitherBody::Zero(EitherBody::One(body)))),
-                (&Method::GET, "/list") => list(self.pool, session)
-                    .await?
-                    .map(|body| EitherBody::Zero(EitherBody::One(EitherBody::Zero(body)))),
-                (&Method::GET, "/favicon.ico") => favicon_ico(req)?
-                    .map(|body| EitherBody::Zero(EitherBody::One(EitherBody::One(body)))),
-                (_, _) => {
-                    let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
-                    *not_found.status_mut() = StatusCode::NOT_FOUND;
-                    not_found.map(|body| EitherBody::One(body))
+        match (req.method(), req.uri().path()) {
+            (&Method::GET, "/") => {
+                async move {
+                    Ok(index(req, session)
+                        .await?
+                        .map(|body| EitherBody::Zero(EitherBody::Zero(EitherBody::Zero(body)))))
                 }
-            })
+            }
+            (&Method::GET, "/index.css") => {
+                async move {
+                    Ok(indexcss(req)?
+                        .map(|body| EitherBody::Zero(EitherBody::Zero(EitherBody::One(body)))))
+                }
+            }
+            (&Method::GET, "/list") => {
+                async move {
+                    Ok(list(self.pool, session)
+                        .await?
+                        .map(|body| EitherBody::Zero(EitherBody::One(EitherBody::Zero(body)))))
+                }
+            }
+            (&Method::GET, "/favicon.ico") => {
+                async move {
+                    Ok(favicon_ico(req)?
+                        .map(|body| EitherBody::Zero(EitherBody::One(EitherBody::One(body)))))
+                }
+            }
+            (_, _) => {
+                async move {
+                    Ok({
+                        let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
+                        *not_found.status_mut() = StatusCode::NOT_FOUND;
+                        not_found.map(|body| EitherBody::One(body))
+                    })
+                }
+            }
         }
     }
 }
