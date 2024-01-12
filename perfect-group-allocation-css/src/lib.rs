@@ -1,14 +1,37 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+use lightningcss::bundler::{Bundler, FileProvider};
+use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
+use lightningcss::targets::Targets;
+use parcel_sourcemap::SourceMap;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+static INDEX_CSS: OnceLock<String> = OnceLock::new();
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub fn initialize_index_css() {
+    // @import would produce a flash of unstyled content and also is less efficient
+    let fs = FileProvider::new();
+    let mut bundler = Bundler::new(&fs, None, ParserOptions::default());
+    // TODO FIXME project independent path
+    let stylesheet = bundler
+        .bundle(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../frontend/index.css"))
+        .map_err(|error| lightningcss::error::Error {
+            kind: error.kind.to_string(),
+            loc: error.loc,
+        })
+        .unwrap();
+    let mut source_map = SourceMap::new(".");
+
+    INDEX_CSS
+        .set(
+            stylesheet
+                .to_css(PrinterOptions {
+                    minify: true,
+                    source_map: Some(&mut source_map),
+                    project_root: None,
+                    targets: Targets::default(),
+                    analyze_dependencies: None,
+                    pseudo_classes: None,
+                })
+                .unwrap()
+                .code,
+        )
+        .unwrap();
 }
