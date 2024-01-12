@@ -200,6 +200,7 @@ async fn main() -> Result<(), AppError> {
 use headers::{Header, HeaderMapExt};
 
 use crate::routes::favicon::favicon_ico;
+use crate::routes::projects::create::create;
 use crate::routes::projects::list::list;
 
 pub trait ResponseTypedHeaderExt {
@@ -341,11 +342,19 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
                         .map(|body| EitherBody::Left(EitherBody::Right(EitherBody::Right(body)))))
                 })))
             }
-            (_, _) => Either::Right(async move {
+            (&Method::GET, "/create") => {
+                let pool = self.pool.clone();
+                Either::Right(Either::Left(async move {
+                    Ok(create(req, pool, session)
+                        .await?
+                        .map(|body| EitherBody::Right(EitherBody::Left(body))))
+                }))
+            }
+            (_, _) => Either::Right(Either::Right(async move {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found.map(|body| EitherBody::Right(body)))
-            }),
+                Ok(not_found.map(|body| EitherBody::Right(EitherBody::Right(body))))
+            })),
         }
     }
 }

@@ -9,7 +9,7 @@ use http_body::{Body, Frame};
 use http_body_util::StreamBody;
 use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
-use perfect_group_allocation_database::DatabaseConnection;
+use perfect_group_allocation_database::{DatabaseConnection, Pool};
 use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
@@ -20,9 +20,10 @@ use crate::session::Session;
 use crate::{yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm};
 
 pub async fn create(
-    DatabaseConnection(mut connection): DatabaseConnection,
-    session: Session,
-    form: CsrfSafeForm<CreateProjectPayload>,
+    request: hyper::Request<impl hyper::body::Body>,
+    pool: Pool,
+    session: Session, // TODO FIXME extract in here
+                      //form: CsrfSafeForm<CreateProjectPayload>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
     let session_clone = session.clone();
     let result = async gen move {
@@ -64,6 +65,8 @@ pub async fn create(
         if empty_title || empty_description {
             return;
         }
+
+        let connection = pool.get().await?;
 
         if let Err(error) = diesel::insert_into(project_history::table)
             .values(NewProject {
