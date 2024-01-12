@@ -1,0 +1,20 @@
+cargo-features = ["edition2024"]
+
+[package]
+name = "perfect-group-allocation-optimizer"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+good_lp = { default-features = false, version = "1", features = [ "coin_cbc" ] } # TOOD split out into separate crate
+
+[lints]
+workspace = true

@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "perfect-group-allocation-backend", "perfect-group-allocation-database", "perfect-group-allocation-e2e", "webdriver-bidi"
-, "determinism-hack"]
+, "determinism-hack", "perfect-group-allocation-openidconnect", "perfect-group-allocation-css", "perfect-group-allocation-solver", "perfect-group-allocation-optimizer"]
 exclude = [ "perfect-group-allocation-telemetry"]
 
 [workspace.package]

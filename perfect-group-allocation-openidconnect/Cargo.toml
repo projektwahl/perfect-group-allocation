@@ -1,0 +1,21 @@
+cargo-features = ["edition2024"]
+
+[package]
+name = "perfect-group-allocation-openidconnect"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+openidconnect = "3"
+oauth2 = "4"
+
+[lints]
+workspace = true
