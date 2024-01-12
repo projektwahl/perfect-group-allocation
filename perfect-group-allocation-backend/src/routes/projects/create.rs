@@ -4,7 +4,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use bytes::Bytes;
 use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;
-use http::header;
+use http::{header, Response, StatusCode};
+use http_body::{Body, Frame};
+use http_body_util::StreamBody;
 use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
 use perfect_group_allocation_database::DatabaseConnection;
@@ -12,8 +14,8 @@ use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
 
-use super::list::create_project;
 use crate::error::AppError;
+use crate::routes::create_project;
 use crate::session::Session;
 use crate::{CreateProjectPayload, CsrfSafeForm};
 
@@ -21,7 +23,7 @@ pub async fn create(
     DatabaseConnection(mut connection): DatabaseConnection,
     session: Session,
     form: CsrfSafeForm<CreateProjectPayload>,
-) -> (Session, impl IntoResponse) {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
     let session_clone = session.clone();
     let result = async gen move {
         let template = yieldoki!(create_project());
@@ -85,13 +87,16 @@ pub async fn create(
         //Ok(Redirect::to("/list").into_response())
     };
     let stream = AsyncIteratorStream(result).map(|elem| match elem {
-        Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
+        Err(app_error) => Ok(Frame::data(Bytes::from(format!(
             // TODO FIXME use template here
             "<h1>Error {}</h1>",
             &app_error.to_string()
-        ))),
-        Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-        Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
+        )))),
+        Ok(Cow::Owned(ok)) => Ok(Frame::data(Bytes::from(ok))),
+        Ok(Cow::Borrowed(ok)) => Ok(Frame::data(Bytes::from(ok))),
     });
-    (session, ([(header::CONTENT_TYPE, "text/html")], stream))
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .body(StreamBody::new(stream))
+        .unwrap())
 }

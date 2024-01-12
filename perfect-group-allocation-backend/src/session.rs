@@ -4,10 +4,11 @@ use chrono::{DateTime, Utc};
 use cookie::{Cookie, CookieJar, SameSite};
 use oauth2::{PkceCodeVerifier, RefreshToken};
 use openidconnect::{EndUserEmail, Nonce};
+use serde::Serialize;
 
 use crate::error::AppError;
 
-#[derive(miniserde::Serialize)]
+#[derive(Serialize)]
 pub struct SessionCookieStrings {
     email: String,
     expiration: String,
@@ -22,7 +23,7 @@ pub struct SessionCookie {
 }
 
 fn test_to_string(value: &(String, Option<SessionCookieStrings>)) -> String {
-    miniserde::json::to_string(value)
+    serde_json::to_string(value).unwrap()
 }
 
 #[derive(Clone)]

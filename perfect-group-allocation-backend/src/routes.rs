@@ -5,7 +5,7 @@ pub mod index;
 //pub mod indexcss;
 //pub mod openid_login;
 //pub mod openid_redirect;
-//pub mod projects;
+pub mod projects;
 
 #[template_stream("templates")]
 pub fn temporary() {}

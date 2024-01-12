@@ -41,13 +41,13 @@ pub async fn index(
     };
     let stream =
         AsyncIteratorStream(result).map(|elem: Result<Cow<'static, str>, AppError>| match elem {
-            Err(app_error) => Ok::<Frame<Bytes>, AppError>(Frame::data(Bytes::from(format!(
+            Err(app_error) => Ok(Frame::data(Bytes::from(format!(
                 // TODO FIXME use template here
                 "<h1>Error {}</h1>",
                 &app_error.to_string()
             )))),
-            Ok(Cow::Owned(ok)) => Ok::<Frame<Bytes>, AppError>(Frame::data(Bytes::from(ok))),
-            Ok(Cow::Borrowed(ok)) => Ok::<Frame<Bytes>, AppError>(Frame::data(Bytes::from(ok))),
+            Ok(Cow::Owned(ok)) => Ok(Frame::data(Bytes::from(ok))),
+            Ok(Cow::Borrowed(ok)) => Ok(Frame::data(Bytes::from(ok))),
         });
     Ok(Response::builder()
         .status(StatusCode::OK)
