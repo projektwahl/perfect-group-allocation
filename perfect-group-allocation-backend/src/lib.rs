@@ -256,7 +256,10 @@ macro_rules! yieldfv {
         let expr = $e;
         let value = expr.1;
         let ret = expr.0;
-        yield Ok(http_body::Frame::data(Bytes::from(value)));
+        yield Ok(http_body::Frame::data(match value {
+            Cow::Owned(v) => Bytes::from(v),
+            Cow::Borrowed(v) => Bytes::from(v),
+        }));
         ret
     }};
 }
@@ -327,9 +330,7 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
                 (_, _) => {
                     let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                     *not_found.status_mut() = StatusCode::NOT_FOUND;
-                    not_found.map(|body| {
-                        EitherBody::One(EitherBody::Zero(EitherBody::One(EitherBody::Zero(body))))
-                    })
+                    not_found.map(|body| EitherBody::One(body))
                 }
             })
         }

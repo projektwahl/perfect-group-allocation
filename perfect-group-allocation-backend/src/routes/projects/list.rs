@@ -63,9 +63,9 @@ async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>,
     while let Some(x) = stream.next().await {
         let inner_template = yieldfi!(template.next_enter_loop());
         let x = x.unwrap();
-        let inner_template = yieldfi!(inner_template.title(x.title));
+        let inner_template = yieldfv!(inner_template.title(x.title));
         let inner_template = yieldfi!(inner_template.next());
-        let inner_template = yieldfi!(inner_template.description(x.info));
+        let inner_template = yieldfv!(inner_template.description(x.info));
         template = yieldfi!(inner_template.next());
     }
     let template = yieldfi!(template.next_end_loop());
