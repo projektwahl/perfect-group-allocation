@@ -43,6 +43,7 @@ use perfect_group_allocation_database::{get_database_connection, Pool};
 use perfect_group_allocation_openidconnect::initialize_openid_client;
 use pin_project::pin_project;
 use routes::index::index;
+use routes::indexcss::indexcss;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
@@ -265,7 +266,10 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
             Ok(match (req.method(), req.uri().path()) {
                 (&Method::GET, "/") => index(req, session)
                     .await?
-                    .map(|body| EitherBody::Left(body)),
+                    .map(|body| EitherBody::Left(EitherBody::Left(body))),
+                (&Method::GET, "/index.css") => indexcss(req, session)
+                    .await?
+                    .map(|body| EitherBody::Left(EitherBody::Right(body))),
                 (_, _) => {
                     let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                     *not_found.status_mut() = StatusCode::NOT_FOUND;

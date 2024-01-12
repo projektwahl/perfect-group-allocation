@@ -35,6 +35,7 @@ thiserror = "1"
 once_cell = "1"
 chrono = "0.4"
 http = "1"
+headers = "0.4"
 zero-cost-templating = { git = "https://github.com/mohe2015/zero-cost-templating.git", branch = "work" }
 bytes = "1"
 pin-project = "1"

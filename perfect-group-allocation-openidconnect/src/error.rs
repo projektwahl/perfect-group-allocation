@@ -3,7 +3,7 @@ use oauth2::{RequestTokenError, StandardErrorResponse};
 use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 
 #[derive(thiserror::Error, Debug)]
-pub enum AppError {
+pub enum OpenIdConnectError {
     #[error("request token error: {0}")]
     RequestToken(
         #[from]

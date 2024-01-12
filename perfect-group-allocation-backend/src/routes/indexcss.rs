@@ -1,9 +1,17 @@
 use std::path::Path;
 use std::sync::OnceLock;
 
-use http::{header, StatusCode};
+use bytes::Bytes;
+use headers::{ETag, Header, IfNoneMatch};
+use http::header::{ETAG, IF_NONE_MATCH};
+use http::{header, Response, StatusCode};
+use http_body::Body;
+use http_body_util::{Empty, Full};
+use perfect_group_allocation_css::index_css;
 
+use crate::error::AppError;
 use crate::session::Session;
+use crate::EitherBody;
 
 // add watcher and then use websocket to hot reload on client?
 // or for dev simply enforce unbundled development where chrome directly modifies the files
@@ -11,24 +19,26 @@ use crate::session::Session;
 
 // Etag and cache busting
 pub async fn indexcss(
-    if_none_match: TypedHeader<headers::IfNoneMatch>,
+    request: hyper::Request<impl hyper::body::Body>,
     session: Session,
-) -> (Session, impl IntoResponse) {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
+    let if_none_match =
+        IfNoneMatch::decode(&mut request.headers().get_all(IF_NONE_MATCH).into_iter())?;
     let etag_string = "\"xyzzy\"";
-    let etag = etag_string.parse::<headers::ETag>().unwrap();
+    let etag = etag_string.parse::<ETag>().unwrap();
     if if_none_match.precondition_passes(&etag) {
-        (
-            session,
-            (
-                [
-                    (header::ETAG, etag_string),
-                    (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
-                ],
-                Css(INDEX_CSS.get().unwrap().as_str()),
-            )
-                .into_response(),
-        )
+        Ok(Response::builder()
+            .status(StatusCode::NOT_MODIFIED)
+            .header(header::ETAG, etag_string)
+            .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
+            .body(EitherBody::Left(Full::new(Bytes::from_static(
+                index_css!(),
+            ))))
+            .unwrap())
     } else {
-        (session, StatusCode::NOT_MODIFIED.into_response())
+        Ok(Response::builder()
+            .status(StatusCode::NOT_MODIFIED)
+            .body(EitherBody::Right(Empty::default()))
+            .unwrap())
     }
 }

@@ -19,7 +19,7 @@ pub use openidconnect::EndUserEmail;
 use openidconnect::{EmptyAdditionalClaims, IdTokenFields, IssuerUrl, Nonce};
 use serde::{Deserialize, Serialize};
 
-use crate::error::AppError;
+use crate::error::OpenIdConnectError;
 
 type OpenIdConnectClientType = openidconnect::Client<
     EmptyAdditionalClaims,
@@ -56,7 +56,8 @@ pub struct OpenIdSession {
     csrf_token: oauth2::CsrfToken,
 }
 
-pub static OPENID_CLIENT: OnceLock<Result<OpenIdConnectClientType, AppError>> = OnceLock::new();
+pub static OPENID_CLIENT: OnceLock<Result<OpenIdConnectClientType, OpenIdConnectError>> =
+    OnceLock::new();
 
 #[allow(unused)]
 pub async fn initialize_openid_client() {

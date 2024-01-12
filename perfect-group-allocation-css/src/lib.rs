@@ -34,6 +34,6 @@ pub fn index_css(_item: TokenStream) -> TokenStream {
         })
         .unwrap()
         .code;
-    let tree = TokenTree::Literal(proc_macro::Literal::string(&result));
+    let tree = TokenTree::Literal(proc_macro::Literal::byte_string(result.as_bytes()));
     tree.into()
 }

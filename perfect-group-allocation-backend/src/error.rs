@@ -4,22 +4,8 @@ use perfect_group_allocation_database::DatabaseError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
-    /*#[error("request token error: {0}")]
-    RequestToken(
-        #[from]
-        RequestTokenError<
-            oauth2::reqwest::Error<reqwest::Error>,
-            StandardErrorResponse<BasicErrorResponseType>,
-        >,
-    ),*/
-    //#[error("claims verification error: {0}")]
-    //ClaimsVerification(#[from] ClaimsVerificationError),
-    //#[error("openid signing error: {0}")]
-    //Signing(#[from] SigningError),
-    //#[error("oauth error: {0}")]
-    //Oauth2Parse(#[from] oauth2::url::ParseError),
-    //#[error("discovery error: {0}")]
-    //Discovery(#[from] DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>),
+    #[error("header error: {0}")]
+    Header(#[from] headers::Error),
     #[error("IO error: {0}")]
     File(#[from] std::io::Error),
     #[error("json error: {0}")]
