@@ -1,5 +1,6 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
+use hyper::service::Service as _;
 use hyper::Request;
 use perfect_group_allocation_backend::setup_server;
 

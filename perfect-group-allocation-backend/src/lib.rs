@@ -327,23 +327,24 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
                 Ok(indexcss(req)?
                     .map(|body| EitherBody::Left(EitherBody::Left(EitherBody::Right(body)))))
             }))),
-            (&Method::GET, "/list") => Either::Left(Either::Right(Either::Left(async move {
-                Ok(list(self.pool, session)
-                    .await?
-                    .map(|body| EitherBody::Left(EitherBody::Right(EitherBody::Left(body)))))
-            }))),
+            (&Method::GET, "/list") => {
+                let pool = self.pool.clone();
+                Either::Left(Either::Right(Either::Left(async move {
+                    Ok(list(pool, session)
+                        .await?
+                        .map(|body| EitherBody::Left(EitherBody::Right(EitherBody::Left(body)))))
+                })))
+            }
             (&Method::GET, "/favicon.ico") => {
-                Ok(Either::Left(Either::Right(Either::Right(async move {
-                    favicon_ico(req)?
-                        .map(|body| EitherBody::Left(EitherBody::Right(EitherBody::Right(body))))
-                }))))
+                Either::Left(Either::Right(Either::Right(async move {
+                    Ok(favicon_ico(req)?
+                        .map(|body| EitherBody::Left(EitherBody::Right(EitherBody::Right(body)))))
+                })))
             }
             (_, _) => Either::Right(async move {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(Either::Left(Either::Right(Either::Right(
-                    not_found.map(|body| EitherBody::Right(body)),
-                ))))
+                Ok(not_found.map(|body| EitherBody::Right(body)))
             }),
         }
     }
