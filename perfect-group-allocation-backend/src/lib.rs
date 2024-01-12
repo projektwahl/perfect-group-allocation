@@ -196,6 +196,21 @@ async fn main() -> Result<(), AppError> {
 }
 */
 
+use headers::{Header, HeaderMapExt};
+
+use crate::routes::favicon::favicon_ico;
+
+pub trait ResponseTypedHeaderExt {
+    fn typed_header<H: Header>(self, header: H) -> Self;
+}
+
+impl ResponseTypedHeaderExt for hyper::http::response::Builder {
+    fn typed_header<H: Header>(mut self, header: H) -> Self {
+        self.headers_mut().map(|res| res.typed_insert(header));
+        self
+    }
+}
+
 #[pin_project(project = EitherBodyProj)]
 pub enum EitherBody<
     LE: Into<AppError>,
@@ -203,8 +218,8 @@ pub enum EitherBody<
     L: http_body::Body<Data = Bytes, Error = LE>,
     R: http_body::Body<Data = Bytes, Error = RE>,
 > {
-    Left(#[pin] L),
-    Right(#[pin] R),
+    Zero(#[pin] L),
+    One(#[pin] R),
 }
 
 impl<
@@ -223,10 +238,10 @@ impl<
     ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
         let this = self.project();
         match this {
-            EitherBodyProj::Left(l) => l
+            EitherBodyProj::Zero(l) => l
                 .poll_frame(cx)
                 .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
-            EitherBodyProj::Right(r) => r
+            EitherBodyProj::One(r) => r
                 .poll_frame(cx)
                 .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
         }
@@ -263,17 +278,22 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
 
             let session = Session::new(jar);
 
+            println!("{} {}", req.method(), req.uri().path());
+
             Ok(match (req.method(), req.uri().path()) {
                 (&Method::GET, "/") => index(req, session)
                     .await?
-                    .map(|body| EitherBody::Left(EitherBody::Left(body))),
-                (&Method::GET, "/index.css") => indexcss(req, session)
-                    .await?
-                    .map(|body| EitherBody::Left(EitherBody::Right(body))),
+                    .map(|body| EitherBody::Zero(EitherBody::Zero(body))),
+                (&Method::GET, "/index.css") => {
+                    indexcss(req)?.map(|body| EitherBody::Zero(EitherBody::One(body)))
+                }
+                (&Method::GET, "/favicon.ico") => {
+                    favicon_ico(req)?.map(|body| EitherBody::One(EitherBody::Zero(body)))
+                }
                 (_, _) => {
                     let mut not_found = Response::new(Full::new(Bytes::from_static(b"hi")));
                     *not_found.status_mut() = StatusCode::NOT_FOUND;
-                    not_found.map(|body| EitherBody::Right(body))
+                    not_found.map(|body| EitherBody::One(EitherBody::One(body)))
                 }
             })
         }

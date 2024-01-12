@@ -1,8 +1,9 @@
 use std::path::Path;
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use bytes::Bytes;
-use headers::{ETag, Header, IfNoneMatch};
+use headers::{CacheControl, ContentType, ETag, Header, HeaderMapExt, IfNoneMatch};
 use http::header::{ETAG, IF_NONE_MATCH};
 use http::{header, Response, StatusCode};
 use http_body::Body;
@@ -11,34 +12,40 @@ use perfect_group_allocation_css::index_css;
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::EitherBody;
+use crate::{EitherBody, ResponseTypedHeaderExt as _};
 
 // add watcher and then use websocket to hot reload on client?
 // or for dev simply enforce unbundled development where chrome directly modifies the files
 // so maybe simply don't implement watcher at all
 
-// Etag and cache busting
-pub async fn indexcss(
+pub fn indexcss(
     request: hyper::Request<impl hyper::body::Body>,
-    session: Session,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
-    let if_none_match =
-        IfNoneMatch::decode(&mut request.headers().get_all(IF_NONE_MATCH).into_iter())?;
+    let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
     let etag_string = "\"xyzzy\"";
     let etag = etag_string.parse::<ETag>().unwrap();
-    if if_none_match.precondition_passes(&etag) {
+    if if_none_match
+        .map(|h| h.precondition_passes(&etag))
+        .unwrap_or(true)
+    {
         Ok(Response::builder()
-            .status(StatusCode::NOT_MODIFIED)
-            .header(header::ETAG, etag_string)
-            .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
-            .body(EitherBody::Left(Full::new(Bytes::from_static(
+            .status(StatusCode::OK)
+            .typed_header(ContentType::from(mime::TEXT_CSS_UTF_8))
+            .typed_header(etag)
+            .typed_header(
+                CacheControl::new()
+                    .with_immutable()
+                    .with_public()
+                    .with_max_age(Duration::from_secs(31_536_000)),
+            )
+            .body(EitherBody::Zero(Full::new(Bytes::from_static(
                 index_css!(),
             ))))
             .unwrap())
     } else {
         Ok(Response::builder()
             .status(StatusCode::NOT_MODIFIED)
-            .body(EitherBody::Right(Empty::default()))
+            .body(EitherBody::One(Empty::default()))
             .unwrap())
     }
 }

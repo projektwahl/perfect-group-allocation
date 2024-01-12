@@ -1,6 +1,6 @@
 use zero_cost_templating::template_stream;
 
-//pub mod favicon;
+pub mod favicon;
 pub mod index;
 pub mod indexcss;
 //pub mod openid_login;
