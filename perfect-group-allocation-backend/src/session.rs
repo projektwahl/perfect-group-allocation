@@ -78,7 +78,7 @@ impl Session {
             .http_only(true)
             .same_site(SameSite::Lax) // openid-redirect is a cross-site-redirect
             /*.secure(true) */;
-        self.private_cookies.clone().add(cookie);
+        self.private_cookies.add(cookie);
         (session_id, input)
     }
 
@@ -93,7 +93,7 @@ impl Session {
         .http_only(true)
         .same_site(SameSite::Lax) // needed because top level callback is cross-site
             /*.secure(true) */;
-        self.private_cookies.clone().add(cookie);
+        self.private_cookies.add(cookie);
         Ok(())
     }
 
@@ -114,7 +114,7 @@ impl Session {
             .http_only(true)
             .same_site(SameSite::Lax) // needed because top level callback is cross-site
             /*.secure(true) */;
-        self.private_cookies.clone().remove(cookie);
+        self.private_cookies.remove(cookie);
         Ok(return_value)
     }
 }
