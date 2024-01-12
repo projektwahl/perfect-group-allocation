@@ -341,7 +341,7 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
                         .map(|body| EitherBody::Left(EitherBody::Right(EitherBody::Right(body)))))
                 })))
             }
-            (&Method::GET, "/create") => {
+            (&Method::POST, "/") => {
                 let pool = self.pool.clone();
                 Either::Right(Either::Left(async move {
                     Ok(create(req, pool, session)
