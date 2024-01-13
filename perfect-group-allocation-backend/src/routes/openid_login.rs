@@ -1,4 +1,5 @@
 use perfect_group_allocation_database::DatabaseConnection;
+use perfect_group_allocation_openidconnect::begin_authentication;
 use serde::Deserialize;
 
 use crate::error::AppError;
@@ -21,14 +22,11 @@ pub async fn openid_login(
     mut session: Session,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<impl IntoResponse, AppError> {
-    let client = match OPENID_CLIENT.get().unwrap() {
-        Ok(client) => client,
-        Err(_error) => return Err(AppError::OpenIdNotConfigured),
-    };
-
     // TODO FIXME check csrf token?
 
-    session.set_openidconnect(&(&pkce_verifier, &nonce, &csrf_token))?;
+    let (auth_url, session) = begin_authentication().await?;
+
+    session.set_openidconnect(&session)?;
 
     Ok(Redirect::to(auth_url.as_str()).into_response())
 }
