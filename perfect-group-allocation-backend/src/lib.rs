@@ -542,9 +542,11 @@ pub async fn run_http2_server(
 
 static ALPN: &[u8] = b"h3";
 
-pub struct H3Body(h3::server::RequestStream<h3_quinn::RecvStream, bytes::Bytes>);
+pub struct H3Body<B: Buf + Send + 'static, S: h3::quic::RecvStream + 'static>(
+    h3::server::RequestStream<S, B>,
+);
 
-impl Body for H3Body {
+impl<B: Buf + Send + 'static, S: h3::quic::RecvStream + 'static> Body for H3Body<B, S> {
     type Error = h3::Error;
 
     type Data = impl Buf + Send + 'static;
@@ -599,7 +601,11 @@ const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 async fn handle_connection<B: Buf + Send + 'static, C: h3::quic::Connection<B>>(
     service: Svc<B>,
     connection: h3::server::Connection<C, B>,
-) {
+) where
+    C::BidiStream: h3::quic::BidiStream<B> + Send + 'static,
+    <<C as h3::quic::Connection<B>>::BidiStream as h3::quic::BidiStream<B>>::RecvStream:
+        std::marker::Send,
+{
     loop {
         match connection.accept().await {
             Ok(Some((req, stream))) => {
