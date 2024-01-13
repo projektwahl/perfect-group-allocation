@@ -1,8 +1,2 @@
 [build]
-rustflags = ["--cfg", "tokio_unstable", "-Zmacro-backtrace"]
-
-[profile.release]
-debug = true
-
-[profile.bench]
-debug = true
+rustflags = ["-C", "link-arg=-fuse-ld=mold", "--cfg", "tokio_unstable"]

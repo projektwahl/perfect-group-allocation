@@ -54,7 +54,7 @@ cookie = "0.18"
 sha2 = { version = "0.10", features = ["asm"] }
 log = { version = "0.4", features = ["release_max_level_off"] }
 tracing = { version = "0.1", features = ["release_max_level_off"] }
-#perfect-group-allocation-telemetry = { path = "../perfect-group-allocation-telemetry", optional = true }
+perfect-group-allocation-telemetry = { path = "../perfect-group-allocation-telemetry" }
 perfect-group-allocation-database = { path = "../perfect-group-allocation-database" }
 perfect-group-allocation-openidconnect = { path = "../perfect-group-allocation-openidconnect" }
 perfect-group-allocation-css = { path = "../perfect-group-allocation-css" }
