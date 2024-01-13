@@ -542,11 +542,9 @@ pub async fn run_http2_server(
 
 static ALPN: &[u8] = b"h3";
 
-pub struct H3Body<B: Buf + Send + 'static, S: h3::quic::RecvStream + 'static>(
-    h3::server::RequestStream<S, B>,
-);
+pub struct H3Body<S: h3::quic::RecvStream + 'static>(h3::server::RequestStream<S, Bytes>);
 
-impl<B: Buf + Send + 'static, S: h3::quic::RecvStream + 'static> Body for H3Body<B, S> {
+impl<S: h3::quic::RecvStream + 'static> Body for H3Body<S> {
     type Error = h3::Error;
 
     type Data = impl Buf + Send + 'static;
@@ -598,13 +596,11 @@ const KEY_PATH: &str = ".lego/certificates/h3.selfmade4u.de.key";
 const PORT: u16 = 443;
 const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 
-async fn handle_connection<B: Buf + Send + 'static, C: h3::quic::Connection<B>>(
+async fn handle_connection<B: Buf + Send + 'static, C: h3::quic::Connection<Bytes>>(
     service: Svc<B>,
-    connection: h3::server::Connection<C, B>,
+    connection: h3::server::Connection<C, Bytes>,
 ) where
-    C::BidiStream: h3::quic::BidiStream<B> + Send + 'static,
-    <<C as h3::quic::Connection<B>>::BidiStream as h3::quic::BidiStream<B>>::RecvStream:
-        std::marker::Send,
+    C::BidiStream: h3::quic::BidiStream<Bytes> + Send + 'static,
 {
     loop {
         match connection.accept().await {
