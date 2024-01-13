@@ -10,9 +10,11 @@ use http_body_util::{Empty, Full};
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{EitherBody, ResponseTypedHeaderExt as _};
+use crate::{either_http_body, ResponseTypedHeaderExt as _};
 
 static FAVICON_ICO: &[u8] = include_bytes!("../../../frontend/favicon.ico");
+
+either_http_body!(EitherBody 1 2);
 
 // Etag and cache busting
 pub fn favicon_ico(
@@ -35,12 +37,14 @@ pub fn favicon_ico(
                     .with_public()
                     .with_max_age(Duration::from_secs(31_536_000)),
             )
-            .body(EitherBody::Left(Full::new(Bytes::from_static(FAVICON_ICO))))
+            .body(EitherBody::Option1(Full::new(Bytes::from_static(
+                FAVICON_ICO,
+            ))))
             .unwrap())
     } else {
         Ok(Response::builder()
             .status(StatusCode::NOT_MODIFIED)
-            .body(EitherBody::Right(Empty::default()))
+            .body(EitherBody::Option2(Empty::default()))
             .unwrap())
     }
 }

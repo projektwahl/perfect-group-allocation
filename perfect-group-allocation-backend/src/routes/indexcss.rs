@@ -12,11 +12,13 @@ use perfect_group_allocation_css::index_css;
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{EitherBody, ResponseTypedHeaderExt as _};
+use crate::{either_http_body, ResponseTypedHeaderExt as _};
 
 // add watcher and then use websocket to hot reload on client?
 // or for dev simply enforce unbundled development where chrome directly modifies the files
 // so maybe simply don't implement watcher at all
+
+either_http_body!(EitherBody 1 2);
 
 pub fn indexcss(
     request: hyper::Request<hyper::body::Incoming>,
@@ -38,14 +40,14 @@ pub fn indexcss(
                     .with_public()
                     .with_max_age(Duration::from_secs(31_536_000)),
             )
-            .body(EitherBody::Left(Full::new(Bytes::from_static(
+            .body(EitherBody::Option1(Full::new(Bytes::from_static(
                 index_css!().0,
             ))))
             .unwrap())
     } else {
         Ok(Response::builder()
             .status(StatusCode::NOT_MODIFIED)
-            .body(EitherBody::Right(Empty::default()))
+            .body(EitherBody::Option2(Empty::default()))
             .unwrap())
     }
 }

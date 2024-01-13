@@ -18,7 +18,7 @@ use zero_cost_templating::{yieldoki, yieldokv, Unsafe};
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{yieldfi, yieldfv, CsrfSafeForm, ResponseTypedHeaderExt};
+use crate::{either_http_body, yieldfi, yieldfv, CsrfSafeForm, ResponseTypedHeaderExt};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -28,6 +28,8 @@ pub struct OpenIdRedirectErrorTemplate {
     error: String,
     error_description: String,
 }
+
+either_http_body!(EitherBody 1 2);
 
 #[expect(
     clippy::disallowed_types,
@@ -87,7 +89,7 @@ pub async fn openid_redirect(
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .typed_header(ContentType::html())
-                .body(EitherBody::Left(StreamBody::new(stream)))
+                .body(EitherBody::Option1(StreamBody::new(stream)))
                 .unwrap())
         }
         OpenIdRedirectInner::Success(ok) => {
@@ -105,7 +107,7 @@ pub async fn openid_redirect(
             Ok(Response::builder()
                 .status(StatusCode::TEMPORARY_REDIRECT)
                 .header(LOCATION, "/list")
-                .body(EitherBody::Right(
+                .body(EitherBody::Option2(
                     Empty::new().map_err::<_, AppError>(|err| match err {}),
                 ))
                 .unwrap())

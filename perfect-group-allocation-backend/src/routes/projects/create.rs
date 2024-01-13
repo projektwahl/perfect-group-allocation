@@ -20,8 +20,10 @@ use crate::error::AppError;
 use crate::routes::create_project;
 use crate::session::Session;
 use crate::{
-    yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, EitherBody, ResponseTypedHeaderExt,
+    either_http_body, yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt,
 };
+
+either_http_body!(EitherBody 1 2);
 
 pub async fn create(
     request: hyper::Request<hyper::body::Incoming>,
@@ -62,7 +64,7 @@ pub async fn create(
                     } else {
                         StatusCode::OK
                     })
-                    .body(EitherBody::Left(
+                    .body(EitherBody::Option1(
                         Empty::new().map_err::<_, AppError>(|err| match err {}),
                     ))
                     .unwrap());
@@ -129,6 +131,6 @@ pub async fn create(
     Ok(Response::builder()
         .status(status_code)
         .typed_header(ContentType::html())
-        .body(EitherBody::Right(StreamBody::new(stream)))
+        .body(EitherBody::Option2(StreamBody::new(stream)))
         .unwrap())
 }
