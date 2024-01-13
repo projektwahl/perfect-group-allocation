@@ -40,6 +40,7 @@ use hyper::body::Incoming;
 use hyper::service::{service_fn, Service};
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
+use itertools::Itertools;
 use perfect_group_allocation_database::{get_database_connection, Pool};
 use pin_project::pin_project;
 use routes::index::index;
@@ -412,7 +413,7 @@ pub async fn run_server(
 
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
 
-    let (cert, key) = load_certs().await?;
+    let (certs, key) = load_certs_key_pair()?;
 
     let incoming = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8443))
         .await
@@ -421,7 +422,7 @@ pub async fn run_server(
     let mut server_config = ServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth()
-        .with_single_cert(vec![cert], key)?;
+        .with_single_cert(certs, key)?;
     server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
 
     let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
@@ -527,11 +528,34 @@ impl Body for H3Body {
     }
 }
 
-pub async fn load_certs() -> Result<(Certificate, PrivateKey), AppError> {
-    let cert = Certificate(tokio::fs::read("examples/server.cert").await?);
-    let key = PrivateKey(tokio::fs::read("examples/server.key").await?);
+fn load_certs(filename: &str) -> std::io::Result<Vec<Certificate>> {
+    // TODO FIXME async
+    // Open certificate file.
+    let certfile = std::fs::File::open(filename)?;
+    let mut reader = std::io::BufReader::new(certfile);
 
-    Ok((cert, key))
+    // Load and return certificate.
+    let certs = rustls_pemfile::certs(&mut reader)?;
+    Ok(certs.into_iter().map(Certificate).collect())
+}
+
+// Load private key from file.
+fn load_private_key(filename: &str) -> std::io::Result<PrivateKey> {
+    // Open keyfile.
+    let keyfile = std::fs::File::open(filename)?;
+    let mut reader = std::io::BufReader::new(keyfile);
+
+    // Load and return a single private key.
+    let keys = rustls_pemfile::pkcs8_private_keys(&mut reader)?;
+
+    Ok(PrivateKey(keys[0].clone()))
+}
+
+pub fn load_certs_key_pair() -> Result<(Vec<Certificate>, PrivateKey), AppError> {
+    let certs = load_certs("./localhost.pem")?;
+    let key = load_private_key("./localhost-key.pem")?;
+
+    Ok((certs, key))
 }
 
 pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::error::Error>> {
@@ -540,7 +564,7 @@ pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::e
 
     let listen = std::net::SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8443));
 
-    let (cert, key) = load_certs().await?;
+    let (certs, key) = load_certs_key_pair()?;
 
     let mut tls_config = ServerConfig::builder()
         .with_safe_default_cipher_suites()
@@ -548,7 +572,7 @@ pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::e
         .with_protocol_versions(&[&TLS13])
         .unwrap()
         .with_no_client_auth()
-        .with_single_cert(vec![cert], key)?;
+        .with_single_cert(certs, key)?;
 
     tls_config.max_early_data_size = u32::MAX;
     tls_config.alpn_protocols = vec![ALPN.into()];

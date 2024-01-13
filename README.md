@@ -17,6 +17,9 @@ cargo test
 ## Dev
 
 ```bash
+mkcert -install
+mkcert localhost
+
 sudo nano /etc/sysctl.conf
 vm.max_map_count=262144
 sudo sysctl -p
