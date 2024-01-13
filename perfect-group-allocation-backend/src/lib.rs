@@ -675,6 +675,8 @@ pub async fn run_http3_server(
 
 #[allow(clippy::redundant_pub_crate)]
 async fn shutdown_signal() {
+    std::future::pending::<()>().await;
+    /*
     // check which of these two signals we need
     let ctrl_c = async {
         tokio::signal::ctrl_c()
@@ -692,5 +694,5 @@ async fn shutdown_signal() {
     tokio::select! {
         () = ctrl_c => {},
         () = terminate => {},
-    }
+    }*/
 }
