@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use headers::ContentType;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
@@ -31,7 +31,7 @@ either_http_body!(EitherBody 1 2);
 
 pub async fn openid_redirect(
     request: hyper::Request<
-        impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+        impl http_body::Body<Data = impl Buf, Error = hyper::Error> + Send + 'static,
     >,
     mut session: Session, // what if this here could be a reference?
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {

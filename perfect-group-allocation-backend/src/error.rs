@@ -23,6 +23,8 @@ pub enum AppError {
     Json(#[from] serde_json::Error),
     #[error("webserver error: {0}")]
     Hyper(#[from] hyper::Error),
+    #[error("webserver h3 error: {0}")]
+    H3(#[from] h3::Error),
     #[error("unknown error: {0}")]
     Other(#[from] anyhow::Error),
     #[error("env var error: {0}")]

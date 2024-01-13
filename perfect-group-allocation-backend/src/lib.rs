@@ -25,27 +25,31 @@ use core::convert::Infallible;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use cookie::Cookie;
 use error::AppError;
 use futures_util::{pin_mut, Future, FutureExt};
+use h3::error::ErrorLevel;
 use http::header::COOKIE;
 use http::{Request, Response, StatusCode};
-use http_body::Body;
+use http_body::{Body, Frame};
 use http_body_util::{BodyExt, Full, Limited};
-use hyper::service::Service;
+use hyper::body::Incoming;
+use hyper::service::{service_fn, Service};
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use perfect_group_allocation_database::{get_database_connection, Pool};
+use pin_project::pin_project;
 use routes::index::index;
 use routes::indexcss::indexcss;
+use rustls::{Certificate, PrivateKey};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::watch;
-use tracing::{error, info, warn};
+use tracing::{error, info, trace_span, warn};
 
 pub trait CsrfSafeExtractor {}
 
@@ -95,7 +99,7 @@ where
 {
     async fn from_request(
         request: hyper::Request<
-            impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+            impl http_body::Body<Data = impl Buf, Error = AppError> + Send + 'static,
         >,
         session: Session,
     ) -> Result<Self, AppError> {
@@ -261,8 +265,10 @@ pub struct Svc {
 either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 8);
 either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
 
-impl<RequestBody: http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static>
-    Service<Request<RequestBody>> for Svc
+impl<
+    B: Buf + Send + 'static,
+    RequestBody: http_body::Body<Data = B, Error = AppError> + Send + 'static,
+> Service<Request<RequestBody>> for Svc
 {
     type Error = Infallible;
     type Response = Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send>;
@@ -420,7 +426,7 @@ pub async fn run_server(
 
                     let fut = async move {
                         let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
-                        let connection = builder.serve_connection_with_upgrades(socket, service);
+                        let connection = builder.serve_connection_with_upgrades(socket, service_fn(|req| service.call(req.map(|body: Incoming| body.map_err(|e| AppError::from(e))))));
                         pin_mut!(connection);
 
                         loop {
@@ -464,6 +470,113 @@ pub async fn run_server(
         }
         Ok(())
     })
+}
+
+static ALPN: &[u8] = b"h3";
+
+#[pin_project]
+pub struct H3Body<B: Buf, F: Future<Output = Result<Option<B>, h3::Error>>>(#[pin] F);
+
+impl<B: Buf, F: Future<Output = Result<Option<B>, h3::Error>>> Body for H3Body<B, F> {
+    type Data = Bytes;
+    type Error = h3::Error;
+
+    fn poll_frame(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+        let this = self.project();
+        this.0
+            .poll(cx)
+            .map(|v| v.transpose().map(|v| v.map(|v| Frame::data(v))))
+    }
+}
+
+pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::error::Error>> {
+    // TODO FIXME don't do this twice in h2 and h3
+    let service = setup_server(&database_url).await?;
+
+    let listen = std::net::SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000));
+
+    // TODO FIXME make nonblocking
+    let cert = Certificate(tokio::fs::read("examples/server.cert").await?);
+    let key = PrivateKey(tokio::fs::read("examples/server.key").await?);
+
+    let mut tls_config = rustls::ServerConfig::builder()
+        .with_safe_default_cipher_suites()
+        .with_safe_default_kx_groups()
+        .with_protocol_versions(&[&rustls::version::TLS13])
+        .unwrap()
+        .with_no_client_auth()
+        .with_single_cert(vec![cert], key)?;
+
+    tls_config.max_early_data_size = u32::MAX;
+    tls_config.alpn_protocols = vec![ALPN.into()];
+
+    let server_config = quinn::ServerConfig::with_crypto(Arc::new(tls_config));
+    let endpoint = quinn::Endpoint::server(server_config, listen)?;
+
+    info!("listening on {}", listen);
+
+    // handle incoming connections and requests
+
+    while let Some(new_conn) = endpoint.accept().await {
+        trace_span!("New connection being attempted");
+
+        let service = service.clone();
+
+        tokio::spawn(async move {
+            match new_conn.await {
+                Ok(conn) => {
+                    info!("new connection established");
+
+                    let mut h3_conn = h3::server::Connection::new(h3_quinn::Connection::new(conn))
+                        .await
+                        .unwrap();
+
+                    loop {
+                        match h3_conn.accept().await {
+                            Ok(Some((req, stream))) => {
+                                info!("new request: {:#?}", req);
+
+                                let service = service.clone();
+
+                                tokio::spawn(async move {
+                                    let (response_body, request_body) = stream.split();
+                                    let request = req.map(|_| H3Body(request_body.recv_data()));
+                                    let response = service.call(
+                                        request.map(|body| body.map_err(|e| AppError::from(e))),
+                                    );
+                                });
+                            }
+
+                            // indicating no more streams to be received
+                            Ok(None) => {
+                                break;
+                            }
+
+                            Err(err) => {
+                                error!("error on accept {}", err);
+                                match err.get_error_level() {
+                                    ErrorLevel::ConnectionError => break,
+                                    ErrorLevel::StreamError => continue,
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(err) => {
+                    error!("accepting connection failed: {:?}", err);
+                }
+            }
+        });
+    }
+
+    // shut down gracefully
+    // wait for connections to be closed before exiting
+    endpoint.wait_idle().await;
+
+    Ok(())
 }
 
 #[allow(clippy::redundant_pub_crate)]

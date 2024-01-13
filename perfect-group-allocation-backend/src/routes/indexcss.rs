@@ -1,13 +1,14 @@
 use std::convert::Infallible;
 use std::time::Duration;
 
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use headers::{CacheControl, ContentType, ETag, HeaderMapExt, IfNoneMatch};
 use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::{Empty, Full};
 use perfect_group_allocation_css::index_css;
 
+use crate::error::AppError;
 use crate::{either_http_body, ResponseTypedHeaderExt as _};
 
 // add watcher and then use websocket to hot reload on client?
@@ -19,7 +20,7 @@ either_http_body!(EitherBody 1 2);
 #[expect(clippy::needless_pass_by_value)]
 pub fn indexcss(
     request: hyper::Request<
-        impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+        impl http_body::Body<Data = impl Buf, Error = impl Into<AppError>> + Send + 'static,
     >,
 ) -> hyper::Response<impl Body<Data = Bytes, Error = Infallible>> {
     let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
