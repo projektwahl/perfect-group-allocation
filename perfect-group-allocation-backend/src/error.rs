@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 
 use perfect_group_allocation_database::DatabaseError;
+use perfect_group_allocation_openidconnect::error::OpenIdConnectError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
@@ -36,6 +37,8 @@ pub enum AppError {
          response?"
     )]
     SessionStillHeld,
+    #[error("openid connect error: {0}")]
+    OpenIdConnect(#[from] OpenIdConnectError),
     #[error(
         "Höchstwahrscheinlich ist deine Anmeldesession abgelaufen und du musst es erneut \
          versuchen. Wenn dies wieder auftritt, melde das Problem bitte an einen \

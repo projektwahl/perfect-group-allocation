@@ -1,3 +1,5 @@
+use bytes::Bytes;
+use http_body::Body;
 use perfect_group_allocation_database::DatabaseConnection;
 use perfect_group_allocation_openidconnect::begin_authentication;
 use serde::Deserialize;
@@ -21,12 +23,12 @@ pub async fn openid_login(
     DatabaseConnection(_db): DatabaseConnection,
     mut session: Session,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
     // TODO FIXME check csrf token?
 
-    let (auth_url, session) = begin_authentication().await?;
+    let (auth_url, openid_session) = begin_authentication().await?;
 
-    session.set_openidconnect(&session)?;
+    session.set_openidconnect(&openid_session)?;
 
     Ok(Redirect::to(auth_url.as_str()).into_response())
 }

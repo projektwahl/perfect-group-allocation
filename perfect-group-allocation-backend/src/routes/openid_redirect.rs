@@ -4,7 +4,10 @@ use anyhow::anyhow;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;
-use perfect_group_allocation_openidconnect::OpenIdRedirect;
+use http_body::Body;
+use perfect_group_allocation_openidconnect::{
+    finish_authentication, OpenIdRedirect, OpenIdRedirectInner,
+};
 use serde::{Deserialize, Serialize};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
@@ -29,7 +32,7 @@ pub struct OpenIdRedirectErrorTemplate {
 pub async fn openid_redirect(
     mut session: Session, // what if this here could be a reference?
     form: axum::Form<OpenIdRedirect>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
     let session_ref = &mut session;
     // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
     // TODO FIXME errors also need to return the session?
