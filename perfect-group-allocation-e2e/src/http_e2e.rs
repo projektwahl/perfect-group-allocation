@@ -39,7 +39,7 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
 
 use std::future::Future;
 
-use perfect_group_allocation_backend::run_server;
+use perfect_group_allocation_backend::{run_http2_server, setup_http2_http3_server};
 
 // podman run --rm --detach --name postgres-testing --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
 
@@ -54,9 +54,10 @@ pub async fn test_as_client(repeat: u64) {
 }
 
 pub async fn test_server() -> impl Future<Output = ()> {
-    let fut = run_server("postgres://postgres@localhost/pga?sslmode=disable".to_owned())
-        .await
-        .unwrap();
+    let fut =
+        setup_http2_http3_server("postgres://postgres@localhost/pga?sslmode=disable".to_owned())
+            .await
+            .unwrap();
     async move {
         fut.await.unwrap();
     }

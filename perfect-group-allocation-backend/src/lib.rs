@@ -49,8 +49,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use tokio::net::TcpListener;
-use tokio::select;
 use tokio::sync::watch;
+use tokio::{join, select};
 use tokio_rustls::rustls::version::TLS13;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
@@ -404,16 +404,42 @@ pub fn setup_server<B: Buf + Send + 'static>(
 
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 
-/// Outer future returns when server started listening. Inner future returns when server stopped.
-#[allow(clippy::cognitive_complexity)]
-pub async fn run_server(
+pub async fn setup_http2_http3_server(
     database_url: String,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let service = setup_server(&database_url)?;
-
-    // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
-
     let (certs, key) = load_certs_key_pair()?;
+
+    // needs a service that accepts some non-controllable impl Buf
+    let http3_server = run_http3_server(database_url.clone(), certs.clone(), key.clone()).await?;
+    // needs a service that accepts Bytes, therefore we to create separate services
+    let http2_server = run_http2_server(database_url, certs, key).await?;
+
+    #[allow(clippy::redundant_pub_crate)]
+    Ok(async move {
+        let mut http2_server = tokio::spawn(http2_server);
+        let mut http3_server = tokio::spawn(http3_server);
+        select! {
+            http2_result = &mut http2_server => {
+                http2_result??;
+                http3_server.await?
+            }
+            http3_result = &mut http3_server => {
+                http3_result??;
+                http2_server.await?
+            }
+        }
+    })
+}
+
+/// Outer future returns when server started listening. Inner future returns when server stopped.
+#[allow(clippy::cognitive_complexity)]
+pub async fn run_http2_server(
+    database_url: String,
+    certs: Vec<Certificate>,
+    key: PrivateKey,
+) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
+    // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
+    let service = setup_server(&database_url)?;
 
     let incoming = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8443))
         .await
@@ -558,13 +584,14 @@ pub fn load_certs_key_pair() -> Result<(Vec<Certificate>, PrivateKey), AppError>
     Ok((certs, key))
 }
 
-pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::error::Error>> {
-    // TODO FIXME don't do this twice in h2 and h3
+pub async fn run_http3_server(
+    database_url: String,
+    certs: Vec<Certificate>,
+    key: PrivateKey,
+) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let service = setup_server(&database_url)?;
 
     let listen = std::net::SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8443));
-
-    let (certs, key) = load_certs_key_pair()?;
 
     let mut tls_config = ServerConfig::builder()
         .with_safe_default_cipher_suites()
@@ -582,66 +609,68 @@ pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::e
 
     info!("listening on {}", listen);
 
-    // handle incoming connections and requests
+    Ok(async move {
+        // handle incoming connections and requests
 
-    while let Some(new_conn) = endpoint.accept().await {
-        trace_span!("New connection being attempted");
+        while let Some(new_conn) = endpoint.accept().await {
+            trace_span!("New connection being attempted");
 
-        let service = service.clone();
+            let service = service.clone();
 
-        tokio::spawn(async move {
-            match new_conn.await {
-                Ok(conn) => {
-                    info!("new connection established");
+            tokio::spawn(async move {
+                match new_conn.await {
+                    Ok(conn) => {
+                        info!("new connection established");
 
-                    let mut h3_conn: h3::server::Connection<h3_quinn::Connection, Bytes> =
-                        h3::server::Connection::new(h3_quinn::Connection::new(conn))
-                            .await
-                            .unwrap();
+                        let mut h3_conn: h3::server::Connection<h3_quinn::Connection, Bytes> =
+                            h3::server::Connection::new(h3_quinn::Connection::new(conn))
+                                .await
+                                .unwrap();
 
-                    loop {
-                        match h3_conn.accept().await {
-                            Ok(Some((req, stream))) => {
-                                info!("new request: {:#?}", req);
+                        loop {
+                            match h3_conn.accept().await {
+                                Ok(Some((req, stream))) => {
+                                    info!("new request: {:#?}", req);
 
-                                let service = service.clone();
+                                    let service = service.clone();
 
-                                tokio::spawn(async move {
-                                    let (response_body, mut request_body) = stream.split();
-                                    let request = req.map(|_| H3Body(request_body));
-                                    let response = service.call(
-                                        request.map(|body| body.map_err(|e| AppError::from(e))),
-                                    );
-                                });
-                            }
+                                    tokio::spawn(async move {
+                                        let (response_body, mut request_body) = stream.split();
+                                        let request = req.map(|_| H3Body(request_body));
+                                        let response = service.call(
+                                            request.map(|body| body.map_err(|e| AppError::from(e))),
+                                        );
+                                    });
+                                }
 
-                            // indicating no more streams to be received
-                            Ok(None) => {
-                                break;
-                            }
+                                // indicating no more streams to be received
+                                Ok(None) => {
+                                    break;
+                                }
 
-                            Err(err) => {
-                                error!("error on accept {}", err);
-                                match err.get_error_level() {
-                                    ErrorLevel::ConnectionError => break,
-                                    ErrorLevel::StreamError => continue,
+                                Err(err) => {
+                                    error!("error on accept {}", err);
+                                    match err.get_error_level() {
+                                        ErrorLevel::ConnectionError => break,
+                                        ErrorLevel::StreamError => continue,
+                                    }
                                 }
                             }
                         }
                     }
+                    Err(err) => {
+                        error!("accepting connection failed: {:?}", err);
+                    }
                 }
-                Err(err) => {
-                    error!("accepting connection failed: {:?}", err);
-                }
-            }
-        });
-    }
+            });
+        }
 
-    // shut down gracefully
-    // wait for connections to be closed before exiting
-    endpoint.wait_idle().await;
+        // shut down gracefully
+        // wait for connections to be closed before exiting
+        endpoint.wait_idle().await;
 
-    Ok(())
+        Ok(())
+    })
 }
 
 #[allow(clippy::redundant_pub_crate)]
