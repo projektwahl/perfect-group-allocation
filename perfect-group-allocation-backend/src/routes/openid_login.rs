@@ -24,7 +24,6 @@ impl CsrfToken for OpenIdLoginPayload {
 }
 
 pub async fn openid_login(
-    DatabaseConnection(_db): DatabaseConnection,
     mut session: Session,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {

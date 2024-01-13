@@ -260,6 +260,7 @@ struct Svc {
 }
 
 either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7);
+either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
 
 impl Service<Request<hyper::body::Incoming>> for Svc {
     type Error = AppError;
@@ -287,47 +288,43 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
         println!("{} {}", req.method(), req.uri().path());
 
         match (req.method(), req.uri().path()) {
-            (&Method::GET, "/") => Either::Left(Either::Left(Either::Left(async move {
+            (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
                 Ok(index(req, session)
                     .await?
                     .map(|body| EitherBodyRouter::Option1(body)))
-            }))),
-            (&Method::GET, "/index.css") => Either::Left(Either::Left(Either::Right(async move {
+            }),
+            (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
                 Ok(indexcss(req)?.map(|body| EitherBodyRouter::Option2(body)))
-            }))),
+            }),
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
-                Either::Left(Either::Right(Either::Left(async move {
+                EitherFutureRouter::Option3(async move {
                     Ok(list(pool, session)
                         .await?
                         .map(|body| EitherBodyRouter::Option3(body)))
-                })))
+                })
             }
-            (&Method::GET, "/favicon.ico") => {
-                Either::Left(Either::Right(Either::Right(async move {
-                    Ok(favicon_ico(req)?.map(|body| EitherBodyRouter::Option4(body)))
-                })))
-            }
+            (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
+                Ok(favicon_ico(req)?.map(|body| EitherBodyRouter::Option4(body)))
+            }),
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
-                Either::Right(Either::Left(Either::Right(async move {
+                EitherFutureRouter::Option5(async move {
                     Ok(create(req, pool, session)
                         .await?
                         .map(|body| EitherBodyRouter::Option5(body)))
-                })))
+                })
             }
-            (&Method::GET, "/openidconnect-login") => {
-                Either::Right(Either::Left(Either::Right(async move {
-                    Ok(openid_login(req, pool, session)
-                        .await?
-                        .map(|body| EitherBodyRouter::Option6(body)))
-                })))
-            }
-            (_, _) => Either::Right(Either::Right(async move {
+            (&Method::GET, "/openidconnect-login") => EitherFutureRouter::Option6(async move {
+                Ok(openid_login(session)
+                    .await?
+                    .map(|body| EitherBodyRouter::Option6(body)))
+            }),
+            (_, _) => EitherFutureRouter::Option7(async move {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
                 Ok(not_found.map(|body| EitherBodyRouter::Option7(body)))
-            })),
+            }),
         }
     }
 }

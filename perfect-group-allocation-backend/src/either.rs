@@ -35,3 +35,38 @@ macro_rules! either_http_body {
         }
     };
 }
+
+#[macro_export]
+macro_rules! either_future {
+    ($name: ident $($ident:literal)*) => {
+        ::paste::paste! {
+            #[::pin_project::pin_project(project = [<$name Proj>])]
+            enum $name<
+                Output,
+                $([<Option $ident>]: ::core::future::Future<Output = Output>,)*
+            > {
+                $([<Option $ident>](#[pin] [<Option $ident>]),)*
+            }
+
+            impl<
+                Output,
+                $([<Option $ident>]: ::core::future::Future<Output = Output>,)*
+            > ::core::future::Future for $name<Output, $([<Option $ident>],)*>
+            {
+                type Output = Output;
+
+                fn poll(
+                    self: ::core::pin::Pin<&mut Self>,
+                    cx: &mut ::std::task::Context<'_>
+                ) -> ::std::task::Poll<Self::Output> {
+                    let this = self.project();
+                    match this {
+                        $(
+                            [<$name Proj>]::[<Option $ident>](option) => option.poll(cx),
+                        )*
+                    }
+                }
+            }
+        }
+    };
+}
