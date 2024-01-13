@@ -33,6 +33,7 @@ use cookie::Cookie;
 use error::AppError;
 use futures_util::{pin_mut, Future, FutureExt, StreamExt, TryFutureExt};
 use h3::error::{Code, ErrorLevel};
+use h3::quic::RecvStream;
 use http::header::{ALT_SVC, COOKIE};
 use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use http_body::{Body, Frame};
@@ -596,11 +597,13 @@ const KEY_PATH: &str = ".lego/certificates/h3.selfmade4u.de.key";
 const PORT: u16 = 443;
 const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 
-async fn handle_connection<B: Buf + Send + 'static, C: h3::quic::Connection<Bytes>>(
-    service: Svc<B>,
+async fn handle_connection<B: Buf + Send + 'static, C: h3::quic::Connection<Bytes>, MyRecvStream: RecvStream<Buf = B>>(
+service: Svc<B>, // the service needs to use the same impl buf that recvstream decided to use
     connection: h3::server::Connection<C, Bytes>,
 ) where
-    C::BidiStream: h3::quic::BidiStream<Bytes> + Send + 'static,
+// the RecvStream uses impl Buf
+    C::BidiStream: h3::quic::BidiStream<Bytes, RecvStream = MyRecvStream> + Send + 'static,
+    <<C as h3::quic::Connection<bytes::Bytes>>::BidiStream as h3::quic::BidiStream<bytes::Bytes>>::RecvStream: std::marker::Send,
 {
     loop {
         match connection.accept().await {
