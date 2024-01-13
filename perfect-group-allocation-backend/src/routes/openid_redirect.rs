@@ -18,7 +18,7 @@ use zero_cost_templating::{yieldoki, yieldokv, Unsafe};
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{yieldfi, yieldfv, CsrfSafeForm, EitherBody, ResponseTypedHeaderExt};
+use crate::{yieldfi, yieldfv, CsrfSafeForm, ResponseTypedHeaderExt};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 

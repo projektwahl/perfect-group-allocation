@@ -16,6 +16,7 @@ extern crate alloc;
 // determinism?
 
 pub mod csrf_protection;
+pub mod either;
 pub mod error;
 pub mod routes;
 pub mod session;
@@ -199,6 +200,7 @@ async fn main() -> Result<(), AppError> {
 use headers::{Header, HeaderMapExt};
 
 use crate::routes::favicon::favicon_ico;
+use crate::routes::openid_login::{self, openid_login};
 use crate::routes::projects::create::create;
 use crate::routes::projects::list::list;
 
@@ -210,43 +212,6 @@ impl ResponseTypedHeaderExt for hyper::http::response::Builder {
     fn typed_header<H: Header>(mut self, header: H) -> Self {
         self.headers_mut().map(|res| res.typed_insert(header));
         self
-    }
-}
-
-#[pin_project(project = EitherBodyProj)]
-pub enum EitherBody<
-    LE: Into<AppError>,
-    RE: Into<AppError>,
-    L: http_body::Body<Data = Bytes, Error = LE>,
-    R: http_body::Body<Data = Bytes, Error = RE>,
-> {
-    Left(#[pin] L),
-    Right(#[pin] R),
-}
-
-impl<
-    LE: Into<AppError>,
-    RE: Into<AppError>,
-    L: http_body::Body<Data = Bytes, Error = LE>,
-    R: http_body::Body<Data = Bytes, Error = RE>,
-> Body for EitherBody<LE, RE, L, R>
-{
-    type Data = Bytes;
-    type Error = AppError;
-
-    fn poll_frame(
-        self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
-        let this = self.project();
-        match this {
-            EitherBodyProj::Left(l) => l
-                .poll_frame(cx)
-                .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
-            EitherBodyProj::Right(r) => r
-                .poll_frame(cx)
-                .map(|poll| poll.map(|opt| opt.map_err(Into::into))),
-        }
     }
 }
 
@@ -294,6 +259,8 @@ struct Svc {
     pool: Pool,
 }
 
+either_http_body!(EitherBody 1 2 3 4 5 6 7);
+
 impl Service<Request<hyper::body::Incoming>> for Svc {
     type Error = AppError;
     type Response = Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send>;
@@ -323,38 +290,43 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
             (&Method::GET, "/") => Either::Left(Either::Left(Either::Left(async move {
                 Ok(index(req, session)
                     .await?
-                    .map(|body| EitherBody::Left(EitherBody::Left(EitherBody::Left(body)))))
+                    .map(|body| EitherBody::Option1(body)))
             }))),
             (&Method::GET, "/index.css") => Either::Left(Either::Left(Either::Right(async move {
-                Ok(indexcss(req)?
-                    .map(|body| EitherBody::Left(EitherBody::Left(EitherBody::Right(body)))))
+                Ok(indexcss(req)?.map(|body| EitherBody::Option2(body)))
             }))),
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
                 Either::Left(Either::Right(Either::Left(async move {
                     Ok(list(pool, session)
                         .await?
-                        .map(|body| EitherBody::Left(EitherBody::Right(EitherBody::Left(body)))))
+                        .map(|body| EitherBody::Option3(body)))
                 })))
             }
             (&Method::GET, "/favicon.ico") => {
                 Either::Left(Either::Right(Either::Right(async move {
-                    Ok(favicon_ico(req)?
-                        .map(|body| EitherBody::Left(EitherBody::Right(EitherBody::Right(body)))))
+                    Ok(favicon_ico(req)?.map(|body| EitherBody::Option4(body)))
                 })))
             }
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
-                Either::Right(Either::Left(async move {
+                Either::Right(Either::Left(Either::Right(async move {
                     Ok(create(req, pool, session)
                         .await?
-                        .map(|body| EitherBody::Right(EitherBody::Left(body))))
-                }))
+                        .map(|body| EitherBody::Option5(body)))
+                })))
+            }
+            (&Method::GET, "/openidconnect-login") => {
+                Either::Right(Either::Left(Either::Right(async move {
+                    Ok(openid_login(req, pool, session)
+                        .await?
+                        .map(|body| EitherBody::Option6(body)))
+                })))
             }
             (_, _) => Either::Right(Either::Right(async move {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found.map(|body| EitherBody::Right(EitherBody::Right(body))))
+                Ok(not_found.map(|body| EitherBody::Option7(body)))
             })),
         }
     }

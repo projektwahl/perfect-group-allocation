@@ -1791,6 +1791,7 @@ dependencies = [
  "log",
  "mime",
  "once_cell",
+ "paste",
  "perfect-group-allocation-css",
  "perfect-group-allocation-database",
  "perfect-group-allocation-openidconnect",
