@@ -368,10 +368,7 @@ impl<
                 .map(EitherBodyRouter::Option8)),
         })
         .map_ok(|result: Response<_>| {
-            result.untyped_header(
-                ALT_SVC,
-                HeaderValue::from_static(r#"h3=":8443"; ma=2592000; persist=1"#),
-            )
+            result.untyped_header(ALT_SVC, HeaderValue::from_static(ALT_SVC_HEADER))
         })
     }
 }
@@ -408,21 +405,6 @@ pub fn setup_server<B: Buf + Send + 'static>(
     //let app = app.layer(CatchPanicLayer::new());
     #[cfg(feature = "perfect-group-allocation-telemetry")]
     let app = app.layer(perfect_group_allocation_telemetry::trace_layer::MyTraceLayer);
-    /*    let config = OpenSSLConfig::from_pem_file(
-            ".lego/certificates/h3.selfmade4u.de.crt",
-            ".lego/certificates/h3.selfmade4u.de.key",
-        )
-        .unwrap();
-    */
-    /*
-        let config = RustlsConfig::from_pem_file(
-            ".lego/certificates/h3.selfmade4u.de.crt",
-            ".lego/certificates/h3.selfmade4u.de.key",
-        )
-        .await
-        .unwrap();
-    */
-    //let addr = SocketAddr::from(([127, 0, 0, 1], 8443));
 
     Ok(app)
 }
@@ -466,7 +448,7 @@ pub async fn run_http2_server(
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
     let service = setup_server(&database_url)?;
 
-    let incoming = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8443))
+    let incoming = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), PORT))
         .await
         .unwrap();
 
@@ -596,17 +578,20 @@ fn load_private_key(filename: &str) -> std::io::Result<PrivateKey> {
     let mut reader = std::io::BufReader::new(keyfile);
 
     // Load and return a single private key.
-    let keys = rustls_pemfile::pkcs8_private_keys(&mut reader)?;
+    let keys = rustls_pemfile::ec_private_keys(&mut reader)?;
 
     Ok(PrivateKey(keys[0].clone()))
 }
 
 pub fn load_certs_key_pair() -> Result<(Vec<Certificate>, PrivateKey), AppError> {
-    let certs = load_certs("./localhost.pem")?;
-    let key = load_private_key("./localhost-key.pem")?;
+    let certs = load_certs(".lego/certificates/h3.selfmade4u.de.crt")?;
+    let key = load_private_key(".lego/certificates/h3.selfmade4u.de.key")?;
 
     Ok((certs, key))
 }
+
+const PORT: u16 = 443;
+const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 
 pub fn run_http3_server(
     database_url: String,
@@ -615,7 +600,7 @@ pub fn run_http3_server(
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let service = setup_server(&database_url)?;
 
-    let listen = std::net::SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8443));
+    let listen = std::net::SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), PORT));
 
     let mut tls_config = ServerConfig::builder()
         .with_safe_default_cipher_suites()
@@ -677,6 +662,7 @@ pub fn run_http3_server(
                                                     .await
                                                     .unwrap();
 
+                                                let mut body = std::pin::pin!(body);
                                                 while let Some(value) = body.frame().await {
                                                     let value = value.unwrap();
                                                     if value.is_data() {

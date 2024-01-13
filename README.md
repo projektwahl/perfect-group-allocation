@@ -18,7 +18,11 @@ cargo test
 
 ```bash
 mkcert -install
-mkcert localhost
+mkcert h3.selfmade4u.de
+
+# for chrome and h3 you need to listen on a port < 1024 AND you need a certificate with a public root
+HETZNER_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx lego --email Moritz.Hedtke@t-online.de --dns hetzner --domains h3.selfmade4u.de run
+cargo build --bin server && sudo setcap 'cap_net_bind_service=+ep' target/debug/server && ./target/debug/server
 
 sudo nano /etc/sysctl.conf
 vm.max_map_count=262144
