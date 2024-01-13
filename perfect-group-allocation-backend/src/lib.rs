@@ -286,6 +286,7 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
         }
 
         let session = Session::new(jar);
+        let err_session = session.clone(); // TODO FIXME
 
         println!("{} {}", req.method(), req.uri().path());
 
@@ -330,10 +331,9 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
         }
         .map(|fut: Result<_, AppError>| match fut {
             Ok(ok) => Ok(ok),
-            Err(err) => Ok(Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(EitherBodyRouter::Option8(Empty::new()))
-                .unwrap()),
+            Err(err) => Ok(err
+                .build_error_template(err_session)
+                .map(EitherBodyRouter::Option8)),
         })
     }
 }
