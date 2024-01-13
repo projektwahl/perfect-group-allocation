@@ -3,6 +3,7 @@
 #![feature(let_chains)]
 #![feature(hash_raw_entry)]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(error_generic_member_access)]
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
@@ -347,8 +348,7 @@ impl<
     }
 }
 
-#[cfg_attr(feature = "profiling", expect(clippy::unused_async))]
-pub async fn setup_server<B: Buf + Send + 'static>(
+pub fn setup_server<B: Buf + Send + 'static>(
     database_url: &str,
 ) -> std::result::Result<Svc<B>, AppError> {
     info!("starting up server...");
@@ -356,8 +356,6 @@ pub async fn setup_server<B: Buf + Send + 'static>(
     // this one uses parallelism for generating the index css which is highly nondeterministic
     //#[cfg(not(feature = "profiling"))]
     //initialize_index_css();
-    #[cfg(not(feature = "profiling"))]
-    perfect_group_allocation_openidconnect::get_openid_client().await?;
 
     // https://github.com/hyperium/hyper/blob/master/examples/state.rs
 
@@ -408,7 +406,7 @@ pub async fn setup_server<B: Buf + Send + 'static>(
 pub async fn run_server(
     database_url: String,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let service = setup_server(&database_url).await?;
+    let service = setup_server(&database_url)?;
 
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
 
@@ -510,7 +508,7 @@ impl Body for H3Body {
 
 pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::error::Error>> {
     // TODO FIXME don't do this twice in h2 and h3
-    let service = setup_server(&database_url).await?;
+    let service = setup_server(&database_url)?;
 
     let listen = std::net::SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000));
 
