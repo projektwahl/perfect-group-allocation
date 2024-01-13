@@ -3,18 +3,19 @@
 
 extern crate alloc;
 
+mod examples;
+
 use alloc::collections::BTreeMap;
 
 use good_lp::solvers::ObjectiveDirection::Maximisation;
 use good_lp::{default_solver, variable, Expression, ProblemVariables, Solution, SolverModel};
 use itertools::Itertools;
+use tracing::info;
 
 use crate::examples::workshops::{
     Participant, Preference, Rank, Requirement, Room, RoomInTimeSlot, RoomSize, Timeslot, Workshop,
     WorkshopTopic, WorkshopTopicSize,
 };
-
-pub mod examples;
 
 #[expect(unused, reason = "tmp")]
 fn group_pairs<A, B, I>(items: I) -> BTreeMap<A, Vec<B>>
@@ -30,7 +31,7 @@ where
         })
 }
 
-fn main() {
+pub fn main() {
     let mut variables = ProblemVariables::new();
 
     let requirement_outside = Requirement {

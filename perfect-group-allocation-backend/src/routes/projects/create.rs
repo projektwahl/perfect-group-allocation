@@ -3,7 +3,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use bytes::Bytes;
 use diesel_async::RunQueryDsl;
-use futures_util::StreamExt;
 use headers::ContentType;
 use http::{Response, StatusCode};
 use http_body::Body;
@@ -25,7 +24,9 @@ use crate::{
 either_http_body!(EitherBody 1 2);
 
 pub async fn create(
-    request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
+    request: hyper::Request<
+        impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+    >,
     pool: Pool,
     session: Session, // TODO FIXME extract in here
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {

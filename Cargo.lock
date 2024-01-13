@@ -1872,6 +1872,8 @@ name = "perfect-group-allocation-optimizer"
 version = "0.1.0"
 dependencies = [
  "good_lp",
+ "itertools 0.12.0",
+ "tracing",
 ]
 
 [[package]]

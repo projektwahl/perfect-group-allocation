@@ -8,4 +8,4 @@ pub mod openid_redirect;
 pub mod projects;
 
 #[template_stream("templates")]
-pub fn temporary() {}
+pub const fn temporary() {}

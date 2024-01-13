@@ -1,7 +1,6 @@
 use std::convert::Infallible;
 
 use bytes::Bytes;
-use futures_util::StreamExt;
 use headers::ContentType;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
@@ -30,12 +29,10 @@ pub struct OpenIdRedirectErrorTemplate {
 
 either_http_body!(EitherBody 1 2);
 
-#[expect(
-    clippy::disallowed_types,
-    reason = "csrf protection done here explicitly"
-)]
 pub async fn openid_redirect(
-    request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
+    request: hyper::Request<
+        impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+    >,
     mut session: Session, // what if this here could be a reference?
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let session_ref = &mut session;

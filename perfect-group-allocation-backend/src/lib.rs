@@ -37,7 +37,6 @@ use hyper::service::Service;
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use perfect_group_allocation_database::{get_database_connection, Pool};
-use perfect_group_allocation_openidconnect::get_openid_client;
 use routes::index::index;
 use routes::indexcss::indexcss;
 use serde::de::DeserializeOwned;
@@ -95,7 +94,9 @@ where
     T: DeserializeOwned + CsrfToken + Send,
 {
     async fn from_request(
-        request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
+        request: hyper::Request<
+            impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+        >,
         session: Session,
     ) -> Result<Self, AppError> {
         let not_get_or_head =
@@ -109,7 +110,6 @@ where
             .unwrap()
             .to_bytes();
 
-        #[expect(clippy::disallowed_types, reason = "this is the csrf safe wrapper")]
         let extractor: T = serde_urlencoded::from_bytes(&body).unwrap();
 
         if not_get_or_head {
@@ -199,13 +199,14 @@ use crate::routes::projects::create::create;
 use crate::routes::projects::list::list;
 
 pub trait ResponseTypedHeaderExt {
+    #[must_use]
     fn typed_header<H: Header>(self, header: H) -> Self;
 }
 
 impl ResponseTypedHeaderExt for hyper::http::response::Builder {
     fn typed_header<H: Header>(mut self, header: H) -> Self {
         if let Some(res) = self.headers_mut() {
-            res.typed_insert(header)
+            res.typed_insert(header);
         }
         self
     }
@@ -290,10 +291,10 @@ impl<RequestBody: http_body::Body<Data = Bytes, Error = hyper::Error> + Send + '
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
-                Ok(index(req, session).await?.map(EitherBodyRouter::Option1))
+                Ok(index(session).await?.map(EitherBodyRouter::Option1))
             }),
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
-                Ok(indexcss(req)?.map(EitherBodyRouter::Option2))
+                Ok(indexcss(req).map(EitherBodyRouter::Option2))
             }),
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
@@ -302,7 +303,7 @@ impl<RequestBody: http_body::Body<Data = Bytes, Error = hyper::Error> + Send + '
                 })
             }
             (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
-                Ok(favicon_ico(req)?.map(EitherBodyRouter::Option4))
+                Ok(favicon_ico(req).map(EitherBodyRouter::Option4))
             }),
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
@@ -330,6 +331,7 @@ impl<RequestBody: http_body::Body<Data = Bytes, Error = hyper::Error> + Send + '
     }
 }
 
+#[cfg_attr(feature = "profiling", expect(clippy::unused_async))]
 pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppError> {
     info!("starting up server...");
 
@@ -337,7 +339,7 @@ pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppErr
     //#[cfg(not(feature = "profiling"))]
     //initialize_index_css();
     #[cfg(not(feature = "profiling"))]
-    get_openid_client().await;
+    perfect_group_allocation_openidconnect::get_openid_client().await?;
 
     // https://github.com/hyperium/hyper/blob/master/examples/state.rs
 
@@ -462,13 +464,6 @@ pub async fn run_server(
         }
         Ok(())
     })
-}
-
-fn unwrap_infallible<T>(result: Result<T, Infallible>) -> T {
-    match result {
-        Ok(value) => value,
-        Err(err) => match err {},
-    }
 }
 
 #[allow(clippy::redundant_pub_crate)]

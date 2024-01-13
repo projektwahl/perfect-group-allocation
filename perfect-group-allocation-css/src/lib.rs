@@ -4,7 +4,6 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::Path;
 
 use lightningcss::bundler::{Bundler, FileProvider};
-
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
 use parcel_sourcemap::SourceMap;

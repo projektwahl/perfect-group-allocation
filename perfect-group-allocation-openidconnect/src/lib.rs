@@ -1,7 +1,5 @@
 pub mod error;
 
-
-
 use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
 use oauth2::reqwest::async_http_client;
 pub use oauth2::RefreshToken;
@@ -21,7 +19,7 @@ use openidconnect::{
     AccessTokenHash, EmptyAdditionalClaims, IdTokenFields, IssuerUrl, Nonce, TokenResponse,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::{OnceCell};
+use tokio::sync::OnceCell;
 
 use crate::error::OpenIdConnectError;
 

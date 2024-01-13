@@ -1,9 +1,5 @@
-
-
-
 use cookie::{Cookie, CookieJar, SameSite};
-use perfect_group_allocation_openidconnect::{OpenIdSession};
-
+use perfect_group_allocation_openidconnect::OpenIdSession;
 
 use crate::error::AppError;
 

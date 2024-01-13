@@ -1,4 +1,3 @@
-
 use std::convert::Infallible;
 
 use bytes::Bytes;
@@ -9,14 +8,13 @@ use headers::ContentType;
 use http::{Response, StatusCode};
 use http_body::{Body, Frame};
 use http_body_util::StreamBody;
-
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::models::ProjectHistoryEntry;
 use perfect_group_allocation_database::schema::project_history;
-use perfect_group_allocation_database::{Pool};
+use perfect_group_allocation_database::Pool;
 use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{Unsafe};
+use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::routes::list_projects;

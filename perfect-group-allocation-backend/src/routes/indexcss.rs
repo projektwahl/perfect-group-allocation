@@ -8,7 +8,6 @@ use http_body::Body;
 use http_body_util::{Empty, Full};
 use perfect_group_allocation_css::index_css;
 
-use crate::error::AppError;
 use crate::{either_http_body, ResponseTypedHeaderExt as _};
 
 // add watcher and then use websocket to hot reload on client?
@@ -17,14 +16,17 @@ use crate::{either_http_body, ResponseTypedHeaderExt as _};
 
 either_http_body!(EitherBody 1 2);
 
+#[expect(clippy::needless_pass_by_value)]
 pub fn indexcss(
-    request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
+    request: hyper::Request<
+        impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+    >,
+) -> hyper::Response<impl Body<Data = Bytes, Error = Infallible>> {
     let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
     let etag_string = "\"xyzzy\"";
     let etag = etag_string.parse::<ETag>().unwrap();
     if if_none_match.map_or(true, |h| h.precondition_passes(&etag)) {
-        Ok(Response::builder()
+        Response::builder()
             .status(StatusCode::OK)
             .typed_header(ContentType::from(mime::TEXT_CSS_UTF_8))
             .typed_header(etag)
@@ -37,11 +39,11 @@ pub fn indexcss(
             .body(EitherBody::Option1(Full::new(Bytes::from_static(
                 index_css!().0,
             ))))
-            .unwrap())
+            .unwrap()
     } else {
-        Ok(Response::builder()
+        Response::builder()
             .status(StatusCode::NOT_MODIFIED)
             .body(EitherBody::Option2(Empty::default()))
-            .unwrap())
+            .unwrap()
     }
 }

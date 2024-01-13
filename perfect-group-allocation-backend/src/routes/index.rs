@@ -1,7 +1,6 @@
 use std::convert::Infallible;
 
 use bytes::Bytes;
-use futures_util::StreamExt;
 use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::StreamBody;
@@ -15,7 +14,6 @@ use crate::session::Session;
 use crate::{yieldfi, yieldfv};
 
 pub async fn index(
-    _request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
     session: Session,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let result = async gen move {

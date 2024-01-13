@@ -1,4 +1,3 @@
-
 use perfect_group_allocation_backend::run_server;
 
 pub fn main() {
