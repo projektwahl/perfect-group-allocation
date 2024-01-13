@@ -30,8 +30,8 @@ use std::sync::Arc;
 use bytes::{Buf, Bytes};
 use cookie::Cookie;
 use error::AppError;
-use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
-use h3::error::ErrorLevel;
+use futures_util::{pin_mut, Future, FutureExt, StreamExt, TryFutureExt};
+use h3::error::{Code, ErrorLevel};
 use http::header::{ALT_SVC, COOKIE};
 use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use http_body::{Body, Frame};
@@ -201,6 +201,7 @@ async fn main() -> Result<(), AppError> {
 */
 
 use headers::{Header, HeaderMapExt};
+use zero_cost_templating::async_iterator_extension::AsyncIterExt;
 
 use crate::routes::favicon::favicon_ico;
 use crate::routes::openid_login::openid_login;
@@ -434,7 +435,7 @@ pub async fn setup_http2_http3_server(
     let (certs, key) = load_certs_key_pair()?;
 
     // needs a service that accepts some non-controllable impl Buf
-    let http3_server = run_http3_server(database_url.clone(), certs.clone(), key.clone()).await?;
+    let http3_server = run_http3_server(database_url.clone(), certs.clone(), key.clone())?;
     // needs a service that accepts Bytes, therefore we to create separate services
     let http2_server = run_http2_server(database_url, certs, key).await?;
 
@@ -529,7 +530,6 @@ pub async fn run_http2_server(
                             }
                         }
 
-                        tracing::info!("hi");
 
                         drop(closed_rx);
                     };
@@ -608,7 +608,7 @@ pub fn load_certs_key_pair() -> Result<(Vec<Certificate>, PrivateKey), AppError>
     Ok((certs, key))
 }
 
-pub async fn run_http3_server(
+pub fn run_http3_server(
     database_url: String,
     certs: Vec<Certificate>,
     key: PrivateKey,
@@ -659,11 +659,47 @@ pub async fn run_http3_server(
                                     let service = service.clone();
 
                                     tokio::spawn(async move {
-                                        let (response_body, mut request_body) = stream.split();
+                                        let (mut response_body, mut request_body) = stream.split();
                                         let request = req.map(|_| H3Body(request_body));
-                                        let response = service.call(
-                                            request.map(|body| body.map_err(|e| AppError::from(e))),
-                                        );
+                                        let response =
+                                            service
+                                                .call(request.map(|body| {
+                                                    body.map_err(|e| AppError::from(e))
+                                                }))
+                                                .await;
+                                        match response {
+                                            Ok(response) => {
+                                                let response: Response<_> = response;
+                                                let (parts, body) = response.into_parts();
+
+                                                response_body
+                                                    .send_response(Response::from_parts(parts, ()))
+                                                    .await
+                                                    .unwrap();
+
+                                                while let Some(value) = body.frame().await {
+                                                    let value = value.unwrap();
+                                                    if value.is_data() {
+                                                        response_body
+                                                            .send_data(value.into_data().unwrap())
+                                                            .await
+                                                            .unwrap();
+                                                    } else if value.is_trailers() {
+                                                        response_body
+                                                            .send_trailers(
+                                                                value.into_trailers().unwrap(),
+                                                            )
+                                                            .await
+                                                            .unwrap();
+                                                        return;
+                                                    }
+                                                }
+                                                response_body.finish().await.unwrap();
+                                            }
+                                            Err(error) => {
+                                                let _error: Infallible = error;
+                                            }
+                                        }
                                     });
                                 }
 
