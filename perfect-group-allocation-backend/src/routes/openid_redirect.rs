@@ -1,12 +1,10 @@
-use alloc::borrow::Cow;
 use std::convert::Infallible;
 
-use anyhow::anyhow;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use headers::ContentType;
 use http::header::LOCATION;
-use http::{header, Response, StatusCode};
+use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::{BodyExt as _, Empty, Limited, StreamBody};
 use perfect_group_allocation_css::index_css;
@@ -15,11 +13,11 @@ use perfect_group_allocation_openidconnect::{
 };
 use serde::{Deserialize, Serialize};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{yieldoki, yieldokv, Unsafe};
+use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{either_http_body, yieldfi, yieldfv, CsrfSafeForm, ResponseTypedHeaderExt};
+use crate::{either_http_body, yieldfi, yieldfv, ResponseTypedHeaderExt};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -37,7 +35,7 @@ either_http_body!(EitherBody 1 2);
     reason = "csrf protection done here explicitly"
 )]
 pub async fn openid_redirect(
-    request: hyper::Request<hyper::body::Incoming>,
+    request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
     mut session: Session, // what if this here could be a reference?
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let session_ref = &mut session;

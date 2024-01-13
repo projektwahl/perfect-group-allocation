@@ -1,4 +1,3 @@
-use alloc::borrow::Cow;
 use std::convert::Infallible;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -6,16 +5,15 @@ use bytes::Bytes;
 use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;
 use headers::ContentType;
-use http::{header, Response, StatusCode};
-use http_body::{Body, Frame};
-use http_body_util::{BodyExt, Empty, StreamBody};
+use http::{Response, StatusCode};
+use http_body::Body;
+use http_body_util::{Empty, StreamBody};
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
-use perfect_group_allocation_database::{DatabaseConnection, DatabaseError, Pool};
-use tracing::error;
+use perfect_group_allocation_database::{DatabaseError, Pool};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{yieldoki, yieldokv, Unsafe};
+use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::routes::create_project;
@@ -27,7 +25,7 @@ use crate::{
 either_http_body!(EitherBody 1 2);
 
 pub async fn create(
-    request: hyper::Request<hyper::body::Incoming>,
+    request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
     pool: Pool,
     session: Session, // TODO FIXME extract in here
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {

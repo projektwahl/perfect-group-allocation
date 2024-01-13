@@ -3,14 +3,12 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use bytes::Bytes;
-use headers::{CacheControl, ContentType, ETag, Header, HeaderMapExt, IfNoneMatch};
-use http::header::IF_NONE_MATCH;
-use http::{header, Response, StatusCode};
+use headers::{CacheControl, ContentType, ETag, HeaderMapExt, IfNoneMatch};
+use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::{Empty, Full};
 
 use crate::error::AppError;
-use crate::session::Session;
 use crate::{either_http_body, ResponseTypedHeaderExt as _};
 
 static FAVICON_ICO: &[u8] = include_bytes!("../../../frontend/favicon.ico");
@@ -19,15 +17,12 @@ either_http_body!(EitherBody 1 2);
 
 // Etag and cache busting
 pub fn favicon_ico(
-    request: hyper::Request<hyper::body::Incoming>,
+    request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
     let etag_string = "\"xyzzy\"";
     let etag = etag_string.parse::<ETag>().unwrap();
-    if if_none_match
-        .map(|h| h.precondition_passes(&etag))
-        .unwrap_or(true)
-    {
+    if if_none_match.map_or(true, |h| h.precondition_passes(&etag)) {
         Ok(Response::builder()
             .status(StatusCode::OK)
             .typed_header(ContentType::from_str("image/x-icon").unwrap())

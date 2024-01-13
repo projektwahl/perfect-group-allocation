@@ -1,6 +1,6 @@
 pub mod error;
 
-use std::sync::OnceLock;
+
 
 use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
 use oauth2::reqwest::async_http_client;
@@ -21,7 +21,7 @@ use openidconnect::{
     AccessTokenHash, EmptyAdditionalClaims, IdTokenFields, IssuerUrl, Nonce, TokenResponse,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::{OnceCell, RwLock};
+use tokio::sync::{OnceCell};
 
 use crate::error::OpenIdConnectError;
 
@@ -186,7 +186,7 @@ pub async fn finish_authentication(
         }
     }
 
-    let Some(email) = claims.email() else {
+    let Some(_email) = claims.email() else {
         return Err(OpenIdConnectError::MissingEmailAddress);
     };
 

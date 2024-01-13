@@ -1,5 +1,7 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
+use http_body_util::BodyExt;
+use hyper::body::Incoming;
 use hyper::service::Service as _;
 use hyper::Request;
 use perfect_group_allocation_backend::setup_server;
@@ -14,20 +16,12 @@ pub async fn bench_client_server_function_service(value: u64) {
         .await
         .unwrap();
     for _ in 0..value {
-        let mut service = service
-            .call(SocketAddr::V4(SocketAddrV4::new(
-                Ipv4Addr::new(0, 0, 0, 0),
-                3000,
-            )))
-            .await
-            .unwrap();
-
         // TODO FIXME check response
         service
             .call(
                 Request::builder()
                     .uri("http://localhost:3000/")
-                    .body(http_body_util::Empty::new())
+                    .body(http_body_util::Empty::new().map_err(|error| match error {}))
                     .unwrap(),
             )
             .await

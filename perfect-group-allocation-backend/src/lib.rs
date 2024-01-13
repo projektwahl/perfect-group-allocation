@@ -22,34 +22,28 @@ pub mod routes;
 pub mod session;
 
 use core::convert::Infallible;
-use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::pin::Pin;
+use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
-use std::time::Duration;
 
 use bytes::Bytes;
-use cookie::{Cookie, CookieBuilder, CookieJar};
+use cookie::Cookie;
 use error::AppError;
-use futures_util::future::Either;
-use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
+use futures_util::{pin_mut, Future, FutureExt};
 use http::header::COOKIE;
 use http::{Request, Response, StatusCode};
 use http_body::Body;
-use http_body_util::{BodyExt, Empty, Full, Limited};
-use hyper::body::Incoming;
-use hyper::service::{service_fn, Service};
+use http_body_util::{BodyExt, Full, Limited};
+use hyper::service::Service;
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
-use itertools::Itertools;
 use perfect_group_allocation_database::{get_database_connection, Pool};
 use perfect_group_allocation_openidconnect::get_openid_client;
-use pin_project::pin_project;
 use routes::index::index;
 use routes::indexcss::indexcss;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::watch;
 use tracing::{error, info, warn};
@@ -101,7 +95,7 @@ where
     T: DeserializeOwned + CsrfToken + Send,
 {
     async fn from_request(
-        request: hyper::Request<hyper::body::Incoming>,
+        request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
         session: Session,
     ) -> Result<Self, AppError> {
         let not_get_or_head =
@@ -200,7 +194,7 @@ async fn main() -> Result<(), AppError> {
 use headers::{Header, HeaderMapExt};
 
 use crate::routes::favicon::favicon_ico;
-use crate::routes::openid_login::{self, openid_login};
+use crate::routes::openid_login::openid_login;
 use crate::routes::projects::create::create;
 use crate::routes::projects::list::list;
 
@@ -210,7 +204,9 @@ pub trait ResponseTypedHeaderExt {
 
 impl ResponseTypedHeaderExt for hyper::http::response::Builder {
     fn typed_header<H: Header>(mut self, header: H) -> Self {
-        self.headers_mut().map(|res| res.typed_insert(header));
+        if let Some(res) = self.headers_mut() {
+            res.typed_insert(header)
+        }
         self
     }
 }
@@ -257,20 +253,22 @@ macro_rules! yieldfi {
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
 #[derive(Clone)]
-struct Svc {
+pub struct Svc {
     pool: Pool,
 }
 
 either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 8);
 either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
 
-impl Service<Request<hyper::body::Incoming>> for Svc {
+impl<RequestBody: http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static>
+    Service<Request<RequestBody>> for Svc
+{
     type Error = Infallible;
     type Response = Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send>;
 
     type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send + 'static;
 
-    fn call(&self, req: Request<hyper::body::Incoming>) -> Self::Future {
+    fn call(&self, req: Request<RequestBody>) -> Self::Future {
         // TODO FIXME only parse cookies when needed
         let cookies = req
             .headers()
@@ -292,41 +290,35 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
-                Ok(index(req, session)
-                    .await?
-                    .map(|body| EitherBodyRouter::Option1(body)))
+                Ok(index(req, session).await?.map(EitherBodyRouter::Option1))
             }),
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
-                Ok(indexcss(req)?.map(|body| EitherBodyRouter::Option2(body)))
+                Ok(indexcss(req)?.map(EitherBodyRouter::Option2))
             }),
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option3(async move {
-                    Ok(list(pool, session)
-                        .await?
-                        .map(|body| EitherBodyRouter::Option3(body)))
+                    Ok(list(pool, session).await?.map(EitherBodyRouter::Option3))
                 })
             }
             (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
-                Ok(favicon_ico(req)?.map(|body| EitherBodyRouter::Option4(body)))
+                Ok(favicon_ico(req)?.map(EitherBodyRouter::Option4))
             }),
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option5(async move {
                     Ok(create(req, pool, session)
                         .await?
-                        .map(|body| EitherBodyRouter::Option5(body)))
+                        .map(EitherBodyRouter::Option5))
                 })
             }
             (&Method::GET, "/openidconnect-login") => EitherFutureRouter::Option6(async move {
-                Ok(openid_login(session)
-                    .await?
-                    .map(|body| EitherBodyRouter::Option6(body)))
+                Ok(openid_login(session).await?.map(EitherBodyRouter::Option6))
             }),
             (_, _) => EitherFutureRouter::Option7(async move {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found.map(|body| EitherBodyRouter::Option7(body)))
+                Ok(not_found.map(EitherBodyRouter::Option7))
             }),
         }
         .map(|fut: Result<_, AppError>| match fut {
@@ -416,7 +408,7 @@ pub async fn run_server(
             select! {
                 accept = listener.accept() => {
                     // TODO FIXME don't unwrap
-                    let (socket, remote_addr) = accept.unwrap();
+                    let (socket, _remote_addr) = accept.unwrap();
 
                     let shutdown_tx = Arc::clone(&shutdown_tx);
                     let closed_rx = closed_rx.clone();

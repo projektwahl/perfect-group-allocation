@@ -1,14 +1,13 @@
-use alloc::borrow::Cow;
 use std::convert::Infallible;
 
 use bytes::Bytes;
 use futures_util::StreamExt;
-use http::{header, Response, StatusCode};
-use http_body::{Body, Frame};
-use http_body_util::{Full, StreamBody};
+use http::{Response, StatusCode};
+use http_body::Body;
+use http_body_util::StreamBody;
 use perfect_group_allocation_css::index_css;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{yieldoki, yieldokv, Unsafe};
+use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::routes::create_project;
@@ -16,7 +15,7 @@ use crate::session::Session;
 use crate::{yieldfi, yieldfv};
 
 pub async fn index(
-    request: hyper::Request<hyper::body::Incoming>,
+    _request: hyper::Request<impl http_body::Body<Data = Bytes, Error = hyper::Error>>,
     session: Session,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let result = async gen move {

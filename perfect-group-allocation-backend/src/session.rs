@@ -1,9 +1,9 @@
-use core::convert::Infallible;
 
-use chrono::{DateTime, Utc};
+
+
 use cookie::{Cookie, CookieJar, SameSite};
-use perfect_group_allocation_openidconnect::{EndUserEmail, OpenIdSession, RefreshToken};
-use serde::Serialize;
+use perfect_group_allocation_openidconnect::{OpenIdSession};
+
 
 use crate::error::AppError;
 
@@ -34,7 +34,7 @@ impl Session {
             .and_then(|cookie| serde_json::from_str(cookie.value()).ok())
     }
 
-    /// first return value is session_id, second is openid session
+    /// first return value is `session_id`, second is openid session
     #[must_use]
     pub fn session(&self) -> (String, Option<String>) {
         #[expect(clippy::unwrap_used, reason = "set in constructor so has to exist")]

@@ -1,4 +1,4 @@
-use alloc::borrow::Cow;
+
 use std::convert::Infallible;
 
 use bytes::Bytes;
@@ -9,14 +9,14 @@ use headers::ContentType;
 use http::{Response, StatusCode};
 use http_body::{Body, Frame};
 use http_body_util::StreamBody;
-use hyper::header;
+
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::models::ProjectHistoryEntry;
 use perfect_group_allocation_database::schema::project_history;
-use perfect_group_allocation_database::{DatabaseConnection, Pool};
+use perfect_group_allocation_database::{Pool};
 use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{template_stream, yieldoki, yieldokv, Unsafe};
+use zero_cost_templating::{Unsafe};
 
 use crate::error::AppError;
 use crate::routes::list_projects;
@@ -91,7 +91,7 @@ pub async fn list(
     pool: Pool,
     session: Session,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
-    let stream = AsyncIteratorStream(list_internal(pool, session.clone()));
+    let stream = AsyncIteratorStream(list_internal(pool, session));
     Ok(Response::builder()
         .status(StatusCode::OK)
         .typed_header(ContentType::html())

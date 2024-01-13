@@ -1,18 +1,18 @@
 use std::convert::Infallible;
 
 use bytes::Bytes;
-use headers::Location;
+
 use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
-use http_body_util::{BodyExt as _, Empty};
-use perfect_group_allocation_database::DatabaseConnection;
+use http_body_util::{Empty};
+
 use perfect_group_allocation_openidconnect::begin_authentication;
 use serde::Deserialize;
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{CsrfToken, ResponseTypedHeaderExt};
+use crate::{CsrfToken};
 
 #[derive(Deserialize)]
 pub struct OpenIdLoginPayload {

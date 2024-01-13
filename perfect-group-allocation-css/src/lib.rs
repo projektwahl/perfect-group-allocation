@@ -4,11 +4,11 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::Path;
 
 use lightningcss::bundler::{Bundler, FileProvider};
-use lightningcss::properties::custom::Token;
+
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
 use parcel_sourcemap::SourceMap;
-use proc_macro::{quote, Group, TokenStream, TokenTree};
+use proc_macro::{quote, TokenStream, TokenTree};
 
 // TODO FIXME automatic recompilation
 
