@@ -30,10 +30,10 @@ use std::sync::Arc;
 use bytes::{Buf, Bytes};
 use cookie::Cookie;
 use error::AppError;
-use futures_util::{pin_mut, Future, FutureExt};
+use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
 use h3::error::ErrorLevel;
-use http::header::COOKIE;
-use http::{Request, Response, StatusCode};
+use http::header::{ALT_SVC, COOKIE};
+use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use http_body::{Body, Frame};
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::body::Incoming;
@@ -210,6 +210,8 @@ use crate::routes::projects::list::list;
 pub trait ResponseTypedHeaderExt {
     #[must_use]
     fn typed_header<H: Header>(self, header: H) -> Self;
+
+    fn untyped_header(self, key: HeaderName, value: HeaderValue) -> Self;
 }
 
 impl ResponseTypedHeaderExt for hyper::http::response::Builder {
@@ -217,6 +219,22 @@ impl ResponseTypedHeaderExt for hyper::http::response::Builder {
         if let Some(res) = self.headers_mut() {
             res.typed_insert(header);
         }
+        self
+    }
+
+    fn untyped_header(self, key: HeaderName, value: HeaderValue) -> Self {
+        self.header(key, value)
+    }
+}
+
+impl<T> ResponseTypedHeaderExt for Response<T> {
+    fn typed_header<H: Header>(mut self, header: H) -> Self {
+        self.headers_mut().typed_insert(header);
+        self
+    }
+
+    fn untyped_header(mut self, key: HeaderName, value: HeaderValue) -> Self {
+        self.headers_mut().append(key, value);
         self
     }
 }
@@ -347,6 +365,12 @@ impl<
             Err(err) => Ok(err
                 .build_error_template(err_session)
                 .map(EitherBodyRouter::Option8)),
+        })
+        .map_ok(|result: Response<_>| {
+            result.untyped_header(
+                ALT_SVC,
+                HeaderValue::from_static(r#"h3=":8443"; ma=2592000; persist=1"#),
+            )
         })
     }
 }
