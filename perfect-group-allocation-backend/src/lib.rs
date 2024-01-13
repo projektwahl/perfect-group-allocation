@@ -41,7 +41,7 @@ use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use itertools::Itertools;
 use perfect_group_allocation_database::{get_database_connection, Pool};
-use perfect_group_allocation_openidconnect::initialize_openid_client;
+use perfect_group_allocation_openidconnect::get_openid_client;
 use pin_project::pin_project;
 use routes::index::index;
 use routes::indexcss::indexcss;
@@ -367,7 +367,7 @@ pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppErr
     //#[cfg(not(feature = "profiling"))]
     //initialize_index_css();
     #[cfg(not(feature = "profiling"))]
-    initialize_openid_client().await;
+    get_openid_client().await;
 
     // https://github.com/hyperium/hyper/blob/master/examples/state.rs
 

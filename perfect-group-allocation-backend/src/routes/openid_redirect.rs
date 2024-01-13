@@ -4,16 +4,13 @@ use anyhow::anyhow;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use http::header;
-use oauth2::reqwest::async_http_client;
-use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
-use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
 use serde::{Deserialize, Serialize};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::{yieldoki, yieldokv};
 
 use crate::error::AppError;
-use crate::openid::OPENID_CLIENT;
 use crate::session::{Session, SessionCookie};
+use crate::{yieldfi, yieldfv};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -80,7 +77,7 @@ pub async fn openid_redirect(
     match form.0.inner {
         OpenIdRedirectInner::Error(err) => {
             let result = async gen move {
-                let template = yieldfi!(crate::routes::projects::list::openid_redirect());
+                let template = yieldfi!(crate::routes::openid_redirect());
                 let template = yieldfi!(template.next());
                 let template = yieldfi!(template.next());
                 let template = yieldfv!(template.page_title("Create Project"));
@@ -124,6 +121,8 @@ pub async fn openid_redirect(
                 .set_pkce_verifier(pkce_verifier)
                 .request_async(async_http_client)
                 .await?;
+
+            // the token_response may be signed and then we could store it in the cookie
 
             // TODO FIXME store it in cookie?
 

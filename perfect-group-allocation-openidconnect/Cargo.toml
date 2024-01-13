@@ -19,6 +19,7 @@ oauth2 = "4"
 reqwest = "0.11"
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
 
 [lints]
 workspace = true

@@ -1,11 +1,7 @@
-use oauth2::PkceCodeChallenge;
-use openidconnect::core::CoreAuthenticationFlow;
-use openidconnect::Nonce;
 use perfect_group_allocation_database::DatabaseConnection;
 use serde::Deserialize;
 
 use crate::error::AppError;
-use crate::openid::OPENID_CLIENT;
 use crate::session::Session;
 use crate::CsrfToken;
 
@@ -31,20 +27,6 @@ pub async fn openid_login(
     };
 
     // TODO FIXME check csrf token?
-
-    // Generate a PKCE challenge.
-    let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-
-    // Generate the full authorization URL.
-    let (auth_url, csrf_token, nonce) = client
-        .authorize_url(
-            CoreAuthenticationFlow::AuthorizationCode,
-            openidconnect::CsrfToken::new_random,
-            Nonce::new_random,
-        )
-        // Set the PKCE code challenge.
-        .set_pkce_challenge(pkce_challenge)
-        .url();
 
     session.set_openidconnect(&(&pkce_verifier, &nonce, &csrf_token))?;
 

@@ -1854,6 +1854,7 @@ dependencies = [
  "reqwest",
  "serde",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
