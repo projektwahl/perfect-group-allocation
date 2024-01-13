@@ -1,45 +1,24 @@
-use axum::extract::multipart::MultipartError;
-use axum::extract::rejection::FormRejection;
-use axum::response::{Html, IntoResponse};
-use hyper::StatusCode;
-use oauth2::basic::BasicErrorResponseType;
-use oauth2::{RequestTokenError, StandardErrorResponse};
-use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
-use perfect_group_allocation_database::DatabaseError;
-use serde::Serialize;
+use std::convert::Infallible;
 
+use bytes::Bytes;
+use http::{Response, StatusCode};
+use http_body_util::StreamBody;
+use perfect_group_allocation_css::index_css;
+use perfect_group_allocation_database::DatabaseError;
+use perfect_group_allocation_openidconnect::error::OpenIdConnectError;
+use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
+use zero_cost_templating::Unsafe;
+
+use crate::routes::error;
 use crate::session::Session;
+use crate::{yieldfi, yieldfv};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
-    #[error("form submission error: {0}")]
-    FormRejection(#[from] FormRejection),
-    #[error("form upload error: {0}")]
-    Multipart(#[from] MultipartError),
-    #[error("webserver error: {0}")]
-    Axum(#[from] axum::Error),
-    #[error("request token error: {0}")]
-    RequestToken(
-        #[from]
-        RequestTokenError<
-            oauth2::reqwest::Error<reqwest::Error>,
-            StandardErrorResponse<BasicErrorResponseType>,
-        >,
-    ),
-    #[error("claims verification error: {0}")]
-    ClaimsVerification(#[from] ClaimsVerificationError),
-    #[error("openid signing error: {0}")]
-    Signing(#[from] SigningError),
-    #[error("oauth error: {0}")]
-    Oauth2Parse(#[from] oauth2::url::ParseError),
-    #[error("discovery error: {0}")]
-    Discovery(#[from] DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>),
+    #[error("header error: {0}")]
+    Header(#[from] headers::Error),
     #[error("IO error: {0}")]
     File(#[from] std::io::Error),
-    #[error("bundling error: {0}")]
-    Bundling(#[from] lightningcss::error::Error<String>),
-    #[error("bundling error type 2: {0}")]
-    Bundling2(#[from] lightningcss::error::Error<lightningcss::error::PrinterErrorKind>),
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("webserver error: {0}")]
@@ -68,6 +47,8 @@ pub enum AppError {
          response?"
     )]
     SessionStillHeld,
+    #[error("openid connect error: {0}")]
+    OpenIdConnect(#[from] OpenIdConnectError),
     #[error(
         "Höchstwahrscheinlich ist deine Anmeldesession abgelaufen und du musst es erneut \
          versuchen. Wenn dies wieder auftritt, melde das Problem bitte an einen \
@@ -78,52 +59,49 @@ pub enum AppError {
     OpenIdNotConfigured,
 }
 
-#[derive(Serialize)]
-pub struct ErrorTemplate {
-    request_id: String,
-    error: String,
+impl From<Infallible> for AppError {
+    fn from(value: Infallible) -> Self {
+        match value {}
+    }
 }
 
-pub async fn to_error_result(
-    session: Session,
-    app_error: AppError,
-) -> (Session, (StatusCode, axum::response::Response)) {
-    match app_error {
-        _err @ (AppError::FormRejection(_)
-        | AppError::Multipart(_)
-        | AppError::Axum(_)
-        | AppError::Database(_)
-        | AppError::RequestToken(_)
-        | AppError::ClaimsVerification(_)
-        | AppError::Signing(_)
-        | AppError::Discovery(_)
-        | AppError::Oauth2Parse(_)
-        | AppError::File(_)
-        | AppError::Bundling(_)
-        | AppError::Bundling2(_)
-        | AppError::Json(_)
-        | AppError::Hyper(_)
-        | AppError::EnvVar(_)
-        | AppError::Rustls(_)
-        | AppError::Poison(_)
-        | AppError::Join(_)
-        | AppError::OpenIdTokenNotFound
-        | AppError::OpenIdNotConfigured
-        | AppError::NoAcceptRemaining
-        | AppError::SessionStillHeld
-        | AppError::Other(_)) => {
-            let result = "TODO FIXME";
-            (
-                session,
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Html(result).into_response(),
-                ),
-            )
-        }
-        err @ AppError::WrongCsrfToken => (
-            session,
-            (StatusCode::BAD_REQUEST, format!("{err}").into_response()),
-        ),
+impl From<diesel_async::pooled_connection::deadpool::PoolError> for AppError {
+    fn from(value: diesel_async::pooled_connection::deadpool::PoolError) -> Self {
+        Self::Database(value.into())
+    }
+}
+
+impl AppError {
+    pub fn build_error_template(
+        self,
+        session: Session,
+    ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send> {
+        let result = async gen move {
+            let template = yieldfi!(error());
+            let template = yieldfi!(template.next());
+            let template = yieldfi!(template.next());
+            let template = yieldfv!(template.page_title("Internal Server Error"));
+            let template = yieldfi!(template.next());
+            let template = yieldfv!(
+                template.indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
+            );
+            let template = yieldfi!(template.next());
+            let template = yieldfi!(template.next());
+            let template = yieldfi!(template.next_email_false());
+            let template = yieldfv!(template.csrf_token(session.session().0));
+            let template = yieldfi!(template.next());
+            let template = yieldfi!(template.next());
+            let template = yieldfi!(template.next());
+            let template = yieldfv!(template.request_id("REQUESTID"));
+            let template = yieldfi!(template.next());
+            let template = yieldfv!(template.error(self.to_string()));
+            let template = yieldfi!(template.next());
+            yieldfi!(template.next());
+        };
+        let stream = AsyncIteratorStream(result);
+        Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(StreamBody::new(stream))
+            .unwrap()
     }
 }

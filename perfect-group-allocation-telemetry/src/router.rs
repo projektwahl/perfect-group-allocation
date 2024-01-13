@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use axum::handler::Handler;
-use axum::Router;
 use http::Method;
 use opentelemetry::metrics::Unit;
 use opentelemetry::KeyValue;

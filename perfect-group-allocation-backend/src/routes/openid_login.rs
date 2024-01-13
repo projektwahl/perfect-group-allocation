@@ -1,12 +1,14 @@
-use axum::response::{IntoResponse, Redirect};
-use oauth2::PkceCodeChallenge;
-use openidconnect::core::CoreAuthenticationFlow;
-use openidconnect::Nonce;
-use perfect_group_allocation_database::DatabaseConnection;
+use std::convert::Infallible;
+
+use bytes::Bytes;
+use http::header::LOCATION;
+use http::{Response, StatusCode};
+use http_body::Body;
+use http_body_util::Empty;
+use perfect_group_allocation_openidconnect::begin_authentication;
 use serde::Deserialize;
 
-use crate::error::{to_error_result, AppError};
-use crate::openid::OPENID_CLIENT;
+use crate::error::AppError;
 use crate::session::Session;
 use crate::CsrfToken;
 
@@ -21,40 +23,19 @@ impl CsrfToken for OpenIdLoginPayload {
     }
 }
 
-#[axum::debug_handler(state=crate::MyState)]
 pub async fn openid_login(
-    DatabaseConnection(_db): DatabaseConnection,
     mut session: Session,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
-) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
-    let result = async {
-        let client = match OPENID_CLIENT.get().unwrap() {
-            Ok(client) => client,
-            Err(_error) => return Err(AppError::OpenIdNotConfigured),
-        };
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
+    // TODO FIXME check csrf token?
 
-        // TODO FIXME check csrf token?
+    let (auth_url, openid_session) = begin_authentication().await?;
 
-        // Generate a PKCE challenge.
-        let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+    session.set_openidconnect(&openid_session)?;
 
-        // Generate the full authorization URL.
-        let (auth_url, csrf_token, nonce) = client
-            .authorize_url(
-                CoreAuthenticationFlow::AuthorizationCode,
-                openidconnect::CsrfToken::new_random,
-                Nonce::new_random,
-            )
-            // Set the PKCE code challenge.
-            .set_pkce_challenge(pkce_challenge)
-            .url();
-
-        session.set_openidconnect(&(&pkce_verifier, &nonce, &csrf_token))?;
-
-        Ok(Redirect::to(auth_url.as_str()).into_response())
-    };
-    match result.await {
-        Ok(ok) => Ok((session, ok)),
-        Err(app_error) => Err(to_error_result(session, app_error).await),
-    }
+    Ok(Response::builder()
+        .status(StatusCode::TEMPORARY_REDIRECT)
+        .header(LOCATION, auth_url)
+        .body(Empty::new())
+        .unwrap())
 }

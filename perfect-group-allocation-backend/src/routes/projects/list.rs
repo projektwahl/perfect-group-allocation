@@ -1,37 +1,54 @@
-use alloc::borrow::Cow;
+use std::convert::Infallible;
 
-use axum::response::IntoResponse;
 use bytes::Bytes;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;
-use hyper::header;
+use headers::ContentType;
+use http::{Response, StatusCode};
+use http_body::{Body, Frame};
+use http_body_util::StreamBody;
+use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::models::ProjectHistoryEntry;
 use perfect_group_allocation_database::schema::project_history;
-use perfect_group_allocation_database::DatabaseConnection;
+use perfect_group_allocation_database::Pool;
 use tracing::error;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{template_stream, yieldoki, yieldokv};
+use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
+use crate::routes::list_projects;
 use crate::session::Session;
+use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
-#[template_stream("templates")]
-async gen fn list_internal(
-    DatabaseConnection(mut connection): DatabaseConnection,
-    session: Session,
-) -> Result<alloc::borrow::Cow<'static, str>, AppError> {
-    let template = yieldoki!(list_projects());
-    let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next());
-    let template = yieldokv!(template.page_title("Projects"));
-    let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next_email_false());
-    let template = yieldokv!(template.csrf_token(session.session().0));
-    let template = yieldoki!(template.next());
-    let template = yieldoki!(template.next());
-    let mut template = yieldoki!(template.next());
+async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>, Infallible> {
+    let template = yieldfi!(list_projects());
+    let template = yieldfi!(template.next());
+    let template = yieldfi!(template.next());
+    let template = yieldfv!(template.page_title("Projects"));
+    let template = yieldfi!(template.next());
+    let template = yieldfv!(
+        template.indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
+    );
+    let template = yieldfi!(template.next());
+    let template = yieldfi!(template.next());
+    let template = yieldfi!(template.next_email_false());
+    let template = yieldfv!(template.csrf_token(session.session().0));
+    let template = yieldfi!(template.next());
+    let template = yieldfi!(template.next());
+    let mut template = yieldfi!(template.next());
+    let mut connection = match pool.get().await {
+        Ok(connection) => connection,
+        Err(erroro) => {
+            let template = yieldfi!(template.next_enter_loop());
+            let template = yieldfi!(template.next_error_true());
+            let template = yieldfv!(template.error_message(AppError::from(erroro).to_string()));
+            let template = yieldfi!(template.next());
+            let template = yieldfi!(template.next_end_loop());
+            yieldfi!(template.next());
+            return;
+        }
+    };
     let mut stream = match project_history::table
         .group_by((
             project_history::id,
@@ -50,39 +67,32 @@ async gen fn list_internal(
         Ok(value) => value,
         Err(error) => {
             error!("{:?}", error);
-            let template = yieldoki!(template.next_end_loop());
-            yieldoki!(template.next());
-            return;
+            let template = yieldfi!(template.next_end_loop());
+            yieldfi!(template.next());
+            return; // TODO FIXME
         }
     };
     while let Some(x) = stream.next().await {
-        let inner_template = yieldoki!(template.next_enter_loop());
+        let inner_template = yieldfi!(template.next_enter_loop());
+        let inner_template = yieldfi!(inner_template.next_error_false());
         let x = x.unwrap();
-        let inner_template = yieldokv!(inner_template.title(x.title));
-        let inner_template = yieldoki!(inner_template.next());
-        let inner_template = yieldokv!(inner_template.description(x.info));
-        template = yieldoki!(inner_template.next());
+        let inner_template = yieldfv!(inner_template.title(x.title));
+        let inner_template = yieldfi!(inner_template.next());
+        let inner_template = yieldfv!(inner_template.description(x.info));
+        template = yieldfi!(inner_template.next());
     }
-    let template = yieldoki!(template.next_end_loop());
-    yieldoki!(template.next());
+    let template = yieldfi!(template.next_end_loop());
+    yieldfi!(template.next());
 }
 
-#[axum::debug_handler(state=crate::MyState)]
-pub async fn list(db: DatabaseConnection, session: Session) -> (Session, impl IntoResponse) {
-    let stream = AsyncIteratorStream(list_internal(db, session.clone())).map(|elem| match elem {
-        Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
-            // TODO FIXME use template here
-            "<h1>Error {}</h1>",
-            &app_error.to_string()
-        ))),
-        Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-        Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-    });
-    (
-        session,
-        (
-            [(header::CONTENT_TYPE, "text/html")],
-            axum::body::Body::from_stream(stream),
-        ),
-    )
+pub async fn list(
+    pool: Pool,
+    session: Session,
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
+    let stream = AsyncIteratorStream(list_internal(pool, session));
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .typed_header(ContentType::html())
+        .body(StreamBody::new(stream))
+        .unwrap())
 }

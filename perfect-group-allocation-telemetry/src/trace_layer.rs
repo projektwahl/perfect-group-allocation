@@ -4,21 +4,16 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::task::{ready, Context, Poll};
 
-use axum::extract::MatchedPath;
 use http::{HeaderMap, HeaderName, HeaderValue, Request, Response};
 use opentelemetry::global;
 use opentelemetry::propagation::{Extractor, Injector};
 use opentelemetry_semantic_conventions::trace as otelsc;
 use pin_project::pin_project;
-use tower_layer::Layer;
-use tower_service::Service;
 use tracing::instrument::Instrumented;
 use tracing::Instrument as _;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 // TODO FIXME add support for http client
-
-// inspired by https://github.com/tower-rs/tower-http/blob/main/tower-http/src/trace/service.rs
 
 #[derive(Debug, Clone)]
 #[allow(clippy::module_name_repetitions)]

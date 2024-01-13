@@ -3,18 +3,22 @@ form {
     max-width: 50em;
 }
 
-label {
+form label {
     grid-column: 1;
 }
 
-input {
+form input {
     grid-column: 2;
 }
 
-.error {
+form .error {
     border-color: red;
 }
 
-button {
+form button {
+    grid-column: 1 / 3;
+}
+
+form .error-message {
     grid-column: 1 / 3;
 }

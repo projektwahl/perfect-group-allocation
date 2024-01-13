@@ -1,48 +1,24 @@
-use alloc::borrow::Cow;
+use std::convert::Infallible;
 
-use anyhow::anyhow;
-use axum::response::{IntoResponse, Redirect};
 use bytes::Bytes;
-use futures_util::StreamExt;
-use http::header;
-use oauth2::reqwest::async_http_client;
-use oauth2::{AuthorizationCode, TokenResponse as OAuth2TokenResponse};
-use openidconnect::{AccessTokenHash, TokenResponse as OpenIdTokenResponse};
+use headers::ContentType;
+use http::header::LOCATION;
+use http::{Response, StatusCode};
+use http_body::Body;
+use http_body_util::{BodyExt as _, Empty, Limited, StreamBody};
+use perfect_group_allocation_css::index_css;
+use perfect_group_allocation_openidconnect::{
+    finish_authentication, OpenIdRedirect, OpenIdRedirectInner,
+};
 use serde::{Deserialize, Serialize};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{yieldoki, yieldokv};
+use zero_cost_templating::Unsafe;
 
-use crate::error::{to_error_result, AppError};
-use crate::openid::OPENID_CLIENT;
-use crate::session::{Session, SessionCookie};
+use crate::error::AppError;
+use crate::session::Session;
+use crate::{either_http_body, yieldfi, yieldfv, ResponseTypedHeaderExt};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
-
-#[derive(Deserialize, Serialize)]
-pub struct OpenIdRedirectError {
-    error: String,
-    error_description: String,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct OpenIdRedirectSuccess {
-    session_state: String,
-    code: String,
-}
-
-#[derive(Deserialize)]
-pub struct OpenIdRedirect {
-    state: String,
-    #[serde(flatten)]
-    inner: OpenIdRedirectInner,
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-pub enum OpenIdRedirectInner {
-    Success(OpenIdRedirectSuccess),
-    Error(OpenIdRedirectError),
-}
 
 #[derive(Deserialize, Serialize)]
 pub struct OpenIdRedirectErrorTemplate {
@@ -51,126 +27,84 @@ pub struct OpenIdRedirectErrorTemplate {
     error_description: String,
 }
 
-#[expect(
-    clippy::disallowed_types,
-    reason = "csrf protection done here explicitly"
-)]
+either_http_body!(EitherBody 1 2);
+
 pub async fn openid_redirect(
+    request: hyper::Request<
+        impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+    >,
     mut session: Session, // what if this here could be a reference?
-    form: axum::Form<OpenIdRedirect>,
-) -> Result<(Session, impl IntoResponse), (Session, impl IntoResponse)> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let session_ref = &mut session;
-    let result = async {
-        // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
-        // TODO FIXME errors also need to return the session?
 
-        let expected_csrf_token = session_ref.session().0;
-        let (pkce_verifier, nonce, openid_csrf_token) =
-            session_ref.get_and_remove_openidconnect()?;
+    let body: Bytes = Limited::new(request.into_body(), 100)
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
 
-        if &form.0.state != openid_csrf_token.secret() {
-            return Err(AppError::WrongCsrfToken);
-        };
+    let form: OpenIdRedirect<OpenIdRedirectInner> = serde_urlencoded::from_bytes(&body).unwrap();
 
-        // Once the user has been redirected to the redirect URL, you'll have access to the
-        // authorization code. For security reasons, your code should verify that the `state`
-        // parameter returned by the server matches `csrf_state`.
-        let client = match OPENID_CLIENT.get().unwrap() {
-            Ok(client) => client,
-            Err(_error) => return Err(AppError::OpenIdNotConfigured),
-        };
+    // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
+    // TODO FIXME errors also need to return the session?
 
-        match form.0.inner {
-            OpenIdRedirectInner::Error(err) => {
-                let result = async gen move {
-                    let template = yieldoki!(crate::routes::projects::list::openid_redirect());
-                    let template = yieldoki!(template.next());
-                    let template = yieldoki!(template.next());
-                    let template = yieldokv!(template.page_title("Create Project"));
-                    let template = yieldoki!(template.next());
-                    let template = yieldoki!(template.next());
-                    let template = yieldoki!(template.next_email_false());
-                    let template = yieldokv!(template.csrf_token(expected_csrf_token));
-                    let template = yieldoki!(template.next());
-                    let template = yieldoki!(template.next());
-                    let template = yieldoki!(template.next());
-                    let template = yieldokv!(template.error(err.error));
-                    let template = yieldoki!(template.next());
-                    let template = yieldokv!(template.error_description(err.error_description));
-                    let template = yieldoki!(template.next());
-                    yieldoki!(template.next());
-                };
-                let stream =
-                    AsyncIteratorStream(result).map(|elem: Result<Cow<'static, str>, AppError>| {
-                        match elem {
-                            Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
-                                // TODO FIXME use template here
-                                "<h1>Error {}</h1>",
-                                &app_error.to_string()
-                            ))),
-                            Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-                            Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-                        }
-                    });
-                Ok((
-                    [(header::CONTENT_TYPE, "text/html")],
-                    axum::body::Body::from_stream(stream),
-                )
-                    .into_response())
-            }
-            OpenIdRedirectInner::Success(ok) => {
-                // TODO FIXME isn't it possible to directly get the id token?
-                // maybe the other way the client also gets the data / the browser history (but I would think its encrypted)
+    let expected_csrf_token = session_ref.session().0;
 
-                // this way we may also be able to use the refresh token? (would be nice for mobile performance)
+    let openid_session = session_ref.get_and_remove_openidconnect()?;
 
-                // Now you can exchange it for an access token and ID token.
-                let token_response = client
-                    .exchange_code(AuthorizationCode::new(ok.code))
-                    // Set the PKCE code verifier.
-                    .set_pkce_verifier(pkce_verifier)
-                    .request_async(async_http_client)
-                    .await?;
+    // Once the user has been redirected to the redirect URL, you'll have access to the
+    // authorization code. For security reasons, your code should verify that the `state`
+    // parameter returned by the server matches `csrf_state`.
 
-                // Extract the ID token claims after verifying its authenticity and nonce.
-                let id_token = token_response
-                    .id_token()
-                    .ok_or_else(|| anyhow!("Server did not return an ID token"))?;
-                let claims = id_token.claims(&client.id_token_verifier(), &nonce)?;
-
-                // Verify the access token hash to ensure that the access token hasn't been substituted for
-                // another user's.
-                if let Some(expected_access_token_hash) = claims.access_token_hash() {
-                    let actual_access_token_hash = AccessTokenHash::from_token(
-                        token_response.access_token(),
-                        &id_token.signing_alg()?,
-                    )?;
-                    if actual_access_token_hash != *expected_access_token_hash {
-                        return Err(anyhow!("Invalid access token").into());
-                    }
-                }
-
-                let Some(email) = claims.email() else {
-                    return Err(anyhow!("No email address received by SSO").into());
-                };
-
-                // TODO FIXME our application should work without refresh token
-                let Some(refresh_token) = token_response.refresh_token() else {
-                    return Err(anyhow!("No refresh token received by SSO").into());
-                };
-
-                session_ref.set_session(Some(SessionCookie {
-                    email: email.to_owned(),
-                    expiration: claims.expiration(),
-                    refresh_token: refresh_token.to_owned(),
-                }));
-
-                Ok(Redirect::to("/list").into_response())
-            }
+    match form.inner {
+        OpenIdRedirectInner::Error(err) => {
+            let result = async gen move {
+                let template = yieldfi!(crate::routes::openid_redirect());
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next());
+                let template = yieldfv!(template.page_title("Create Project"));
+                let template = yieldfi!(template.next());
+                let template = yieldfv!(
+                    template
+                        .indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
+                );
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next_email_false());
+                let template = yieldfv!(template.csrf_token(expected_csrf_token));
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next());
+                let template = yieldfi!(template.next());
+                let template = yieldfv!(template.error(err.error));
+                let template = yieldfi!(template.next());
+                let template = yieldfv!(template.error_description(err.error_description));
+                let template = yieldfi!(template.next());
+                yieldfi!(template.next());
+            };
+            let stream = AsyncIteratorStream(result);
+            Ok(Response::builder()
+                .status(StatusCode::OK)
+                .typed_header(ContentType::html())
+                .body(EitherBody::Option1(StreamBody::new(stream)))
+                .unwrap())
         }
-    };
-    match result.await {
-        Ok(ok) => Ok((session, ok)),
-        Err(app_error) => Err(to_error_result(session, app_error).await),
+        OpenIdRedirectInner::Success(ok) => {
+            let result = finish_authentication(
+                openid_session,
+                OpenIdRedirect {
+                    state: form.state,
+                    inner: ok,
+                },
+            )
+            .await?;
+
+            session_ref.set_openid_session(Some(result));
+
+            Ok(Response::builder()
+                .status(StatusCode::TEMPORARY_REDIRECT)
+                .header(LOCATION, "/list")
+                .body(EitherBody::Option2(Empty::new()))
+                .unwrap())
+        }
     }
 }

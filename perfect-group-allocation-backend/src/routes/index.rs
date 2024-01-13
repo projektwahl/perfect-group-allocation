@@ -1,55 +1,51 @@
-use alloc::borrow::Cow;
+use std::convert::Infallible;
 
-use axum::response::IntoResponse;
 use bytes::Bytes;
-use futures_util::StreamExt;
-use http::header;
+use http::{Response, StatusCode};
+use http_body::Body;
+use http_body_util::StreamBody;
+use perfect_group_allocation_css::index_css;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{yieldoki, yieldokv};
+use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
-use crate::routes::projects::list::create_project;
+use crate::routes::create_project;
 use crate::session::Session;
+use crate::{yieldfi, yieldfv};
 
-pub async fn index(session: Session) -> (Session, impl IntoResponse) {
-    let session_clone = session.clone();
+pub async fn index(
+    session: Session,
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let result = async gen move {
-        let template = yieldoki!(create_project());
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next());
-        let template = yieldokv!(template.page_title("Create Project"));
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next_email_false());
-        let template = yieldokv!(template.csrf_token(session_clone.session().0));
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next());
-        let template = yieldokv!(template.csrf_token(session_clone.session().0));
-        let template = yieldoki!(template.next());
-        let template = yieldokv!(template.title(""));
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next_title_error_false());
-        let template = yieldokv!(template.description(""));
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next_description_error_false());
-        yieldoki!(template.next());
+        let template = yieldfi!(create_project());
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next());
+        let template = yieldfv!(template.page_title("Create Project"));
+        let template = yieldfi!(template.next());
+        let template = yieldfv!(
+            template.indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
+        );
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next_email_false());
+        let template = yieldfv!(template.csrf_token(session.session().0));
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next_error_false());
+        let template = yieldfv!(template.csrf_token(session.session().0));
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next_title_error_false());
+        let template = yieldfv!(template.title(""));
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next_description_error_false());
+        let template = yieldfv!(template.description(""));
+        let template = yieldfi!(template.next());
+        yieldfi!(template.next());
     };
-    let stream =
-        AsyncIteratorStream(result).map(|elem: Result<Cow<'static, str>, AppError>| match elem {
-            Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
-                // TODO FIXME use template here
-                "<h1>Error {}</h1>",
-                &app_error.to_string()
-            ))),
-            Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-            Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-        });
-    (
-        session,
-        (
-            [(header::CONTENT_TYPE, "text/html")],
-            axum::body::Body::from_stream(stream),
-        ),
-    )
+    let stream = AsyncIteratorStream(result);
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .body(StreamBody::new(stream))
+        .unwrap())
 }

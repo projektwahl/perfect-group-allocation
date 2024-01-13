@@ -1,17 +1,13 @@
 use core::task::{Context, Poll};
 use std::collections::HashMap;
-// https://github.com/tower-rs/tower/blob/master/guides/building-a-middleware-from-scratch.md
 use std::future::Future;
 use std::hash::{BuildHasher, Hash};
 use std::pin::Pin;
 
-use axum::extract::{MatchedPath, Request};
 use http::Method;
 use opentelemetry::metrics::Unit;
 use pin_project::pin_project;
 use tokio_metrics::TaskMonitor;
-use tower_layer::Layer;
-use tower_service::Service;
 
 // TODO runtime metrics
 // https://docs.rs/tokio/latest/tokio/runtime/struct.RuntimeMetrics.html

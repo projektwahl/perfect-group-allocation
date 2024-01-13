@@ -1,9 +1,13 @@
 {{#>main}}
 <div>
     {{#each projects}}
+    {{#if error}}
+    <div class="error-message">Es ist ein Fehler aufgetreten: {{error_message}}</div>
+    {{else}}
     title: {{title}} <br />
     description: {{description}} <br />
     <br />
+    {{/if}}
     {{/each}}
 </div>
 {{/main}}

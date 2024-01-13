@@ -19,3 +19,11 @@ main {
 .container-small {
     margin: auto;
 }
+
+.error-message {
+    background-color: #f33;
+    border-radius: 0.5em;
+    padding: 0.5em;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}

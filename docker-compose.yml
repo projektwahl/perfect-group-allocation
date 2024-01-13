@@ -89,6 +89,7 @@ services:
       - 16686:16686 # web interface
     networks:
       - opensearch-net
+    profiles: ["telemetry"]
   opentelemetry-collector:
     image: docker.io/otel/opentelemetry-collector
     container_name: opentelemetry-collector
@@ -100,6 +101,7 @@ services:
       - 4317:4317 # OTLP gRPC receiver
     networks:
       - opensearch-net
+    profiles: ["telemetry"]
   prometheus:
     image: docker.io/prom/prometheus
     command: --enable-feature=otlp-write-receiver
@@ -112,6 +114,7 @@ services:
       ./prometheus.yml:/prometheus/prometheus.yml
     networks:
       - opensearch-net
+    profiles: ["telemetry"]
   grafana:
     image: docker.io/grafana/grafana
     container_name: grafana
@@ -119,6 +122,26 @@ services:
       - GF_SERVER_HTTP_PORT=3001
     ports:
       - 3001:3001
+    networks:
+      - opensearch-net
+    profiles: ["telemetry"]
+  postgres:
+    image: docker.io/postgres
+    # ADD A VOLUME IN PRODUCTION
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust # DO NOT USE IN PRODUCTION
+    ports:
+      - 5432:5432
+    networks:
+      - opensearch-net
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.4
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    ports:
+      - 8080:8080
     networks:
       - opensearch-net
   # https://grafana.com/docs/agent/latest/flow/setup/install/docker/

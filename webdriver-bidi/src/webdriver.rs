@@ -4,6 +4,7 @@ use futures::Future;
 use tempfile::tempdir;
 use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::sync::{broadcast, mpsc, oneshot};
+use tracing::{error, trace};
 
 use crate::generated::SendCommand;
 use crate::webdriver_handler::WebDriverHandler;
@@ -56,7 +57,7 @@ impl WebDriver {
                         .await
                         .map_err(crate::error::ErrorInner::FailedToRunBrowser)?;
 
-                    println!("child status was: {status}");
+                    error!("child status was: {status}");
 
                     Ok::<(), crate::error::Error>(())
                 });
@@ -67,7 +68,7 @@ impl WebDriver {
                     .await
                     .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
                 {
-                    eprintln!("{line}");
+                    trace!("{line}");
                     if let Some(p) =
                         line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:")
                     {
@@ -85,7 +86,7 @@ impl WebDriver {
 
                 tokio::spawn(async move {
                     while let Some(line) = reader.next_line().await? {
-                        eprintln!("{line}");
+                        trace!("{line}");
                     }
                     Ok::<(), std::io::Error>(())
                 });
@@ -111,7 +112,7 @@ impl WebDriver {
                         .await
                         .map_err(crate::error::ErrorInner::FailedToRunBrowser)?;
 
-                    println!("child status was: {status}");
+                    error!("child status was: {status}");
 
                     Ok::<(), crate::error::Error>(())
                 });
@@ -121,7 +122,7 @@ impl WebDriver {
                     .await
                     .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
                 {
-                    eprintln!("line: {line}");
+                    trace!("{line}");
                     if line == "ChromeDriver was started successfully." {
                         break;
                     }
@@ -129,7 +130,7 @@ impl WebDriver {
 
                 tokio::spawn(async move {
                     while let Some(line) = reader.next_line().await? {
-                        eprintln!("{line}");
+                        trace!("{line}");
                     }
                     Ok::<(), std::io::Error>(())
                 });

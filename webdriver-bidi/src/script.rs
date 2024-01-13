@@ -1,5 +1,12 @@
 //! <https://w3c.github.io/webdriver-bidi/#module-script>
 
+pub mod add_preload_script;
+pub mod call_function;
+pub mod disown;
+pub mod evaluate;
+pub mod get_realms;
+pub mod remove_preload_script;
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -47,7 +54,9 @@ pub struct ChannelProperties {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub enum EvaluateResult {
+    #[serde(rename = "success")]
     Success(EvaluateResultSuccess),
+    #[serde(rename = "exception")]
     Exception(EvaluateResultException),
 }
 
@@ -58,8 +67,8 @@ pub enum EvaluateResult {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct EvaluateResultSuccess {
-    result: RemoteValue,
-    realm: Realm,
+    pub result: RemoteValue,
+    pub realm: Realm,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-EvaluateResult>
@@ -69,8 +78,8 @@ pub struct EvaluateResultSuccess {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct EvaluateResultException {
-    exception_details: ExceptionDetails,
-    realm: Realm,
+    pub exception_details: ExceptionDetails,
+    pub realm: Realm,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-ExceptionDetails>
@@ -139,14 +148,14 @@ pub enum LocalValue {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct ListLocalValue(Vec<LocalValue>);
+pub struct ListLocalValue(pub Vec<LocalValue>);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ArrayLocalValue {
-    value: ListLocalValue,
+    pub value: ListLocalValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -154,7 +163,7 @@ pub struct ArrayLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct DateLocalValue {
-    value: String,
+    pub value: String,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -162,14 +171,14 @@ pub struct DateLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 // TODO FIXME first value may be a string
-pub struct MappingLocalValue(Vec<(LocalValue, LocalValue)>);
+pub struct MappingLocalValue(pub Vec<(LocalValue, LocalValue)>);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct MapLocalValue {
-    value: MappingLocalValue,
+    pub value: MappingLocalValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -177,7 +186,7 @@ pub struct MapLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ObjectLocalValue {
-    value: MappingLocalValue,
+    pub value: MappingLocalValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -185,10 +194,10 @@ pub struct ObjectLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct RegExpValue {
-    pattern: String,
+    pub pattern: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    flags: Option<String>,
+    pub flags: Option<String>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -196,7 +205,7 @@ pub struct RegExpValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct RegExpLocalValue {
-    value: RegExpValue,
+    pub value: RegExpValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-LocalValue>
@@ -204,14 +213,14 @@ pub struct RegExpLocalValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SetLocalValue {
-    value: ListLocalValue,
+    pub value: ListLocalValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-PreloadScript>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-pub struct Preload(pub String);
+pub struct PreloadScript(pub String);
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-Realm>
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -226,10 +235,10 @@ pub struct Realm(pub String);
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct RealmInfo {
-    realm: Realm,
-    origin: String,
+    pub realm: Realm,
+    pub origin: String,
     #[serde(flatten)]
-    inner: RealmInfoInner,
+    pub inner: RealmInfoInner,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
@@ -261,10 +270,10 @@ pub enum RealmInfoInner {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WindowRealmInfo {
-    context: BrowsingContext,
+    pub context: BrowsingContext,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    sandbox: Option<String>,
+    pub sandbox: Option<String>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
@@ -272,7 +281,7 @@ pub struct WindowRealmInfo {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct DedicatedWorkerRealmInfo {
-    owners: Vec<Realm>,
+    pub owners: Vec<Realm>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
@@ -280,7 +289,7 @@ pub struct DedicatedWorkerRealmInfo {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SharedWorkerRealmInfo {
-    owners: Vec<Realm>,
+    pub owners: Vec<Realm>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
@@ -288,7 +297,7 @@ pub struct SharedWorkerRealmInfo {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ServiceWorkerRealmInfo {
-    owners: Vec<Realm>,
+    pub owners: Vec<Realm>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RealmInfo>
@@ -438,8 +447,6 @@ pub enum RemoteValue {
     WindowProxy(WindowProxyRemoteValue),
 }
 
-// TODO FIXME Option
-
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -457,7 +464,11 @@ pub struct MappingRemoteValue(pub Vec<Vec<(RemoteValue, RemoteValue)>>); // TODO
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SymbolRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -466,9 +477,15 @@ pub struct SymbolRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ArrayRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
-    pub value: ListRemoteValue,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub value: Option<ListRemoteValue>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -476,9 +493,15 @@ pub struct ArrayRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ObjectRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
-    pub value: MappingRemoteValue,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub value: Option<MappingRemoteValue>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -486,7 +509,11 @@ pub struct ObjectRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct FunctionRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -495,7 +522,11 @@ pub struct FunctionRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct RegExpRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
     pub value: RegExpValue,
 }
@@ -505,7 +536,11 @@ pub struct RegExpRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct DateRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
     pub value: String,
 }
@@ -515,9 +550,15 @@ pub struct DateRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct MapRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
-    pub value: MappingRemoteValue,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub value: Option<MappingRemoteValue>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -525,9 +566,15 @@ pub struct MapRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct SetRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
-    pub value: ListRemoteValue,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub value: Option<ListRemoteValue>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -535,7 +582,11 @@ pub struct SetRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WeakMapRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -544,7 +595,11 @@ pub struct WeakMapRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct WeakSetRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -553,7 +608,11 @@ pub struct WeakSetRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct IteratorRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -562,7 +621,11 @@ pub struct IteratorRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct GeneratorRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -571,7 +634,11 @@ pub struct GeneratorRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ErrorRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -580,7 +647,11 @@ pub struct ErrorRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ProxyRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -589,7 +660,11 @@ pub struct ProxyRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct PromiseRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -598,7 +673,11 @@ pub struct PromiseRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct TypedArrayRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -607,7 +686,11 @@ pub struct TypedArrayRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct ArrayBufferRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 
@@ -616,8 +699,14 @@ pub struct ArrayBufferRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NodeListRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub value: Option<ListRemoteValue>,
 }
 
@@ -626,8 +715,14 @@ pub struct NodeListRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct HTMLCollectionRemoteValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub value: Option<ListRemoteValue>,
 }
 
@@ -636,10 +731,18 @@ pub struct HTMLCollectionRemoteValue {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NodeRemoteValue {
-    pub shared_id: SharedId,
-    pub handle: Handle,
-    pub internal_id: InternalId,
-    pub value: NodeProperties,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub shared_id: Option<SharedId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub internal_id: Option<InternalId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub value: Option<NodeProperties>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -649,13 +752,27 @@ pub struct NodeRemoteValue {
 pub struct NodeProperties {
     pub node_type: u64,
     pub child_node_count: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub attributes: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub children: Option<Vec<NodeRemoteValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub local_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub mode: Option<String>, // TODO open/closed
     #[serde(rename = "namespaceURI")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub namespace_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub node_value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub shadow_root: Option<Box<NodeRemoteValue>>,
 }
 
@@ -665,7 +782,11 @@ pub struct NodeProperties {
 #[serde(deny_unknown_fields)]
 pub struct WindowProxyRemoteValue {
     pub value: WindowProxyProperties,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub handle: Option<Handle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub internal_id: Option<InternalId>,
 }
 

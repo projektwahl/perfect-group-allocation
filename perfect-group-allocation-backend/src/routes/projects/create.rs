@@ -1,151 +1,134 @@
-use alloc::borrow::Cow;
+use std::convert::Infallible;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::response::IntoResponse;
 use bytes::Bytes;
 use diesel_async::RunQueryDsl;
-use futures_util::StreamExt;
-use http::header;
+use headers::ContentType;
+use http::{Response, StatusCode};
+use http_body::Body;
+use http_body_util::{Empty, StreamBody};
+use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
-use perfect_group_allocation_database::DatabaseConnection;
-use tracing::error;
+use perfect_group_allocation_database::{DatabaseError, Pool};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::{yieldoki, yieldokv};
+use zero_cost_templating::Unsafe;
 
-use super::list::create_project;
 use crate::error::AppError;
+use crate::routes::create_project;
 use crate::session::Session;
-use crate::{CreateProjectPayload, CsrfSafeForm};
+use crate::{
+    either_http_body, yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt,
+};
+
+either_http_body!(EitherBody 1 2);
 
 pub async fn create(
-    DatabaseConnection(mut connection): DatabaseConnection,
-    session: Session,
-    form: CsrfSafeForm<CreateProjectPayload>,
-) -> (Session, impl IntoResponse) {
+    request: hyper::Request<
+        impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+    >,
+    pool: Pool,
+    session: Session, // TODO FIXME extract in here
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let session_clone = session.clone();
-    let result = async gen move {
-        let template = yieldoki!(create_project());
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next());
-        let template = yieldokv!(template.page_title("Create Project"));
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next_email_false());
-        let template = yieldokv!(template.csrf_token(session_clone.session().0));
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next());
-        let template = yieldoki!(template.next());
-        let template = yieldokv!(template.csrf_token(session_clone.session().0));
-        let template = yieldoki!(template.next());
-        let template = yieldokv!(template.title(form.value.title.clone()));
-        let template = yieldoki!(template.next());
-        let empty_title = form.value.title.is_empty();
-        let template = if empty_title {
-            let template = yieldoki!(template.next_title_error_true());
-            let template = yieldokv!(template.title_error("title must not be empty"));
-            yieldoki!(template.next())
-        } else {
-            yieldoki!(template.next_title_error_false())
+    let form = CsrfSafeForm::<CreateProjectPayload>::from_request(request, session)
+        .await
+        .unwrap();
+
+    let empty_title = form.value.title.is_empty();
+    let empty_description = form.value.description.is_empty();
+    let mut global_error = None;
+
+    if !empty_title && !empty_description {
+        match pool.get().await {
+            Ok(mut connection) => {
+                if let Err(error) = diesel::insert_into(project_history::table)
+                    .values(NewProject {
+                        id: SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap()
+                            .subsec_nanos()
+                            .try_into()
+                            .unwrap(),
+                        title: form.value.title.clone(),
+                        info: form.value.description.clone(),
+                    })
+                    .execute(&mut connection)
+                    .await
+                {
+                    global_error = Some(AppError::from(DatabaseError::from(error)).to_string());
+                };
+                return Ok(Response::builder()
+                    .status(if global_error.is_some() {
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    } else {
+                        StatusCode::OK
+                    })
+                    .body(EitherBody::Option1(Empty::new()))
+                    .unwrap());
+            }
+            Err(error) => {
+                global_error = Some(AppError::from(error).to_string());
+            }
         };
-        let template = yieldokv!(template.description(form.value.description.clone()));
-        let template = yieldoki!(template.next());
-        let empty_description = form.value.description.is_empty();
-        let template = if empty_description {
-            let template = yieldoki!(template.next_description_error_true());
-            let template = yieldokv!(template.description_error("description must not be empty"));
-            yieldoki!(template.next())
-        } else {
-            yieldoki!(template.next_description_error_false())
-        };
-        yieldoki!(template.next());
-
-        if empty_title || empty_description {
-            return;
-        }
-
-        if let Err(error) = diesel::insert_into(project_history::table)
-            .values(NewProject {
-                id: SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .subsec_nanos()
-                    .try_into()
-                    .unwrap(),
-                title: form.value.title.clone(),
-                info: form.value.description.clone(),
-            })
-            .execute(&mut connection)
-            .await
-        {
-            error!("{:?}", error);
-            yield Ok::<Cow<'static, str>, AppError>("TODO FIXME database error".into());
-        };
-
-        // we can't stream the response and then redirect so probably add a button or so and use javascript? or maybe don't stream this page?
-        //Ok(Redirect::to("/list").into_response())
-    };
-    let stream = AsyncIteratorStream(result).map(|elem| match elem {
-        Err(app_error) => Ok::<Bytes, AppError>(Bytes::from(format!(
-            // TODO FIXME use template here
-            "<h1>Error {}</h1>",
-            &app_error.to_string()
-        ))),
-        Ok(Cow::Owned(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-        Ok(Cow::Borrowed(ok)) => Ok::<Bytes, AppError>(Bytes::from(ok)),
-    });
-    (
-        session,
-        (
-            [(header::CONTENT_TYPE, "text/html")],
-            axum::body::Body::from_stream(stream),
-        ),
-    )
-}
-/*
-#[cfg(test)]
-mod tests {
-    use std::str::from_utf8;
-
-    use axum::response::IntoResponse as _;
-    use axum_extra::extract::CookieJar;
-    use http_body_util::BodyExt;
-    use perfect_group_allocation_database::{
-        get_database_connection_from_env, DatabaseConnection, DatabaseError,
-    };
-
-    use crate::error::AppError;
-    use crate::session::Session;
-    use crate::{create, CreateProjectPayload, CsrfSafeForm};
-
-
-    #[tokio::test]
-    async fn hello_world() -> Result<(), AppError> {
-        let database = get_database_connection_from_env()?;
-        let session = Session::new(CookieJar::new()); // TODO FIXME Key::generate()
-        let form = CsrfSafeForm {
-            value: CreateProjectPayload {
-                csrf_token: String::new(),
-                title: "test".to_owned(),
-                description: "test".to_owned(),
-            },
-        };
-
-        let (_session, response) = create(
-            DatabaseConnection(database.get().await.map_err(DatabaseError::from)?),
-            session,
-            form,
-        )
-        .await;
-        let response = response.into_response();
-        let binding = response.into_body().collect().await.unwrap().to_bytes();
-        let response = from_utf8(&binding).unwrap();
-        assert!(response.contains(
-            "Error database error: Failed to acquire connection from pool: Connection pool timed \
-             out"
-        ));
-
-        Ok(())
     }
+
+    let status_code = if global_error.is_some() {
+        StatusCode::INTERNAL_SERVER_ERROR
+    } else {
+        StatusCode::OK
+    };
+
+    let result = async gen move {
+        let template = yieldfi!(create_project());
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next());
+        let template = yieldfv!(template.page_title("Create Project"));
+        let template = yieldfi!(template.next());
+        let template = yieldfv!(
+            template.indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
+        );
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next_email_false());
+        let template = yieldfv!(template.csrf_token(session_clone.session().0));
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next());
+        let template = yieldfi!(template.next());
+        let template = if let Some(global_error) = global_error {
+            let inner_template = yieldfi!(template.next_error_true());
+            let inner_template = yieldfv!(inner_template.error_message(global_error));
+            yieldfi!(inner_template.next())
+        } else {
+            yieldfi!(template.next_error_false())
+        };
+        let template = yieldfv!(template.csrf_token(session_clone.session().0));
+        let template = yieldfi!(template.next());
+        let template = if empty_title {
+            let template = yieldfi!(template.next_title_error_true());
+            let template = yieldfv!(template.title_error("title must not be empty"));
+            yieldfi!(template.next())
+        } else {
+            yieldfi!(template.next_title_error_false())
+        };
+        let template = yieldfv!(template.title(form.value.title.clone()));
+        let template = yieldfi!(template.next());
+        let template = if empty_description {
+            let template = yieldfi!(template.next_description_error_true());
+            let template = yieldfv!(template.description_error("description must not be empty"));
+            yieldfi!(template.next())
+        } else {
+            yieldfi!(template.next_description_error_false())
+        };
+        let template = yieldfv!(template.description(form.value.description.clone()));
+        let template = yieldfi!(template.next());
+
+        yieldfi!(template.next());
+    };
+    let stream = AsyncIteratorStream(result);
+    Ok(Response::builder()
+        .status(status_code)
+        .typed_header(ContentType::html())
+        .body(EitherBody::Option2(StreamBody::new(stream)))
+        .unwrap())
 }
-*/

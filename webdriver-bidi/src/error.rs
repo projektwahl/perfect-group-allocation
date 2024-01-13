@@ -27,9 +27,7 @@ pub enum ErrorInner {
     TokioOneShotReceive(tokio::sync::oneshot::error::RecvError),
     #[error("failed to detect WebDriver BiDi port")]
     PortDetect(std::num::ParseIntError),
-    #[error("failed to parse received message {0}")]
-    ParseReceived(serde_json::Error),
-    #[error("failed to parse received message {0}")]
+    #[error("failed to parse received message {0:?}")]
     ParseReceivedWithPath(serde_path_to_error::Error<serde_json::Error>),
     #[error("failed to find WebDriver BiDi port")]
     PortNotFound,
