@@ -1,12 +1,16 @@
 use bytes::Bytes;
+use headers::Location;
+use http::header::LOCATION;
+use http::{Response, StatusCode};
 use http_body::Body;
+use http_body_util::{BodyExt as _, Empty};
 use perfect_group_allocation_database::DatabaseConnection;
 use perfect_group_allocation_openidconnect::begin_authentication;
 use serde::Deserialize;
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::CsrfToken;
+use crate::{CsrfToken, ResponseTypedHeaderExt};
 
 #[derive(Deserialize)]
 pub struct OpenIdLoginPayload {
@@ -30,5 +34,9 @@ pub async fn openid_login(
 
     session.set_openidconnect(&openid_session)?;
 
-    Ok(Redirect::to(auth_url.as_str()).into_response())
+    Ok(Response::builder()
+        .status(StatusCode::TEMPORARY_REDIRECT)
+        .header(LOCATION, auth_url)
+        .body(Empty::new().map_err::<_, AppError>(|err| match err {}))
+        .unwrap())
 }

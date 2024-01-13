@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use bytes::Bytes;
 use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;
+use headers::ContentType;
 use http::{header, Response, StatusCode};
 use http_body::{Body, Frame};
 use http_body_util::{BodyExt, Empty, StreamBody};
@@ -18,7 +19,9 @@ use zero_cost_templating::{yieldoki, yieldokv, Unsafe};
 use crate::error::AppError;
 use crate::routes::create_project;
 use crate::session::Session;
-use crate::{yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, EitherBody};
+use crate::{
+    yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, EitherBody, ResponseTypedHeaderExt,
+};
 
 pub async fn create(
     request: hyper::Request<hyper::body::Incoming>,
@@ -125,6 +128,7 @@ pub async fn create(
     let stream = AsyncIteratorStream(result);
     Ok(Response::builder()
         .status(status_code)
+        .typed_header(ContentType::html())
         .body(EitherBody::Right(StreamBody::new(stream)))
         .unwrap())
 }
