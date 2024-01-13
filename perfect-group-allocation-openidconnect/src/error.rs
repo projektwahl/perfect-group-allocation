@@ -20,4 +20,12 @@ pub enum OpenIdConnectError {
     Oauth2Parse(#[from] oauth2::url::ParseError),
     #[error("discovery error: {0}")]
     Discovery(#[from] DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>),
+    #[error("wrong csrf token")]
+    WrongCsrfToken,
+    #[error("server did not return id token")]
+    NoIdTokenReturned,
+    #[error("invalid access token")]
+    InvalidAccessToken,
+    #[error("missing email address")]
+    MissingEmailAddress,
 }

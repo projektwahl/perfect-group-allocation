@@ -173,8 +173,8 @@ pub async fn finish_authentication(
     // Extract the ID token claims after verifying its authenticity and nonce.
     let id_token = token_response
         .id_token()
-        .ok_or_else(|| anyhow!("Server did not return an ID token"))?;
-    let claims = id_token.claims(&client.id_token_verifier(), &nonce)?;
+        .ok_or_else(|| OpenIdConnectError::NoIdTokenReturned)?;
+    let claims = id_token.claims(&client.id_token_verifier(), &session.nonce)?;
 
     // Verify the access token hash to ensure that the access token hasn't been substituted for
     // another user's.
@@ -182,18 +182,16 @@ pub async fn finish_authentication(
         let actual_access_token_hash =
             AccessTokenHash::from_token(token_response.access_token(), &id_token.signing_alg()?)?;
         if actual_access_token_hash != *expected_access_token_hash {
-            return Err(anyhow!("Invalid access token").into());
+            return Err(OpenIdConnectError::InvalidAccessToken);
         }
     }
 
     let Some(email) = claims.email() else {
-        return Err(anyhow!("No email address received by SSO").into());
+        return Err(OpenIdConnectError::MissingEmailAddress);
     };
 
-    // TODO FIXME our application should work without refresh token
-    let Some(refresh_token) = token_response.refresh_token() else {
-        return Err(anyhow!("No refresh token received by SSO").into());
-    };
+    // TODO FIXME our application should work without refresh token but use it for efficiency?
+    // token_response.refresh_token()
 
     Ok("hi".to_owned())
 }
