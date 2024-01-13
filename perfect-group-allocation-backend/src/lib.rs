@@ -31,11 +31,11 @@ use bytes::Bytes;
 use cookie::{Cookie, CookieBuilder, CookieJar};
 use error::AppError;
 use futures_util::future::Either;
-use futures_util::{pin_mut, Future};
+use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
 use http::header::COOKIE;
 use http::{Request, Response, StatusCode};
 use http_body::Body;
-use http_body_util::{BodyExt, Full, Limited};
+use http_body_util::{BodyExt, Empty, Full, Limited};
 use hyper::body::Incoming;
 use hyper::service::{service_fn, Service};
 use hyper::Method;
@@ -259,11 +259,11 @@ struct Svc {
     pool: Pool,
 }
 
-either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7);
+either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 8);
 either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
 
 impl Service<Request<hyper::body::Incoming>> for Svc {
-    type Error = AppError;
+    type Error = Infallible;
     type Response = Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send>;
 
     type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send + 'static;
@@ -326,6 +326,15 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
                 Ok(not_found.map(|body| EitherBodyRouter::Option7(body)))
             }),
         }
+        .map(|fut: Result<_, AppError>| match fut {
+            Ok(ok) => Ok(ok),
+            Err(err) => Ok(Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(EitherBodyRouter::Option8(
+                    Empty::new().map_err::<_, AppError>(|err| match err {}),
+                ))
+                .unwrap()),
+        })
     }
 }
 
