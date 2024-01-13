@@ -25,6 +25,7 @@ pub mod session;
 use core::convert::Infallible;
 use std::marker::PhantomData;
 use std::net::{Ipv4Addr, SocketAddrV4};
+use std::path::Path;
 use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
@@ -417,7 +418,7 @@ pub async fn setup_http2_http3_server(
     let (certs, key) = load_certs_key_pair()?;
 
     // needs a service that accepts some non-controllable impl Buf
-    let http3_server = run_http3_server(database_url.clone(), certs.clone(), key.clone())?;
+    let http3_server = run_http3_server_s2n(database_url.clone(), certs.clone(), key.clone())?;
     // needs a service that accepts Bytes, therefore we to create separate services
     let http2_server = run_http2_server(database_url, certs, key).await?;
 
@@ -584,16 +585,119 @@ fn load_private_key(filename: &str) -> std::io::Result<PrivateKey> {
 }
 
 pub fn load_certs_key_pair() -> Result<(Vec<Certificate>, PrivateKey), AppError> {
-    let certs = load_certs(".lego/certificates/h3.selfmade4u.de.crt")?;
-    let key = load_private_key(".lego/certificates/h3.selfmade4u.de.key")?;
+    let certs = load_certs(CERT_PATH)?;
+    let key = load_private_key(KEY_PATH)?;
 
     Ok((certs, key))
 }
 
+const CERT_PATH: &str = ".lego/certificates/h3.selfmade4u.de.crt";
+const KEY_PATH: &str = ".lego/certificates/h3.selfmade4u.de.key";
 const PORT: u16 = 443;
 const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 
-pub fn run_http3_server(
+async fn handle_connection<B: Buf + Send + 'static, C: h3::quic::Connection<B>>(
+    service: Svc<B>,
+    connection: h3::server::Connection<C, B>,
+) {
+    loop {
+        match connection.accept().await {
+            Ok(Some((req, stream))) => {
+                info!("new request: {:#?}", req);
+
+                let service = service.clone();
+
+                tokio::spawn(async move {
+                    let (mut response_body, mut request_body) = stream.split();
+                    let request = req.map(|_| H3Body(request_body));
+                    let response = service
+                        .call(request.map(|body| body.map_err(|e| AppError::from(e))))
+                        .await;
+                    match response {
+                        Ok(response) => {
+                            let response: Response<_> = response;
+                            let (parts, body) = response.into_parts();
+
+                            response_body
+                                .send_response(Response::from_parts(parts, ()))
+                                .await
+                                .unwrap();
+
+                            let mut body = std::pin::pin!(body);
+                            while let Some(value) = body.frame().await {
+                                let value = value.unwrap();
+                                if value.is_data() {
+                                    response_body
+                                        .send_data(value.into_data().unwrap())
+                                        .await
+                                        .unwrap();
+                                } else if value.is_trailers() {
+                                    response_body
+                                        .send_trailers(value.into_trailers().unwrap())
+                                        .await
+                                        .unwrap();
+                                    return;
+                                }
+                            }
+                            response_body.finish().await.unwrap();
+                        }
+                        Err(error) => {
+                            let _error: Infallible = error;
+                        }
+                    }
+                });
+            }
+
+            // indicating no more streams to be received
+            Ok(None) => {
+                break;
+            }
+
+            Err(err) => {
+                error!("error on accept {}", err);
+                match err.get_error_level() {
+                    ErrorLevel::ConnectionError => break,
+                    ErrorLevel::StreamError => continue,
+                }
+            }
+        }
+    }
+}
+
+pub fn run_http3_server_s2n(
+    database_url: String,
+    certs: Vec<Certificate>,
+    key: PrivateKey,
+) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
+    let service = setup_server(&database_url)?;
+
+    let mut server = s2n_quic::Server::builder()
+        .with_tls((Path::new(CERT_PATH), Path::new(KEY_PATH)))?
+        .with_io(format!("127.0.0.1:{PORT}").as_str())?
+        .start()?;
+
+    info!("listening on localhost:{PORT}");
+
+    // https://github.com/aws/s2n-quic/blob/main/quic/s2n-quic-qns/src/server/h3.rs
+
+    Ok(async move {
+        while let Some(mut connection) = server.accept().await {
+            let service = service.clone();
+
+            // spawn a new task for the connection
+            tokio::spawn(async move {
+                let mut connection =
+                    h3::server::Connection::new(s2n_quic_h3::Connection::new(connection))
+                        .await
+                        .unwrap();
+                handle_connection::<Bytes, _>(service, connection).await;
+            });
+        }
+        Ok(())
+    })
+}
+
+pub fn run_http3_server_quinn(
     database_url: String,
     certs: Vec<Certificate>,
     key: PrivateKey,
@@ -631,78 +735,11 @@ pub fn run_http3_server(
                     Ok(conn) => {
                         info!("new connection established");
 
-                        let mut h3_conn: h3::server::Connection<h3_quinn::Connection, Bytes> =
+                        let mut connection: h3::server::Connection<h3_quinn::Connection, Bytes> =
                             h3::server::Connection::new(h3_quinn::Connection::new(conn))
                                 .await
                                 .unwrap();
-
-                        loop {
-                            match h3_conn.accept().await {
-                                Ok(Some((req, stream))) => {
-                                    info!("new request: {:#?}", req);
-
-                                    let service = service.clone();
-
-                                    tokio::spawn(async move {
-                                        let (mut response_body, mut request_body) = stream.split();
-                                        let request = req.map(|_| H3Body(request_body));
-                                        let response =
-                                            service
-                                                .call(request.map(|body| {
-                                                    body.map_err(|e| AppError::from(e))
-                                                }))
-                                                .await;
-                                        match response {
-                                            Ok(response) => {
-                                                let response: Response<_> = response;
-                                                let (parts, body) = response.into_parts();
-
-                                                response_body
-                                                    .send_response(Response::from_parts(parts, ()))
-                                                    .await
-                                                    .unwrap();
-
-                                                let mut body = std::pin::pin!(body);
-                                                while let Some(value) = body.frame().await {
-                                                    let value = value.unwrap();
-                                                    if value.is_data() {
-                                                        response_body
-                                                            .send_data(value.into_data().unwrap())
-                                                            .await
-                                                            .unwrap();
-                                                    } else if value.is_trailers() {
-                                                        response_body
-                                                            .send_trailers(
-                                                                value.into_trailers().unwrap(),
-                                                            )
-                                                            .await
-                                                            .unwrap();
-                                                        return;
-                                                    }
-                                                }
-                                                response_body.finish().await.unwrap();
-                                            }
-                                            Err(error) => {
-                                                let _error: Infallible = error;
-                                            }
-                                        }
-                                    });
-                                }
-
-                                // indicating no more streams to be received
-                                Ok(None) => {
-                                    break;
-                                }
-
-                                Err(err) => {
-                                    error!("error on accept {}", err);
-                                    match err.get_error_level() {
-                                        ErrorLevel::ConnectionError => break,
-                                        ErrorLevel::StreamError => continue,
-                                    }
-                                }
-                            }
-                        }
+                        handle_connection(service, connection).await;
                     }
                     Err(err) => {
                         error!("accepting connection failed: {:?}", err);
