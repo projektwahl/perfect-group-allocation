@@ -265,10 +265,8 @@ pub struct Svc {
 either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 8);
 either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
 
-impl<
-    B: Buf + Send + 'static,
-    RequestBody: http_body::Body<Data = B, Error = AppError> + Send + 'static,
-> Service<Request<RequestBody>> for Svc
+impl<RequestBody: http_body::Body<Data = Bytes, Error = AppError> + Send + 'static>
+    Service<Request<RequestBody>> for Svc
 {
     type Error = Infallible;
     type Response = Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send>;
@@ -474,19 +472,20 @@ pub async fn run_server(
 
 static ALPN: &[u8] = b"h3";
 
-#[pin_project]
-pub struct H3Body<B: Buf, F: Future<Output = Result<Option<B>, h3::Error>>>(#[pin] F);
+pub struct H3Body(h3::server::RequestStream<h3_quinn::RecvStream, bytes::Bytes>);
 
-impl<B: Buf, F: Future<Output = Result<Option<B>, h3::Error>>> Body for H3Body<B, F> {
-    type Data = Bytes;
+impl Body for H3Body {
     type Error = h3::Error;
 
+    type Data = impl Buf;
+
     fn poll_frame(
-        self: std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
-        let this = self.project();
-        this.0
+        let recv_data = self.0.recv_data();
+        let recv_data = std::pin::pin!(recv_data);
+        recv_data
             .poll(cx)
             .map(|v| v.transpose().map(|v| v.map(|v| Frame::data(v))))
     }
@@ -530,9 +529,10 @@ pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::e
                 Ok(conn) => {
                     info!("new connection established");
 
-                    let mut h3_conn = h3::server::Connection::new(h3_quinn::Connection::new(conn))
-                        .await
-                        .unwrap();
+                    let mut h3_conn: h3::server::Connection<h3_quinn::Connection, Bytes> =
+                        h3::server::Connection::new(h3_quinn::Connection::new(conn))
+                            .await
+                            .unwrap();
 
                     loop {
                         match h3_conn.accept().await {
@@ -542,8 +542,8 @@ pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::e
                                 let service = service.clone();
 
                                 tokio::spawn(async move {
-                                    let (response_body, request_body) = stream.split();
-                                    let request = req.map(|_| H3Body(request_body.recv_data()));
+                                    let (response_body, mut request_body) = stream.split();
+                                    let request = req.map(|_| H3Body(request_body));
                                     let response = service.call(
                                         request.map(|body| body.map_err(|e| AppError::from(e))),
                                     );
