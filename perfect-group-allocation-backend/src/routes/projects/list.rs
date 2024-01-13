@@ -1,4 +1,5 @@
 use alloc::borrow::Cow;
+use std::convert::Infallible;
 
 use bytes::Bytes;
 use diesel::prelude::*;
@@ -22,7 +23,7 @@ use crate::routes::list_projects;
 use crate::session::Session;
 use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
-async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>, AppError> {
+async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>, Infallible> {
     let template = yieldfi!(list_projects());
     let template = yieldfi!(template.next());
     let template = yieldfi!(template.next());
@@ -89,7 +90,7 @@ async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>,
 pub async fn list(
     pool: Pool,
     session: Session,
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let stream = AsyncIteratorStream(list_internal(pool, session.clone()));
     Ok(Response::builder()
         .status(StatusCode::OK)

@@ -18,7 +18,7 @@ use crate::{yieldfi, yieldfv};
 pub async fn index(
     request: hyper::Request<hyper::body::Incoming>,
     session: Session,
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());

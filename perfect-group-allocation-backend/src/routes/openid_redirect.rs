@@ -1,4 +1,5 @@
 use alloc::borrow::Cow;
+use std::convert::Infallible;
 
 use anyhow::anyhow;
 use bytes::Bytes;
@@ -38,7 +39,7 @@ either_http_body!(EitherBody 1 2);
 pub async fn openid_redirect(
     request: hyper::Request<hyper::body::Incoming>,
     mut session: Session, // what if this here could be a reference?
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let session_ref = &mut session;
 
     let body: Bytes = Limited::new(request.into_body(), 100)
@@ -107,9 +108,7 @@ pub async fn openid_redirect(
             Ok(Response::builder()
                 .status(StatusCode::TEMPORARY_REDIRECT)
                 .header(LOCATION, "/list")
-                .body(EitherBody::Option2(
-                    Empty::new().map_err::<_, AppError>(|err| match err {}),
-                ))
+                .body(EitherBody::Option2(Empty::new()))
                 .unwrap())
         }
     }

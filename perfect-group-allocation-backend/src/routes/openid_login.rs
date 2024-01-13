@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use bytes::Bytes;
 use headers::Location;
 use http::header::LOCATION;
@@ -26,7 +28,7 @@ impl CsrfToken for OpenIdLoginPayload {
 pub async fn openid_login(
     mut session: Session,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     // TODO FIXME check csrf token?
 
     let (auth_url, openid_session) = begin_authentication().await?;
@@ -36,6 +38,6 @@ pub async fn openid_login(
     Ok(Response::builder()
         .status(StatusCode::TEMPORARY_REDIRECT)
         .header(LOCATION, auth_url)
-        .body(Empty::new().map_err::<_, AppError>(|err| match err {}))
+        .body(Empty::new())
         .unwrap())
 }

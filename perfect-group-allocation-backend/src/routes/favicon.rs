@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -19,7 +20,7 @@ either_http_body!(EitherBody 1 2);
 // Etag and cache busting
 pub fn favicon_ico(
     request: hyper::Request<hyper::body::Incoming>,
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
     let etag_string = "\"xyzzy\"";
     let etag = etag_string.parse::<ETag>().unwrap();

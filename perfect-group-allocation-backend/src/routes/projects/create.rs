@@ -1,4 +1,5 @@
 use alloc::borrow::Cow;
+use std::convert::Infallible;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use bytes::Bytes;
@@ -29,7 +30,7 @@ pub async fn create(
     request: hyper::Request<hyper::body::Incoming>,
     pool: Pool,
     session: Session, // TODO FIXME extract in here
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = AppError>>, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let session_clone = session.clone();
     let form = CsrfSafeForm::<CreateProjectPayload>::from_request(request, session)
         .await
@@ -64,9 +65,7 @@ pub async fn create(
                     } else {
                         StatusCode::OK
                     })
-                    .body(EitherBody::Option1(
-                        Empty::new().map_err::<_, AppError>(|err| match err {}),
-                    ))
+                    .body(EitherBody::Option1(Empty::new()))
                     .unwrap());
             }
             Err(error) => {

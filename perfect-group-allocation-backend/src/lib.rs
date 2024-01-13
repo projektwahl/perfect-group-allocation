@@ -222,10 +222,12 @@ macro_rules! yieldfv {
         let expr = $e;
         let value = expr.1;
         let ret = expr.0;
-        yield Ok::<http_body::Frame<Bytes>, AppError>(http_body::Frame::data(match value {
-            Cow::Owned(v) => Bytes::from(v),
-            Cow::Borrowed(v) => Bytes::from(v),
-        }));
+        yield Ok::<::http_body::Frame<::bytes::Bytes>, ::core::convert::Infallible>(
+            ::http_body::Frame::data(match value {
+                ::alloc::borrow::Cow::Owned(v) => ::bytes::Bytes::from(v),
+                ::alloc::borrow::Cow::Borrowed(v) => ::bytes::Bytes::from(v),
+            }),
+        );
         ret
     }};
 }
@@ -242,9 +244,9 @@ macro_rules! yieldfi {
             // maybe match has bad liveness analysis?
             if value.is_some() {
                 let value = value.unwrap();
-                yield Ok::<http_body::Frame<Bytes>, AppError>(http_body::Frame::data(Bytes::from(
-                    value,
-                )));
+                yield Ok::<::http_body::Frame<::bytes::Bytes>, ::core::convert::Infallible>(
+                    ::http_body::Frame::data(::bytes::Bytes::from(value)),
+                );
             } else {
                 break;
             }
@@ -264,7 +266,7 @@ either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
 
 impl Service<Request<hyper::body::Incoming>> for Svc {
     type Error = Infallible;
-    type Response = Response<impl http_body::Body<Data = Bytes, Error = AppError> + Send>;
+    type Response = Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send>;
 
     type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send + 'static;
 
@@ -330,9 +332,7 @@ impl Service<Request<hyper::body::Incoming>> for Svc {
             Ok(ok) => Ok(ok),
             Err(err) => Ok(Response::builder()
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(EitherBodyRouter::Option8(
-                    Empty::new().map_err::<_, AppError>(|err| match err {}),
-                ))
+                .body(EitherBodyRouter::Option8(Empty::new()))
                 .unwrap()),
         })
     }
