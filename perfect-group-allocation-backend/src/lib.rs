@@ -44,13 +44,15 @@ use perfect_group_allocation_database::{get_database_connection, Pool};
 use pin_project::pin_project;
 use routes::index::index;
 use routes::indexcss::indexcss;
-use rustls::{Certificate, PrivateKey};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::watch;
+use tokio_rustls::rustls::version::TLS13;
+use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
+use tokio_rustls::TlsAcceptor;
 use tracing::{error, info, trace_span, warn};
 
 pub trait CsrfSafeExtractor {}
@@ -410,9 +412,19 @@ pub async fn run_server(
 
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
 
-    let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000))
+    let (cert, key) = load_certs().await?;
+
+    let incoming = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8443))
         .await
         .unwrap();
+
+    let mut server_config = ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(vec![cert], key)?;
+    server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
+
+    let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
 
     // tell the connections to shutdown
     let (shutdown_tx, shutdown_rx) = watch::channel(());
@@ -427,18 +439,27 @@ pub async fn run_server(
     Ok(async move {
         loop {
             select! {
-                accept = listener.accept() => {
+                incoming_accept = incoming.accept() => {
                     // TODO FIXME don't unwrap
-                    let (socket, _remote_addr) = accept.unwrap();
+                    let (tcp_stream, _remote_addr) = incoming_accept.unwrap();
+
+                    let tls_acceptor = tls_acceptor.clone();
 
                     let shutdown_tx = Arc::clone(&shutdown_tx);
                     let closed_rx = closed_rx.clone();
 
                     let service = service.clone();
-                    let socket = TokioIo::new(socket);
 
                     let fut = async move {
+                        let tls_stream = match tls_acceptor.accept(tcp_stream).await {
+                            Ok(tls_stream) => tls_stream,
+                            Err(err) => {
+                                eprintln!("failed to perform tls handshake: {err:#}");
+                                return;
+                            }
+                        };
                         let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
+                        let socket = TokioIo::new(tls_stream);
                         let connection = builder.serve_connection_with_upgrades(socket, service_fn(|req| service.call(req.map(|body: Incoming| body.map_err(|e| AppError::from(e))))));
                         pin_mut!(connection);
 
@@ -506,20 +527,25 @@ impl Body for H3Body {
     }
 }
 
+pub async fn load_certs() -> Result<(Certificate, PrivateKey), AppError> {
+    let cert = Certificate(tokio::fs::read("examples/server.cert").await?);
+    let key = PrivateKey(tokio::fs::read("examples/server.key").await?);
+
+    Ok((cert, key))
+}
+
 pub async fn run_http3_server(database_url: String) -> Result<(), Box<dyn std::error::Error>> {
     // TODO FIXME don't do this twice in h2 and h3
     let service = setup_server(&database_url)?;
 
-    let listen = std::net::SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000));
+    let listen = std::net::SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8443));
 
-    // TODO FIXME make nonblocking
-    let cert = Certificate(tokio::fs::read("examples/server.cert").await?);
-    let key = PrivateKey(tokio::fs::read("examples/server.key").await?);
+    let (cert, key) = load_certs().await?;
 
-    let mut tls_config = rustls::ServerConfig::builder()
+    let mut tls_config = ServerConfig::builder()
         .with_safe_default_cipher_suites()
         .with_safe_default_kx_groups()
-        .with_protocol_versions(&[&rustls::version::TLS13])
+        .with_protocol_versions(&[&TLS13])
         .unwrap()
         .with_no_client_auth()
         .with_single_cert(vec![cert], key)?;

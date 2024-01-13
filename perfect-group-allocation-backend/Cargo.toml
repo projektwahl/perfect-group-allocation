@@ -23,12 +23,11 @@ profiling = []
 futures-util = "0.3"
 itertools = { default-features = false, version = "0.12", features = [ "use_alloc", "use_std" ] }
 tokio = { version = "1", features = ["full"] }
-tokio-rustls = "0.25"
+tokio-rustls = "0.24"
 hyper = { version = "1", features = ["full"] }
 h3 = { git = "https://github.com/hyperium/h3.git" }
 h3-quinn = { git = "https://github.com/hyperium/h3.git" }
 quinn = "0.10"
-rustls = "0.21"
 http-body = "1"
 tokio-util = { version = "0.7", features = ["io"] }
 anyhow = "1"
