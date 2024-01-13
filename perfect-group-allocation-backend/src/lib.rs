@@ -22,6 +22,7 @@ pub mod routes;
 pub mod session;
 
 use core::convert::Infallible;
+use std::marker::PhantomData;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
@@ -257,16 +258,27 @@ macro_rules! yieldfi {
 }
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
-#[derive(Clone)]
-pub struct Svc {
+pub struct Svc<B: Buf + Send + 'static> {
     pool: Pool,
+    phantom_data: PhantomData<B>,
+}
+
+impl<B: Buf + Send + 'static> Clone for Svc<B> {
+    fn clone(&self) -> Self {
+        Self {
+            pool: self.pool.clone(),
+            phantom_data: self.phantom_data,
+        }
+    }
 }
 
 either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 8);
 either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
 
-impl<RequestBody: http_body::Body<Data = Bytes, Error = AppError> + Send + 'static>
-    Service<Request<RequestBody>> for Svc
+impl<
+    B: Buf + Send + 'static,
+    RequestBody: http_body::Body<Data = B, Error = AppError> + Send + 'static,
+> Service<Request<RequestBody>> for Svc<B>
 {
     type Error = Infallible;
     type Response = Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send>;
@@ -336,7 +348,9 @@ impl<RequestBody: http_body::Body<Data = Bytes, Error = AppError> + Send + 'stat
 }
 
 #[cfg_attr(feature = "profiling", expect(clippy::unused_async))]
-pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppError> {
+pub async fn setup_server<B: Buf + Send + 'static>(
+    database_url: &str,
+) -> std::result::Result<Svc<B>, AppError> {
     info!("starting up server...");
 
     // this one uses parallelism for generating the index css which is highly nondeterministic
@@ -360,7 +374,10 @@ pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppErr
     //.route(&Method::POST, "/openidconnect-login", openid_login)
     //.route(&Method::GET, "/openidconnect-redirect", openid_redirect);
 
-    let app = Svc { pool };
+    let app = Svc {
+        pool,
+        phantom_data: PhantomData,
+    };
 
     //let app = app.layer(CatchPanicLayer::new());
     #[cfg(feature = "perfect-group-allocation-telemetry")]
@@ -477,7 +494,7 @@ pub struct H3Body(h3::server::RequestStream<h3_quinn::RecvStream, bytes::Bytes>)
 impl Body for H3Body {
     type Error = h3::Error;
 
-    type Data = impl Buf;
+    type Data = impl Buf + Send + 'static;
 
     fn poll_frame(
         mut self: std::pin::Pin<&mut Self>,
