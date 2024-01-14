@@ -17,7 +17,7 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt install -y coinor-libcbc-dev
+      - run: sudo apt install -y mold coinor-libcbc-dev
       - run: rustup default nightly
       - uses: actions/checkout@v3
       - run: cargo build
@@ -25,7 +25,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt install -y coinor-libcbc-dev
+      - run: sudo apt install -y mold coinor-libcbc-dev
       - run: rustup toolchain install nightly --component clippy
       - run: rustup default nightly
       - uses: actions/checkout@v3
@@ -33,7 +33,7 @@ jobs:
   cargo-deny:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt install -y coinor-libcbc-dev
+      - run: sudo apt install -y mold coinor-libcbc-dev
       - run: rustup toolchain install nightly --component rustfmt
       - run: rustup default nightly
       - run: cargo install --locked cargo-deny

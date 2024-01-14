@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use diesel_async::RunQueryDsl;
 use headers::ContentType;
 use http::{Response, StatusCode};
@@ -25,7 +25,7 @@ either_http_body!(EitherBody 1 2);
 
 pub async fn create(
     request: hyper::Request<
-        impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
     pool: Pool,
     session: Session, // TODO FIXME extract in here

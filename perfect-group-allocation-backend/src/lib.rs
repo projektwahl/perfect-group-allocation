@@ -3,6 +3,7 @@
 #![feature(let_chains)]
 #![feature(hash_raw_entry)]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(error_generic_member_access)]
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
@@ -18,22 +19,26 @@ extern crate alloc;
 pub mod csrf_protection;
 pub mod either;
 pub mod error;
+pub mod h3;
 pub mod routes;
 pub mod session;
 
 use core::convert::Infallible;
+use std::marker::PhantomData;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use cookie::Cookie;
 use error::AppError;
-use futures_util::{pin_mut, Future, FutureExt};
-use http::header::COOKIE;
-use http::{Request, Response, StatusCode};
+use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
+use h3::run_http3_server_s2n;
+use http::header::{ALT_SVC, COOKIE};
+use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use http_body::Body;
 use http_body_util::{BodyExt, Full, Limited};
-use hyper::service::Service;
+use hyper::body::Incoming;
+use hyper::service::{service_fn, Service};
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use perfect_group_allocation_database::{get_database_connection, Pool};
@@ -45,6 +50,8 @@ use session::Session;
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::watch;
+use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
+use tokio_rustls::TlsAcceptor;
 use tracing::{error, info, warn};
 
 pub trait CsrfSafeExtractor {}
@@ -95,7 +102,7 @@ where
 {
     async fn from_request(
         request: hyper::Request<
-            impl http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static,
+            impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
         >,
         session: Session,
     ) -> Result<Self, AppError> {
@@ -201,6 +208,9 @@ use crate::routes::projects::list::list;
 pub trait ResponseTypedHeaderExt {
     #[must_use]
     fn typed_header<H: Header>(self, header: H) -> Self;
+
+    #[must_use]
+    fn untyped_header(self, key: HeaderName, value: HeaderValue) -> Self;
 }
 
 impl ResponseTypedHeaderExt for hyper::http::response::Builder {
@@ -208,6 +218,22 @@ impl ResponseTypedHeaderExt for hyper::http::response::Builder {
         if let Some(res) = self.headers_mut() {
             res.typed_insert(header);
         }
+        self
+    }
+
+    fn untyped_header(self, key: HeaderName, value: HeaderValue) -> Self {
+        self.header(key, value)
+    }
+}
+
+impl<T> ResponseTypedHeaderExt for Response<T> {
+    fn typed_header<H: Header>(mut self, header: H) -> Self {
+        self.headers_mut().typed_insert(header);
+        self
+    }
+
+    fn untyped_header(mut self, key: HeaderName, value: HeaderValue) -> Self {
+        self.headers_mut().append(key, value);
         self
     }
 }
@@ -253,16 +279,27 @@ macro_rules! yieldfi {
 }
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
-#[derive(Clone)]
-pub struct Svc {
+pub struct Svc<RequestBodyBuf: Buf + Send + 'static> {
     pool: Pool,
+    phantom_data: PhantomData<RequestBodyBuf>,
+}
+
+impl<RequestBodyBuf: Buf + Send + 'static> Clone for Svc<RequestBodyBuf> {
+    fn clone(&self) -> Self {
+        Self {
+            pool: self.pool.clone(),
+            phantom_data: self.phantom_data,
+        }
+    }
 }
 
 either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 8);
 either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
 
-impl<RequestBody: http_body::Body<Data = Bytes, Error = hyper::Error> + Send + 'static>
-    Service<Request<RequestBody>> for Svc
+impl<
+    RequestBodyBuf: Buf + Send + 'static,
+    RequestBody: http_body::Body<Data = RequestBodyBuf, Error = AppError> + Send + 'static,
+> Service<Request<RequestBody>> for Svc<RequestBodyBuf>
 {
     type Error = Infallible;
     type Response = Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send>;
@@ -328,18 +365,20 @@ impl<RequestBody: http_body::Body<Data = Bytes, Error = hyper::Error> + Send + '
                 .build_error_template(err_session)
                 .map(EitherBodyRouter::Option8)),
         })
+        .map_ok(|result: Response<_>| {
+            result.untyped_header(ALT_SVC, HeaderValue::from_static(ALT_SVC_HEADER))
+        })
     }
 }
 
-#[cfg_attr(feature = "profiling", expect(clippy::unused_async))]
-pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppError> {
+pub fn setup_server<B: Buf + Send + 'static>(
+    database_url: &str,
+) -> std::result::Result<Svc<B>, AppError> {
     info!("starting up server...");
 
     // this one uses parallelism for generating the index css which is highly nondeterministic
     //#[cfg(not(feature = "profiling"))]
     //initialize_index_css();
-    #[cfg(not(feature = "profiling"))]
-    perfect_group_allocation_openidconnect::get_openid_client().await?;
 
     // https://github.com/hyperium/hyper/blob/master/examples/state.rs
 
@@ -356,44 +395,68 @@ pub async fn setup_server(database_url: &str) -> std::result::Result<Svc, AppErr
     //.route(&Method::POST, "/openidconnect-login", openid_login)
     //.route(&Method::GET, "/openidconnect-redirect", openid_redirect);
 
-    let app = Svc { pool };
+    let app = Svc {
+        pool,
+        phantom_data: PhantomData,
+    };
 
     //let app = app.layer(CatchPanicLayer::new());
     #[cfg(feature = "perfect-group-allocation-telemetry")]
     let app = app.layer(perfect_group_allocation_telemetry::trace_layer::MyTraceLayer);
-    /*    let config = OpenSSLConfig::from_pem_file(
-            ".lego/certificates/h3.selfmade4u.de.crt",
-            ".lego/certificates/h3.selfmade4u.de.key",
-        )
-        .unwrap();
-    */
-    /*
-        let config = RustlsConfig::from_pem_file(
-            ".lego/certificates/h3.selfmade4u.de.crt",
-            ".lego/certificates/h3.selfmade4u.de.key",
-        )
-        .await
-        .unwrap();
-    */
-    //let addr = SocketAddr::from(([127, 0, 0, 1], 8443));
 
     Ok(app)
 }
 
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 
-/// Outer future returns when server started listening. Inner future returns when server stopped.
-#[allow(clippy::cognitive_complexity)]
-pub async fn run_server(
+pub async fn setup_http2_http3_server(
     database_url: String,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let service = setup_server(&database_url).await?;
+    let (certs, key) = load_certs_key_pair()?;
 
+    // needs a service that accepts some non-controllable impl Buf
+    let http3_server = run_http3_server_s2n(database_url.clone())?;
+    // needs a service that accepts Bytes, therefore we to create separate services
+    let http2_server = run_http2_server(database_url, certs, key).await?;
+
+    #[allow(clippy::redundant_pub_crate)]
+    Ok(async move {
+        let mut http2_server = tokio::spawn(http2_server);
+        let mut http3_server = tokio::spawn(http3_server);
+        select! {
+            http2_result = &mut http2_server => {
+                http2_result??;
+                http3_server.await?
+            }
+            http3_result = &mut http3_server => {
+                http3_result??;
+                http2_server.await?
+            }
+        }
+    })
+}
+
+/// Outer future returns when server started listening. Inner future returns when server stopped.
+#[allow(clippy::cognitive_complexity)]
+pub async fn run_http2_server(
+    database_url: String,
+    certs: Vec<Certificate>,
+    key: PrivateKey,
+) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
+    let service = setup_server(&database_url)?;
 
-    let listener = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 3000))
+    let incoming = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), PORT))
         .await
         .unwrap();
+
+    let mut server_config = ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(certs, key)?;
+    server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
+
+    let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
 
     // tell the connections to shutdown
     let (shutdown_tx, shutdown_rx) = watch::channel(());
@@ -408,19 +471,28 @@ pub async fn run_server(
     Ok(async move {
         loop {
             select! {
-                accept = listener.accept() => {
+                incoming_accept = incoming.accept() => {
                     // TODO FIXME don't unwrap
-                    let (socket, _remote_addr) = accept.unwrap();
+                    let (tcp_stream, _remote_addr) = incoming_accept.unwrap();
+
+                    let tls_acceptor = tls_acceptor.clone();
 
                     let shutdown_tx = Arc::clone(&shutdown_tx);
                     let closed_rx = closed_rx.clone();
 
                     let service = service.clone();
-                    let socket = TokioIo::new(socket);
 
                     let fut = async move {
+                        let tls_stream = match tls_acceptor.accept(tcp_stream).await {
+                            Ok(tls_stream) => tls_stream,
+                            Err(err) => {
+                                eprintln!("failed to perform tls handshake: {err:#}");
+                                return;
+                            }
+                        };
                         let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
-                        let connection = builder.serve_connection_with_upgrades(socket, service);
+                        let socket = TokioIo::new(tls_stream);
+                        let connection = builder.serve_connection_with_upgrades(socket, service_fn(|req| service.call(req.map(|body: Incoming| body.map_err(AppError::from)))));
                         pin_mut!(connection);
 
                         loop {
@@ -438,7 +510,6 @@ pub async fn run_server(
                             }
                         }
 
-                        tracing::info!("hi");
 
                         drop(closed_rx);
                     };
@@ -466,8 +537,45 @@ pub async fn run_server(
     })
 }
 
+fn load_certs(filename: &str) -> std::io::Result<Vec<Certificate>> {
+    // TODO FIXME async
+    // Open certificate file.
+    let certfile = std::fs::File::open(filename)?;
+    let mut reader = std::io::BufReader::new(certfile);
+
+    // Load and return certificate.
+    let certs = rustls_pemfile::certs(&mut reader)?;
+    Ok(certs.into_iter().map(Certificate).collect())
+}
+
+// Load private key from file.
+fn load_private_key(filename: &str) -> std::io::Result<PrivateKey> {
+    // Open keyfile.
+    let keyfile = std::fs::File::open(filename)?;
+    let mut reader = std::io::BufReader::new(keyfile);
+
+    // Load and return a single private key.
+    let keys = rustls_pemfile::ec_private_keys(&mut reader)?;
+
+    Ok(PrivateKey(keys[0].clone()))
+}
+
+pub fn load_certs_key_pair() -> Result<(Vec<Certificate>, PrivateKey), AppError> {
+    let certs = load_certs(CERT_PATH)?;
+    let key = load_private_key(KEY_PATH)?;
+
+    Ok((certs, key))
+}
+
+pub const CERT_PATH: &str = ".lego/certificates/h3.selfmade4u.de.crt";
+pub const KEY_PATH: &str = ".lego/certificates/h3.selfmade4u.de.key";
+pub const PORT: u16 = 443;
+pub const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
+
 #[allow(clippy::redundant_pub_crate)]
 async fn shutdown_signal() {
+    std::future::pending::<()>().await;
+    /*
     // check which of these two signals we need
     let ctrl_c = async {
         tokio::signal::ctrl_c()
@@ -485,5 +593,5 @@ async fn shutdown_signal() {
     tokio::select! {
         () = ctrl_c => {},
         () = terminate => {},
-    }
+    }*/
 }

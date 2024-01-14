@@ -191,5 +191,5 @@ pub async fn finish_authentication(
     // TODO FIXME our application should work without refresh token but use it for efficiency?
     // token_response.refresh_token()
 
-    Ok("hi".to_owned())
+    Ok("authentication done".to_owned())
 }

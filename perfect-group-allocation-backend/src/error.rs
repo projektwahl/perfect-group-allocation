@@ -1,4 +1,6 @@
+use std::backtrace::Backtrace;
 use std::convert::Infallible;
+use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
 use http::{Response, StatusCode};
@@ -13,31 +15,35 @@ use crate::routes::error;
 use crate::session::Session;
 use crate::{yieldfi, yieldfv};
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error)]
 pub enum AppError {
-    #[error("header error: {0}")]
-    Header(#[from] headers::Error),
-    #[error("IO error: {0}")]
-    File(#[from] std::io::Error),
-    #[error("json error: {0}")]
-    Json(#[from] serde_json::Error),
-    #[error("webserver error: {0}")]
-    Hyper(#[from] hyper::Error),
-    #[error("unknown error: {0}")]
-    Other(#[from] anyhow::Error),
-    #[error("env var error: {0}")]
-    EnvVar(#[from] std::env::VarError),
-    #[error("rustls error: {0}")]
-    Rustls(#[from] tokio_rustls::rustls::Error),
-    #[error("poison error: {0}")]
-    Poison(#[from] std::sync::PoisonError<()>),
-    #[error("join error: {0}")]
-    Join(#[from] tokio::task::JoinError),
+    #[error("header error: {0}\n{1}")]
+    Header(#[from] headers::Error, Backtrace),
+    #[error("IO error: {0}\n{1}")]
+    File(#[from] std::io::Error, Backtrace),
+    #[error("json error: {0}\n{1}")]
+    Json(#[from] serde_json::Error, Backtrace),
+    #[error("webserver error: {0}\n{1}")]
+    Hyper(#[from] hyper::Error, Backtrace),
+    #[error("webserver h3 error: {0}\n{1}")]
+    H3(#[from] h3::Error, Backtrace),
+    #[error("unknown error: {0}\n{1}")]
+    Other(#[from] anyhow::Error, Backtrace),
+    #[error("env var error: {0}\n{1}")]
+    EnvVar(#[from] std::env::VarError, Backtrace),
+    #[error("rustls error: {0}\n{1}")]
+    Rustls(#[from] tokio_rustls::rustls::Error, Backtrace),
+    #[error("poison error: {0}\n{1}")]
+    Poison(#[from] std::sync::PoisonError<()>, Backtrace),
+    #[error("join error: {0}\n{1}")]
+    Join(#[from] tokio::task::JoinError, Backtrace),
+    #[error("quic start error: {0}\n{1}")]
+    S2nStart(#[from] s2n_quic::provider::StartError, Backtrace),
     // #[cfg(feature = "perfect-group-allocation-telemetry")]
     //#[error("trace error: {0}")]
     //Trace(#[from] TraceError),
-    #[error("database error: {0}")]
-    Database(#[from] DatabaseError),
+    #[error("database error: {0}\n{1}")]
+    Database(#[from] DatabaseError, Backtrace),
     #[error("wrong csrf token")]
     WrongCsrfToken,
     #[error("no accept remaining")]
@@ -47,8 +53,8 @@ pub enum AppError {
          response?"
     )]
     SessionStillHeld,
-    #[error("openid connect error: {0}")]
-    OpenIdConnect(#[from] OpenIdConnectError),
+    #[error("openid connect error: {0}\n{1}")]
+    OpenIdConnect(#[from] OpenIdConnectError, Backtrace),
     #[error(
         "Höchstwahrscheinlich ist deine Anmeldesession abgelaufen und du musst es erneut \
          versuchen. Wenn dies wieder auftritt, melde das Problem bitte an einen \
@@ -59,6 +65,12 @@ pub enum AppError {
     OpenIdNotConfigured,
 }
 
+impl Debug for AppError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
 impl From<Infallible> for AppError {
     fn from(value: Infallible) -> Self {
         match value {}
@@ -67,7 +79,7 @@ impl From<Infallible> for AppError {
 
 impl From<diesel_async::pooled_connection::deadpool::PoolError> for AppError {
     fn from(value: diesel_async::pooled_connection::deadpool::PoolError) -> Self {
-        Self::Database(value.into())
+        Self::from(DatabaseError::from(value))
     }
 }
 
