@@ -25,7 +25,7 @@ either_http_body!(EitherBody 1 2);
 
 pub async fn create(
     request: hyper::Request<
-        impl http_body::Body<Data = impl Buf, Error = AppError> + Send + 'static,
+        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
     pool: Pool,
     session: Session, // TODO FIXME extract in here

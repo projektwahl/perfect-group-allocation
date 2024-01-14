@@ -1,4 +1,3 @@
-use std::convert::Infallible;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
 use std::sync::Arc;
@@ -112,10 +111,9 @@ service: Svc::<<H3Body<MyRecvStream> as Body>::Data>, // the service needs to us
 
 type TestS2n = <H3Body<s2n_quic_h3::RecvStream> as Body>::Data;
 
+#[expect(clippy::needless_pass_by_value)]
 pub fn run_http3_server_s2n(
     database_url: String,
-    _certs: Vec<Certificate>,
-    _key: PrivateKey,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let service = setup_server::<TestS2n>(&database_url)?;
 
@@ -147,6 +145,7 @@ pub fn run_http3_server_s2n(
 
 type TestQuinn = <H3Body<h3_quinn::RecvStream> as Body>::Data;
 
+#[expect(clippy::needless_pass_by_value)]
 pub fn run_http3_server_quinn(
     database_url: String,
     certs: Vec<Certificate>,

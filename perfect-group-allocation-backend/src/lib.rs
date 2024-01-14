@@ -102,7 +102,7 @@ where
 {
     async fn from_request(
         request: hyper::Request<
-            impl http_body::Body<Data = impl Buf, Error = AppError> + Send + 'static,
+            impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
         >,
         session: Session,
     ) -> Result<Self, AppError> {
@@ -209,6 +209,7 @@ pub trait ResponseTypedHeaderExt {
     #[must_use]
     fn typed_header<H: Header>(self, header: H) -> Self;
 
+    #[must_use]
     fn untyped_header(self, key: HeaderName, value: HeaderValue) -> Self;
 }
 
@@ -414,7 +415,7 @@ pub async fn setup_http2_http3_server(
     let (certs, key) = load_certs_key_pair()?;
 
     // needs a service that accepts some non-controllable impl Buf
-    let http3_server = run_http3_server_s2n(database_url.clone(), certs.clone(), key.clone())?;
+    let http3_server = run_http3_server_s2n(database_url.clone())?;
     // needs a service that accepts Bytes, therefore we to create separate services
     let http2_server = run_http2_server(database_url, certs, key).await?;
 
