@@ -12,8 +12,9 @@
 Using Forgejo Actions
 ```
 systemctl --user enable --now podman
-podman run --userns=keep-id -v $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock --rm code.forgejo.org/forgejo/runner:3.3.0 bash -c "forgejo-runner register --no-interactive --token XXX --n
-ame runner --instance https://codeberg.org && forgejo-runner daemon"
+
+# you need to enable actions on the repository and then add it to the repository itself
+podman run --userns=keep-id --env DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock" -v $XDG_RUNTIME_DIR/podman/podman.sock:$XDG_RUNTIME_DIR/podman/podman.sock --rm code.forgejo.org/forgejo/runner:3.3.0 bash -c "forgejo-runner register --no-interactive --token XXX --name runner --instance https://codeberg.org && forgejo-runner daemon"
 ```
 
 ## Updating dependencies
