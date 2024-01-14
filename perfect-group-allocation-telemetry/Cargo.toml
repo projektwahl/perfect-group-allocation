@@ -17,7 +17,7 @@ readme.workspace = true
 log = { default-features = false, version = "0.4", features = ["release_max_level_off"] }
 tracing = { default-features = false, version = "0.1", features = ["release_max_level_off"] }
 tracing-opentelemetry = { default-features = false, version = "0.22", features = ["metrics"] }
-tracing-subscriber = { default-features = false, version = "0.3" }
+tracing-subscriber = { default-features = false, version = "0.3", features = ["env-filter"] }
 console-subscriber = { default-features = false, version = "0.2" }
 opentelemetry = { default-features = false, version = "0.21", features = ["trace", "metrics", "logs"] }
 opentelemetry_sdk  = { default-features = false, version = "0.21", features = ["trace", "metrics", "logs", "rt-tokio" ] }

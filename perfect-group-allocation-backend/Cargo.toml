@@ -45,7 +45,7 @@ mime = { default-features = false, version = "0.3" }
 zero-cost-templating = { default-features = false, git = "https://github.com/mohe2015/zero-cost-templating.git", branch = "work" }
 bytes = { default-features = false, version = "1" }
 pin-project = { default-features = false, version = "1" }
-hyper-util = { default-features = false, version = "0.1" }
+hyper-util = { default-features = false, version = "0.1", features = ["tokio", "server-auto"] }
 http-body-util = { default-features = false, version = "0.1" }
 serde_urlencoded = { default-features = false, version = "0.7" }
 paste = { default-features = false, version = "1" }
