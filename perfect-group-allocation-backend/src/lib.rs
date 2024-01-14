@@ -33,7 +33,6 @@ use cookie::Cookie;
 use error::AppError;
 use futures_util::{pin_mut, Future, FutureExt, StreamExt, TryFutureExt};
 use h3::error::{Code, ErrorLevel};
-use h3::quic::RecvStream;
 use http::header::{ALT_SVC, COOKIE};
 use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use http_body::{Body, Frame};
@@ -597,15 +596,16 @@ const KEY_PATH: &str = ".lego/certificates/h3.selfmade4u.de.key";
 const PORT: u16 = 443;
 const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 
-async fn handle_connection<RequestBodyBuf: Buf + Send + 'static, C: h3::quic::Connection<Bytes>, MyRecvStream: h3::quic::RecvStream + 'static>(
-service: Svc::<RequestBodyBuf>, // the service needs to use the same impl buf that recvstream decided to use
-    connection: h3::server::Connection<C, Bytes>,
+async fn handle_connection<C: h3::quic::Connection<Bytes>, MyRecvStream: h3::quic::RecvStream + 'static>(
+service: Svc::<<H3Body<MyRecvStream> as Body>::Data>, // the service needs to use the same impl buf that recvstream decided to use
+    mut connection: h3::server::Connection<C, Bytes>,
 ) where
 // RequestBodyBuf needs to == H3Body::Data
 
 // the RecvStream uses impl Buf
     C::BidiStream: h3::quic::BidiStream<Bytes, RecvStream = MyRecvStream> + Send + 'static,
     <<C as h3::quic::Connection<bytes::Bytes>>::BidiStream as h3::quic::BidiStream<bytes::Bytes>>::RecvStream: std::marker::Send,
+    <<C as h3::quic::Connection<bytes::Bytes>>::BidiStream as h3::quic::BidiStream<bytes::Bytes>>::SendStream: std::marker::Send
 {
     loop {
         match connection.accept().await {
@@ -671,12 +671,14 @@ service: Svc::<RequestBodyBuf>, // the service needs to use the same impl buf th
     }
 }
 
+type TestS2n = <H3Body<s2n_quic_h3::RecvStream> as Body>::Data;
+
 pub fn run_http3_server_s2n(
     database_url: String,
     certs: Vec<Certificate>,
     key: PrivateKey,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let service = setup_server(&database_url)?;
+    let service = setup_server::<TestS2n>(&database_url)?;
 
     let mut server = s2n_quic::Server::builder()
         .with_tls((Path::new(CERT_PATH), Path::new(KEY_PATH)))?
@@ -697,19 +699,21 @@ pub fn run_http3_server_s2n(
                     h3::server::Connection::new(s2n_quic_h3::Connection::new(connection))
                         .await
                         .unwrap();
-                handle_connection::<Bytes, _>(service, connection).await;
+                handle_connection(service, connection).await;
             });
         }
         Ok(())
     })
 }
 
+type TestQuinn = <H3Body<h3_quinn::RecvStream> as Body>::Data;
+
 pub fn run_http3_server_quinn(
     database_url: String,
     certs: Vec<Certificate>,
     key: PrivateKey,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let service = setup_server(&database_url)?;
+    let service = setup_server::<TestQuinn>(&database_url)?;
 
     let listen = std::net::SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), PORT));
 
