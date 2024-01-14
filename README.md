@@ -7,6 +7,13 @@
 3. Low Latency
 4. Low Resource usage on the server
 
+## Updating dependencies
+
+```
+cargo install cargo-edit
+cargo upgrade --verbose
+```
+
 ## Testing
 
 ```bash
@@ -81,10 +88,6 @@ use zed attack proxy to create some requests
 export DEBUGINFOD_URLS="https://debuginfod.archlinux.org"
 kcachegrind callgrind.out.110536
 ```
-https://www.keycloak.org/getting-started/getting-started-podman
-podman run -p 8080:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:22.0.5 start-dev
-podman start b217886c51eb
-
 http://localhost:8080/realms/pga/account/
 
 Add GitHub as identity provider for demo

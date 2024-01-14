@@ -1250,13 +1250,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "h3"
+version = "0.0.3"
+source = "git+https://github.com/hyperium/h3.git#branch=master#e7c7ab9d634ef73784d6cbc424a270dbaa4f1c99"
+dependencies = [
+ "bytes",
+ "fastrand",
+ "futures-util",
+ "http 1.0.0",
+ "pin-project-lite",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "h3-quinn"
 version = "0.0.4"
 source = "git+https://github.com/hyperium/h3.git#e7c7ab9d634ef73784d6cbc424a270dbaa4f1c99"
 dependencies = [
  "bytes",
  "futures",
- "h3",
+ "h3 0.0.3 (git+https://github.com/hyperium/h3.git)",
  "quinn",
  "quinn-proto",
  "tokio",
@@ -2375,7 +2389,7 @@ dependencies = [
  "diesel",
  "diesel-async",
  "futures-util",
- "h3",
+ "h3 0.0.3 (git+https://github.com/hyperium/h3.git)",
  "h3-quinn",
  "headers",
  "http 1.0.0",
@@ -3335,7 +3349,7 @@ source = "git+https://github.com/aws/s2n-quic.git#2d060fe5336fe25e415a3f436465b5
 dependencies = [
  "bytes",
  "futures",
- "h3",
+ "h3 0.0.3 (git+https://github.com/hyperium/h3.git#branch=master)",
  "s2n-quic",
  "s2n-quic-core",
 ]
