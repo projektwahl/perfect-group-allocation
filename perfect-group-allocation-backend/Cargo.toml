@@ -23,8 +23,8 @@ profiling = []
 futures-util = "0.3"
 itertools = { default-features = false, version = "0.12", features = [ "use_alloc", "use_std" ] }
 tokio = { version = "1", features = ["full"] }
-tokio-rustls = "0.24" # can't update because of quinn
-rustls-pemfile = "1" # can't update because of quinn
+tokio-rustls = "0.25" # can't update because of quinn
+rustls-pemfile = "2" # can't update because of quinn
 hyper = { version = "1", features = ["full"] }
 h3 = { git = "https://github.com/hyperium/h3.git", branch = "master" }
 s2n-quic-h3 = { git = "https://github.com/aws/s2n-quic.git" }

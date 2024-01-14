@@ -1,6 +1,4 @@
-use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
-use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
 use futures_util::Future;
@@ -9,9 +7,7 @@ use http::Response;
 use http_body::{Body, Frame};
 use http_body_util::BodyExt as _;
 use hyper::service::Service as _;
-use tokio_rustls::rustls::version::TLS13;
-use tokio_rustls::rustls::{Certificate, PrivateKey};
-use tracing::{error, info, trace_span};
+use tracing::{error, info};
 
 use crate::error::AppError;
 use crate::{setup_server, Svc, CERT_PATH, KEY_PATH, PORT};

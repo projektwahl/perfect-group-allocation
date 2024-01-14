@@ -11,7 +11,7 @@
 
 ```
 cargo install cargo-edit
-cargo upgrade --verbose
+cargo upgrade --verbose --incompatible allow --pinned allow
 ```
 
 ## Testing

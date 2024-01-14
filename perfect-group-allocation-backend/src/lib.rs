@@ -50,7 +50,8 @@ use session::Session;
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::watch;
-use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
+use tokio_rustls::rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use tokio_rustls::rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
 use tracing::{error, info, warn};
 
@@ -440,8 +441,8 @@ pub async fn setup_http2_http3_server(
 #[allow(clippy::cognitive_complexity)]
 pub async fn run_http2_server(
     database_url: String,
-    certs: Vec<Certificate>,
-    key: PrivateKey,
+    certs: Vec<CertificateDer<'static>>,
+    key: PrivateKeyDer<'static>,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
     let service = setup_server(&database_url)?;
@@ -451,7 +452,6 @@ pub async fn run_http2_server(
         .unwrap();
 
     let mut server_config = ServerConfig::builder()
-        .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(certs, key)?;
     server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
@@ -537,30 +537,25 @@ pub async fn run_http2_server(
     })
 }
 
-fn load_certs(filename: &str) -> std::io::Result<Vec<Certificate>> {
+fn load_certs(filename: &str) -> std::io::Result<Vec<CertificateDer>> {
     // TODO FIXME async
-    // Open certificate file.
     let certfile = std::fs::File::open(filename)?;
     let mut reader = std::io::BufReader::new(certfile);
 
-    // Load and return certificate.
-    let certs = rustls_pemfile::certs(&mut reader)?;
-    Ok(certs.into_iter().map(Certificate).collect())
+    rustls_pemfile::certs(&mut reader).collect()
 }
 
 // Load private key from file.
-fn load_private_key(filename: &str) -> std::io::Result<PrivateKey> {
-    // Open keyfile.
+fn load_private_key(filename: &str) -> std::io::Result<PrivateKeyDer> {
     let keyfile = std::fs::File::open(filename)?;
     let mut reader = std::io::BufReader::new(keyfile);
 
-    // Load and return a single private key.
-    let keys = rustls_pemfile::ec_private_keys(&mut reader)?;
-
-    Ok(PrivateKey(keys[0].clone()))
+    // TODO FIXME remove unwrap
+    Ok(rustls_pemfile::private_key(&mut reader)?.unwrap())
 }
 
-pub fn load_certs_key_pair() -> Result<(Vec<Certificate>, PrivateKey), AppError> {
+pub fn load_certs_key_pair()
+-> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), AppError> {
     let certs = load_certs(CERT_PATH)?;
     let key = load_private_key(KEY_PATH)?;
 
