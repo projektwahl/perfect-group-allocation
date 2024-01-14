@@ -30,8 +30,8 @@ jobs:
             target/      
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-      - run: source "$HOME/.cargo/env" && rustup toolchain install --component rustfmt,clippy nightly
-      - run: source "$HOME/.cargo/env" && rustup default nightly
+      - run: . "$HOME/.cargo/env" && rustup toolchain install --component rustfmt,clippy nightly
+      - run: . "$HOME/.cargo/env" && rustup default nightly
       - run: cargo install --locked cargo-hack
       - run: cargo install --locked cargo-deny
       - uses: actions/checkout@v3
