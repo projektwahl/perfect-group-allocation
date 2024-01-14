@@ -3,6 +3,7 @@ use std::convert::Infallible;
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
+use headers::ContentType;
 use http::{Response, StatusCode};
 use http_body_util::StreamBody;
 use perfect_group_allocation_config::ConfigError;
@@ -14,7 +15,7 @@ use zero_cost_templating::Unsafe;
 
 use crate::routes::error;
 use crate::session::Session;
-use crate::{yieldfi, yieldfv};
+use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
 #[derive(thiserror::Error)]
 pub enum AppError {
@@ -114,6 +115,7 @@ impl AppError {
         let stream = AsyncIteratorStream(result);
         Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .typed_header(ContentType::html())
             .body(StreamBody::new(stream))
             .unwrap()
     }

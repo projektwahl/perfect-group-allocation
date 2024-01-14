@@ -39,13 +39,10 @@ pub async fn openid_redirect(
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     let session_ref = &mut session;
 
-    let body: Bytes = Limited::new(request.into_body(), 100)
-        .collect()
-        .await
-        .unwrap()
-        .to_bytes();
+    let body = request.uri().query().unwrap();
 
-    let form: OpenIdRedirect<OpenIdRedirectInner> = serde_urlencoded::from_bytes(&body).unwrap();
+    // TODO FIXME unwrap
+    let form: OpenIdRedirect<OpenIdRedirectInner> = serde_urlencoded::from_str(body).unwrap();
 
     // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
     // TODO FIXME errors also need to return the session?
