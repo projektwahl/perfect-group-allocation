@@ -17,18 +17,18 @@ readme.workspace = true
 workspace = true
 
 [dependencies]
-iai-callgrind = "0.10.0"
-perfect-group-allocation-backend = { path = "../perfect-group-allocation-backend" }
-webdriver-bidi = { path = "../webdriver-bidi" }
-hyper = { version = "1", features = ["full"] }
-tokio = { version = "1", features = ["full"] }
-http-body-util = "0.1"
-hyper-util = { version = "0.1", features = ["full"] }
-bytes = "1"
-libc = "0.2"
-rand = "0.8"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+iai-callgrind = { default-features = false, version = "0.10" }
+perfect-group-allocation-backend = { default-features = false, path = "../perfect-group-allocation-backend" }
+webdriver-bidi = { default-features = false, path = "../webdriver-bidi" }
+hyper = { default-features = false, version = "1", features = ["full"] }
+tokio = { default-features = false, version = "1", features = ["full"] }
+http-body-util = { default-features = false, version = "0.1" }
+hyper-util = { default-features = false, version = "0.1", features = ["full"] }
+bytes = { default-features = false, version = "1" }
+libc = { default-features = false, version = "0.2" }
+rand = { default-features = false, version = "0.8" }
+tracing = { default-features = false, version = "0.1" }
+tracing-subscriber = { default-features = false, version = "0.3", features = ["env-filter"] }
 
 [[bench]]
 name = "http_e2e"
