@@ -4,7 +4,7 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, Empty};
 use hyper::Request;
 use hyper_util::rt::TokioIo;
-use perfect_group_allocation_config::Config;
+use perfect_group_allocation_config::{Config, OpenIdConnectConfig};
 use tokio::net::TcpStream;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -56,8 +56,13 @@ pub async fn test_as_client(repeat: u64) {
 
 pub async fn test_server() -> impl Future<Output = ()> {
     let fut = setup_http2_http3_server(Config {
+        url: "https://h3.selfmade4u.de".to_owned(),
         database_url: "postgres://postgres@localhost/pga?sslmode=disable".to_owned(),
-        openidconnect: None,
+        openidconnect: OpenIdConnectConfig {
+            issuer_url: "http://localhost:8080/realms/pga".to_owned(),
+            client_id: "pga".to_owned(),
+            client_secret: "test".to_owned(),
+        },
     })
     .await
     .unwrap();

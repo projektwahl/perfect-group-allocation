@@ -8,14 +8,16 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 pub struct OpenIdConnectConfig {
+    pub issuer_url: String,
     pub client_id: String,
     pub client_secret: String,
 }
 
 #[derive(Deserialize, Clone)]
 pub struct Config {
+    pub url: String,
     pub database_url: String,
-    pub openidconnect: Option<OpenIdConnectConfig>,
+    pub openidconnect: OpenIdConnectConfig,
 }
 
 #[derive(thiserror::Error)]

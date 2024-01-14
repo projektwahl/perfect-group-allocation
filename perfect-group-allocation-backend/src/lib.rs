@@ -282,6 +282,7 @@ macro_rules! yieldfi {
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
 pub struct Svc<RequestBodyBuf: Buf + Send + 'static> {
+    config: Config,
     pool: Pool,
     phantom_data: PhantomData<RequestBodyBuf>,
 }
@@ -289,6 +290,7 @@ pub struct Svc<RequestBodyBuf: Buf + Send + 'static> {
 impl<RequestBodyBuf: Buf + Send + 'static> Clone for Svc<RequestBodyBuf> {
     fn clone(&self) -> Self {
         Self {
+            config: self.config.clone(),
             pool: self.pool.clone(),
             phantom_data: self.phantom_data,
         }
@@ -352,9 +354,14 @@ impl<
                         .map(EitherBodyRouter::Option5))
                 })
             }
-            (&Method::GET, "/openidconnect-login") => EitherFutureRouter::Option6(async move {
-                Ok(openid_login(session).await?.map(EitherBodyRouter::Option6))
-            }),
+            (&Method::GET, "/openidconnect-login") => {
+                let config = self.config.clone();
+                EitherFutureRouter::Option6(async move {
+                    Ok(openid_login(config, session)
+                        .await?
+                        .map(EitherBodyRouter::Option6))
+                })
+            }
             (_, _) => EitherFutureRouter::Option7(async move {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
@@ -398,6 +405,7 @@ pub fn setup_server<B: Buf + Send + 'static>(
     //.route(&Method::GET, "/openidconnect-redirect", openid_redirect);
 
     let app = Svc {
+        config,
         pool,
         phantom_data: PhantomData,
     };

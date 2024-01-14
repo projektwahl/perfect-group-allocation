@@ -1,5 +1,5 @@
 use perfect_group_allocation_backend::setup_http2_http3_server;
-use perfect_group_allocation_config::Config;
+use perfect_group_allocation_config::{Config, OpenIdConnectConfig};
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
@@ -31,8 +31,13 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
         .init();
 
     let fut = setup_http2_http3_server(Config {
+        url: "https://h3.selfmade4u.de".to_owned(),
         database_url: "postgres://postgres@localhost/pga?sslmode=disable".to_owned(),
-        openidconnect: None,
+        openidconnect: OpenIdConnectConfig {
+            issuer_url: "http://localhost:8080/realms/pga".to_owned(),
+            client_id: "pga".to_owned(),
+            client_secret: "test".to_owned(),
+        },
     })
     .await
     .unwrap();

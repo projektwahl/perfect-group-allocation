@@ -6,6 +6,7 @@ use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::{BodyExt as _, Empty, Limited, StreamBody};
+use perfect_group_allocation_config::Config;
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_openidconnect::{
     finish_authentication, OpenIdRedirect, OpenIdRedirectInner,
@@ -30,6 +31,7 @@ pub struct OpenIdRedirectErrorTemplate {
 either_http_body!(EitherBody 1 2);
 
 pub async fn openid_redirect(
+    config: Config,
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = hyper::Error> + Send + 'static,
     >,
@@ -90,6 +92,7 @@ pub async fn openid_redirect(
         }
         OpenIdRedirectInner::Success(ok) => {
             let result = finish_authentication(
+                config,
                 openid_session,
                 OpenIdRedirect {
                     state: form.state,

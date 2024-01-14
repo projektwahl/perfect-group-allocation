@@ -5,6 +5,7 @@ use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::Empty;
+use perfect_group_allocation_config::Config;
 use perfect_group_allocation_openidconnect::begin_authentication;
 use serde::Deserialize;
 
@@ -24,12 +25,13 @@ impl CsrfToken for OpenIdLoginPayload {
 }
 
 pub async fn openid_login(
+    config: Config,
     mut session: Session,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     // TODO FIXME check csrf token?
 
-    let (auth_url, openid_session) = begin_authentication().await?;
+    let (auth_url, openid_session) = begin_authentication(config).await?;
 
     session.set_openidconnect(&openid_session)?;
 
