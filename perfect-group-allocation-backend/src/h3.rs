@@ -34,7 +34,7 @@ impl<S: h3::quic::RecvStream + 'static> Body for H3Body<S> {
         let recv_data = std::pin::pin!(recv_data);
         recv_data
             .poll(cx)
-            .map(|v| v.transpose().map(|v| v.map(|v| Frame::data(v))))
+            .map(|v| v.transpose().map(|v| v.map(Frame::data)))
     }
 }
 
@@ -59,42 +59,37 @@ service: Svc::<<H3Body<MyRecvStream> as Body>::Data>, // the service needs to us
                 let service = service.clone();
 
                 tokio::spawn(async move {
-                    let (mut response_body, mut request_body) = stream.split();
-                    let request = req.map(|_| H3Body(request_body));
+                    let (mut response_body, request_body) = stream.split();
+                    let request = req.map(|()| H3Body(request_body));
                     let response = service
-                        .call(request.map(|body| body.map_err(|e| AppError::from(e))))
+                        .call(request.map(|body| body.map_err(AppError::from)))
                         .await;
-                    match response {
-                        Ok(response) => {
-                            let response: Response<_> = response;
-                            let (parts, body) = response.into_parts();
+                    if let Ok(response) = response {
+                        let response: Response<_> = response;
+                        let (parts, body) = response.into_parts();
 
-                            response_body
-                                .send_response(Response::from_parts(parts, ()))
-                                .await
-                                .unwrap();
+                        response_body
+                            .send_response(Response::from_parts(parts, ()))
+                            .await
+                            .unwrap();
 
-                            let mut body = std::pin::pin!(body);
-                            while let Some(value) = body.frame().await {
-                                let value = value.unwrap();
-                                if value.is_data() {
-                                    response_body
-                                        .send_data(value.into_data().unwrap())
-                                        .await
-                                        .unwrap();
-                                } else if value.is_trailers() {
-                                    response_body
-                                        .send_trailers(value.into_trailers().unwrap())
-                                        .await
-                                        .unwrap();
-                                    return;
-                                }
+                        let mut body = std::pin::pin!(body);
+                        while let Some(value) = body.frame().await {
+                            let value = value.unwrap();
+                            if value.is_data() {
+                                response_body
+                                    .send_data(value.into_data().unwrap())
+                                    .await
+                                    .unwrap();
+                            } else if value.is_trailers() {
+                                response_body
+                                    .send_trailers(value.into_trailers().unwrap())
+                                    .await
+                                    .unwrap();
+                                return;
                             }
-                            response_body.finish().await.unwrap();
                         }
-                        Err(error) => {
-                            let _error: Infallible = error;
-                        }
+                        response_body.finish().await.unwrap();
                     }
                 });
             }
@@ -119,8 +114,8 @@ type TestS2n = <H3Body<s2n_quic_h3::RecvStream> as Body>::Data;
 
 pub fn run_http3_server_s2n(
     database_url: String,
-    certs: Vec<Certificate>,
-    key: PrivateKey,
+    _certs: Vec<Certificate>,
+    _key: PrivateKey,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let service = setup_server::<TestS2n>(&database_url)?;
 
@@ -134,12 +129,12 @@ pub fn run_http3_server_s2n(
     // https://github.com/aws/s2n-quic/blob/main/quic/s2n-quic-qns/src/server/h3.rs
 
     Ok(async move {
-        while let Some(mut connection) = server.accept().await {
+        while let Some(connection) = server.accept().await {
             let service = service.clone();
 
             // spawn a new task for the connection
             tokio::spawn(async move {
-                let mut connection =
+                let connection =
                     h3::server::Connection::new(s2n_quic_h3::Connection::new(connection))
                         .await
                         .unwrap();
@@ -190,7 +185,7 @@ pub fn run_http3_server_quinn(
                     Ok(conn) => {
                         info!("new connection established");
 
-                        let mut connection: h3::server::Connection<h3_quinn::Connection, Bytes> =
+                        let connection: h3::server::Connection<h3_quinn::Connection, Bytes> =
                             h3::server::Connection::new(h3_quinn::Connection::new(conn))
                                 .await
                                 .unwrap();

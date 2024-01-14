@@ -1,4 +1,4 @@
-use perfect_group_allocation_backend::{run_http2_server, setup_http2_http3_server};
+use perfect_group_allocation_backend::setup_http2_http3_server;
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;

@@ -26,37 +26,33 @@ pub mod session;
 use core::convert::Infallible;
 use std::marker::PhantomData;
 use std::net::{Ipv4Addr, SocketAddrV4};
-use std::path::Path;
 use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
 use cookie::Cookie;
 use error::AppError;
-use futures_util::{pin_mut, Future, FutureExt, StreamExt, TryFutureExt};
+use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
 use h3::run_http3_server_s2n;
 use http::header::{ALT_SVC, COOKIE};
 use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
-use http_body::{Body, Frame};
+use http_body::Body;
 use http_body_util::{BodyExt, Full, Limited};
 use hyper::body::Incoming;
 use hyper::service::{service_fn, Service};
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
-use itertools::Itertools;
 use perfect_group_allocation_database::{get_database_connection, Pool};
-use pin_project::pin_project;
 use routes::index::index;
 use routes::indexcss::indexcss;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
 use tokio::net::TcpListener;
+use tokio::select;
 use tokio::sync::watch;
-use tokio::{join, select};
-use tokio_rustls::rustls::version::TLS13;
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 use tokio_rustls::TlsAcceptor;
-use tracing::{error, info, trace_span, warn};
+use tracing::{error, info, warn};
 
 pub trait CsrfSafeExtractor {}
 
@@ -203,7 +199,6 @@ async fn main() -> Result<(), AppError> {
 */
 
 use headers::{Header, HeaderMapExt};
-use zero_cost_templating::async_iterator_extension::AsyncIterExt;
 
 use crate::routes::favicon::favicon_ico;
 use crate::routes::openid_login::openid_login;
@@ -496,7 +491,7 @@ pub async fn run_http2_server(
                         };
                         let builder = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new());
                         let socket = TokioIo::new(tls_stream);
-                        let connection = builder.serve_connection_with_upgrades(socket, service_fn(|req| service.call(req.map(|body: Incoming| body.map_err(|e| AppError::from(e))))));
+                        let connection = builder.serve_connection_with_upgrades(socket, service_fn(|req| service.call(req.map(|body: Incoming| body.map_err(AppError::from)))));
                         pin_mut!(connection);
 
                         loop {
