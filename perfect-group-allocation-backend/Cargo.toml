@@ -31,9 +31,6 @@ h3-quinn = { git = "https://github.com/hyperium/h3.git" }
 s2n-quic-h3 = { git = "https://github.com/aws/s2n-quic.git" }
 s2n-quic = { git = "https://github.com/aws/s2n-quic.git" }
 quinn = "0.10"
-quiche = "0.20"
-mio = "0.8"
-ring = "0.17"
 http-body = "1"
 tokio-util = { version = "0.7", features = ["io"] }
 anyhow = "1"

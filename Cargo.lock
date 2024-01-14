@@ -1869,7 +1869,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f3d0b296e374a4e6f3c7b0a1f5a51d748a0d34c85e7dc48fc3fa9a87657fe09"
 dependencies = [
  "libc",
- "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.48.0",
 ]
@@ -2015,12 +2014,6 @@ checksum = "a6a622008b6e321afc04970976f62ee297fdbaa6f95318ca343e3eebb9648441"
 dependencies = [
  "memchr",
 ]
-
-[[package]]
-name = "octets"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a74f2cda724d43a0a63140af89836d4e7db6138ef67c9f96d3a0f0150d05000"
 
 [[package]]
 name = "once_cell"
@@ -2384,7 +2377,6 @@ dependencies = [
  "itertools 0.12.0",
  "log",
  "mime",
- "mio",
  "once_cell",
  "paste",
  "perfect-group-allocation-css",
@@ -2392,10 +2384,8 @@ dependencies = [
  "perfect-group-allocation-openidconnect",
  "perfect-group-allocation-telemetry",
  "pin-project",
- "quiche",
  "quinn",
  "rand 0.8.5",
- "ring 0.17.7",
  "rustls-pemfile",
  "s2n-quic",
  "s2n-quic-h3",
@@ -2817,26 +2807,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "quiche"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cefb16e101e73e6e4982e78746a21745b73a41168b6272b30e861ba2ed3df79f"
-dependencies = [
- "cmake",
- "either",
- "intrusive-collections",
- "libc",
- "libm",
- "log",
- "octets",
- "once_cell",
- "ring 0.17.7",
- "slab",
- "smallvec",
- "winapi",
 ]
 
 [[package]]
@@ -3744,9 +3714,6 @@ name = "smallvec"
 version = "1.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4dccd0940a2dcdf68d092b8cbab7dc0ad8fa938bf95787e1b916b0e3d0e8e970"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "socket2"
