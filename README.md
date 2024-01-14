@@ -34,6 +34,7 @@ cargo upgrade --verbose --incompatible allow --pinned allow
 
 https://www.keycloak.org/docs/latest/server_admin/index.html#admin-cli
 
+podman exec -it perfect-group-allocation_keycloak_1 bash
 cd /tmp
 export PATH=$PATH:/opt/keycloak/bin
 kc.sh export --dir test
@@ -43,7 +44,7 @@ kcadm.sh create realms -s realm=pga -s enabled=true
 kcadm.sh create users -r pga -s username=test -s enabled=true
 kcadm.sh set-password -r pga --username test --new-password test
 CID=$(kcadm.sh create clients -r pga -s clientId=pga -s 'redirectUris=["https://h3.selfmade4u.de/*"]' -i)
-kcadm.sh get clients/$CID/client-secret -r pga
+CLIENT_SECRET=$(kcadm.sh get clients/$CID/client-secret -r pga --fields value --format csv --noquotes)
 
 http://localhost:8080/admin/master/console/
 admin
