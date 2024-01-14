@@ -379,9 +379,12 @@ impl<
         }
         .map(|fut: Result<_, AppError>| match fut {
             Ok(ok) => Ok(ok),
-            Err(err) => Ok(err
-                .build_error_template(err_session)
-                .map(EitherBodyRouter::Option500)),
+            Err(err) => {
+                // TODO FIXME this may need to set a cookie
+                Ok(err
+                    .build_error_template(err_session)
+                    .map(EitherBodyRouter::Option500))
+            }
         })
         .map_ok(|result: Response<_>| {
             result.untyped_header(ALT_SVC, HeaderValue::from_static(ALT_SVC_HEADER))
