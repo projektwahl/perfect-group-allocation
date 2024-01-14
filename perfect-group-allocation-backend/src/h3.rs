@@ -16,8 +16,6 @@ use tracing::{error, info, trace_span};
 use crate::error::AppError;
 use crate::{setup_server, Svc, CERT_PATH, KEY_PATH, PORT};
 
-static ALPN: &[u8] = b"h3";
-
 pub struct H3Body<S: h3::quic::RecvStream + 'static>(h3::server::RequestStream<S, Bytes>);
 
 impl<S: h3::quic::RecvStream + 'static> Body for H3Body<S> {
@@ -143,6 +141,10 @@ pub fn run_http3_server_s2n(
     })
 }
 
+/*
+// depends on old version of tokio-rustls
+static ALPN: &[u8] = b"h3";
+
 type TestQuinn = <H3Body<h3_quinn::RecvStream> as Body>::Data;
 
 #[expect(clippy::needless_pass_by_value)]
@@ -204,3 +206,4 @@ pub fn run_http3_server_quinn(
         Ok(())
     })
 }
+*/

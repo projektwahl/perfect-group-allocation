@@ -133,7 +133,7 @@ version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2c6f9497a1bd3bed0a28a01b8836dbe9c7a2c521e47a14b165c64c4df592331"
 dependencies = [
- "bindgen",
+ "bindgen 0.68.1",
  "cmake",
  "dunce",
  "fs_extra",
@@ -248,6 +248,29 @@ name = "bindgen"
 version = "0.68.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "726e4313eb6ec35d2730258ad4e15b547ee75d6afaa1361a922e78e59b7d8078"
+dependencies = [
+ "bitflags 2.4.1",
+ "cexpr",
+ "clang-sys",
+ "lazy_static",
+ "lazycell",
+ "log",
+ "peeking_take_while",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash",
+ "shlex",
+ "syn 2.0.48",
+ "which",
+]
+
+[[package]]
+name = "bindgen"
+version = "0.69.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4c69fae65a523209d34240b60abe0c42d33d1045d445c0839d8a4894a736e2d"
 dependencies = [
  "bitflags 2.4.1",
  "cexpr",
@@ -1250,20 +1273,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "h3-quinn"
-version = "0.0.4"
-source = "git+https://github.com/hyperium/h3.git?branch=master#e7c7ab9d634ef73784d6cbc424a270dbaa4f1c99"
-dependencies = [
- "bytes",
- "futures",
- "h3",
- "quinn",
- "quinn-proto",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "hash_hasher"
 version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1560,20 +1569,23 @@ dependencies = [
 
 [[package]]
 name = "iai-callgrind"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ebd67b0ae963bb8b800829320c264fcf71f821e3aed0c004ee252c99dbff3f7"
+checksum = "9dbd4d1c88de3299e471a3b829ffac3cd08bffc63c4881386be9692952e34864"
 dependencies = [
  "bincode",
+ "bindgen 0.69.2",
+ "cc",
  "iai-callgrind-macros",
  "iai-callgrind-runner",
+ "regex",
 ]
 
 [[package]]
 name = "iai-callgrind-macros"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af5af66b85e350097b8c0f6329c6347d3323d010443475741c29a1a167f116fb"
+checksum = "e2a4bb39225592c0a28cfca6f70af52ebd8da23f533c2cdd0a3329c1fa252d56"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -1583,11 +1595,10 @@ dependencies = [
 
 [[package]]
 name = "iai-callgrind-runner"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a465e75ad1dfe0fbbb3ee22f5f7d5c077401e412059edb5f3856b1734668bee"
+checksum = "e4036e3e68dc88a39f528f0fe469aaee00bc07d5a823e9ff88a6156d32f3b912"
 dependencies = [
- "lazy_static",
  "serde",
 ]
 
@@ -2376,7 +2387,6 @@ dependencies = [
  "diesel-async",
  "futures-util",
  "h3",
- "h3-quinn",
  "headers",
  "http 1.0.0",
  "http-body 1.0.0",
@@ -2393,7 +2403,6 @@ dependencies = [
  "perfect-group-allocation-openidconnect",
  "perfect-group-allocation-telemetry",
  "pin-project",
- "quinn",
  "rand 0.8.5",
  "rustls-pemfile",
  "s2n-quic",
@@ -2819,55 +2828,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "quinn"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cc2c5017e4b43d5995dcea317bc46c1e09404c0a9664d2908f7f02dfe943d75"
-dependencies = [
- "bytes",
- "futures-io",
- "pin-project-lite",
- "quinn-proto",
- "quinn-udp",
- "rustc-hash",
- "rustls",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "quinn-proto"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "141bf7dfde2fbc246bfd3fe12f2455aa24b0fbd9af535d8c86c7bd1381ff2b1a"
-dependencies = [
- "bytes",
- "rand 0.8.5",
- "ring 0.16.20",
- "rustc-hash",
- "rustls",
- "rustls-native-certs",
- "slab",
- "thiserror",
- "tinyvec",
- "tracing",
-]
-
-[[package]]
-name = "quinn-udp"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "055b4e778e8feb9f93c4e439f71dc2156ef13360b432b799e179a8c4cdf0b1d7"
-dependencies = [
- "bytes",
- "libc",
- "socket2",
- "tracing",
- "windows-sys 0.48.0",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3216,18 +3176,6 @@ dependencies = [
  "ring 0.17.7",
  "rustls-webpki",
  "sct",
-]
-
-[[package]]
-name = "rustls-native-certs"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9aace74cb666635c918e9c12bc0d348266037aa8eb599b5cba565709a8dff00"
-dependencies = [
- "openssl-probe",
- "rustls-pemfile",
- "schannel",
- "security-framework",
 ]
 
 [[package]]
