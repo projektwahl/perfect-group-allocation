@@ -2,8 +2,8 @@ use bytes::Bytes;
 use http_body_util::BodyExt;
 use hyper::service::Service as _;
 use hyper::Request;
-use perfect_group_allocation_backend::config::Config;
 use perfect_group_allocation_backend::setup_server;
+use perfect_group_allocation_config::Config;
 
 // podman run --rm --detach --name postgres-testing --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
 

@@ -4,6 +4,7 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, Empty};
 use hyper::Request;
 use hyper_util::rt::TokioIo;
+use perfect_group_allocation_config::Config;
 use tokio::net::TcpStream;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -39,7 +40,6 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
 
 use std::future::Future;
 
-use perfect_group_allocation_backend::config::Config;
 use perfect_group_allocation_backend::setup_http2_http3_server;
 
 // podman run --rm --detach --name postgres-testing --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres

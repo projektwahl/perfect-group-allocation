@@ -2313,7 +2313,6 @@ dependencies = [
  "cookie",
  "diesel",
  "diesel-async",
- "figment",
  "futures-util",
  "h3",
  "headers",
@@ -2327,6 +2326,7 @@ dependencies = [
  "mime",
  "once_cell",
  "paste",
+ "perfect-group-allocation-config",
  "perfect-group-allocation-css",
  "perfect-group-allocation-database",
  "perfect-group-allocation-openidconnect",
@@ -2346,6 +2346,15 @@ dependencies = [
  "tokio-util",
  "tracing",
  "zero-cost-templating",
+]
+
+[[package]]
+name = "perfect-group-allocation-config"
+version = "0.1.0"
+dependencies = [
+ "figment",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
@@ -2378,6 +2387,7 @@ dependencies = [
  "iai-callgrind",
  "libc",
  "perfect-group-allocation-backend",
+ "perfect-group-allocation-config",
  "rand 0.8.5",
  "tokio",
  "tracing",

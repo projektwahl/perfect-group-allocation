@@ -7,9 +7,9 @@ use http::Response;
 use http_body::{Body, Frame};
 use http_body_util::BodyExt as _;
 use hyper::service::Service as _;
+use perfect_group_allocation_config::Config;
 use tracing::{error, info};
 
-use crate::config::Config;
 use crate::error::AppError;
 use crate::{setup_server, Svc, CERT_PATH, KEY_PATH, PORT};
 
@@ -106,7 +106,6 @@ service: Svc::<<H3Body<MyRecvStream> as Body>::Data>, // the service needs to us
 
 type TestS2n = <H3Body<s2n_quic_h3::RecvStream> as Body>::Data;
 
-#[expect(clippy::needless_pass_by_value)]
 pub fn run_http3_server_s2n(
     config: Config,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {

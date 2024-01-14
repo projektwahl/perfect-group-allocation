@@ -16,7 +16,6 @@ extern crate alloc;
 
 // determinism?
 
-pub mod config;
 pub mod csrf_protection;
 pub mod either;
 pub mod error;
@@ -30,7 +29,6 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
-use config::Config;
 use cookie::Cookie;
 use error::AppError;
 use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
@@ -43,6 +41,7 @@ use hyper::body::Incoming;
 use hyper::service::{service_fn, Service};
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
+use perfect_group_allocation_config::Config;
 use perfect_group_allocation_database::{get_database_connection, Pool};
 use routes::index::index;
 use routes::indexcss::indexcss;

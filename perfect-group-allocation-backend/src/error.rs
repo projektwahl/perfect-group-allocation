@@ -5,6 +5,7 @@ use std::fmt::{Debug, Display};
 use bytes::Bytes;
 use http::{Response, StatusCode};
 use http_body_util::StreamBody;
+use perfect_group_allocation_config::ConfigError;
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::DatabaseError;
 use perfect_group_allocation_openidconnect::error::OpenIdConnectError;
@@ -38,7 +39,7 @@ pub enum AppError {
     #[error("quic start error: {0}\n{1}")]
     S2nStart(#[from] s2n_quic::provider::StartError, Backtrace),
     #[error("configuration error: {0}")]
-    Configuration(#[from] figment::Error),
+    Configuration(#[from] ConfigError),
     // #[cfg(feature = "perfect-group-allocation-telemetry")]
     //#[error("trace error: {0}")]
     //Trace(#[from] TraceError),
