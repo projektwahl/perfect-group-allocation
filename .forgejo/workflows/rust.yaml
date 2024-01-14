@@ -29,7 +29,7 @@ jobs:
             ~/.cargo/git/db/
             target/      
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+      - run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -y
       - run: rustup toolchain install --component rustfmt,clippy nightly
       - run: rustup default nightly
       - run: cargo install --locked cargo-hack
