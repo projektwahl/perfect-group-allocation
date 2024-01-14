@@ -27,8 +27,6 @@ pub enum AppError {
     Hyper(#[from] hyper::Error, Backtrace),
     #[error("webserver h3 error: {0}\n{1}")]
     H3(#[from] h3::Error, Backtrace),
-    #[error("unknown error: {0}\n{1}")]
-    Other(#[from] anyhow::Error, Backtrace),
     #[error("env var error: {0}\n{1}")]
     EnvVar(#[from] std::env::VarError, Backtrace),
     #[error("rustls error: {0}\n{1}")]

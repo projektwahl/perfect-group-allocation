@@ -14,7 +14,7 @@ readme.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio-tungstenite = { default-features = false, version = "0.21" }
+tokio-tungstenite = { default-features = false, version = "0.21", features = ["connect"] }
 tokio = { default-features = false, version = "1", features = ["full"] }
 futures = { default-features = false, version = "0.3" }
 serde = { default-features = false, version = "1", features = ["derive"] }
