@@ -32,6 +32,19 @@ cargo upgrade --verbose --incompatible allow --pinned allow
 
 ## Keycloak
 
+https://www.keycloak.org/docs/latest/server_admin/index.html#admin-cli
+
+cd /tmp
+export PATH=$PATH:/opt/keycloak/bin
+kc.sh export --dir test
+kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin
+kcadm.sh delete realms/pga
+kcadm.sh create realms -s realm=pga -s enabled=true
+kcadm.sh create users -r pga -s username=test -s enabled=true
+kcadm.sh set-password -r pga --username test --new-password test
+CID=$(kcadm.sh create clients -r pga -s clientId=pga -s 'redirectUris=["https://h3.selfmade4u.de/*"]' -i)
+kcadm.sh get clients/$CID/client-secret -r pga
+
 http://localhost:8080/admin/master/console/
 admin
 admin
