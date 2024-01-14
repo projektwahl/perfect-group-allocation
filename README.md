@@ -112,7 +112,6 @@ Identity Providers -> Manage display order
 ## Testing
 
 ```bash
-podman run --rm --name postgres-testing --env POSTGRES_PASSWORD=password --publish 5431:5432 docker.io/postgres
 cargo test
 ```
 
