@@ -17,7 +17,7 @@ readme.workspace = true
 diesel = { default-features = false, version = "2" }
 diesel-async = { default-features = false, version = "0.4", features = ["postgres", "deadpool"] }
 thiserror = { default-features = false, version = "1" }
-http = { default-features = false, version = "1" }
+http = { default-features = false, version = "1", features = ["std"] }
 async-trait = { default-features = false, version = "0.1" }
 
 [lints]

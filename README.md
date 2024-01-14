@@ -89,6 +89,8 @@ cargo test
 ## Dev
 
 ```bash
+cargo +stable install cargo-hack --locked
+
 mkcert -install
 mkcert h3.selfmade4u.de
 

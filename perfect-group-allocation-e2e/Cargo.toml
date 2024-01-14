@@ -17,7 +17,7 @@ readme.workspace = true
 workspace = true
 
 [dependencies]
-iai-callgrind = { default-features = false, version = "0.10" }
+iai-callgrind = { default-features = false, version = "0.10", features = ["default"] }
 perfect-group-allocation-backend = { default-features = false, path = "../perfect-group-allocation-backend" }
 webdriver-bidi = { default-features = false, path = "../webdriver-bidi" }
 hyper = { default-features = false, version = "1", features = ["full"] }

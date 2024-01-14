@@ -18,13 +18,13 @@ tokio-tungstenite = { default-features = false, version = "0.21", features = ["c
 tokio = { default-features = false, version = "1", features = ["full"] }
 futures = { default-features = false, version = "0.3" }
 serde = { default-features = false, version = "1", features = ["derive"] }
-serde_json = { default-features = false, version = "1" }
+serde_json = { default-features = false, version = "1", features = ["alloc"] }
 tempfile = { default-features = false, version = "3" }
 thiserror = { default-features = false, version = "1" }
 serde_path_to_error = { default-features = false, version = "0.1" }
 paste = { default-features = false, version = "1" }
 tracing = { default-features = false, version = "0.1" }
-tracing-subscriber = { default-features = false, version = "0.3" }
+tracing-subscriber = { default-features = false, version = "0.3", features = ["fmt"] }
 
 [lints]
 workspace = true
