@@ -283,12 +283,12 @@ macro_rules! yieldfi {
 }
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
-pub struct Svc<B: Buf + Send + 'static> {
+pub struct Svc<RequestBodyBuf: Buf + Send + 'static> {
     pool: Pool,
-    phantom_data: PhantomData<B>,
+    phantom_data: PhantomData<RequestBodyBuf>,
 }
 
-impl<B: Buf + Send + 'static> Clone for Svc<B> {
+impl<RequestBodyBuf: Buf + Send + 'static> Clone for Svc<RequestBodyBuf> {
     fn clone(&self) -> Self {
         Self {
             pool: self.pool.clone(),
@@ -301,9 +301,9 @@ either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 8);
 either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
 
 impl<
-    B: Buf + Send + 'static,
-    RequestBody: http_body::Body<Data = B, Error = AppError> + Send + 'static,
-> Service<Request<RequestBody>> for Svc<B>
+    RequestBodyBuf: Buf + Send + 'static,
+    RequestBody: http_body::Body<Data = RequestBodyBuf, Error = AppError> + Send + 'static,
+> Service<Request<RequestBody>> for Svc<RequestBodyBuf>
 {
     type Error = Infallible;
     type Response = Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send>;
@@ -597,10 +597,12 @@ const KEY_PATH: &str = ".lego/certificates/h3.selfmade4u.de.key";
 const PORT: u16 = 443;
 const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 
-async fn handle_connection<B: Buf + Send + 'static, C: h3::quic::Connection<Bytes>, MyRecvStream: RecvStream<Buf = B>>(
-service: Svc<B>, // the service needs to use the same impl buf that recvstream decided to use
+async fn handle_connection<RequestBodyBuf: Buf + Send + 'static, C: h3::quic::Connection<Bytes>, MyRecvStream: h3::quic::RecvStream + 'static>(
+service: Svc::<RequestBodyBuf>, // the service needs to use the same impl buf that recvstream decided to use
     connection: h3::server::Connection<C, Bytes>,
 ) where
+// RequestBodyBuf needs to == H3Body::Data
+
 // the RecvStream uses impl Buf
     C::BidiStream: h3::quic::BidiStream<Bytes, RecvStream = MyRecvStream> + Send + 'static,
     <<C as h3::quic::Connection<bytes::Bytes>>::BidiStream as h3::quic::BidiStream<bytes::Bytes>>::RecvStream: std::marker::Send,
