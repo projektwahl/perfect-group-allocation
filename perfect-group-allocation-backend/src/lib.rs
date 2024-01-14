@@ -596,7 +596,7 @@ const KEY_PATH: &str = ".lego/certificates/h3.selfmade4u.de.key";
 const PORT: u16 = 443;
 const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 
-async fn handle_connection<C: h3::quic::Connection<Bytes>, MyRecvStream: h3::quic::RecvStream + 'static>(
+async fn handle_connection<C: h3::quic::Connection<Bytes> + Send, MyRecvStream: h3::quic::RecvStream + 'static>(
 service: Svc::<<H3Body<MyRecvStream> as Body>::Data>, // the service needs to use the same impl buf that recvstream decided to use
     mut connection: h3::server::Connection<C, Bytes>,
 ) where
@@ -604,6 +604,8 @@ service: Svc::<<H3Body<MyRecvStream> as Body>::Data>, // the service needs to us
 
 // the RecvStream uses impl Buf
     C::BidiStream: h3::quic::BidiStream<Bytes, RecvStream = MyRecvStream> + Send + 'static,
+    <C as h3::quic::Connection<bytes::Bytes>>::SendStream: Send,
+    <C as h3::quic::Connection<bytes::Bytes>>::RecvStream: Send,
     <<C as h3::quic::Connection<bytes::Bytes>>::BidiStream as h3::quic::BidiStream<bytes::Bytes>>::RecvStream: std::marker::Send,
     <<C as h3::quic::Connection<bytes::Bytes>>::BidiStream as h3::quic::BidiStream<bytes::Bytes>>::SendStream: std::marker::Send
 {
