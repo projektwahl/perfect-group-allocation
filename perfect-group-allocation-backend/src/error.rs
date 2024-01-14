@@ -37,6 +37,8 @@ pub enum AppError {
     Join(#[from] tokio::task::JoinError, Backtrace),
     #[error("quic start error: {0}\n{1}")]
     S2nStart(#[from] s2n_quic::provider::StartError, Backtrace),
+    #[error("configuration error: {0}")]
+    Configuration(#[from] figment::Error),
     // #[cfg(feature = "perfect-group-allocation-telemetry")]
     //#[error("trace error: {0}")]
     //Trace(#[from] TraceError),

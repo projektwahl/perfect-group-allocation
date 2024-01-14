@@ -9,6 +9,7 @@ use http_body_util::BodyExt as _;
 use hyper::service::Service as _;
 use tracing::{error, info};
 
+use crate::config::Config;
 use crate::error::AppError;
 use crate::{setup_server, Svc, CERT_PATH, KEY_PATH, PORT};
 
@@ -107,9 +108,9 @@ type TestS2n = <H3Body<s2n_quic_h3::RecvStream> as Body>::Data;
 
 #[expect(clippy::needless_pass_by_value)]
 pub fn run_http3_server_s2n(
-    database_url: String,
+    config: Config,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let service = setup_server::<TestS2n>(&database_url)?;
+    let service = setup_server::<TestS2n>(config)?;
 
     let mut server = s2n_quic::Server::builder()
         .with_tls((Path::new(CERT_PATH), Path::new(KEY_PATH)))?

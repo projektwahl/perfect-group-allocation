@@ -30,6 +30,7 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
+use config::Config;
 use cookie::Cookie;
 use error::AppError;
 use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
@@ -374,7 +375,7 @@ impl<
 }
 
 pub fn setup_server<B: Buf + Send + 'static>(
-    database_url: &str,
+    config: Config,
 ) -> std::result::Result<Svc<B>, AppError> {
     info!("starting up server...");
 
@@ -384,7 +385,7 @@ pub fn setup_server<B: Buf + Send + 'static>(
 
     // https://github.com/hyperium/hyper/blob/master/examples/state.rs
 
-    let pool = get_database_connection(database_url)?;
+    let pool = get_database_connection(&config.database_url)?;
 
     //let service = ServeDir::new("frontend");
 
@@ -412,14 +413,14 @@ pub fn setup_server<B: Buf + Send + 'static>(
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 
 pub async fn setup_http2_http3_server(
-    database_url: String,
+    config: Config,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let (certs, key) = load_certs_key_pair()?;
 
     // needs a service that accepts some non-controllable impl Buf
-    let http3_server = run_http3_server_s2n(database_url.clone())?;
+    let http3_server = run_http3_server_s2n(config.clone())?;
     // needs a service that accepts Bytes, therefore we to create separate services
-    let http2_server = run_http2_server(database_url, certs, key).await?;
+    let http2_server = run_http2_server(config, certs, key).await?;
 
     #[allow(clippy::redundant_pub_crate)]
     Ok(async move {
@@ -441,12 +442,12 @@ pub async fn setup_http2_http3_server(
 /// Outer future returns when server started listening. Inner future returns when server stopped.
 #[allow(clippy::cognitive_complexity)]
 pub async fn run_http2_server(
-    database_url: String,
-    certs: Vec<CertificateDer<'static>>,
+    config: Config,
+    certs: Vec<CertificateDer<'static>>, // TODO FIXME put these into the config file
     key: PrivateKeyDer<'static>,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
-    let service = setup_server(&database_url)?;
+    let service = setup_server(config)?;
 
     let incoming = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), PORT))
         .await

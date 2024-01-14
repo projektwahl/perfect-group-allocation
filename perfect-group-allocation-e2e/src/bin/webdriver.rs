@@ -1,3 +1,4 @@
+use perfect_group_allocation_backend::config::Config;
 use perfect_group_allocation_backend::setup_http2_http3_server;
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt as _;
@@ -29,10 +30,12 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
         .with(fmt_layer)
         .init();
 
-    let fut =
-        setup_http2_http3_server("postgres://postgres@localhost/pga?sslmode=disable".to_owned())
-            .await
-            .unwrap();
+    let fut = setup_http2_http3_server(Config {
+        database_url: "postgres://postgres@localhost/pga?sslmode=disable".to_owned(),
+        openidconnect: None,
+    })
+    .await
+    .unwrap();
     tokio::spawn(async move {
         fut.await.unwrap();
     });
