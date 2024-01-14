@@ -32,4 +32,4 @@ missing_panics_doc = "allow"
 module_name_repetitions = "allow"
 
 [patch.crates-io]
-h3 = { git = "https://github.com/hyperium/h3.git#branch=master" } # http version 1
+h3 = { git = "https://github.com/hyperium/h3.git", branch = "master"  } # http version 1
