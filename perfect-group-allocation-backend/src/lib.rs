@@ -16,6 +16,7 @@ extern crate alloc;
 
 // determinism?
 
+pub mod config;
 pub mod csrf_protection;
 pub mod either;
 pub mod error;

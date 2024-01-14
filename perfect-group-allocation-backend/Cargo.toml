@@ -59,3 +59,4 @@ perfect-group-allocation-telemetry = { default-features = false, path = "../perf
 perfect-group-allocation-database = { default-features = false, path = "../perfect-group-allocation-database" }
 perfect-group-allocation-openidconnect = { default-features = false, path = "../perfect-group-allocation-openidconnect" }
 perfect-group-allocation-css = { default-features = false, path = "../perfect-group-allocation-css" }
+figment = { version = "0.10", features = ["toml", "env"] }
