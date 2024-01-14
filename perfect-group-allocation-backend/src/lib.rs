@@ -204,6 +204,7 @@ use headers::{Header, HeaderMapExt};
 
 use crate::routes::favicon::favicon_ico;
 use crate::routes::openid_login::openid_login;
+use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::create::create;
 use crate::routes::projects::list::list;
 
@@ -297,8 +298,8 @@ impl<RequestBodyBuf: Buf + Send + 'static> Clone for Svc<RequestBodyBuf> {
     }
 }
 
-either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 8);
-either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
+either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 404 500);
+either_future!(EitherFutureRouter 1 2 3 4 5 6 7 404);
 
 impl<
     RequestBodyBuf: Buf + Send + 'static,
@@ -354,7 +355,7 @@ impl<
                         .map(EitherBodyRouter::Option5))
                 })
             }
-            (&Method::GET, "/openidconnect-login") => {
+            (&Method::POST, "/openidconnect-login") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option6(async move {
                     Ok(openid_login(config, session)
@@ -362,17 +363,25 @@ impl<
                         .map(EitherBodyRouter::Option6))
                 })
             }
-            (_, _) => EitherFutureRouter::Option7(async move {
+            (&Method::GET, "/openidconnect-redirect") => {
+                let config = self.config.clone();
+                EitherFutureRouter::Option7(async move {
+                    Ok(openid_redirect(config, req, session)
+                        .await?
+                        .map(EitherBodyRouter::Option7))
+                })
+            }
+            (_, _) => EitherFutureRouter::Option404(async move {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found.map(EitherBodyRouter::Option7))
+                Ok(not_found.map(EitherBodyRouter::Option404))
             }),
         }
         .map(|fut: Result<_, AppError>| match fut {
             Ok(ok) => Ok(ok),
             Err(err) => Ok(err
                 .build_error_template(err_session)
-                .map(EitherBodyRouter::Option8)),
+                .map(EitherBodyRouter::Option500)),
         })
         .map_ok(|result: Response<_>| {
             result.untyped_header(ALT_SVC, HeaderValue::from_static(ALT_SVC_HEADER))

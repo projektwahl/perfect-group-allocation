@@ -33,7 +33,7 @@ either_http_body!(EitherBody 1 2);
 pub async fn openid_redirect(
     config: Config,
     request: hyper::Request<
-        impl http_body::Body<Data = impl Buf + Send, Error = hyper::Error> + Send + 'static,
+        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
     mut session: Session, // what if this here could be a reference?
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {

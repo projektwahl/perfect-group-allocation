@@ -44,7 +44,9 @@ kcadm.sh create realms -s realm=pga -s enabled=true
 kcadm.sh create users -r pga -s username=test -s enabled=true
 kcadm.sh set-password -r pga --username test --new-password test
 CID=$(kcadm.sh create clients -r pga -s clientId=pga -s 'redirectUris=["https://h3.selfmade4u.de/*"]' -i)
+CID=$(kcadm.sh get clients -r pga --fields id -q clientId=pga --format csv --noquotes)
 CLIENT_SECRET=$(kcadm.sh get clients/$CID/client-secret -r pga --fields value --format csv --noquotes)
+echo $CLIENT_SECRET
 
 http://localhost:8080/admin/master/console/
 admin

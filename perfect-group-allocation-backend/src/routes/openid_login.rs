@@ -36,7 +36,7 @@ pub async fn openid_login(
     session.set_openidconnect(&openid_session)?;
 
     Ok(Response::builder()
-        .status(StatusCode::TEMPORARY_REDIRECT)
+        .status(StatusCode::SEE_OTHER)
         .header(LOCATION, auth_url)
         .body(Empty::new())
         .unwrap())

@@ -4,4 +4,4 @@ database_url = "postgres://postgres@localhost/pga?sslmode=disable"
 [openidconnect]
 issuer_url = "http://localhost:8080/realms/pga"
 client_id = "pga"
-client_secret = "test"
+client_secret = "Y0WEHGLjA61HvCYqGWUGTFIBo0YWtWdB"
