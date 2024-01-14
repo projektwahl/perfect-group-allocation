@@ -19,7 +19,7 @@ jobs:
     container:
       image: node:slim
     steps:
-      - run: apt update && apt install -y curl mold coinor-libcbc-dev
+      - run: apt update && apt install -y zstd curl mold coinor-libcbc-dev
       - uses: actions/cache@v3
         with:
           path: |
