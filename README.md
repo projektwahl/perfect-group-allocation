@@ -7,6 +7,15 @@
 3. Low Latency
 4. Low Resource usage on the server
 
+## CI
+
+Using Forgejo Actions
+```
+systemctl --user enable --now podman
+podman run --userns=keep-id -v $XDG_RUNTIME_DIR/podman/podman.sock:/var/run/docker.sock --rm code.forgejo.org/forgejo/runner:3.3.0 bash -c "forgejo-runner register --no-interactive --token XXX --n
+ame runner --instance https://codeberg.org && forgejo-runner daemon"
+```
+
 ## Updating dependencies
 
 ```
