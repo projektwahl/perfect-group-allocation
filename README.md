@@ -14,6 +14,70 @@ cargo install cargo-edit
 cargo upgrade --verbose --incompatible allow --pinned allow
 ```
 
+## Keycloak
+
+http://localhost:8080/admin/master/console/
+admin
+admin
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#configuring-realms
+
+Create Realm "pga"
+
+http://localhost:8080/admin/master/console/#/pga/realm-settings/localization
+
+Internationalization -> Deutsch
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#assembly-managing-users_server_administration_guide
+
+Create test user, add password
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#con-user-impersonation_server_administration_guide
+
+Impersonate user for testing
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#_identity_broker
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#_client_suggested_idp
+
+https://www.keycloak.org/docs/23.0.4/securing_apps/#_java_adapter_logout
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#sso-protocols
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#_oidc-logout
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#assembly-managing-clients_server_administration_guide
+
+Create an OpenID client
+
+Clients -> Create Client -> ...
+
+Client Authentication On
+
+Only enable Standard Flow
+
+Valid redirect urls:
+https://h3.selfmade4u.de
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#configuring-auditing-to-track-events
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#auditing-admin-events
+
+CRITIAL SECURITY NOTES:
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#host
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#admin-cli
+
+http://localhost:8080/realms/pga/account/
+
+/realms/{realm-name}/.well-known/openid-configuration
+
+Add GitHub as identity provider for demo
+
+Identity Providers -> Manage display order
+
+
 ## Testing
 
 ```bash
@@ -87,9 +151,3 @@ use zed attack proxy to create some requests
 
 export DEBUGINFOD_URLS="https://debuginfod.archlinux.org"
 kcachegrind callgrind.out.110536
-```
-http://localhost:8080/realms/pga/account/
-
-Add GitHub as identity provider for demo
-
-Identity Providers -> Manage display order
