@@ -234,9 +234,12 @@ impl<
     TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
 > Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
-    pub fn to_cookies() {
-        Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION)
-            .build()
-            .make_removal()
+    pub fn to_cookies(&self) {
+        if self.csrf_token.is_changed() {
+            match self.csrf_token.get_value() {
+                Some(value) => Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build(),
+                None => Cookie::build(COOKIE_NAME_CSRF_TOKEN).build(),
+            }
+        }
     }
 }
