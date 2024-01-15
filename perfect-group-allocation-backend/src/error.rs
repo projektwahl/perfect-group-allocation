@@ -102,7 +102,7 @@ impl AppError {
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next_email_false());
-            let template = yieldfv!(template.csrf_token(session.session().0));
+            let template = yieldfv!(template.csrf_token(session.csrf_token));
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());

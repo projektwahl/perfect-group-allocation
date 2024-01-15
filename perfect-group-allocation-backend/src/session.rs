@@ -97,6 +97,7 @@ pub struct Session<
     OpenIdConnectSession: Cookiey + CookieyChanged = Unchanged<Option<String>>,
     TemporaryOpenIdConnectState: Cookiey + CookieyChanged = Unchanged<Option<String>>,
 > {
+    /// Only static resources don't need this. All other pages need it for the login link in the header.
     pub csrf_token: CsrfToken,
     pub openidconnect_session: OpenIdConnectSession,
     pub temporary_openidconnect_state: TemporaryOpenIdConnectState,

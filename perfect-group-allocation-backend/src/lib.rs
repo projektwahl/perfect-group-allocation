@@ -113,7 +113,7 @@ where
         let not_get_or_head =
             !(request.method() == Method::GET || request.method() == Method::HEAD);
 
-        let expected_csrf_token = session.session().0;
+        let expected_csrf_token = session.ensure_csrf_token();
 
         let body: Bytes = Limited::new(request.into_body(), 100)
             .collect()
