@@ -85,15 +85,15 @@ impl<OpenIdConnectSession: IntoCookieValue, TemporaryOpenIdConnectState: IntoCoo
     }
 
     pub fn csrf_token(&self) -> String {
-        self.csrf_token.0
+        self.csrf_token.0.clone()
     }
 
     pub fn openidconnect_session(&self) -> OpenIdConnectSession {
-        self.openidconnect_session.0
+        self.openidconnect_session.0.clone()
     }
 
     pub fn temporary_openidconnect_state(&self) -> TemporaryOpenIdConnectState {
-        self.temporary_openidconnect_state.0
+        self.temporary_openidconnect_state.0.clone()
     }
 }
 

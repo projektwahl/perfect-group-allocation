@@ -87,7 +87,6 @@ pub fn create<'a>(
             StatusCode::OK
         };
 
-        let fixed_session = session.ensure_csrf_token();
         let result = async gen move {
             let template = yieldfi!(create_project());
             let template = yieldfi!(template.next());
@@ -100,7 +99,7 @@ pub fn create<'a>(
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next_email_false());
-            let template = yieldfv!(template.csrf_token(fixed_session.session().0));
+            let template = yieldfv!(template.csrf_token(session.csrf_token()));
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
@@ -111,7 +110,7 @@ pub fn create<'a>(
             } else {
                 yieldfi!(template.next_error_false())
             };
-            let template = yieldfv!(template.csrf_token(fixed_session.session().0));
+            let template = yieldfv!(template.csrf_token(session.csrf_token()));
             let template = yieldfi!(template.next());
             let template = if empty_title {
                 let template = yieldfi!(template.next_title_error_true());

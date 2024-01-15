@@ -20,8 +20,7 @@ pub async fn index(
     session: Session,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
-    let session = session.ensure_csrf_token();
-    let frozen_session = session.freeze();
+    let csrf_token = session.csrf_token();
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());
@@ -34,12 +33,12 @@ pub async fn index(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_email_false());
-        let template = yieldfv!(template.csrf_token(session.get_csrf_token()));
+        let template = yieldfv!(template.csrf_token(csrf_token.clone()));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_error_false());
-        let template = yieldfv!(template.csrf_token(session.get_csrf_token()));
+        let template = yieldfv!(template.csrf_token(csrf_token));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_title_error_false());
         let template = yieldfv!(template.title(""));

@@ -52,8 +52,7 @@ pub fn openid_redirect(
         // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
         // TODO FIXME errors also need to return the session?
 
-        let session = session.ensure_csrf_token();
-        let expected_csrf_token = session.get_csrf_token();
+        let expected_csrf_token = session.csrf_token();
 
         let (openid_session, session) = session.get_and_remove_temporary_openidconnect_state()?;
 
