@@ -25,7 +25,7 @@ impl CsrfToken for OpenIdLoginPayload {
 }
 
 pub async fn openid_login(
-    request: hyper::Request<
+    _request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
     session: Session,
@@ -37,7 +37,7 @@ pub async fn openid_login(
 
     let (auth_url, openid_session) = begin_authentication(config).await?;
 
-    let session = session.with_temporary_openidconnect_state(&openid_session);
+    let _session = session.with_temporary_openidconnect_state(&openid_session);
 
     Ok(Response::builder()
         .status(StatusCode::SEE_OTHER)

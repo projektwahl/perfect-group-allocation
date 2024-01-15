@@ -1,16 +1,16 @@
 use std::convert::Infallible;
 
 use bytes::{Buf, Bytes};
-use futures_util::Future;
+
 use headers::ContentType;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
-use http_body_util::{BodyExt as _, Empty, Limited, StreamBody};
+use http_body_util::{Empty, StreamBody};
 use perfect_group_allocation_config::Config;
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_openidconnect::{
-    finish_authentication, OpenIdRedirect, OpenIdRedirectInner, OpenIdSession,
+    finish_authentication, OpenIdRedirect, OpenIdRedirectInner,
 };
 use serde::{Deserialize, Serialize};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
@@ -98,7 +98,7 @@ pub async fn openid_redirect(
             )
             .await?;
 
-            let session = session.with_openidconnect_session(result);
+            let _session = session.with_openidconnect_session(result);
 
             Ok(Response::builder()
                 .status(StatusCode::TEMPORARY_REDIRECT)

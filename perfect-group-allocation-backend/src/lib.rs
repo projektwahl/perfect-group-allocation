@@ -31,11 +31,11 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
-use cookie::Cookie;
+
 use error::AppError;
 use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
 use h3::run_http3_server_s2n;
-use http::header::{ALT_SVC, COOKIE};
+use http::header::{ALT_SVC};
 use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use http_body::Body;
 use http_body_util::{BodyExt, Full, Limited};
@@ -371,10 +371,10 @@ impl<
                 Ok(not_found.map(EitherBodyRouter::Option404))
             }),
         }
-        .map(|fut: (Result<_, AppError>)| match fut {
+        .map(|fut: Result<_, AppError>| match fut {
             Ok(ok) => Ok(ok),
             Err(err) => {
-                let mut response = err
+                let response = err
                     .build_error_template(error_session)
                     .map(EitherBodyRouter::Option500);
                 Ok(response)

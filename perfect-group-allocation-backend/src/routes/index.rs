@@ -14,7 +14,7 @@ use crate::session::Session;
 use crate::{yieldfi, yieldfv};
 
 pub async fn index(
-    request: hyper::Request<
+    _request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
     session: Session,

@@ -1,13 +1,13 @@
-use std::marker::PhantomData;
 
-use cookie::{Cookie, CookieJar, SameSite};
+
+use cookie::{Cookie};
 use http::header::{COOKIE, SET_COOKIE};
-use http::{HeaderValue, Request, Response};
+use http::{HeaderValue, Request};
 use perfect_group_allocation_openidconnect::OpenIdSession;
 use rand::{thread_rng, Rng as _};
 
 use crate::error::AppError;
-use crate::routes::OpenidRedirectTemplate0;
+
 
 const COOKIE_NAME_CSRF_TOKEN: &str = "__Host_csrf_token";
 const COOKIE_NAME_OPENIDCONNECT_SESSION: &str = "__Host_openidconnect_session";
@@ -82,7 +82,7 @@ impl ResponseSessionExt for hyper::http::response::Builder {
         OpenIdConnectSession: IntoCookieValue,
         TemporaryOpenIdConnectState: IntoCookieValue,
     >(
-        mut self,
+        self,
         session: Session<OpenIdConnectSession, TemporaryOpenIdConnectState>,
     ) -> Self {
         let mut this = self;
@@ -135,10 +135,10 @@ impl Session {
             .for_each(|cookie| match cookie.name() {
                 COOKIE_NAME_CSRF_TOKEN => csrf_token = Some(cookie.value().to_owned()),
                 COOKIE_NAME_OPENIDCONNECT_SESSION => {
-                    openidconnect_session = Some(cookie.value().to_owned())
+                    openidconnect_session = Some(cookie.value().to_owned());
                 }
                 COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE => {
-                    temporary_openidconnect_state = serde_json::from_str(cookie.value()).unwrap()
+                    temporary_openidconnect_state = serde_json::from_str(cookie.value()).unwrap();
                 }
                 _ => {
                     // ignore the cookies that are not interesting for us
@@ -151,7 +151,7 @@ impl Session {
                 .map(char::from)
                 .collect()
         });
-        Session {
+        Self {
             csrf_token: (csrf_token, false),
             openidconnect_session: (openidconnect_session, false),
             temporary_openidconnect_state: (temporary_openidconnect_state, false),
@@ -174,7 +174,7 @@ impl<TemporaryOpenIdConnectState: IntoCookieValue>
     }
 
     pub fn without_openidconnect_session(self) -> Session<(), TemporaryOpenIdConnectState> {
-        if let (None, false) = self.openidconnect_session {
+        if self.openidconnect_session == (None, false) {
             Session {
                 csrf_token: self.csrf_token,
                 openidconnect_session: ((), false),
