@@ -37,7 +37,7 @@ pub async fn openid_login(
 
     let (auth_url, openid_session) = begin_authentication(config).await?;
 
-    let session = session.with_temporary_openidconnect_state(&openid_session);
+    let session = session.with_temporary_openidconnect_state(openid_session);
 
     Ok(Response::builder()
         .with_session(session)

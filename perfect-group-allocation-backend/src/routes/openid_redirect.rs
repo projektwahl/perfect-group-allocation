@@ -90,7 +90,7 @@ pub async fn openid_redirect(
         OpenIdRedirectInner::Success(ok) => {
             let result = finish_authentication(
                 config,
-                serde_json::from_str(&openid_session).unwrap(),
+                openid_session,
                 OpenIdRedirect {
                     state: form.state,
                     inner: ok,

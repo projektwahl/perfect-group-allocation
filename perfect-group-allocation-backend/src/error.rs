@@ -94,7 +94,7 @@ impl From<diesel::result::Error> for AppError {
 impl AppError {
     pub fn build_error_template(
         self,
-        session: Session,
+        session: Session<Option<String>, ()>,
     ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send + 'static> {
         let csrf_token = session.csrf_token();
         let result = async gen move {

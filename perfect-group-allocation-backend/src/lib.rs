@@ -320,7 +320,7 @@ impl<
 
         // just store csrf token here? (static files are the only ones that theoretically don't need one)
         let session = Session::new(&req);
-        let error_session = session.clone(); // at some point we may also want to show the logged in user etc so just clone the whole thing
+        let error_session = session.without_temporary_openidconnect_state().clone(); // at some point we may also want to show the logged in user etc so just clone the whole thing
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => EitherFutureRouter::Option1(async move {

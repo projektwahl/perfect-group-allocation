@@ -188,6 +188,8 @@ pub async fn finish_authentication(
         }
     }
 
+    println!("{:?}", claims);
+
     let Some(_email) = claims.email() else {
         return Err(OpenIdConnectError::MissingEmailAddress);
     };

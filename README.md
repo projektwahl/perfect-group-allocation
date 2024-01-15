@@ -45,7 +45,7 @@ export PATH=$PATH:/opt/keycloak/bin
 kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin
 #kcadm.sh delete realms/pga
 kcadm.sh create realms -s realm=pga -s enabled=true
-kcadm.sh create users -r pga -s username=test -s enabled=true
+kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
 kcadm.sh set-password -r pga --username test --new-password test
 CID=$(kcadm.sh create clients -r pga -s clientId=pga -s 'redirectUris=["https://h3.selfmade4u.de/*"]' -i)
 CID=$(kcadm.sh get clients -r pga --fields id -q clientId=pga --format csv --noquotes)
