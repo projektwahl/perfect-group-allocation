@@ -13,7 +13,7 @@ const COOKIE_NAME_CSRF_TOKEN: &str = "__Host_csrf_token";
 const COOKIE_NAME_OPENIDCONNECT_SESSION: &str = "__Host_openidconnect_session";
 const COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE: &str = "__Host_temporary_openidconnect_state";
 
-pub trait IntoCookieValue {
+pub trait IntoCookieValue: Clone {
     fn into_cookie_value(self) -> Option<String>;
 }
 
