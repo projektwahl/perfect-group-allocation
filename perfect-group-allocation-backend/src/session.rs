@@ -7,6 +7,7 @@ use perfect_group_allocation_openidconnect::OpenIdSession;
 use rand::{thread_rng, Rng as _};
 
 use crate::error::AppError;
+use crate::routes::OpenidRedirectTemplate0;
 
 const COOKIE_NAME_CSRF_TOKEN: &str = "__Host_csrf_token";
 const COOKIE_NAME_OPENIDCONNECT_SESSION: &str = "__Host_openidconnect_session";
@@ -125,7 +126,9 @@ impl<CsrfToken, TemporaryOpenIdConnectState>
     }
 }
 
-impl<CsrfToken, OpenIdConnectSession> Session<CsrfToken, OpenIdConnectSession, Option<String>> {
+impl<CsrfToken, OpenIdConnectSession>
+    Session<CsrfToken, OpenIdConnectSession, Unchanged<Option<String>>>
+{
     pub fn with_temporary_openidconnect_state(
         &mut self,
         input: &OpenIdSession,
@@ -138,24 +141,17 @@ impl<CsrfToken, OpenIdConnectSession> Session<CsrfToken, OpenIdConnectSession, O
     }
 
     pub fn get_and_remove_temporary_openidconnect_state(
-        &mut self,
-    ) -> Result<OpenIdSession, AppError> {
-        let return_value = match self
-            .private_cookies
-            .get(Self::COOKIE_NAME_OPENIDCONNECT)
-            .map(|cookie| serde_json::from_str(cookie.value()))
-            .ok_or(AppError::OpenIdTokenNotFound)
-        {
-            Ok(Ok(value)) => value,
-            Ok(Err(error)) => return Err(error.into()),
-            Err(error) => return Err(error),
-        };
-        let cookie = Cookie::build((Self::COOKIE_NAME_OPENIDCONNECT, ""))
-            .http_only(true)
-            .same_site(SameSite::Lax) // needed because top level callback is cross-site
-            /*.secure(true) */;
-        self.private_cookies.remove(cookie);
-        Ok(return_value)
+        self,
+    ) -> Result<Session<CsrfToken, OpenIdConnectSession, Changed<()>>, AppError> {
+        if let Unchanged(Some(temporary_openidconnect_state)) = self.temporary_openidconnect_state {
+            Ok(Session {
+                csrf_token: self.csrf_token,
+                openidconnect_session: self.openidconnect_session,
+                temporary_openidconnect_state: Changed(()),
+            })
+        } else {
+            Err(AppError::OpenIdTokenNotFound)
+        }
     }
 }
 
