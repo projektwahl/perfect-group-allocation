@@ -13,13 +13,63 @@ const COOKIE_NAME_CSRF_TOKEN: &str = "__Host_csrf_token";
 const COOKIE_NAME_OPENIDCONNECT_SESSION: &str = "__Host_openidconnect_session";
 const COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE: &str = "__Host_temporary_openidconnect_state";
 
+trait Cookiey<T> {
+    fn get_value(&self) -> Option<T>;
+}
+
+trait CookieyChanged {
+    fn is_changed(&self) -> bool;
+}
+
 pub struct Changed<T>(T);
 
+impl<T> Cookiey<T> for Changed<T> {
+    fn get_value(&self) -> Option<T> {
+        Some(self.0)
+    }
+}
+
+impl<T> CookieyChanged for Changed<T> {
+    fn is_changed(&self) -> bool {
+        true
+    }
+}
+
 pub struct Unchanged<T>(T);
+
+impl<T> Cookiey<T> for Unchanged<T> {
+    fn get_value(&self) -> Option<T> {
+        Some(self.0)
+    }
+}
+
+impl<T> CookieyChanged for Unchanged<T> {
+    fn is_changed(&self) -> bool {
+        false
+    }
+}
 
 pub enum CookieValue<T> {
     Unchanged(Unchanged<T>),
     Changed(Changed<T>),
+}
+
+impl<T: Cookiey<T>> Cookiey<T> for CookieValue<T> {
+    fn get_value(&self) -> Option<T> {
+        match self {
+            CookieValue::Unchanged(value) => value.get_value(),
+            CookieValue::Changed(value) => value.get_value(),
+        }
+    }
+}
+
+impl<T> CookieyChanged for CookieValue<T> {
+    fn is_changed(&self) -> bool {
+        match self {
+            CookieValue::Unchanged(_) => false,
+            CookieValue::Changed(_) => true,
+        }
+    }
 }
 
 // we don't want to store cookies we don't need
