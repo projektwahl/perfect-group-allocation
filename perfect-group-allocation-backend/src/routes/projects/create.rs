@@ -16,7 +16,7 @@ use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::routes::create_project;
-use crate::session::Session;
+use crate::session::{ResponseSessionExt, Session};
 use crate::{
     either_http_body, yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt,
 };
@@ -81,6 +81,7 @@ pub async fn create<'a>(
         StatusCode::OK
     };
 
+    let csrf_token = session.csrf_token();
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());
@@ -93,7 +94,7 @@ pub async fn create<'a>(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_email_false());
-        let template = yieldfv!(template.csrf_token(session.csrf_token()));
+        let template = yieldfv!(template.csrf_token(csrf_token.clone()));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
@@ -104,7 +105,7 @@ pub async fn create<'a>(
         } else {
             yieldfi!(template.next_error_false())
         };
-        let template = yieldfv!(template.csrf_token(session.csrf_token()));
+        let template = yieldfv!(template.csrf_token(csrf_token));
         let template = yieldfi!(template.next());
         let template = if empty_title {
             let template = yieldfi!(template.next_title_error_true());
@@ -129,6 +130,7 @@ pub async fn create<'a>(
     };
     let stream = AsyncIteratorStream(result);
     Ok(Response::builder()
+        .with_session(session)
         .status(status_code)
         .typed_header(ContentType::html())
         .body(EitherBody::Option2(StreamBody::new(stream)))

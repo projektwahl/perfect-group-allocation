@@ -91,22 +91,20 @@ impl ResponseSessionExt for hyper::http::response::Builder {
             );
         }
         if let (value, true) = session.openidconnect_session {
-            let cookie = match value.into_cookie_value() {
-                Some(value) => Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
-                None => Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
-            };
+            let cookie = value.into_cookie_value().map_or_else(
+                || Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
+                |value| Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
+            );
             this = this.header(
                 SET_COOKIE,
                 HeaderValue::try_from(cookie.to_string()).unwrap(),
             );
         }
         if let (value, true) = session.temporary_openidconnect_state {
-            let cookie = match value.into_cookie_value() {
-                Some(value) => {
-                    Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build()
-                }
-                None => Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
-            };
+            let cookie = value.into_cookie_value().map_or_else(
+                || Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
+                |value| Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build(),
+            );
             this = this.header(
                 SET_COOKIE,
                 HeaderValue::try_from(cookie.to_string()).unwrap(),

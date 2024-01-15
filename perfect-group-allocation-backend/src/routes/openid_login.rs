@@ -10,7 +10,7 @@ use perfect_group_allocation_openidconnect::begin_authentication;
 use serde::Deserialize;
 
 use crate::error::AppError;
-use crate::session::Session;
+use crate::session::{ResponseSessionExt as _, Session};
 use crate::CsrfToken;
 
 #[derive(Deserialize)]
@@ -37,9 +37,10 @@ pub async fn openid_login(
 
     let (auth_url, openid_session) = begin_authentication(config).await?;
 
-    let _session = session.with_temporary_openidconnect_state(&openid_session);
+    let session = session.with_temporary_openidconnect_state(&openid_session);
 
     Ok(Response::builder()
+        .with_session(session)
         .status(StatusCode::SEE_OTHER)
         .header(LOCATION, auth_url)
         .body(Empty::new())

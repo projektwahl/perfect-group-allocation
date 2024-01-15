@@ -10,7 +10,7 @@ use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::routes::create_project;
-use crate::session::Session;
+use crate::session::{ResponseSessionExt as _, Session};
 use crate::{yieldfi, yieldfv};
 
 pub async fn index(
@@ -50,6 +50,7 @@ pub async fn index(
     };
     let stream = AsyncIteratorStream(result);
     Ok(Response::builder()
+        .with_session(session)
         .status(StatusCode::OK)
         .body(StreamBody::new(stream))
         .unwrap())

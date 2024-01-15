@@ -18,7 +18,7 @@ use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::routes::list_projects;
-use crate::session::Session;
+use crate::session::{ResponseSessionExt as _, Session};
 use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
 pub async fn list(
@@ -29,6 +29,7 @@ pub async fn list(
     pool: Pool,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
+    let csrf_token = session.csrf_token();
     let result = async gen move {
         let template = yieldfi!(list_projects());
         let template = yieldfi!(template.next());
@@ -41,7 +42,7 @@ pub async fn list(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_email_false());
-        let template = yieldfv!(template.csrf_token(session.csrf_token()));
+        let template = yieldfv!(template.csrf_token(csrf_token));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let mut template = yieldfi!(template.next());
@@ -94,6 +95,7 @@ pub async fn list(
     };
     let stream = AsyncIteratorStream(result);
     Ok(Response::builder()
+        .with_session(session)
         .status(StatusCode::OK)
         .typed_header(ContentType::html())
         .body(StreamBody::new(stream))

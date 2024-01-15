@@ -16,7 +16,7 @@ use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
-use crate::session::Session;
+use crate::session::{ResponseSessionExt as _, Session};
 use crate::{either_http_body, yieldfi, yieldfv, ResponseTypedHeaderExt};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
@@ -81,6 +81,7 @@ pub async fn openid_redirect(
             };
             let stream = AsyncIteratorStream(result);
             Ok(Response::builder()
+                .with_session(session)
                 .status(StatusCode::OK)
                 .typed_header(ContentType::html())
                 .body(EitherBody::Option1(StreamBody::new(stream)))
@@ -97,9 +98,10 @@ pub async fn openid_redirect(
             )
             .await?;
 
-            let _session = session.with_openidconnect_session(result);
+            let session = session.with_openidconnect_session(result);
 
             Ok(Response::builder()
+                .with_session(session)
                 .status(StatusCode::TEMPORARY_REDIRECT)
                 .header(LOCATION, "/list")
                 .body(EitherBody::Option2(Empty::new()))
