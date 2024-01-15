@@ -1,3 +1,4 @@
+use cookie::time::OffsetDateTime;
 use cookie::Cookie;
 use http::header::{COOKIE, SET_COOKIE};
 use http::{HeaderValue, Request};
@@ -101,7 +102,12 @@ impl ResponseSessionExt for hyper::http::response::Builder {
         }
         if let (value, true) = session.openidconnect_session {
             let cookie = value.into_cookie_value().map_or_else(
-                || Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
+                || {
+                    Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION)
+                        .max_age(cookie::time::Duration::seconds(0))
+                        .expires(OffsetDateTime::now_utc() - cookie::time::Duration::days(365))
+                        .build()
+                },
                 |value| Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
             );
             this = this.header(
@@ -111,7 +117,12 @@ impl ResponseSessionExt for hyper::http::response::Builder {
         }
         if let (value, true) = session.temporary_openidconnect_state {
             let cookie = value.into_cookie_value().map_or_else(
-                || Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
+                || {
+                    Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE)
+                        .max_age(cookie::time::Duration::seconds(0))
+                        .expires(OffsetDateTime::now_utc() - cookie::time::Duration::days(365))
+                        .build()
+                },
                 |value| Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build(),
             );
             this = this.header(
