@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::StreamBody;
@@ -11,11 +11,14 @@ use zero_cost_templating::Unsafe;
 use crate::error::AppError;
 use crate::routes::create_project;
 use crate::session::Session;
-use crate::{yieldfi, yieldfv};
+use crate::{get_session, yieldfi, yieldfv};
 
 pub async fn index(
-    session: Session,
+    request: hyper::Request<
+        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
+    >,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
+    let session = get_session(&request);
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());

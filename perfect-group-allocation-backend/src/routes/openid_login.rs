@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::CsrfToken;
+use crate::{get_session, CsrfToken};
 
 #[derive(Deserialize)]
 pub struct OpenIdLoginPayload {
@@ -25,11 +25,14 @@ impl CsrfToken for OpenIdLoginPayload {
 }
 
 pub async fn openid_login(
+    request: hyper::Request<
+        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
+    >,
     config: Config,
-    mut session: Session,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
     // TODO FIXME check csrf token?
+    let mut session = get_session(&request);
 
     let (auth_url, openid_session) = begin_authentication(config).await?;
 

@@ -106,7 +106,7 @@ where
         request: hyper::Request<
             impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
         >,
-        session: Session,
+        session: &Session,
     ) -> Result<Self, AppError> {
         let not_get_or_head =
             !(request.method() == Method::GET || request.method() == Method::HEAD);
@@ -298,6 +298,23 @@ impl<RequestBodyBuf: Buf + Send + 'static> Clone for Svc<RequestBodyBuf> {
     }
 }
 
+pub fn get_session<T>(request: &Request<T>) -> Session {
+    let cookies = request
+        .headers()
+        .get_all(COOKIE)
+        .into_iter()
+        .filter_map(|value| value.to_str().ok())
+        .map(std::borrow::ToOwned::to_owned)
+        .flat_map(Cookie::split_parse)
+        .filter_map(std::result::Result::ok);
+    let mut jar = cookie::CookieJar::new();
+    for cookie in cookies {
+        jar.add_original(cookie);
+    }
+
+    Session::new(jar)
+}
+
 either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 404 500);
 either_future!(EitherFutureRouter 1 2 3 4 5 6 7 404);
 
@@ -313,27 +330,12 @@ impl<
 
     fn call(&self, req: Request<RequestBody>) -> Self::Future {
         // TODO FIXME only parse cookies when needed
-        let cookies = req
-            .headers()
-            .get_all(COOKIE)
-            .into_iter()
-            .filter_map(|value| value.to_str().ok())
-            .map(std::borrow::ToOwned::to_owned)
-            .flat_map(Cookie::split_parse)
-            .filter_map(std::result::Result::ok);
-        let mut jar = cookie::CookieJar::new();
-        for cookie in cookies {
-            jar.add_original(cookie);
-        }
-
-        let session = Session::new(jar);
-        let err_session = session.clone(); // TODO FIXME
 
         println!("{} {}", req.method(), req.uri().path());
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
-                Ok(index(session).await?.map(EitherBodyRouter::Option1))
+                Ok(index(req).await?.map(EitherBodyRouter::Option1))
             }),
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
                 Ok(indexcss(req).map(EitherBodyRouter::Option2))
@@ -341,7 +343,7 @@ impl<
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option3(async move {
-                    Ok(list(pool, session).await?.map(EitherBodyRouter::Option3))
+                    Ok(list(req, pool).await?.map(EitherBodyRouter::Option3))
                 })
             }
             (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
@@ -350,15 +352,13 @@ impl<
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option5(async move {
-                    Ok(create(req, pool, session)
-                        .await?
-                        .map(EitherBodyRouter::Option5))
+                    Ok(create(req, pool).await?.map(EitherBodyRouter::Option5))
                 })
             }
             (&Method::POST, "/openidconnect-login") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option6(async move {
-                    Ok(openid_login(config, session)
+                    Ok(openid_login(req, config)
                         .await?
                         .map(EitherBodyRouter::Option6))
                 })
@@ -366,7 +366,7 @@ impl<
             (&Method::GET, "/openidconnect-redirect") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option7(async move {
-                    Ok(openid_redirect(config, req, session)
+                    Ok(openid_redirect(req, config)
                         .await?
                         .map(EitherBodyRouter::Option7))
                 })
@@ -380,7 +380,7 @@ impl<
         .map(|fut: Result<_, AppError>| match fut {
             Ok(ok) => Ok(ok),
             Err(err) => {
-                // TODO FIXME this may need to set a cookie
+                // TODO FIXME this may need to set a cookief
                 Ok(err
                     .build_error_template(err_session)
                     .map(EitherBodyRouter::Option500))

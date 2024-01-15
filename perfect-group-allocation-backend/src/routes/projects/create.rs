@@ -18,7 +18,8 @@ use crate::error::AppError;
 use crate::routes::create_project;
 use crate::session::Session;
 use crate::{
-    either_http_body, yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt,
+    either_http_body, get_session, yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm,
+    ResponseTypedHeaderExt,
 };
 
 either_http_body!(EitherBody 1 2);
@@ -28,10 +29,9 @@ pub async fn create(
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
     pool: Pool,
-    session: Session, // TODO FIXME extract in here
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
-    let session_clone = session.clone();
-    let form = CsrfSafeForm::<CreateProjectPayload>::from_request(request, session)
+    let session = get_session(&request);
+    let form = CsrfSafeForm::<CreateProjectPayload>::from_request(request, &session)
         .await
         .unwrap();
 
@@ -91,7 +91,7 @@ pub async fn create(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_email_false());
-        let template = yieldfv!(template.csrf_token(session_clone.session().0));
+        let template = yieldfv!(template.csrf_token(session.session().0));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
@@ -102,7 +102,7 @@ pub async fn create(
         } else {
             yieldfi!(template.next_error_false())
         };
-        let template = yieldfv!(template.csrf_token(session_clone.session().0));
+        let template = yieldfv!(template.csrf_token(session.session().0));
         let template = yieldfi!(template.next());
         let template = if empty_title {
             let template = yieldfi!(template.next_title_error_true());

@@ -17,7 +17,7 @@ use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{either_http_body, yieldfi, yieldfv, ResponseTypedHeaderExt};
+use crate::{either_http_body, get_session, yieldfi, yieldfv, ResponseTypedHeaderExt};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -31,13 +31,12 @@ pub struct OpenIdRedirectErrorTemplate {
 either_http_body!(EitherBody 1 2);
 
 pub async fn openid_redirect(
-    config: Config,
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
-    mut session: Session, // what if this here could be a reference?
+    config: Config,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
-    let session_ref = &mut session;
+    let mut session = get_session(&request);
 
     let body = request.uri().query().unwrap();
 
@@ -47,9 +46,9 @@ pub async fn openid_redirect(
     // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
     // TODO FIXME errors also need to return the session?
 
-    let expected_csrf_token = session_ref.session().0;
+    let expected_csrf_token = session.session().0;
 
-    let openid_session = session_ref.get_and_remove_openidconnect()?;
+    let openid_session = session.get_and_remove_openidconnect()?;
 
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
@@ -98,7 +97,7 @@ pub async fn openid_redirect(
             )
             .await?;
 
-            session_ref.set_openid_session(Some(result));
+            session.set_openid_session(Some(result));
 
             Ok(Response::builder()
                 .status(StatusCode::TEMPORARY_REDIRECT)

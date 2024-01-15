@@ -19,7 +19,7 @@ either_http_body!(EitherBody 1 2);
 #[expect(clippy::needless_pass_by_value)]
 pub fn favicon_ico(
     request: hyper::Request<
-        impl http_body::Body<Data = impl Buf, Error = impl Into<AppError>> + Send + 'static,
+        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
 ) -> hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static> {
     let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
