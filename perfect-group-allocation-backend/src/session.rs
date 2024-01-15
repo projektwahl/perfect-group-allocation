@@ -97,19 +97,7 @@ pub struct SessionMutableInner {
     pub temporary_openidconnect_state: CookieValue<Option<String>>,
 }
 
-// we don't want to store cookies we don't need
-#[must_use]
-pub struct Session<
-    'a,
-    CsrfToken: Cookiey + CookieyChanged = Unchanged<Option<String>>,
-    OpenIdConnectSession: Cookiey + CookieyChanged = Unchanged<Option<String>>,
-    TemporaryOpenIdConnectState: Cookiey + CookieyChanged = Unchanged<Option<String>>,
-> {
-    pub inner: &'a mut SessionMutableInner,
-    phantom_data: PhantomData<(CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState)>,
-}
-
-impl<'a> Session<'a> {
+impl SessionMutableInner {
     pub fn new<T>(request: &Request<T>) -> Self {
         let mut new = SessionMutableInner {
             csrf_token: CookieValue::Unchanged(Unchanged(None)),
@@ -146,6 +134,36 @@ impl<'a> Session<'a> {
     }
 }
 
+// we don't want to store cookies we don't need
+#[must_use]
+pub struct Session<
+    'a,
+    CsrfToken: Cookiey + CookieyChanged = Unchanged<Option<String>>,
+    OpenIdConnectSession: Cookiey + CookieyChanged = Unchanged<Option<String>>,
+    TemporaryOpenIdConnectState: Cookiey + CookieyChanged = Unchanged<Option<String>>,
+> {
+    pub inner: &'a mut SessionMutableInner,
+    phantom_data: PhantomData<(CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState)>,
+}
+
+impl<'a> Session<'a> {
+    pub fn new(inner: &mut SessionMutableInner) -> Self {
+        assert!(matches!(inner.csrf_token, CookieValue::Unchanged(_)));
+        assert!(matches!(
+            inner.openidconnect_session,
+            CookieValue::Unchanged(_)
+        ));
+        assert!(matches!(
+            inner.temporary_openidconnect_state,
+            CookieValue::Unchanged(_)
+        ));
+        Self {
+            inner,
+            phantom_data: PhantomData,
+        }
+    }
+}
+
 impl<
     'a,
     OpenIdConnectSession: Cookiey + CookieyChanged,
@@ -155,82 +173,76 @@ impl<
     pub fn ensure_csrf_token(
         self,
     ) -> Session<'a, CookieValue<String>, OpenIdConnectSession, TemporaryOpenIdConnectState> {
-        if let Unchanged(Some(csrf_token)) = self.inner.csrf_token {
-            self.inner.csrf_token = CookieValue::Unchanged(Unchanged(csrf_token));
-            Session {
-                inner: self.inner,
-                phantom_data: PhantomData,
-            }
+        if let CookieValue::Unchanged(Unchanged(Some(csrf_token))) = self.inner.csrf_token {
         } else {
             let csrf_token: String = thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(30)
                 .map(char::from)
                 .collect();
-            Session {
-                csrf_token: CookieValue::Changed(Changed(csrf_token)),
-                openidconnect_session: self.openidconnect_session,
-                temporary_openidconnect_state: self.temporary_openidconnect_state,
-            }
+            self.inner.csrf_token = CookieValue::Changed(Changed(Some(csrf_token)))
+        }
+        Session {
+            inner: self.inner,
+            phantom_data: PhantomData,
         }
     }
 }
 
-impl<CsrfToken: Cookiey + CookieyChanged, TemporaryOpenIdConnectState: Cookiey + CookieyChanged>
-    Session<CsrfToken, Unchanged<Option<String>>, TemporaryOpenIdConnectState>
+impl<'a, CsrfToken: Cookiey + CookieyChanged, TemporaryOpenIdConnectState: Cookiey + CookieyChanged>
+    Session<'a, CsrfToken, Unchanged<Option<String>>, TemporaryOpenIdConnectState>
 {
     pub fn with_openidconnect_session(
         self,
         input: String,
-    ) -> Session<CsrfToken, Changed<String>, TemporaryOpenIdConnectState> {
+    ) -> Session<'a, CsrfToken, Changed<String>, TemporaryOpenIdConnectState> {
+        self.inner.openidconnect_session = CookieValue::Changed(Changed(Some(input)));
         Session {
-            csrf_token: self.csrf_token,
-            openidconnect_session: Changed(input),
-            temporary_openidconnect_state: self.temporary_openidconnect_state,
+            inner: self.inner,
+            phantom_data: PhantomData,
         }
     }
 
     pub fn without_openidconnect_session(
         &mut self,
-    ) -> Session<CsrfToken, CookieValue<()>, TemporaryOpenIdConnectState> {
-        if let Unchanged(None) = self.openidconnect_session {
-            Session {
-                csrf_token: self.csrf_token,
-                openidconnect_session: CookieValue::Unchanged(Unchanged(())),
-                temporary_openidconnect_state: self.temporary_openidconnect_state,
-            }
+    ) -> Session<'a, CsrfToken, CookieValue<()>, TemporaryOpenIdConnectState> {
+        if let CookieValue::Unchanged(Unchanged(None)) = self.inner.openidconnect_session {
         } else {
-            Session {
-                csrf_token: self.csrf_token,
-                openidconnect_session: CookieValue::Changed(Changed(())),
-                temporary_openidconnect_state: self.temporary_openidconnect_state,
-            }
+            self.inner.openidconnect_session = CookieValue::Changed(Changed(None));
+        }
+        Session {
+            inner: self.inner,
+            phantom_data: PhantomData,
         }
     }
 }
 
-impl<CsrfToken: Cookiey + CookieyChanged, OpenIdConnectSession: Cookiey + CookieyChanged>
-    Session<CsrfToken, OpenIdConnectSession, Unchanged<Option<String>>>
+impl<'a, CsrfToken: Cookiey + CookieyChanged, OpenIdConnectSession: Cookiey + CookieyChanged>
+    Session<'a, CsrfToken, OpenIdConnectSession, Unchanged<Option<String>>>
 {
     pub fn with_temporary_openidconnect_state(
         &mut self,
         input: &OpenIdSession,
-    ) -> Session<CsrfToken, OpenIdConnectSession, Changed<String>> {
+    ) -> Session<'a, CsrfToken, OpenIdConnectSession, Changed<String>> {
+        self.inner.temporary_openidconnect_state =
+            CookieValue::Changed(Changed(Some(serde_json::to_string(input).unwrap())));
         Session {
-            csrf_token: self.csrf_token,
-            openidconnect_session: self.openidconnect_session,
-            temporary_openidconnect_state: Changed(serde_json::to_string(input).unwrap()),
+            inner: self.inner,
+            phantom_data: PhantomData,
         }
     }
 
     pub fn get_and_remove_temporary_openidconnect_state(
         self,
-    ) -> Result<Session<CsrfToken, OpenIdConnectSession, Changed<()>>, AppError> {
-        if let Unchanged(Some(temporary_openidconnect_state)) = self.temporary_openidconnect_state {
+    ) -> Result<Session<'a, CsrfToken, OpenIdConnectSession, Changed<()>>, AppError> {
+        if let CookieValue::Unchanged(Unchanged(Some(temporary_openidconnect_state)))
+        | CookieValue::Changed(Changed(Some(temporary_openidconnect_state))) =
+            self.inner.temporary_openidconnect_state
+        {
+            self.inner.temporary_openidconnect_state = CookieValue::Changed(Changed(None));
             Ok(Session {
-                csrf_token: self.csrf_token,
-                openidconnect_session: self.openidconnect_session,
-                temporary_openidconnect_state: Changed(()),
+                inner: self.inner,
+                phantom_data: PhantomData,
             })
         } else {
             Err(AppError::OpenIdTokenNotFound)
@@ -240,14 +252,15 @@ impl<CsrfToken: Cookiey + CookieyChanged, OpenIdConnectSession: Cookiey + Cookie
 
 // I think the csrf token needs to be signed/encrypted
 impl<
+    'a,
     CsrfToken: Cookiey + CookieyChanged,
     OpenIdConnectSession: Cookiey + CookieyChanged,
     TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
-> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
+> Session<'a, CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
     pub fn to_cookies<T>(self, response: &mut http::Response<T>) {
-        if self.csrf_token.is_changed() {
-            let cookie = match self.csrf_token.get_value() {
+        if self.inner.csrf_token.is_changed() {
+            let cookie = match self.inner.csrf_token.get_value() {
                 Some(value) => Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build(),
                 None => Cookie::build(COOKIE_NAME_CSRF_TOKEN).build(),
             };
@@ -256,8 +269,8 @@ impl<
                 HeaderValue::try_from(cookie.to_string()).unwrap(),
             );
         }
-        if self.openidconnect_session.is_changed() {
-            let cookie = match self.openidconnect_session.get_value() {
+        if self.inner.openidconnect_session.is_changed() {
+            let cookie = match self.inner.openidconnect_session.get_value() {
                 Some(value) => Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
                 None => Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
             };
@@ -266,8 +279,8 @@ impl<
                 HeaderValue::try_from(cookie.to_string()).unwrap(),
             );
         }
-        if self.temporary_openidconnect_state.is_changed() {
-            let cookie = match self.temporary_openidconnect_state.get_value() {
+        if self.inner.temporary_openidconnect_state.is_changed() {
+            let cookie = match self.inner.temporary_openidconnect_state.get_value() {
                 Some(value) => {
                     Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build()
                 }
