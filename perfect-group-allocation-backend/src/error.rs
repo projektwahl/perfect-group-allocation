@@ -14,7 +14,7 @@ use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::Unsafe;
 
 use crate::routes::error;
-use crate::session::Session;
+use crate::session::{ResponseSessionExt, Session};
 use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
 #[derive(thiserror::Error)]
@@ -114,12 +114,11 @@ impl AppError {
             yieldfi!(template.next());
         };
         let stream = AsyncIteratorStream(result);
-        let mut response = Response::builder()
+        Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .typed_header(ContentType::html())
+            .with_session(session)
             .body(StreamBody::new(stream))
-            .unwrap();
-        session.to_cookies(&mut response);
-        response
+            .unwrap()
     }
 }

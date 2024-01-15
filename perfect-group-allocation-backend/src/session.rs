@@ -38,6 +38,7 @@ impl IntoCookieValue for Option<String> {
 // I think the csrf token needs to be signed/encrypted
 /// we don't want to store cookies we don't need
 #[derive(Clone)]
+#[must_use]
 pub struct Session<
     OpenIdConnectSession: IntoCookieValue = Option<String>,
     TemporaryOpenIdConnectState: IntoCookieValue = Option<String>,
@@ -52,38 +53,6 @@ pub struct Session<
 impl<OpenIdConnectSession: IntoCookieValue, TemporaryOpenIdConnectState: IntoCookieValue>
     Session<OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
-    pub fn to_cookies<T>(self, response: &mut http::Response<T>) {
-        if let (value, true) = self.csrf_token {
-            let cookie = Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build();
-            response.headers_mut().append(
-                SET_COOKIE,
-                HeaderValue::try_from(cookie.to_string()).unwrap(),
-            );
-        }
-        if let (value, true) = self.openidconnect_session {
-            let cookie = match value.into_cookie_value() {
-                Some(value) => Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
-                None => Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
-            };
-            response.headers_mut().append(
-                SET_COOKIE,
-                HeaderValue::try_from(cookie.to_string()).unwrap(),
-            );
-        }
-        if let (value, true) = self.temporary_openidconnect_state {
-            let cookie = match value.into_cookie_value() {
-                Some(value) => {
-                    Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build()
-                }
-                None => Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
-            };
-            response.headers_mut().append(
-                SET_COOKIE,
-                HeaderValue::try_from(cookie.to_string()).unwrap(),
-            );
-        }
-    }
-
     pub fn csrf_token(&self) -> String {
         self.csrf_token.0.clone()
     }
@@ -94,6 +63,59 @@ impl<OpenIdConnectSession: IntoCookieValue, TemporaryOpenIdConnectState: IntoCoo
 
     pub fn temporary_openidconnect_state(&self) -> TemporaryOpenIdConnectState {
         self.temporary_openidconnect_state.0.clone()
+    }
+}
+
+pub trait ResponseSessionExt {
+    #[must_use]
+    fn with_session<
+        OpenIdConnectSession: IntoCookieValue,
+        TemporaryOpenIdConnectState: IntoCookieValue,
+    >(
+        self,
+        session: Session<OpenIdConnectSession, TemporaryOpenIdConnectState>,
+    ) -> Self;
+}
+
+impl ResponseSessionExt for hyper::http::response::Builder {
+    fn with_session<
+        OpenIdConnectSession: IntoCookieValue,
+        TemporaryOpenIdConnectState: IntoCookieValue,
+    >(
+        mut self,
+        session: Session<OpenIdConnectSession, TemporaryOpenIdConnectState>,
+    ) -> Self {
+        let mut this = self;
+        if let (value, true) = session.csrf_token {
+            let cookie = Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build();
+            this = this.header(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
+        }
+        if let (value, true) = session.openidconnect_session {
+            let cookie = match value.into_cookie_value() {
+                Some(value) => Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
+                None => Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
+            };
+            this = this.header(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
+        }
+        if let (value, true) = session.temporary_openidconnect_state {
+            let cookie = match value.into_cookie_value() {
+                Some(value) => {
+                    Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build()
+                }
+                None => Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
+            };
+            this = this.header(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
+        }
+        this
     }
 }
 
