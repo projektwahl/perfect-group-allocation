@@ -41,9 +41,9 @@ https://www.keycloak.org/docs/latest/server_admin/index.html#admin-cli
 podman exec -it perfect-group-allocation_keycloak_1 bash
 cd /tmp
 export PATH=$PATH:/opt/keycloak/bin
-kc.sh export --dir test
+#kc.sh export --dir test
 kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin
-kcadm.sh delete realms/pga
+#kcadm.sh delete realms/pga
 kcadm.sh create realms -s realm=pga -s enabled=true
 kcadm.sh create users -r pga -s username=test -s enabled=true
 kcadm.sh set-password -r pga --username test --new-password test
