@@ -374,11 +374,9 @@ impl<
         .map(|fut: (Result<_, AppError>)| match fut {
             Ok(ok) => Ok(ok),
             Err(err) => {
-                // TODO FIXME this needs to set a cookie
-                let response = err
-                    .build_error_template(&error_session)
+                let mut response = err
+                    .build_error_template(error_session)
                     .map(EitherBodyRouter::Option500);
-                error_session.to_cookies(&mut response);
                 Ok(response)
             }
         })

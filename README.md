@@ -7,6 +7,10 @@
 3. Low Latency
 4. Low Resource usage on the server
 
+## Development Notes
+
+`http_body::Body` should always have a `+ 'static` annotation to avoid errors occuring at the wrong place.
+
 ## CI
 
 Using Forgejo Actions
