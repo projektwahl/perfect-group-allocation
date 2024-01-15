@@ -18,11 +18,20 @@ pub enum CookieValue<T> {
     Changed(T),
 }
 
+impl<T> CookieValue<T> {
+    pub fn into(self) -> T {
+        match self {
+            CookieValue::Unchanged(v) => v,
+            CookieValue::Changed(v) => v,
+        }
+    }
+}
+
 pub struct SessionMutableInner {
     /// Only static resources don't need this. All other pages need it for the login link in the header.
-    pub csrf_token: CookieValue<Option<String>>,
-    pub openidconnect_session: CookieValue<Option<String>>,
-    pub temporary_openidconnect_state: CookieValue<Option<String>>,
+    csrf_token: CookieValue<Option<String>>,
+    openidconnect_session: CookieValue<Option<String>>,
+    temporary_openidconnect_state: CookieValue<Option<String>>,
 }
 
 impl SessionMutableInner {
@@ -68,7 +77,7 @@ pub struct Session<
     OpenIdConnectSession = Option<String>,
     TemporaryOpenIdConnectState = Option<String>,
 > {
-    pub inner: &'a mut SessionMutableInner,
+    inner: &'a mut SessionMutableInner,
     phantom_data: PhantomData<(CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState)>,
 }
 
@@ -110,6 +119,18 @@ impl<'a, OpenIdConnectSession, TemporaryOpenIdConnectState>
             phantom_data: PhantomData,
         }
     }
+
+    pub fn get_csrf_token(&self) -> Option<String> {
+        self.inner.csrf_token.into()
+    }
+}
+
+impl<'a, OpenIdConnectSession, TemporaryOpenIdConnectState>
+    Session<'a, String, OpenIdConnectSession, TemporaryOpenIdConnectState>
+{
+    pub fn get_csrf_token(&self) -> String {
+        self.inner.csrf_token.into().unwrap()
+    }
 }
 
 impl<'a, CsrfToken, TemporaryOpenIdConnectState>
@@ -127,7 +148,7 @@ impl<'a, CsrfToken, TemporaryOpenIdConnectState>
     }
 
     pub fn without_openidconnect_session(
-        &mut self,
+        self,
     ) -> Session<'a, CsrfToken, (), TemporaryOpenIdConnectState> {
         if let CookieValue::Unchanged(None) = self.inner.openidconnect_session {
         } else {
@@ -138,13 +159,25 @@ impl<'a, CsrfToken, TemporaryOpenIdConnectState>
             phantom_data: PhantomData,
         }
     }
+
+    pub fn get_openidconnect_session(&self) -> Option<String> {
+        self.inner.openidconnect_session.into()
+    }
+}
+
+impl<'a, CsrfToken, TemporaryOpenIdConnectState>
+    Session<'a, CsrfToken, String, TemporaryOpenIdConnectState>
+{
+    pub fn get_openidconnect_session(&self) -> String {
+        self.inner.openidconnect_session.into().unwrap()
+    }
 }
 
 impl<'a, CsrfToken, OpenIdConnectSession>
     Session<'a, CsrfToken, OpenIdConnectSession, Option<String>>
 {
     pub fn with_temporary_openidconnect_state(
-        &mut self,
+        self,
         input: &OpenIdSession,
     ) -> Session<'a, CsrfToken, OpenIdConnectSession, String> {
         self.inner.temporary_openidconnect_state =
@@ -169,6 +202,16 @@ impl<'a, CsrfToken, OpenIdConnectSession>
         } else {
             Err(AppError::OpenIdTokenNotFound)
         }
+    }
+
+    pub fn get_temporary_openidconnect_state(&self) -> Option<String> {
+        self.inner.temporary_openidconnect_state.into()
+    }
+}
+
+impl<'a, CsrfToken, OpenIdConnectSession> Session<'a, CsrfToken, OpenIdConnectSession, String> {
+    pub fn get_temporary_openidconnect_state(&self) -> String {
+        self.inner.temporary_openidconnect_state.into().unwrap()
     }
 }
 

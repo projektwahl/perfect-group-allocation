@@ -113,7 +113,7 @@ where
         let not_get_or_head =
             !(request.method() == Method::GET || request.method() == Method::HEAD);
 
-        let expected_csrf_token = session.csrf_token;
+        let expected_csrf_token = session.get_csrf_token();
 
         let body: Bytes = Limited::new(request.into_body(), 100)
             .collect()
@@ -420,9 +420,11 @@ impl<
             } // TODO FIXME set response headers
             (Err(err), session) => {
                 // TODO FIXME this may need to set a cookief
-                Ok(err
-                    .build_error_template(session)
-                    .map(EitherBodyRouter::Option500))
+                let response = err
+                    .build_error_template(&session)
+                    .map(EitherBodyRouter::Option500);
+                session.to_cookies(&mut response);
+                Ok(response)
             }
         })
         .map_ok(|result: Response<_>| {
