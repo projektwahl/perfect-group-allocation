@@ -49,6 +49,60 @@ pub struct Session<
     temporary_openidconnect_state: (TemporaryOpenIdConnectState, bool),
 }
 
+impl<
+    CsrfToken: IntoCookieValue,
+    OpenIdConnectSession: IntoCookieValue,
+    TemporaryOpenIdConnectState: IntoCookieValue,
+> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
+{
+    pub fn to_cookies<T>(self, response: &mut http::Response<T>) {
+        if let (value, true) = self.csrf_token {
+            let cookie = match value.into_cookie_value() {
+                Some(value) => Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build(),
+                None => Cookie::build(COOKIE_NAME_CSRF_TOKEN).build(),
+            };
+            response.headers_mut().append(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
+        }
+        if let (value, true) = self.openidconnect_session {
+            let cookie = match value.into_cookie_value() {
+                Some(value) => Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
+                None => Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
+            };
+            response.headers_mut().append(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
+        }
+        if let (value, true) = self.temporary_openidconnect_state {
+            let cookie = match value.into_cookie_value() {
+                Some(value) => {
+                    Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build()
+                }
+                None => Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
+            };
+            response.headers_mut().append(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
+        }
+    }
+
+    pub fn csrf_token(&self) -> CsrfToken {
+        self.csrf_token.0
+    }
+
+    pub fn openidconnect_session(&self) -> OpenIdConnectSession {
+        self.openidconnect_session.0
+    }
+
+    pub fn temporary_openidconnect_state(&self) -> TemporaryOpenIdConnectState {
+        self.temporary_openidconnect_state.0
+    }
+}
+
 impl Session {
     pub fn new<T>(request: &Request<T>) -> Self {
         let mut new = Session {
@@ -78,41 +132,6 @@ impl Session {
                 }
             });
         new
-    }
-
-    pub fn to_cookies<T>(self, response: &mut http::Response<T>) {
-        if let (value, true) = self.csrf_token {
-            let cookie = match value {
-                Some(value) => Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build(),
-                None => Cookie::build(COOKIE_NAME_CSRF_TOKEN).build(),
-            };
-            response.headers_mut().append(
-                SET_COOKIE,
-                HeaderValue::try_from(cookie.to_string()).unwrap(),
-            );
-        }
-        if let (value, true) = self.openidconnect_session {
-            let cookie = match value {
-                Some(value) => Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
-                None => Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
-            };
-            response.headers_mut().append(
-                SET_COOKIE,
-                HeaderValue::try_from(cookie.to_string()).unwrap(),
-            );
-        }
-        if let (value, true) = self.temporary_openidconnect_state {
-            let cookie = match value {
-                Some(value) => {
-                    Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build()
-                }
-                None => Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
-            };
-            response.headers_mut().append(
-                SET_COOKIE,
-                HeaderValue::try_from(cookie.to_string()).unwrap(),
-            );
-        }
     }
 }
 
@@ -150,10 +169,9 @@ impl<CsrfToken: IntoCookieValue, TemporaryOpenIdConnectState: IntoCookieValue>
         self,
         input: String,
     ) -> Session<CsrfToken, String, TemporaryOpenIdConnectState> {
-        self.openidconnect_session = CookieValue::Changed(Some(input));
         Session {
             csrf_token: self.csrf_token,
-            openidconnect_session: self.openidconnect_session,
+            openidconnect_session: (input, true),
             temporary_openidconnect_state: self.temporary_openidconnect_state,
         }
     }
@@ -187,7 +205,7 @@ impl<CsrfToken: IntoCookieValue, OpenIdConnectSession: IntoCookieValue>
         Session {
             csrf_token: self.csrf_token,
             openidconnect_session: self.openidconnect_session,
-            temporary_openidconnect_state: (Some(serde_json::to_string(input).unwrap()), true),
+            temporary_openidconnect_state: (serde_json::to_string(input).unwrap(), true),
         }
     }
 
@@ -200,7 +218,7 @@ impl<CsrfToken: IntoCookieValue, OpenIdConnectSession: IntoCookieValue>
                 Session {
                     csrf_token: self.csrf_token,
                     openidconnect_session: self.openidconnect_session,
-                    temporary_openidconnect_state: (None, true),
+                    temporary_openidconnect_state: ((), true),
                 },
             ))
         } else {
