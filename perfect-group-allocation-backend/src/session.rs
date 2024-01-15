@@ -7,8 +7,9 @@ use perfect_group_allocation_openidconnect::OpenIdSession;
 
 use crate::error::AppError;
 
-const COOKIE_NAME_OPENIDCONNECT: &str = "__Host-openidconnect";
-const COOKIE_NAME_SESSION: &str = "__Host-session";
+const COOKIE_NAME_CSRF_TOKEN: &str = "__Host_csrf_token";
+const COOKIE_NAME_OPENIDCONNECT_SESSION: &str = "__Host_openidconnect_session";
+const COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE: &str = "__Host_temporary_openidconnect_state";
 
 pub enum CookieValue<T> {
     Unchanged(T),
@@ -18,17 +19,17 @@ pub enum CookieValue<T> {
 // we don't want to store cookies we don't need
 #[must_use]
 pub struct Session<S> {
-    session_id: CookieValue<Option<String>>,
-    temporary_openid_state: CookieValue<Option<OpenIdSession>>,
-    openid_session: CookieValue<Option<String>>,
+    csrf_token: CookieValue<S>,
+    openidconnect_session: CookieValue<Option<String>>,
+    temporary_openidconnect_state: CookieValue<Option<OpenIdSession>>,
 }
 
 impl Session<Option<String>> {
     pub fn new<T>(request: Request<T>) -> Self {
         let mut new = Self {
-            session_id: CookieValue::Unchanged(None),
-            openid_session: CookieValue::Unchanged(None),
-            temporary_openid_state: CookieValue::Unchanged(None),
+            csrf_token: CookieValue::Unchanged(None),
+            openidconnect_session: CookieValue::Unchanged(None),
+            temporary_openidconnect_state: CookieValue::Unchanged(None),
         };
         request
             .headers()
@@ -39,13 +40,20 @@ impl Session<Option<String>> {
             .flat_map(Cookie::split_parse)
             .filter_map(std::result::Result::ok)
             .for_each(|cookie| match cookie.name() {
-                COOKIE_NAME_SESSION => {
-                    new.session_id = CookieValue::Unchanged(Some(cookie.value().to_owned()))
+                COOKIE_NAME_CSRF_TOKEN => {
+                    new.csrf_token = CookieValue::Unchanged(Some(cookie.value().to_owned()))
                 }
-                COOKIE_NAME_OPENIDCONNECT => {
-                    new.openid_session = CookieValue::Unchanged(Some(cookie.value().to_owned()))
+                COOKIE_NAME_OPENIDCONNECT_SESSION => {
+                    new.openidconnect_session =
+                        CookieValue::Unchanged(Some(cookie.value().to_owned()))
                 }
-                _ => {}
+                COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE => {
+                    new.temporary_openidconnect_state =
+                        CookieValue::Unchanged(Some(serde_json::from_str(cookie.value()).unwrap()))
+                }
+                _ => {
+                    // ignore the cookies that are not interesting for us
+                }
             });
         new
     }
