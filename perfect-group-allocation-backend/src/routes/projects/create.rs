@@ -25,7 +25,7 @@ use crate::{
 
 either_http_body!(boxed EitherBody 1 2);
 
-// here we return a body that borrows the session
+// here we return a body that borrows the session. but the headers are already sent then to we have to implement the abstraction properly
 pub fn create<'a>(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send + 'static, Error = AppError> + Send + 'static,
