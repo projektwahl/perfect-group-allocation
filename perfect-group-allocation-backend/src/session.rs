@@ -13,19 +13,37 @@ const COOKIE_NAME_CSRF_TOKEN: &str = "__Host_csrf_token";
 const COOKIE_NAME_OPENIDCONNECT_SESSION: &str = "__Host_openidconnect_session";
 const COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE: &str = "__Host_temporary_openidconnect_state";
 
-trait Cookiey<T> {
-    fn get_value(&self) -> Option<T>;
+trait Cookiey {
+    fn get_value(&self) -> Option<String>;
 }
 
 trait CookieyChanged {
     fn is_changed(&self) -> bool;
 }
 
+impl Cookiey for () {
+    fn get_value(&self) -> Option<String> {
+        None
+    }
+}
+
+impl Cookiey for String {
+    fn get_value(&self) -> Option<String> {
+        Some(self)
+    }
+}
+
+impl<T: Cookiey> Cookiey for Option<T> {
+    fn get_value(&self) -> Option<String> {
+        self.map(|v| v.get_value())
+    }
+}
+
 pub struct Changed<T>(T);
 
-impl<T> Cookiey<T> for Changed<T> {
-    fn get_value(&self) -> Option<T> {
-        Some(self.0)
+impl<T: Cookiey> Cookiey for Changed<T> {
+    fn get_value(&self) -> Option<String> {
+        Some(self.0.get_value())
     }
 }
 
@@ -37,9 +55,9 @@ impl<T> CookieyChanged for Changed<T> {
 
 pub struct Unchanged<T>(T);
 
-impl<T> Cookiey<T> for Unchanged<T> {
-    fn get_value(&self) -> Option<T> {
-        Some(self.0)
+impl<T: Cookiey> Cookiey for Unchanged<T> {
+    fn get_value(&self) -> Option<String> {
+        Some(self.0.get_value())
     }
 }
 
@@ -54,8 +72,8 @@ pub enum CookieValue<T> {
     Changed(Changed<T>),
 }
 
-impl<T: Cookiey<T>> Cookiey<T> for CookieValue<T> {
-    fn get_value(&self) -> Option<T> {
+impl<T: Cookiey> Cookiey for CookieValue<T> {
+    fn get_value(&self) -> Option<String> {
         match self {
             CookieValue::Unchanged(value) => value.get_value(),
             CookieValue::Changed(value) => value.get_value(),
@@ -74,15 +92,17 @@ impl<T> CookieyChanged for CookieValue<T> {
 
 // we don't want to store cookies we don't need
 #[must_use]
-pub struct Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState> {
+pub struct Session<
+    CsrfToken: Cookiey + CookieyChanged,
+    OpenIdConnectSession: Cookiey + CookieyChanged,
+    TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
+> {
     pub csrf_token: CsrfToken,
     pub openidconnect_session: OpenIdConnectSession,
     pub temporary_openidconnect_state: TemporaryOpenIdConnectState,
 }
 
-impl
-    Session<Unchanged<Option<String>>, Unchanged<Option<String>>, Unchanged<Option<OpenIdSession>>>
-{
+impl Session<Unchanged<Option<String>>, Unchanged<Option<String>>, Unchanged<Option<String>>> {
     pub fn new<T>(request: Request<T>) -> Self {
         let mut new = Self {
             csrf_token: Unchanged(None),
@@ -116,8 +136,11 @@ impl
     }
 }
 
-impl<OpenIdConnectSession, TemporaryOpenIdConnectState>
-    Session<Unchanged<Option<String>>, OpenIdConnectSession, TemporaryOpenIdConnectState>
+impl<
+    CsrfToken: Cookiey + CookieyChanged,
+    OpenIdConnectSession: Cookiey + CookieyChanged,
+    TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
+> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
     pub fn with_csrf_token(
         self,
@@ -143,8 +166,11 @@ impl<OpenIdConnectSession, TemporaryOpenIdConnectState>
     }
 }
 
-impl<CsrfToken, TemporaryOpenIdConnectState>
-    Session<CsrfToken, Unchanged<Option<String>>, TemporaryOpenIdConnectState>
+impl<
+    CsrfToken: Cookiey + CookieyChanged,
+    OpenIdConnectSession: Cookiey + CookieyChanged,
+    TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
+> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
     pub fn with_openidconnect_session(
         self,
@@ -176,8 +202,11 @@ impl<CsrfToken, TemporaryOpenIdConnectState>
     }
 }
 
-impl<CsrfToken, OpenIdConnectSession>
-    Session<CsrfToken, OpenIdConnectSession, Unchanged<Option<String>>>
+impl<
+    CsrfToken: Cookiey + CookieyChanged,
+    OpenIdConnectSession: Cookiey + CookieyChanged,
+    TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
+> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
     pub fn with_temporary_openidconnect_state(
         &mut self,
@@ -206,8 +235,11 @@ impl<CsrfToken, OpenIdConnectSession>
 }
 
 // I think the csrf token needs to be signed/encrypted
-impl<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
-    Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
+impl<
+    CsrfToken: Cookiey + CookieyChanged,
+    OpenIdConnectSession: Cookiey + CookieyChanged,
+    TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
+> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
     pub fn to_cookies() {
         Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION)
