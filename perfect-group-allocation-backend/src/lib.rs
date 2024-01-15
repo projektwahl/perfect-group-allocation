@@ -49,7 +49,7 @@ use routes::index::index;
 use routes::indexcss::indexcss;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use session::Session;
+use session::{CookieValue, Session};
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::watch;
@@ -108,12 +108,12 @@ where
         request: hyper::Request<
             impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + '_,
         >,
-        session: &'_ Session,
+        session: &'_ Session<CookieValue<String>>,
     ) -> Result<Self, AppError> {
         let not_get_or_head =
             !(request.method() == Method::GET || request.method() == Method::HEAD);
 
-        let expected_csrf_token = session.ensure_csrf_token();
+        let expected_csrf_token = session.csrf_token;
 
         let body: Bytes = Limited::new(request.into_body(), 100)
             .collect()
