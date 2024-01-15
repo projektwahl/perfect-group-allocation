@@ -30,7 +30,7 @@ pub fn create<'a>(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send + 'static, Error = AppError> + Send + 'static,
     >,
-    session: &'a mut Session,
+    session: Session,
     pool: Pool,
 ) -> impl Future<
     Output = Result<

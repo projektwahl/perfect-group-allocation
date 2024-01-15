@@ -35,8 +35,9 @@ impl IntoCookieValue for Option<String> {
     }
 }
 
-// we don't want to store cookies we don't need
 // I think the csrf token needs to be signed/encrypted
+/// we don't want to store cookies we don't need
+#[derive(Clone)]
 pub struct Session<
     OpenIdConnectSession: IntoCookieValue = Option<String>,
     TemporaryOpenIdConnectState: IntoCookieValue = Option<String>,

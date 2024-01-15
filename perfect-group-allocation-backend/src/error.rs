@@ -88,7 +88,7 @@ impl From<diesel_async::pooled_connection::deadpool::PoolError> for AppError {
 impl AppError {
     pub fn build_error_template(
         self,
-        session: &Session<'_, String>,
+        session: &Session,
     ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send> {
         let result = async gen move {
             let template = yieldfi!(error());
@@ -102,7 +102,7 @@ impl AppError {
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next_email_false());
-            let template = yieldfv!(template.csrf_token(session.get_csrf_token()));
+            let template = yieldfv!(template.csrf_token(session.csrf_token()));
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
