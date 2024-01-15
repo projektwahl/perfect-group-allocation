@@ -316,8 +316,8 @@ pub fn get_session<T>(request: &Request<T>) -> Session {
     Session::new(jar)
 }
 
-either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 404 500);
-either_future!(EitherFutureRouter 1 2 3 4 5 6 7 404);
+either_http_body!(boxed EitherBodyRouter 1 2 3 4 5 6 7 404 500);
+either_future!(boxed EitherFutureRouter 1 2 3 4 5 6 7 404);
 
 impl<
     RequestBodyBuf: Buf + Send + 'static,
