@@ -321,7 +321,7 @@ impl<
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
-                let mut session = get_session(&req);
+                let mut session = Session::new(&req);
                 (
                     try {
                         index(req, &mut session)
@@ -332,7 +332,7 @@ impl<
                 )
             }),
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
-                let session = get_session(&req);
+                let session = Session::new(&req);
                 (
                     try { indexcss(req).map(EitherBodyRouter::Option2) },
                     session,
@@ -341,7 +341,7 @@ impl<
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option3(async move {
-                    let mut session = get_session(&req);
+                    let mut session = Session::new(&req);
                     (
                         try {
                             list(req, &mut session, pool)
@@ -353,7 +353,7 @@ impl<
                 })
             }
             (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
-                let session = get_session(&req);
+                let session = Session::new(&req);
                 (
                     try { favicon_ico(req).map(EitherBodyRouter::Option4) },
                     session,
@@ -362,7 +362,7 @@ impl<
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option5(async move {
-                    let mut session = get_session(&req);
+                    let mut session = Session::new(&req);
                     (
                         try {
                             create(req, &mut session, pool)
@@ -376,7 +376,7 @@ impl<
             (&Method::POST, "/openidconnect-login") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option6(async move {
-                    let mut session = get_session(&req);
+                    let mut session = Session::new(&req);
                     (
                         try {
                             openid_login(req, &mut session, config)
@@ -390,7 +390,7 @@ impl<
             (&Method::GET, "/openidconnect-redirect") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option7(async move {
-                    let mut session = get_session(&req);
+                    let mut session = Session::new(&req);
                     let result = openid_redirect(req, &mut session, config)
                         .await
                         .map(|v| v.map(EitherBodyRouter::Option7));
@@ -398,14 +398,17 @@ impl<
                 })
             }
             (_, _) => EitherFutureRouter::Option404(async move {
-                let session = get_session(&req);
+                let session = Session::new(&req);
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
                 (try { not_found.map(EitherBodyRouter::Option404) }, session)
             }),
         }
         .map(|fut: (Result<_, AppError>, Session)| match fut {
-            (Ok(ok), session) => Ok(ok), // TODO FIXME set response headers
+            (Ok(mut ok), session) => {
+                session.to_cookies(&mut ok);
+                Ok(ok)
+            } // TODO FIXME set response headers
             (Err(err), session) => {
                 // TODO FIXME this may need to set a cookief
                 Ok(err

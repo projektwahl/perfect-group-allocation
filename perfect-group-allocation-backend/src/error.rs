@@ -113,10 +113,12 @@ impl AppError {
             yieldfi!(template.next());
         };
         let stream = AsyncIteratorStream(result);
-        Response::builder()
+        let response = Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .typed_header(ContentType::html())
             .body(StreamBody::new(stream))
-            .unwrap()
+            .unwrap();
+        session.to_cookies(&mut response);
+        response
     }
 }

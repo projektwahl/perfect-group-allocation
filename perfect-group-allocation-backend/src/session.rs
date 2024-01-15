@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use cookie::{Cookie, CookieJar, SameSite};
 use http::header::{COOKIE, SET_COOKIE};
-use http::{Request, Response};
+use http::{HeaderValue, Request, Response};
 use perfect_group_allocation_openidconnect::OpenIdSession;
 use rand::{thread_rng, Rng as _};
 
@@ -103,7 +103,7 @@ pub struct Session<
 }
 
 impl Session {
-    pub fn new<T>(request: Request<T>) -> Self {
+    pub fn new<T>(request: &Request<T>) -> Self {
         let mut new = Self {
             csrf_token: Unchanged(None),
             openidconnect_session: Unchanged(None),
@@ -234,20 +234,26 @@ impl<
     TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
 > Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
-    pub fn to_cookies(self, response_builder: http::response::Builder) {
+    pub fn to_cookies<T>(self, response: &mut http::Response<T>) {
         if self.csrf_token.is_changed() {
             let cookie = match self.csrf_token.get_value() {
                 Some(value) => Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build(),
                 None => Cookie::build(COOKIE_NAME_CSRF_TOKEN).build(),
             };
-            response_builder.header(SET_COOKIE, cookie.to_string());
+            response.headers_mut().append(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
         }
         if self.openidconnect_session.is_changed() {
             let cookie = match self.openidconnect_session.get_value() {
                 Some(value) => Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
                 None => Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
             };
-            response_builder.header(SET_COOKIE, cookie.to_string());
+            response.headers_mut().append(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
         }
         if self.temporary_openidconnect_state.is_changed() {
             let cookie = match self.temporary_openidconnect_state.get_value() {
@@ -256,7 +262,10 @@ impl<
                 }
                 None => Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
             };
-            response_builder.header(SET_COOKIE, cookie.to_string());
+            response.headers_mut().append(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
         }
     }
 }
