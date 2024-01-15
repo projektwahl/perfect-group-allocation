@@ -34,10 +34,9 @@ pub async fn openid_redirect(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
+    session: &mut Session,
     config: Config,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
-    let mut session = get_session(&request);
-
     let body = request.uri().query().unwrap();
 
     // TODO FIXME unwrap

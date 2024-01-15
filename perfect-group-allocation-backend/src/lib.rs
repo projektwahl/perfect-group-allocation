@@ -4,6 +4,7 @@
 #![feature(hash_raw_entry)]
 #![feature(impl_trait_in_assoc_type)]
 #![feature(error_generic_member_access)]
+#![feature(try_blocks)]
 #![allow(
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,
@@ -335,54 +336,87 @@ impl<
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
-                Ok(index(req).await?.map(EitherBodyRouter::Option1))
+                let session = get_session(&req);
+                (
+                    try { index(req).await?.map(EitherBodyRouter::Option1) },
+                    session,
+                )
             }),
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
-                Ok(indexcss(req).map(EitherBodyRouter::Option2))
+                let session = get_session(&req);
+                (
+                    try { indexcss(req).map(EitherBodyRouter::Option2) },
+                    session,
+                )
             }),
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option3(async move {
-                    Ok(list(req, pool).await?.map(EitherBodyRouter::Option3))
+                    let session = get_session(&req);
+                    (
+                        try { list(req, pool).await?.map(EitherBodyRouter::Option3) },
+                        session,
+                    )
                 })
             }
             (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
-                Ok(favicon_ico(req).map(EitherBodyRouter::Option4))
+                let session = get_session(&req);
+                (
+                    try { favicon_ico(req).map(EitherBodyRouter::Option4) },
+                    session,
+                )
             }),
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option5(async move {
-                    Ok(create(req, pool).await?.map(EitherBodyRouter::Option5))
+                    let session = get_session(&req);
+                    (
+                        try { create(req, pool).await?.map(EitherBodyRouter::Option5) },
+                        session,
+                    )
                 })
             }
             (&Method::POST, "/openidconnect-login") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option6(async move {
-                    Ok(openid_login(req, config)
-                        .await?
-                        .map(EitherBodyRouter::Option6))
+                    let session = get_session(&req);
+                    (
+                        try {
+                            openid_login(req, config)
+                                .await?
+                                .map(EitherBodyRouter::Option6)
+                        },
+                        session,
+                    )
                 })
             }
             (&Method::GET, "/openidconnect-redirect") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option7(async move {
-                    Ok(openid_redirect(req, config)
-                        .await?
-                        .map(EitherBodyRouter::Option7))
+                    let mut session = get_session(&req);
+                    (
+                        try {
+                            openid_redirect(req, &mut session, config)
+                                .await?
+                                .map(EitherBodyRouter::Option7)
+                        },
+                        session,
+                    )
                 })
             }
             (_, _) => EitherFutureRouter::Option404(async move {
+                let session = get_session(&req);
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found.map(EitherBodyRouter::Option404))
+                (try { not_found.map(EitherBodyRouter::Option404) }, session)
             }),
         }
-        .map(|fut: Result<_, AppError>| match fut {
-            Ok(ok) => Ok(ok),
-            Err(err) => {
+        .map(|fut: (Result<_, AppError>, Session)| match fut {
+            (Ok(ok), session) => Ok(ok),
+            (Err(err), session) => {
                 // TODO FIXME this may need to set a cookief
                 Ok(err
-                    .build_error_template(err_session)
+                    .build_error_template(session)
                     .map(EitherBodyRouter::Option500))
             }
         })
