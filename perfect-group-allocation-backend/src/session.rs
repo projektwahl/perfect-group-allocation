@@ -38,29 +38,22 @@ impl IntoCookieValue for Option<String> {
 // we don't want to store cookies we don't need
 // I think the csrf token needs to be signed/encrypted
 pub struct Session<
-    CsrfToken: IntoCookieValue = Option<String>,
     OpenIdConnectSession: IntoCookieValue = Option<String>,
     TemporaryOpenIdConnectState: IntoCookieValue = Option<String>,
 > {
     /// Only static resources don't need this. All other pages need it for the login link in the header.
     // bool is true when the value was changed
-    csrf_token: (CsrfToken, bool),
+    csrf_token: (String, bool),
     openidconnect_session: (OpenIdConnectSession, bool),
     temporary_openidconnect_state: (TemporaryOpenIdConnectState, bool),
 }
 
-impl<
-    CsrfToken: IntoCookieValue,
-    OpenIdConnectSession: IntoCookieValue,
-    TemporaryOpenIdConnectState: IntoCookieValue,
-> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
+impl<OpenIdConnectSession: IntoCookieValue, TemporaryOpenIdConnectState: IntoCookieValue>
+    Session<OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
     pub fn to_cookies<T>(self, response: &mut http::Response<T>) {
         if let (value, true) = self.csrf_token {
-            let cookie = match value.into_cookie_value() {
-                Some(value) => Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build(),
-                None => Cookie::build(COOKIE_NAME_CSRF_TOKEN).build(),
-            };
+            let cookie = Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build();
             response.headers_mut().append(
                 SET_COOKIE,
                 HeaderValue::try_from(cookie.to_string()).unwrap(),
@@ -90,7 +83,7 @@ impl<
         }
     }
 
-    pub fn csrf_token(&self) -> CsrfToken {
+    pub fn csrf_token(&self) -> String {
         self.csrf_token.0
     }
 
@@ -105,11 +98,9 @@ impl<
 
 impl Session {
     pub fn new<T>(request: &Request<T>) -> Self {
-        let mut new = Session {
-            csrf_token: (None, false),
-            openidconnect_session: (None, false),
-            temporary_openidconnect_state: (None, false),
-        };
+        let mut csrf_token = None;
+        let mut openidconnect_session = None;
+        let mut temporary_openidconnect_state = None;
         request
             .headers()
             .get_all(COOKIE)
@@ -119,56 +110,39 @@ impl Session {
             .flat_map(Cookie::split_parse)
             .filter_map(std::result::Result::ok)
             .for_each(|cookie| match cookie.name() {
-                COOKIE_NAME_CSRF_TOKEN => new.csrf_token = (Some(cookie.value().to_owned()), false),
+                COOKIE_NAME_CSRF_TOKEN => csrf_token = Some(cookie.value().to_owned()),
                 COOKIE_NAME_OPENIDCONNECT_SESSION => {
-                    new.openidconnect_session = (Some(cookie.value().to_owned()), false)
+                    openidconnect_session = Some(cookie.value().to_owned())
                 }
                 COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE => {
-                    new.temporary_openidconnect_state =
-                        (Some(serde_json::from_str(cookie.value()).unwrap()), false)
+                    temporary_openidconnect_state = serde_json::from_str(cookie.value()).unwrap()
                 }
                 _ => {
                     // ignore the cookies that are not interesting for us
                 }
             });
-        new
-    }
-}
-
-impl<OpenIdConnectSession: IntoCookieValue, TemporaryOpenIdConnectState: IntoCookieValue>
-    Session<Option<String>, OpenIdConnectSession, TemporaryOpenIdConnectState>
-{
-    pub fn ensure_csrf_token(
-        self,
-    ) -> Session<String, OpenIdConnectSession, TemporaryOpenIdConnectState> {
-        if let (Some(csrf_token), false) = self.csrf_token {
-            Session {
-                csrf_token: (csrf_token, false),
-                openidconnect_session: self.openidconnect_session,
-                temporary_openidconnect_state: self.temporary_openidconnect_state,
-            }
-        } else {
-            let csrf_token: String = thread_rng()
+        let csrf_token = csrf_token.unwrap_or_else(|| {
+            thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(30)
                 .map(char::from)
-                .collect();
-            Session {
-                csrf_token: (csrf_token, true),
-                openidconnect_session: self.openidconnect_session,
-                temporary_openidconnect_state: self.temporary_openidconnect_state,
-            }
+                .collect()
+        });
+        Session {
+            csrf_token: (csrf_token, false),
+            openidconnect_session: (openidconnect_session, false),
+            temporary_openidconnect_state: (temporary_openidconnect_state, false),
         }
     }
 }
 
-impl<CsrfToken: IntoCookieValue, TemporaryOpenIdConnectState: IntoCookieValue>
-    Session<CsrfToken, Option<String>, TemporaryOpenIdConnectState>
+impl<TemporaryOpenIdConnectState: IntoCookieValue>
+    Session<Option<String>, TemporaryOpenIdConnectState>
 {
     pub fn with_openidconnect_session(
         self,
         input: String,
-    ) -> Session<CsrfToken, String, TemporaryOpenIdConnectState> {
+    ) -> Session<String, TemporaryOpenIdConnectState> {
         Session {
             csrf_token: self.csrf_token,
             openidconnect_session: (input, true),
@@ -176,9 +150,7 @@ impl<CsrfToken: IntoCookieValue, TemporaryOpenIdConnectState: IntoCookieValue>
         }
     }
 
-    pub fn without_openidconnect_session(
-        self,
-    ) -> Session<CsrfToken, (), TemporaryOpenIdConnectState> {
+    pub fn without_openidconnect_session(self) -> Session<(), TemporaryOpenIdConnectState> {
         if let (None, false) = self.openidconnect_session {
             Session {
                 csrf_token: self.csrf_token,
@@ -195,13 +167,11 @@ impl<CsrfToken: IntoCookieValue, TemporaryOpenIdConnectState: IntoCookieValue>
     }
 }
 
-impl<CsrfToken: IntoCookieValue, OpenIdConnectSession: IntoCookieValue>
-    Session<CsrfToken, OpenIdConnectSession, Option<String>>
-{
+impl<OpenIdConnectSession: IntoCookieValue> Session<OpenIdConnectSession, Option<String>> {
     pub fn with_temporary_openidconnect_state(
         self,
         input: &OpenIdSession,
-    ) -> Session<CsrfToken, OpenIdConnectSession, String> {
+    ) -> Session<OpenIdConnectSession, String> {
         Session {
             csrf_token: self.csrf_token,
             openidconnect_session: self.openidconnect_session,
@@ -211,7 +181,7 @@ impl<CsrfToken: IntoCookieValue, OpenIdConnectSession: IntoCookieValue>
 
     pub fn get_and_remove_temporary_openidconnect_state(
         self,
-    ) -> Result<(String, Session<CsrfToken, OpenIdConnectSession, ()>), AppError> {
+    ) -> Result<(String, Session<OpenIdConnectSession, ()>), AppError> {
         if let (Some(temporary_openidconnect_state), false) = self.temporary_openidconnect_state {
             Ok((
                 temporary_openidconnect_state,

@@ -320,6 +320,9 @@ impl<
 
         println!("{} {}", req.method(), req.uri().path());
 
+        // just store csrf token here? (static files are the only ones that theoretically don't need one)
+        let session = Session::new(&req);
+
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
                 let mut session_inner = SessionMutableInner::new(&req);
@@ -423,6 +426,8 @@ impl<
                     Ok(ok)
                 } // TODO FIXME set response headers
                 (Err(err), session) => {
+                    // the simplest way is to just create a new session here?
+
                     // TODO FIXME this may need to set a cookief
                     let response = err
                         .build_error_template(&session)
