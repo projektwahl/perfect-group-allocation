@@ -26,6 +26,7 @@ use crate::{
 either_http_body!(boxed EitherBody 1 2);
 
 // here we return a body that borrows the session. but the headers are already sent then to we have to implement the abstraction properly
+// maybe in this case it makes sense to clone for the body but still borrow for the head so you can set cookies before
 pub fn create<'a>(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send + 'static, Error = AppError> + Send + 'static,
@@ -34,7 +35,7 @@ pub fn create<'a>(
     pool: Pool,
 ) -> impl Future<
     Output = Result<
-        hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'a>,
+        hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>,
         AppError,
     >,
 > + 'a {
@@ -87,6 +88,7 @@ pub fn create<'a>(
             StatusCode::OK
         };
 
+        let fixed_session = session.clone();
         let result = async gen move {
             let template = yieldfi!(create_project());
             let template = yieldfi!(template.next());
@@ -99,7 +101,7 @@ pub fn create<'a>(
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next_email_false());
-            let template = yieldfv!(template.csrf_token(session.session().0));
+            let template = yieldfv!(template.csrf_token(fixed_session.session().0));
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
@@ -110,7 +112,7 @@ pub fn create<'a>(
             } else {
                 yieldfi!(template.next_error_false())
             };
-            let template = yieldfv!(template.csrf_token(session.session().0));
+            let template = yieldfv!(template.csrf_token(fixed_session.session().0));
             let template = yieldfi!(template.next());
             let template = if empty_title {
                 let template = yieldfi!(template.next_title_error_true());

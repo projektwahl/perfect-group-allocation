@@ -22,7 +22,7 @@ pub fn indexcss(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf, Error = impl Into<AppError>> + Send + 'static,
     >,
-) -> hyper::Response<impl Body<Data = Bytes, Error = Infallible>> {
+) -> hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static> {
     let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
     let etag_string = "\"xyzzy\"";
     let etag = etag_string.parse::<ETag>().unwrap();

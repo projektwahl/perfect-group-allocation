@@ -18,7 +18,9 @@ pub async fn index(
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
     session: &mut Session,
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
+{
+    let fixed_session = session.clone();
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());
@@ -31,12 +33,12 @@ pub async fn index(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_email_false());
-        let template = yieldfv!(template.csrf_token(session.session().0));
+        let template = yieldfv!(template.csrf_token(fixed_session.session().0));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_error_false());
-        let template = yieldfv!(template.csrf_token(session.session().0));
+        let template = yieldfv!(template.csrf_token(fixed_session.session().0));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_title_error_false());
         let template = yieldfv!(template.title(""));

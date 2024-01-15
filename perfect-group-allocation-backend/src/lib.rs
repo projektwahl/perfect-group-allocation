@@ -3,6 +3,7 @@
 #![feature(let_chains)]
 #![feature(hash_raw_entry)]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(type_alias_impl_trait)]
 #![feature(error_generic_member_access)]
 #![feature(try_blocks)]
 #![allow(
