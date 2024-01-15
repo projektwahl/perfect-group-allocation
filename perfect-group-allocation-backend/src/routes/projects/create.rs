@@ -19,8 +19,7 @@ use crate::error::AppError;
 use crate::routes::create_project;
 use crate::session::Session;
 use crate::{
-    either_http_body, get_session, yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm,
-    ResponseTypedHeaderExt,
+    either_http_body, yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt,
 };
 
 either_http_body!(boxed EitherBody 1 2);
@@ -88,7 +87,7 @@ pub fn create<'a>(
             StatusCode::OK
         };
 
-        let fixed_session = session.clone();
+        let fixed_session = session.ensure_csrf_token();
         let result = async gen move {
             let template = yieldfi!(create_project());
             let template = yieldfi!(template.next());
