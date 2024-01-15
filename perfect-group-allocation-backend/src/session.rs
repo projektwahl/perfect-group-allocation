@@ -29,13 +29,13 @@ impl Cookiey for () {
 
 impl Cookiey for String {
     fn get_value(&self) -> Option<String> {
-        Some(self)
+        Some(self.to_owned())
     }
 }
 
 impl<T: Cookiey> Cookiey for Option<T> {
     fn get_value(&self) -> Option<String> {
-        self.map(|v| v.get_value())
+        self.and_then(|v| v.get_value())
     }
 }
 
@@ -43,7 +43,7 @@ pub struct Changed<T>(T);
 
 impl<T: Cookiey> Cookiey for Changed<T> {
     fn get_value(&self) -> Option<String> {
-        Some(self.0.get_value())
+        self.0.get_value()
     }
 }
 
@@ -57,7 +57,7 @@ pub struct Unchanged<T>(T);
 
 impl<T: Cookiey> Cookiey for Unchanged<T> {
     fn get_value(&self) -> Option<String> {
-        Some(self.0.get_value())
+        self.0.get_value()
     }
 }
 
@@ -93,16 +93,16 @@ impl<T> CookieyChanged for CookieValue<T> {
 // we don't want to store cookies we don't need
 #[must_use]
 pub struct Session<
-    CsrfToken: Cookiey + CookieyChanged,
-    OpenIdConnectSession: Cookiey + CookieyChanged,
-    TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
+    CsrfToken: Cookiey + CookieyChanged = Unchanged<Option<String>>,
+    OpenIdConnectSession: Cookiey + CookieyChanged = Unchanged<Option<String>>,
+    TemporaryOpenIdConnectState: Cookiey + CookieyChanged = Unchanged<Option<String>>,
 > {
     pub csrf_token: CsrfToken,
     pub openidconnect_session: OpenIdConnectSession,
     pub temporary_openidconnect_state: TemporaryOpenIdConnectState,
 }
 
-impl Session<Unchanged<Option<String>>, Unchanged<Option<String>>, Unchanged<Option<String>>> {
+impl Session {
     pub fn new<T>(request: Request<T>) -> Self {
         let mut new = Self {
             csrf_token: Unchanged(None),
@@ -137,12 +137,11 @@ impl Session<Unchanged<Option<String>>, Unchanged<Option<String>>, Unchanged<Opt
 }
 
 impl<
-    CsrfToken: Cookiey + CookieyChanged,
     OpenIdConnectSession: Cookiey + CookieyChanged,
     TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
-> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
+> Session<Unchanged<Option<String>>, OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
-    pub fn with_csrf_token(
+    pub fn ensure_csrf_token(
         self,
     ) -> Session<CookieValue<String>, OpenIdConnectSession, TemporaryOpenIdConnectState> {
         if let Unchanged(Some(csrf_token)) = self.csrf_token {
@@ -166,11 +165,8 @@ impl<
     }
 }
 
-impl<
-    CsrfToken: Cookiey + CookieyChanged,
-    OpenIdConnectSession: Cookiey + CookieyChanged,
-    TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
-> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
+impl<CsrfToken: Cookiey + CookieyChanged, TemporaryOpenIdConnectState: Cookiey + CookieyChanged>
+    Session<CsrfToken, Unchanged<Option<String>>, TemporaryOpenIdConnectState>
 {
     pub fn with_openidconnect_session(
         self,
@@ -202,11 +198,8 @@ impl<
     }
 }
 
-impl<
-    CsrfToken: Cookiey + CookieyChanged,
-    OpenIdConnectSession: Cookiey + CookieyChanged,
-    TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
-> Session<CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
+impl<CsrfToken: Cookiey + CookieyChanged, OpenIdConnectSession: Cookiey + CookieyChanged>
+    Session<CsrfToken, OpenIdConnectSession, Unchanged<Option<String>>>
 {
     pub fn with_temporary_openidconnect_state(
         &mut self,
