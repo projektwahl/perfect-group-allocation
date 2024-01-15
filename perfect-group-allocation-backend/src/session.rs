@@ -1,13 +1,10 @@
-
-
-use cookie::{Cookie};
+use cookie::Cookie;
 use http::header::{COOKIE, SET_COOKIE};
 use http::{HeaderValue, Request};
 use perfect_group_allocation_openidconnect::OpenIdSession;
 use rand::{thread_rng, Rng as _};
 
 use crate::error::AppError;
-
 
 const COOKIE_NAME_CSRF_TOKEN: &str = "__Host_csrf_token";
 const COOKIE_NAME_OPENIDCONNECT_SESSION: &str = "__Host_openidconnect_session";

@@ -6,7 +6,7 @@ use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;
 use headers::ContentType;
 use http::{Response, StatusCode};
-use http_body::{Body};
+use http_body::Body;
 use http_body_util::StreamBody;
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::models::ProjectHistoryEntry;
