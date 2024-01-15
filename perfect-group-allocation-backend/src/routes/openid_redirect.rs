@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 
 use bytes::{Buf, Bytes};
+use futures_util::Future;
 use headers::ContentType;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
@@ -30,79 +31,86 @@ pub struct OpenIdRedirectErrorTemplate {
 
 either_http_body!(EitherBody 1 2);
 
-pub async fn openid_redirect(
+pub fn openid_redirect(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
     session: &mut Session,
     config: Config,
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
-    let body = request.uri().query().unwrap();
+) -> impl Future<
+    Output = Result<
+        hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>,
+        AppError,
+    >,
+> {
+    async move {
+        let body = request.uri().query().unwrap();
 
-    // TODO FIXME unwrap
-    let form: OpenIdRedirect<OpenIdRedirectInner> = serde_urlencoded::from_str(body).unwrap();
+        // TODO FIXME unwrap
+        let form: OpenIdRedirect<OpenIdRedirectInner> = serde_urlencoded::from_str(body).unwrap();
 
-    // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
-    // TODO FIXME errors also need to return the session?
+        // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
+        // TODO FIXME errors also need to return the session?
 
-    let expected_csrf_token = session.session().0;
+        let expected_csrf_token = session.session().0;
 
-    let openid_session = session.get_and_remove_openidconnect()?;
+        let openid_session = session.get_and_remove_openidconnect()?;
 
-    // Once the user has been redirected to the redirect URL, you'll have access to the
-    // authorization code. For security reasons, your code should verify that the `state`
-    // parameter returned by the server matches `csrf_state`.
+        // Once the user has been redirected to the redirect URL, you'll have access to the
+        // authorization code. For security reasons, your code should verify that the `state`
+        // parameter returned by the server matches `csrf_state`.
 
-    match form.inner {
-        OpenIdRedirectInner::Error(err) => {
-            let result = async gen move {
-                let template = yieldfi!(crate::routes::openid_redirect());
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next());
-                let template = yieldfv!(template.page_title("Create Project"));
-                let template = yieldfi!(template.next());
-                let template = yieldfv!(
-                    template
-                        .indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
-                );
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next_email_false());
-                let template = yieldfv!(template.csrf_token(expected_csrf_token));
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next());
-                let template = yieldfv!(template.error(err.error));
-                let template = yieldfi!(template.next());
-                let template = yieldfv!(template.error_description(err.error_description));
-                let template = yieldfi!(template.next());
-                yieldfi!(template.next());
-            };
-            let stream = AsyncIteratorStream(result);
-            Ok(Response::builder()
-                .status(StatusCode::OK)
-                .typed_header(ContentType::html())
-                .body(EitherBody::Option1(StreamBody::new(stream)))
-                .unwrap())
-        }
-        OpenIdRedirectInner::Success(ok) => {
-            let result = finish_authentication(
-                config,
-                openid_session,
-                OpenIdRedirect {
-                    state: form.state,
-                    inner: ok,
-                },
-            )
-            .await?;
+        match form.inner {
+            OpenIdRedirectInner::Error(err) => {
+                let result = async gen move {
+                    let template = yieldfi!(crate::routes::openid_redirect());
+                    let template = yieldfi!(template.next());
+                    let template = yieldfi!(template.next());
+                    let template = yieldfv!(template.page_title("Create Project"));
+                    let template = yieldfi!(template.next());
+                    let template =
+                        yieldfv!(template.indexcss_version_unsafe(Unsafe::unsafe_input(
+                            index_css!().1.to_string()
+                        )));
+                    let template = yieldfi!(template.next());
+                    let template = yieldfi!(template.next());
+                    let template = yieldfi!(template.next_email_false());
+                    let template = yieldfv!(template.csrf_token(expected_csrf_token));
+                    let template = yieldfi!(template.next());
+                    let template = yieldfi!(template.next());
+                    let template = yieldfi!(template.next());
+                    let template = yieldfv!(template.error(err.error));
+                    let template = yieldfi!(template.next());
+                    let template = yieldfv!(template.error_description(err.error_description));
+                    let template = yieldfi!(template.next());
+                    yieldfi!(template.next());
+                };
+                let stream = AsyncIteratorStream(result);
+                Ok(Response::builder()
+                    .status(StatusCode::OK)
+                    .typed_header(ContentType::html())
+                    .body(EitherBody::Option1(StreamBody::new(stream)))
+                    .unwrap())
+            }
+            OpenIdRedirectInner::Success(ok) => {
+                let result = finish_authentication(
+                    config,
+                    openid_session,
+                    OpenIdRedirect {
+                        state: form.state,
+                        inner: ok,
+                    },
+                )
+                .await?;
 
-            session.set_openid_session(Some(result));
+                session.set_openid_session(Some(result));
 
-            Ok(Response::builder()
-                .status(StatusCode::TEMPORARY_REDIRECT)
-                .header(LOCATION, "/list")
-                .body(EitherBody::Option2(Empty::new()))
-                .unwrap())
+                Ok(Response::builder()
+                    .status(StatusCode::TEMPORARY_REDIRECT)
+                    .header(LOCATION, "/list")
+                    .body(EitherBody::Option2(Empty::new()))
+                    .unwrap())
+            }
         }
     }
 }

@@ -394,14 +394,10 @@ impl<
                 let config = self.config.clone();
                 EitherFutureRouter::Option7(async move {
                     let mut session = get_session(&req);
-                    (
-                        try {
-                            openid_redirect(req, &mut session, config)
-                                .await?
-                                .map(EitherBodyRouter::Option7)
-                        },
-                        session,
-                    )
+                    let result = openid_redirect(req, &mut session, config)
+                        .await
+                        .map(|v| v.map(EitherBodyRouter::Option7));
+                    (result, session)
                 })
             }
             (_, _) => EitherFutureRouter::Option404(async move {
