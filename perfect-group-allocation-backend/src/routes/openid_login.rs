@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{get_session, CsrfToken};
+use crate::CsrfToken;
 
 #[derive(Deserialize)]
 pub struct OpenIdLoginPayload {
@@ -28,7 +28,7 @@ pub async fn openid_login(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
-    session: &mut Session,
+    session: Session<'_>,
     config: Config,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
@@ -37,7 +37,7 @@ pub async fn openid_login(
 
     let (auth_url, openid_session) = begin_authentication(config).await?;
 
-    session.set_openidconnect(&openid_session)?;
+    let session = session.with_temporary_openidconnect_state(&openid_session);
 
     Ok(Response::builder()
         .status(StatusCode::SEE_OTHER)

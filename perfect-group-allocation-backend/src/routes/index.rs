@@ -11,16 +11,17 @@ use zero_cost_templating::Unsafe;
 use crate::error::AppError;
 use crate::routes::create_project;
 use crate::session::Session;
-use crate::{get_session, yieldfi, yieldfv};
+use crate::{yieldfi, yieldfv};
 
 pub async fn index(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
-    session: &mut Session,
+    session: Session<'_>,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
-    let fixed_session = session.clone();
+    let session = session.ensure_csrf_token();
+    let frozen_session = session.freeze();
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());
@@ -33,12 +34,12 @@ pub async fn index(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_email_false());
-        let template = yieldfv!(template.csrf_token(fixed_session.session().0));
+        let template = yieldfv!(template.csrf_token(session.get_csrf_token()));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_error_false());
-        let template = yieldfv!(template.csrf_token(fixed_session.session().0));
+        let template = yieldfv!(template.csrf_token(session.get_csrf_token()));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_title_error_false());
         let template = yieldfv!(template.title(""));

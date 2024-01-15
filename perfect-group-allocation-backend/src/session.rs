@@ -27,11 +27,16 @@ impl<T> CookieValue<T> {
     }
 }
 
-pub struct SessionMutableInner {
+// I think the csrf token needs to be signed/encrypted
+pub struct SessionMutableInner<
+    CsrfToken = CookieValue<Option<String>>,
+    OpenIdConnectSession = CookieValue<Option<String>>,
+    TemporaryOpenIdConnectState = CookieValue<Option<String>>,
+> {
     /// Only static resources don't need this. All other pages need it for the login link in the header.
-    csrf_token: CookieValue<Option<String>>,
-    openidconnect_session: CookieValue<Option<String>>,
-    temporary_openidconnect_state: CookieValue<Option<String>>,
+    csrf_token: CsrfToken,
+    openidconnect_session: OpenIdConnectSession,
+    temporary_openidconnect_state: TemporaryOpenIdConnectState,
 }
 
 impl SessionMutableInner {
@@ -66,6 +71,41 @@ impl SessionMutableInner {
                 }
             });
         new
+    }
+
+    pub fn to_cookies<T>(self, response: &mut http::Response<T>) {
+        if let CookieValue::Changed(value) = self.csrf_token {
+            let cookie = match value {
+                Some(value) => Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build(),
+                None => Cookie::build(COOKIE_NAME_CSRF_TOKEN).build(),
+            };
+            response.headers_mut().append(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
+        }
+        if let CookieValue::Changed(value) = self.openidconnect_session {
+            let cookie = match value {
+                Some(value) => Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
+                None => Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
+            };
+            response.headers_mut().append(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
+        }
+        if let CookieValue::Changed(value) = self.temporary_openidconnect_state {
+            let cookie = match value {
+                Some(value) => {
+                    Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build()
+                }
+                None => Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
+            };
+            response.headers_mut().append(
+                SET_COOKIE,
+                HeaderValue::try_from(cookie.to_string()).unwrap(),
+            );
+        }
     }
 }
 
@@ -190,15 +230,18 @@ impl<'a, CsrfToken, OpenIdConnectSession>
 
     pub fn get_and_remove_temporary_openidconnect_state(
         self,
-    ) -> Result<Session<'a, CsrfToken, OpenIdConnectSession, ()>, AppError> {
+    ) -> Result<(String, Session<'a, CsrfToken, OpenIdConnectSession, ()>), AppError> {
         if let CookieValue::Unchanged(Some(temporary_openidconnect_state)) =
             self.inner.temporary_openidconnect_state
         {
             self.inner.temporary_openidconnect_state = CookieValue::Changed(None);
-            Ok(Session {
-                inner: self.inner,
-                phantom_data: PhantomData,
-            })
+            Ok((
+                temporary_openidconnect_state,
+                Session {
+                    inner: self.inner,
+                    phantom_data: PhantomData,
+                },
+            ))
         } else {
             Err(AppError::OpenIdTokenNotFound)
         }
@@ -212,45 +255,5 @@ impl<'a, CsrfToken, OpenIdConnectSession>
 impl<'a, CsrfToken, OpenIdConnectSession> Session<'a, CsrfToken, OpenIdConnectSession, String> {
     pub fn get_temporary_openidconnect_state(&self) -> String {
         self.inner.temporary_openidconnect_state.into().unwrap()
-    }
-}
-
-// I think the csrf token needs to be signed/encrypted
-impl<'a, CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
-    Session<'a, CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState>
-{
-    pub fn to_cookies<T>(self, response: &mut http::Response<T>) {
-        if let CookieValue::Changed(value) = self.inner.csrf_token {
-            let cookie = match value {
-                Some(value) => Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build(),
-                None => Cookie::build(COOKIE_NAME_CSRF_TOKEN).build(),
-            };
-            response.headers_mut().append(
-                SET_COOKIE,
-                HeaderValue::try_from(cookie.to_string()).unwrap(),
-            );
-        }
-        if let CookieValue::Changed(value) = self.inner.openidconnect_session {
-            let cookie = match value {
-                Some(value) => Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
-                None => Cookie::build(COOKIE_NAME_OPENIDCONNECT_SESSION).build(),
-            };
-            response.headers_mut().append(
-                SET_COOKIE,
-                HeaderValue::try_from(cookie.to_string()).unwrap(),
-            );
-        }
-        if let CookieValue::Changed(value) = self.inner.temporary_openidconnect_state {
-            let cookie = match value {
-                Some(value) => {
-                    Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build()
-                }
-                None => Cookie::build(COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE).build(),
-            };
-            response.headers_mut().append(
-                SET_COOKIE,
-                HeaderValue::try_from(cookie.to_string()).unwrap(),
-            );
-        }
     }
 }

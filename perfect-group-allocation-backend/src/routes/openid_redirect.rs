@@ -10,7 +10,7 @@ use http_body_util::{BodyExt as _, Empty, Limited, StreamBody};
 use perfect_group_allocation_config::Config;
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_openidconnect::{
-    finish_authentication, OpenIdRedirect, OpenIdRedirectInner,
+    finish_authentication, OpenIdRedirect, OpenIdRedirectInner, OpenIdSession,
 };
 use serde::{Deserialize, Serialize};
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
@@ -18,7 +18,7 @@ use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::session::Session;
-use crate::{either_http_body, get_session, yieldfi, yieldfv, ResponseTypedHeaderExt};
+use crate::{either_http_body, yieldfi, yieldfv, ResponseTypedHeaderExt};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -35,7 +35,7 @@ pub fn openid_redirect(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
-    session: &mut Session,
+    session: Session,
     config: Config,
 ) -> impl Future<
     Output = Result<
@@ -52,9 +52,10 @@ pub fn openid_redirect(
         // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
         // TODO FIXME errors also need to return the session?
 
-        let expected_csrf_token = session.session().0;
+        let session = session.ensure_csrf_token();
+        let expected_csrf_token = session.get_csrf_token();
 
-        let openid_session = session.get_and_remove_openidconnect()?;
+        let (openid_session, session) = session.get_and_remove_temporary_openidconnect_state()?;
 
         // Once the user has been redirected to the redirect URL, you'll have access to the
         // authorization code. For security reasons, your code should verify that the `state`
@@ -95,7 +96,7 @@ pub fn openid_redirect(
             OpenIdRedirectInner::Success(ok) => {
                 let result = finish_authentication(
                     config,
-                    openid_session,
+                    serde_json::from_str(&openid_session).unwrap(),
                     OpenIdRedirect {
                         state: form.state,
                         inner: ok,
@@ -103,7 +104,7 @@ pub fn openid_redirect(
                 )
                 .await?;
 
-                session.set_openid_session(Some(result));
+                let session = session.with_openidconnect_session(result);
 
                 Ok(Response::builder()
                     .status(StatusCode::TEMPORARY_REDIRECT)

@@ -330,7 +330,7 @@ impl<
                             .await?
                             .map(EitherBodyRouter::Option1)
                     },
-                    session,
+                    session_inner,
                 )
             }),
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
@@ -338,7 +338,7 @@ impl<
                 let mut session = Session::new(&mut session_inner);
                 (
                     try { indexcss(req).map(EitherBodyRouter::Option2) },
-                    session,
+                    session_inner,
                 )
             }),
             (&Method::GET, "/list") => {
@@ -352,7 +352,7 @@ impl<
                                 .await?
                                 .map(EitherBodyRouter::Option3)
                         },
-                        session,
+                        session_inner,
                     )
                 })
             }
@@ -361,7 +361,7 @@ impl<
                 let mut session = Session::new(&mut session_inner);
                 (
                     try { favicon_ico(req).map(EitherBodyRouter::Option4) },
-                    session,
+                    session_inner,
                 )
             }),
             (&Method::POST, "/") => {
@@ -375,7 +375,7 @@ impl<
                                 .await?
                                 .map(EitherBodyRouter::Option5)
                         },
-                        session,
+                        session_inner,
                     )
                 })
             }
@@ -390,7 +390,7 @@ impl<
                                 .await?
                                 .map(EitherBodyRouter::Option6)
                         },
-                        session,
+                        session_inner,
                     )
                 })
             }
@@ -402,7 +402,7 @@ impl<
                     let result = openid_redirect(req, &mut session, config)
                         .await
                         .map(|v| v.map(EitherBodyRouter::Option7));
-                    (result, session)
+                    (result, session_inner)
                 })
             }
             (_, _) => EitherFutureRouter::Option404(async move {
@@ -410,23 +410,28 @@ impl<
                 let mut session = Session::new(&mut session_inner);
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                (try { not_found.map(EitherBodyRouter::Option404) }, session)
+                (
+                    try { not_found.map(EitherBodyRouter::Option404) },
+                    session_inner,
+                )
             }),
         }
-        .map(|fut: (Result<_, AppError>, Session)| match fut {
-            (Ok(mut ok), session) => {
-                session.to_cookies(&mut ok);
-                Ok(ok)
-            } // TODO FIXME set response headers
-            (Err(err), session) => {
-                // TODO FIXME this may need to set a cookief
-                let response = err
-                    .build_error_template(&session)
-                    .map(EitherBodyRouter::Option500);
-                session.to_cookies(&mut response);
-                Ok(response)
-            }
-        })
+        .map(
+            |fut: (Result<_, AppError>, SessionMutableInner)| match fut {
+                (Ok(mut ok), session) => {
+                    session.to_cookies(&mut ok);
+                    Ok(ok)
+                } // TODO FIXME set response headers
+                (Err(err), session) => {
+                    // TODO FIXME this may need to set a cookief
+                    let response = err
+                        .build_error_template(&session)
+                        .map(EitherBodyRouter::Option500);
+                    session.to_cookies(&mut response);
+                    Ok(response)
+                }
+            },
+        )
         .map_ok(|result: Response<_>| {
             result.untyped_header(ALT_SVC, HeaderValue::from_static(ALT_SVC_HEADER))
         })
