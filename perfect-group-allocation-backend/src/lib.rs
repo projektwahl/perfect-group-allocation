@@ -105,9 +105,9 @@ where
 {
     async fn from_request(
         request: hyper::Request<
-            impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
+            impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + '_,
         >,
-        session: &Session,
+        session: &'_ Session,
     ) -> Result<Self, AppError> {
         let not_get_or_head =
             !(request.method() == Method::GET || request.method() == Method::HEAD);
@@ -316,6 +316,7 @@ pub fn get_session<T>(request: &Request<T>) -> Session {
     Session::new(jar)
 }
 
+// boxed improves lifetime error messages by a lot
 either_http_body!(boxed EitherBodyRouter 1 2 3 4 5 6 7 404 500);
 either_future!(boxed EitherFutureRouter 1 2 3 4 5 6 7 404);
 
@@ -336,9 +337,13 @@ impl<
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
-                let session = get_session(&req);
+                let mut session = get_session(&req);
                 (
-                    try { index(req).await?.map(EitherBodyRouter::Option1) },
+                    try {
+                        index(req, &mut session)
+                            .await?
+                            .map(EitherBodyRouter::Option1)
+                    },
                     session,
                 )
             }),
@@ -352,9 +357,13 @@ impl<
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option3(async move {
-                    let session = get_session(&req);
+                    let mut session = get_session(&req);
                     (
-                        try { list(req, pool).await?.map(EitherBodyRouter::Option3) },
+                        try {
+                            list(req, &mut session, pool)
+                                .await?
+                                .map(EitherBodyRouter::Option3)
+                        },
                         session,
                     )
                 })
@@ -369,9 +378,13 @@ impl<
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option5(async move {
-                    let session = get_session(&req);
+                    let mut session = get_session(&req);
                     (
-                        try { create(req, pool).await?.map(EitherBodyRouter::Option5) },
+                        try {
+                            create(req, &mut session, pool)
+                                .await?
+                                .map(EitherBodyRouter::Option5)
+                        },
                         session,
                     )
                 })
@@ -379,10 +392,10 @@ impl<
             (&Method::POST, "/openidconnect-login") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option6(async move {
-                    let session = get_session(&req);
+                    let mut session = get_session(&req);
                     (
                         try {
-                            openid_login(req, config)
+                            openid_login(req, &mut session, config)
                                 .await?
                                 .map(EitherBodyRouter::Option6)
                         },
@@ -393,7 +406,6 @@ impl<
             (&Method::GET, "/openidconnect-redirect") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option7(async move {
-                    // the fun thing with lifetime errors here is, that they are not nice to read because of the EitherBodyRouter. It infects everything
                     let mut session = get_session(&req);
                     let result = openid_redirect(req, &mut session, config)
                         .await
@@ -409,7 +421,7 @@ impl<
             }),
         }
         .map(|fut: (Result<_, AppError>, Session)| match fut {
-            (Ok(ok), session) => Ok(ok),
+            (Ok(ok), session) => Ok(ok), // TODO FIXME set response headers
             (Err(err), session) => {
                 // TODO FIXME this may need to set a cookief
                 Ok(err

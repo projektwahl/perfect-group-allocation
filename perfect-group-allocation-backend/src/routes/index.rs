@@ -17,8 +17,8 @@ pub async fn index(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
+    session: &mut Session,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
-    let session = get_session(&request);
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());

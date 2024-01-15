@@ -28,11 +28,12 @@ pub async fn openid_login(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
+    session: &mut Session,
     config: Config,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
+{
     // TODO FIXME check csrf token?
-    let mut session = get_session(&request);
 
     let (auth_url, openid_session) = begin_authentication(config).await?;
 

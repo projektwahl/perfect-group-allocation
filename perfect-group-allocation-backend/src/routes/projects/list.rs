@@ -21,7 +21,7 @@ use crate::routes::list_projects;
 use crate::session::Session;
 use crate::{get_session, yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
-async gen fn list_internal(pool: Pool, session: Session) -> Result<Frame<Bytes>, Infallible> {
+async gen fn list_internal(session: &mut Session, pool: Pool) -> Result<Frame<Bytes>, Infallible> {
     let template = yieldfi!(list_projects());
     let template = yieldfi!(template.next());
     let template = yieldfi!(template.next());
@@ -89,10 +89,10 @@ pub async fn list(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
+    session: &mut Session,
     pool: Pool,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
-    let session = get_session(&request);
-    let stream = AsyncIteratorStream(list_internal(pool, session));
+    let stream = AsyncIteratorStream(list_internal(session, pool));
     Ok(Response::builder()
         .status(StatusCode::OK)
         .typed_header(ContentType::html())
