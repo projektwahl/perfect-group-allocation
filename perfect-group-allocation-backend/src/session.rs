@@ -1,29 +1,58 @@
+use std::marker::PhantomData;
+
 use cookie::{Cookie, CookieJar, SameSite};
+use http::header::COOKIE;
+use http::Request;
 use perfect_group_allocation_openidconnect::OpenIdSession;
 
 use crate::error::AppError;
 
-#[derive(Clone)]
+const COOKIE_NAME_OPENIDCONNECT: &str = "__Host-openidconnect";
+const COOKIE_NAME_SESSION: &str = "__Host-session";
+
+pub enum CookieValue<T> {
+    Unchanged(T),
+    Changed(T),
+}
+
+// we don't want to store cookies we don't need
 #[must_use]
-pub struct Session {
-    private_cookies: CookieJar, // TODO FIXME
+pub struct Session<S> {
+    session_id: CookieValue<Option<String>>,
+    temporary_openid_state: CookieValue<Option<OpenIdSession>>,
+    openid_session: CookieValue<Option<String>>,
+}
+
+impl Session<Option<String>> {
+    pub fn new<T>(request: Request<T>) -> Self {
+        let mut new = Self {
+            session_id: CookieValue::Unchanged(None),
+            openid_session: CookieValue::Unchanged(None),
+            temporary_openid_state: CookieValue::Unchanged(None),
+        };
+        request
+            .headers()
+            .get_all(COOKIE)
+            .into_iter()
+            .filter_map(|value| value.to_str().ok())
+            .map(std::borrow::ToOwned::to_owned)
+            .flat_map(Cookie::split_parse)
+            .filter_map(std::result::Result::ok)
+            .for_each(|cookie| match cookie.name() {
+                COOKIE_NAME_SESSION => {
+                    new.session_id = CookieValue::Unchanged(Some(cookie.value().to_owned()))
+                }
+                COOKIE_NAME_OPENIDCONNECT => {
+                    new.openid_session = CookieValue::Unchanged(Some(cookie.value().to_owned()))
+                }
+                _ => {}
+            });
+        new
+    }
 }
 
 // I think the csrf token needs to be signed/encrypted
-impl Session {
-    //const COOKIE_NAME_OPENIDCONNECT: &'static str = "__Host-openidconnect";
-    //const COOKIE_NAME_SESSION: &'static str = "__Host-session";
-    const COOKIE_NAME_OPENIDCONNECT: &'static str = "openidconnect";
-    const COOKIE_NAME_SESSION: &'static str = "session";
-
-    pub fn new(private_cookies: CookieJar) -> Self {
-        let mut session = Self { private_cookies };
-        if session.optional_session().is_none() {
-            session.set_openid_session(None);
-        }
-        session
-    }
-
+impl<S> Session<S> {
     fn optional_session(&self) -> Option<(String, Option<String>)> {
         self.private_cookies
             .get(Self::COOKIE_NAME_SESSION)

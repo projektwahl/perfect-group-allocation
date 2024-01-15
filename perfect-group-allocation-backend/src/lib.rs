@@ -300,23 +300,6 @@ impl<RequestBodyBuf: Buf + Send + 'static> Clone for Svc<RequestBodyBuf> {
     }
 }
 
-pub fn get_session<T>(request: &Request<T>) -> Session {
-    let cookies = request
-        .headers()
-        .get_all(COOKIE)
-        .into_iter()
-        .filter_map(|value| value.to_str().ok())
-        .map(std::borrow::ToOwned::to_owned)
-        .flat_map(Cookie::split_parse)
-        .filter_map(std::result::Result::ok);
-    let mut jar = cookie::CookieJar::new();
-    for cookie in cookies {
-        jar.add_original(cookie);
-    }
-
-    Session::new(jar)
-}
-
 // boxed improves lifetime error messages by a lot
 either_http_body!(boxed EitherBodyRouter 1 2 3 4 5 6 7 404 500);
 either_future!(boxed EitherFutureRouter 1 2 3 4 5 6 7 404);
