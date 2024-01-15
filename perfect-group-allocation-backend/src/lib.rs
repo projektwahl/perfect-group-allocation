@@ -393,6 +393,7 @@ impl<
             (&Method::GET, "/openidconnect-redirect") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option7(async move {
+                    // the fun thing with lifetime errors here is, that they are not nice to read because of the EitherBodyRouter. It infects everything
                     let mut session = get_session(&req);
                     let result = openid_redirect(req, &mut session, config)
                         .await
