@@ -90,25 +90,31 @@ impl<T> CookieyChanged for CookieValue<T> {
     }
 }
 
+pub struct SessionMutableInner {
+    /// Only static resources don't need this. All other pages need it for the login link in the header.
+    pub csrf_token: CookieValue<Option<String>>,
+    pub openidconnect_session: CookieValue<Option<String>>,
+    pub temporary_openidconnect_state: CookieValue<Option<String>>,
+}
+
 // we don't want to store cookies we don't need
 #[must_use]
 pub struct Session<
+    'a,
     CsrfToken: Cookiey + CookieyChanged = Unchanged<Option<String>>,
     OpenIdConnectSession: Cookiey + CookieyChanged = Unchanged<Option<String>>,
     TemporaryOpenIdConnectState: Cookiey + CookieyChanged = Unchanged<Option<String>>,
 > {
-    /// Only static resources don't need this. All other pages need it for the login link in the header.
-    pub csrf_token: CsrfToken,
-    pub openidconnect_session: OpenIdConnectSession,
-    pub temporary_openidconnect_state: TemporaryOpenIdConnectState,
+    pub inner: &'a mut SessionMutableInner,
+    phantom_data: PhantomData<(CsrfToken, OpenIdConnectSession, TemporaryOpenIdConnectState)>,
 }
 
-impl Session {
+impl<'a> Session<'a> {
     pub fn new<T>(request: &Request<T>) -> Self {
-        let mut new = Self {
-            csrf_token: Unchanged(None),
-            openidconnect_session: Unchanged(None),
-            temporary_openidconnect_state: Unchanged(None),
+        let mut new = SessionMutableInner {
+            csrf_token: CookieValue::Unchanged(Unchanged(None)),
+            openidconnect_session: CookieValue::Unchanged(Unchanged(None)),
+            temporary_openidconnect_state: CookieValue::Unchanged(Unchanged(None)),
         };
         request
             .headers()
@@ -120,14 +126,17 @@ impl Session {
             .filter_map(std::result::Result::ok)
             .for_each(|cookie| match cookie.name() {
                 COOKIE_NAME_CSRF_TOKEN => {
-                    new.csrf_token = Unchanged(Some(cookie.value().to_owned()))
+                    new.csrf_token =
+                        CookieValue::Unchanged(Unchanged(Some(cookie.value().to_owned())))
                 }
                 COOKIE_NAME_OPENIDCONNECT_SESSION => {
-                    new.openidconnect_session = Unchanged(Some(cookie.value().to_owned()))
+                    new.openidconnect_session =
+                        CookieValue::Unchanged(Unchanged(Some(cookie.value().to_owned())))
                 }
                 COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE => {
-                    new.temporary_openidconnect_state =
-                        Unchanged(Some(serde_json::from_str(cookie.value()).unwrap()))
+                    new.temporary_openidconnect_state = CookieValue::Unchanged(Unchanged(Some(
+                        serde_json::from_str(cookie.value()).unwrap(),
+                    )))
                 }
                 _ => {
                     // ignore the cookies that are not interesting for us
@@ -138,18 +147,19 @@ impl Session {
 }
 
 impl<
+    'a,
     OpenIdConnectSession: Cookiey + CookieyChanged,
     TemporaryOpenIdConnectState: Cookiey + CookieyChanged,
-> Session<Unchanged<Option<String>>, OpenIdConnectSession, TemporaryOpenIdConnectState>
+> Session<'a, Unchanged<Option<String>>, OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
     pub fn ensure_csrf_token(
         self,
-    ) -> Session<CookieValue<String>, OpenIdConnectSession, TemporaryOpenIdConnectState> {
-        if let Unchanged(Some(csrf_token)) = self.csrf_token {
+    ) -> Session<'a, CookieValue<String>, OpenIdConnectSession, TemporaryOpenIdConnectState> {
+        if let Unchanged(Some(csrf_token)) = self.inner.csrf_token {
+            self.inner.csrf_token = CookieValue::Unchanged(Unchanged(csrf_token));
             Session {
-                csrf_token: CookieValue::Unchanged(Unchanged(csrf_token)),
-                openidconnect_session: self.openidconnect_session,
-                temporary_openidconnect_state: self.temporary_openidconnect_state,
+                inner: self.inner,
+                phantom_data: PhantomData,
             }
         } else {
             let csrf_token: String = thread_rng()
