@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use bytes::{Buf, Bytes};
 use diesel_async::RunQueryDsl;
 use headers::ContentType;
+use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::{Empty, StreamBody};
@@ -39,47 +40,33 @@ pub async fn create<'a>(
 
     let empty_title = form.value.title.is_empty();
     let empty_description = form.value.description.is_empty();
-    let mut global_error = None;
+
+    let mut global_error = Ok::<(), AppError>(());
 
     if !empty_title && !empty_description {
-        match pool.get().await {
-            Ok(mut connection) => {
-                if let Err(error) = diesel::insert_into(project_history::table)
-                    .values(NewProject {
-                        id: SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .unwrap()
-                            .subsec_nanos()
-                            .try_into()
-                            .unwrap(),
-                        title: form.value.title.clone(),
-                        info: form.value.description.clone(),
-                    })
-                    .execute(&mut connection)
-                    .await
-                {
-                    global_error = Some(AppError::from(DatabaseError::from(error)).to_string());
-                };
-                return Ok(Response::builder()
-                    .status(if global_error.is_some() {
-                        StatusCode::INTERNAL_SERVER_ERROR
-                    } else {
-                        StatusCode::OK
-                    })
-                    .body(EitherBody::Option1(Empty::new()))
-                    .unwrap());
-            }
-            Err(error) => {
-                global_error = Some(AppError::from(error).to_string());
-            }
+        global_error = try {
+            let mut connection = pool.get().await?;
+            diesel::insert_into(project_history::table)
+                .values(NewProject {
+                    id: SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .subsec_nanos()
+                        .try_into()
+                        .unwrap(),
+                    title: form.value.title.clone(),
+                    info: form.value.description.clone(),
+                })
+                .execute(&mut connection)
+                .await?;
+            return Ok(Response::builder()
+                .with_session(session)
+                .status(StatusCode::SEE_OTHER)
+                .header(LOCATION, "/list")
+                .body(EitherBody::Option1(Empty::new()))
+                .unwrap());
         };
     }
-
-    let status_code = if global_error.is_some() {
-        StatusCode::INTERNAL_SERVER_ERROR
-    } else {
-        StatusCode::OK
-    };
 
     let csrf_token = session.csrf_token();
     let result = async gen move {
@@ -98,9 +85,9 @@ pub async fn create<'a>(
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
-        let template = if let Some(global_error) = global_error {
+        let template = if let Err(global_error) = global_error {
             let inner_template = yieldfi!(template.next_error_true());
-            let inner_template = yieldfv!(inner_template.error_message(global_error));
+            let inner_template = yieldfv!(inner_template.error_message(global_error.to_string()));
             yieldfi!(inner_template.next())
         } else {
             yieldfi!(template.next_error_false())
@@ -131,7 +118,7 @@ pub async fn create<'a>(
     let stream = AsyncIteratorStream(result);
     Ok(Response::builder()
         .with_session(session)
-        .status(status_code)
+        .status(StatusCode::OK)
         .typed_header(ContentType::html())
         .body(EitherBody::Option2(StreamBody::new(stream)))
         .unwrap())

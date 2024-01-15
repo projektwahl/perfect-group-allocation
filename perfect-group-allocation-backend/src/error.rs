@@ -85,6 +85,12 @@ impl From<diesel_async::pooled_connection::deadpool::PoolError> for AppError {
     }
 }
 
+impl From<diesel::result::Error> for AppError {
+    fn from(value: diesel::result::Error) -> Self {
+        Self::from(DatabaseError::from(value))
+    }
+}
+
 impl AppError {
     pub fn build_error_template(
         self,

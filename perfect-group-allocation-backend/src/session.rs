@@ -128,7 +128,7 @@ impl Session {
             .flat_map(Cookie::split_parse)
             .filter_map(std::result::Result::ok)
             .for_each(|cookie| match cookie.name() {
-                COOKIE_NAME_CSRF_TOKEN => csrf_token = Some(cookie.value().to_owned()),
+                COOKIE_NAME_CSRF_TOKEN => csrf_token = Some((cookie.value().to_owned(), false)),
                 COOKIE_NAME_OPENIDCONNECT_SESSION => {
                     openidconnect_session = Some(cookie.value().to_owned());
                 }
@@ -140,14 +140,17 @@ impl Session {
                 }
             });
         let csrf_token = csrf_token.unwrap_or_else(|| {
-            thread_rng()
-                .sample_iter(&rand::distributions::Alphanumeric)
-                .take(30)
-                .map(char::from)
-                .collect()
+            (
+                thread_rng()
+                    .sample_iter(&rand::distributions::Alphanumeric)
+                    .take(30)
+                    .map(char::from)
+                    .collect(),
+                true,
+            )
         });
         Self {
-            csrf_token: (csrf_token, false),
+            csrf_token,
             openidconnect_session: (openidconnect_session, false),
             temporary_openidconnect_state: (temporary_openidconnect_state, false),
         }

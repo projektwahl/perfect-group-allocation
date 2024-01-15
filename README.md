@@ -129,6 +129,11 @@ cargo +stable install cargo-hack --locked
 mkcert -install
 mkcert h3.selfmade4u.de
 
+cargo install diesel_cli --no-default-features --features postgres
+export DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
+cd perfect-group-allocation-database/
+diesel database reset
+
 # for chrome and h3 you need to listen on a port < 1024 AND you need a certificate with a public root
 HETZNER_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx lego --email Moritz.Hedtke@t-online.de --dns hetzner --domains h3.selfmade4u.de run
 export PGA_DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
@@ -173,8 +178,6 @@ Callgrind
 # DO NOT USE TRUST AUTHENTICATION IN PRODUCTION! For profiling we don't want to measure sha2 hashing overhead
 podman run --rm --detach --name postgres-profiling --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
 
-export DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
-diesel database reset
 
 https://nnethercote.github.io/perf-book/profiling.html
 

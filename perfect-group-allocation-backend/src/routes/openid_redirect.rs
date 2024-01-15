@@ -102,7 +102,7 @@ pub async fn openid_redirect(
 
             Ok(Response::builder()
                 .with_session(session)
-                .status(StatusCode::TEMPORARY_REDIRECT)
+                .status(StatusCode::SEE_OTHER)
                 .header(LOCATION, "/list")
                 .body(EitherBody::Option2(Empty::new()))
                 .unwrap())
