@@ -2,13 +2,13 @@
 macro_rules! either_http_body {
     (boxed $name: ident $($ident:literal)*) => {
         ::paste::paste! {
-            struct $name(Box<dyn ::http_body::Body<Data = ::bytes::Bytes, Error = ::core::convert::Infallible> + Send>);
+            struct $name(::core::pin::Pin<Box<dyn ::http_body::Body<Data = ::bytes::Bytes, Error = ::core::convert::Infallible> + Send>>);
 
             impl $name {
                 $(
                     #[allow(non_snake_case)]
-                    pub fn [<Option $ident>](body: impl ::http_body::Body<Data = ::bytes::Bytes, Error = ::core::convert::Infallible> + Send) -> Self {
-                        Self(Box::new(body))
+                    pub fn [<Option $ident>](body: impl ::http_body::Body<Data = ::bytes::Bytes, Error = ::core::convert::Infallible> + Send + 'static) -> Self {
+                        Self(Box::pin(body))
                     }
                 )*
             }
@@ -19,10 +19,10 @@ macro_rules! either_http_body {
                 type Error = ::core::convert::Infallible;
 
                 fn poll_frame(
-                    self: ::core::pin::Pin<&mut Self>,
+                    mut self: ::core::pin::Pin<&mut Self>,
                     cx: &mut ::std::task::Context<'_>,
                 ) -> ::std::task::Poll<Option<Result<::http_body::Frame<Self::Data>, Self::Error>>> {
-                    self.poll_frame(cx)
+                    self.0.as_mut().poll_frame(cx)
                 }
             }
         }
@@ -63,13 +63,13 @@ macro_rules! either_http_body {
 macro_rules! either_future {
     (boxed $name: ident $($ident:literal)*) => {
         ::paste::paste! {
-            struct $name<Output>(Box<dyn ::core::future::Future<Output = Output> + Send>);
+            struct $name<Output>(::core::pin::Pin<Box<dyn ::core::future::Future<Output = Output> + Send>>);
 
             impl<Output> $name<Output> {
                 $(
                     #[allow(non_snake_case)]
-                    pub fn [<Option $ident>](future: impl ::core::future::Future<Output = Output> + Send) -> Self {
-                        Self(Box::new(future))
+                    pub fn [<Option $ident>](future: impl ::core::future::Future<Output = Output> + Send + 'static) -> Self {
+                        Self(Box::pin(future))
                     }
                 )*
             }
@@ -79,10 +79,10 @@ macro_rules! either_future {
                 type Output = Output;
 
                 fn poll(
-                    self: ::core::pin::Pin<&mut Self>,
+                    mut self: ::core::pin::Pin<&mut Self>,
                     cx: &mut ::std::task::Context<'_>
                 ) -> ::std::task::Poll<Self::Output> {
-                    self.poll(cx)
+                    self.0.as_mut().poll(cx)
                 }
             }
         }

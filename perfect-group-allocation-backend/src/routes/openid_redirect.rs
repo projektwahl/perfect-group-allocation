@@ -29,7 +29,7 @@ pub struct OpenIdRedirectErrorTemplate {
     error_description: String,
 }
 
-either_http_body!(EitherBody 1 2);
+either_http_body!(either EitherBody 1 2);
 
 pub fn openid_redirect(
     request: hyper::Request<

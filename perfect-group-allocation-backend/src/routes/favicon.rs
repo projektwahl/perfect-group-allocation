@@ -13,7 +13,7 @@ use crate::{either_http_body, ResponseTypedHeaderExt as _};
 
 static FAVICON_ICO: &[u8] = include_bytes!("../../../frontend/favicon.ico");
 
-either_http_body!(EitherBody 1 2);
+either_http_body!(either EitherBody 1 2);
 
 // Etag and cache busting
 #[expect(clippy::needless_pass_by_value)]

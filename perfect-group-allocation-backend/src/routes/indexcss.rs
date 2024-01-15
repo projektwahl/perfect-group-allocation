@@ -15,7 +15,7 @@ use crate::{either_http_body, ResponseTypedHeaderExt as _};
 // or for dev simply enforce unbundled development where chrome directly modifies the files
 // so maybe simply don't implement watcher at all
 
-either_http_body!(EitherBody 1 2);
+either_http_body!(either EitherBody 1 2);
 
 #[expect(clippy::needless_pass_by_value)]
 pub fn indexcss(

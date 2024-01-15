@@ -22,7 +22,7 @@ use crate::{
     ResponseTypedHeaderExt,
 };
 
-either_http_body!(EitherBody 1 2);
+either_http_body!(either EitherBody 1 2);
 
 pub async fn create(
     request: hyper::Request<
