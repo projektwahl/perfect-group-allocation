@@ -108,7 +108,7 @@ where
         request: hyper::Request<
             impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + '_,
         >,
-        session: &'_ Session<CookieValue<String>>,
+        session: &Session<'_, String>,
     ) -> Result<Self, AppError> {
         let not_get_or_head =
             !(request.method() == Method::GET || request.method() == Method::HEAD);
@@ -209,6 +209,7 @@ use crate::routes::openid_login::openid_login;
 use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::create::create;
 use crate::routes::projects::list::list;
+use crate::session::SessionMutableInner;
 
 pub trait ResponseTypedHeaderExt {
     #[must_use]
@@ -321,7 +322,8 @@ impl<
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
-                let mut session = Session::new(&req);
+                let mut session_inner = SessionMutableInner::new(&req);
+                let mut session = Session::new(&mut session_inner);
                 (
                     try {
                         index(req, &mut session)
@@ -332,7 +334,8 @@ impl<
                 )
             }),
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
-                let session = Session::new(&req);
+                let mut session_inner = SessionMutableInner::new(&req);
+                let mut session = Session::new(&mut session_inner);
                 (
                     try { indexcss(req).map(EitherBodyRouter::Option2) },
                     session,
@@ -341,7 +344,8 @@ impl<
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option3(async move {
-                    let mut session = Session::new(&req);
+                    let mut session_inner = SessionMutableInner::new(&req);
+                    let mut session = Session::new(&mut session_inner);
                     (
                         try {
                             list(req, &mut session, pool)
@@ -353,7 +357,8 @@ impl<
                 })
             }
             (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
-                let session = Session::new(&req);
+                let mut session_inner = SessionMutableInner::new(&req);
+                let mut session = Session::new(&mut session_inner);
                 (
                     try { favicon_ico(req).map(EitherBodyRouter::Option4) },
                     session,
@@ -362,7 +367,8 @@ impl<
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option5(async move {
-                    let mut session = Session::new(&req);
+                    let mut session_inner = SessionMutableInner::new(&req);
+                    let mut session = Session::new(&mut session_inner);
                     (
                         try {
                             create(req, &mut session, pool)
@@ -376,7 +382,8 @@ impl<
             (&Method::POST, "/openidconnect-login") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option6(async move {
-                    let mut session = Session::new(&req);
+                    let mut session_inner = SessionMutableInner::new(&req);
+                    let mut session = Session::new(&mut session_inner);
                     (
                         try {
                             openid_login(req, &mut session, config)
@@ -390,7 +397,8 @@ impl<
             (&Method::GET, "/openidconnect-redirect") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option7(async move {
-                    let mut session = Session::new(&req);
+                    let mut session_inner = SessionMutableInner::new(&req);
+                    let mut session = Session::new(&mut session_inner);
                     let result = openid_redirect(req, &mut session, config)
                         .await
                         .map(|v| v.map(EitherBodyRouter::Option7));
@@ -398,7 +406,8 @@ impl<
                 })
             }
             (_, _) => EitherFutureRouter::Option404(async move {
-                let session = Session::new(&req);
+                let mut session_inner = SessionMutableInner::new(&req);
+                let mut session = Session::new(&mut session_inner);
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
                 (try { not_found.map(EitherBodyRouter::Option404) }, session)
