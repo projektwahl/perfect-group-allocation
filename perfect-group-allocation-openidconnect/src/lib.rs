@@ -16,7 +16,8 @@ use openidconnect::core::{
 };
 pub use openidconnect::EndUserEmail;
 use openidconnect::{
-    AccessTokenHash, EmptyAdditionalClaims, IdTokenFields, IssuerUrl, Nonce, TokenResponse,
+    AccessTokenHash, EmptyAdditionalClaims, IdToken, IdTokenClaims, IdTokenFields, IssuerUrl,
+    Nonce, TokenResponse,
 };
 use perfect_group_allocation_config::Config;
 use serde::{Deserialize, Serialize};
@@ -197,5 +198,11 @@ pub async fn finish_authentication(
     // TODO FIXME our application should work without refresh token but use it for efficiency?
     // token_response.refresh_token()
 
-    Ok(id_token.to_string())
+    Ok(serde_json::to_string(claims).unwrap())
+}
+
+pub fn id_token_claims(claims: String) -> IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim> {
+    let claims: IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim> =
+        serde_json::from_str(&claims).unwrap();
+    claims
 }

@@ -5,6 +5,7 @@ use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::StreamBody;
 use perfect_group_allocation_css::index_css;
+use perfect_group_allocation_openidconnect::id_token_claims;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::Unsafe;
 
@@ -21,6 +22,7 @@ pub async fn index(
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
     let csrf_token = session.csrf_token();
+    let openidconnect_session = session.openidconnect_session();
     let result = async gen move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());
@@ -32,9 +34,19 @@ pub async fn index(
         );
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next_email_false());
-        let template = yieldfv!(template.csrf_token(csrf_token.clone()));
-        let template = yieldfi!(template.next());
+        let template = if let Some(openidconnect_session) = openidconnect_session {
+            let claims = id_token_claims(openidconnect_session);
+            println!("{:?}", claims);
+            let template = yieldfi!(template.next_email_true());
+            let template = yieldfv!(template.csrf_token(csrf_token.clone()));
+            let template = yieldfi!(template.next());
+            let template = yieldfv!(template.email(claims.email().unwrap().to_string()));
+            yieldfi!(template.next())
+        } else {
+            let template = yieldfi!(template.next_email_false());
+            let template = yieldfv!(template.csrf_token(csrf_token.clone()));
+            yieldfi!(template.next())
+        };
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_error_false());

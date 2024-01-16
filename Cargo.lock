@@ -2404,6 +2404,7 @@ dependencies = [
  "perfect-group-allocation-config",
  "reqwest",
  "serde",
+ "serde_json",
  "thiserror",
  "tokio",
 ]
