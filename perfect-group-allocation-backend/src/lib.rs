@@ -323,9 +323,14 @@ impl<
         let error_session = session.without_temporary_openidconnect_state().clone(); // at some point we may also want to show the logged in user etc so just clone the whole thing
 
         match (req.method(), req.uri().path()) {
-            (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
-                Ok(index(req, session).await?.map(EitherBodyRouter::Option1))
-            }),
+            (&Method::GET, "/") => {
+                let config = self.config.clone();
+                EitherFutureRouter::Option1(async move {
+                    Ok(index(req, session, config)
+                        .await?
+                        .map(EitherBodyRouter::Option1))
+                })
+            }
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
                 Ok(indexcss(req).map(EitherBodyRouter::Option2))
             }),

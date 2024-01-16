@@ -11,8 +11,8 @@ use oauth2::{
 };
 use openidconnect::core::{
     CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreClient, CoreGenderClaim,
-    CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
-    CoreJwsSigningAlgorithm, CoreProviderMetadata,
+    CoreIdToken, CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse,
+    CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm, CoreProviderMetadata,
 };
 pub use openidconnect::EndUserEmail;
 use openidconnect::{
@@ -198,11 +198,16 @@ pub async fn finish_authentication(
     // TODO FIXME our application should work without refresh token but use it for efficiency?
     // token_response.refresh_token()
 
-    Ok(serde_json::to_string(claims).unwrap())
+    Ok(serde_json::to_string(id_token).unwrap())
 }
 
-pub fn id_token_claims(claims: String) -> IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim> {
-    let claims: IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim> =
-        serde_json::from_str(&claims).unwrap();
-    claims
+pub async fn id_token_claims(
+    config: Config,
+    id_token: String,
+) -> Result<IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>, OpenIdConnectError> {
+    let client = get_openid_client(config).await?;
+
+    let id_token: CoreIdToken = serde_json::from_str(&id_token).unwrap();
+    let claims = id_token.claims(&client.id_token_verifier(), |v: Option<&Nonce>| Ok(()))?;
+    Ok(claims.clone())
 }
