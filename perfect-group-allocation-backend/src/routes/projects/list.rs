@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use futures_util::StreamExt;

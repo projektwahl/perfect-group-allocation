@@ -16,8 +16,8 @@ use openidconnect::core::{
 };
 pub use openidconnect::EndUserEmail;
 use openidconnect::{
-    AccessTokenHash, EmptyAdditionalClaims, IdTokenClaims, IdTokenFields, IssuerUrl,
-    Nonce, TokenResponse,
+    AccessTokenHash, EmptyAdditionalClaims, IdTokenClaims, IdTokenFields, IssuerUrl, Nonce,
+    TokenResponse,
 };
 use perfect_group_allocation_config::Config;
 use serde::{Deserialize, Serialize};

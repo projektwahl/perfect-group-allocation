@@ -11,7 +11,7 @@ use http_body_util::{Empty, StreamBody};
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
-use perfect_group_allocation_database::{Pool};
+use perfect_group_allocation_database::Pool;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::Unsafe;
 

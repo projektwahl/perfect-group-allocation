@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
