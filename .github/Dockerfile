@@ -2,6 +2,7 @@
 # echo $CR_PAT | podman login ghcr.io -u mohe2015 --password-stdin
 # podman build -t ghcr.io/projektwahl/perfect-group-allocation:latest .
 # podman push ghcr.io/projektwahl/perfect-group-allocation:latest
+# make package public
 FROM debian
 
 ARG USERNAME=pga
