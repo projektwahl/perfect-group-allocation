@@ -5,6 +5,7 @@ use libc::{c_uint, size_t, ssize_t};
 use perfect_group_allocation_e2e::service_e2e::bench_client_server_function_service;
 use rand::{RngCore, SeedableRng};
 
+/*
 /// # Safety
 /// Totally unsafe.
 #[allow(unsafe_code)]
@@ -15,9 +16,10 @@ pub unsafe extern "C" fn getrandom(buf: *mut u8, buflen: size_t, _flags: c_uint)
     rng.fill_bytes(slice);
     buflen.try_into().unwrap()
 }
+*/
 
 #[library_benchmark]
-#[bench::short(1)]
+#[bench::short(10)]
 fn bench_client_server(value: u64) {
     bench_client_server_function_service(value);
 }
