@@ -13,16 +13,36 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    shell: bash -leo pipefail {0}
-
 jobs:
+  build-container:
+    #runs-on: docker
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .github
+          push: true
+          tags: ${{ github.repository }}:latest
+          cache-from: type=registry,ref=${{ github.repository }}:latest
+          cache-to: type=inline
   rust:
+    needs: [build-container]
     #runs-on: docker
     runs-on: ubuntu-latest
     container:
-      image: node:slim
+      image: ghcr.io/projektwahl/perfect-group-allocation
     steps:
       - uses: actions/cache@v3
         with:
@@ -32,7 +52,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/      
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
       - uses: actions/checkout@v3
       - run: cargo fmt --check
       - run: cargo hack build --workspace --feature-powerset --optional-deps --all-targets
