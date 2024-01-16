@@ -20,6 +20,7 @@ defaults:
 jobs:
   rust:
     #runs-on: docker
+    runs-on: ubuntu-latest
     container:
       image: node:slim
     steps:
