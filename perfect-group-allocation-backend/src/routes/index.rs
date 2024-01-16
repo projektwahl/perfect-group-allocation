@@ -16,9 +16,6 @@ use crate::session::{ResponseSessionExt as _, Session};
 use crate::{yieldfi, yieldfv};
 
 pub async fn index(
-    _request: hyper::Request<
-        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
-    >,
     session: Session,
     config: Config,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
@@ -40,7 +37,7 @@ pub async fn index(
             let claims = id_token_claims(config, openidconnect_session)
                 .await
                 .unwrap();
-            println!("{:?}", claims);
+            println!("{claims:?}");
             let template = yieldfi!(template.next_email_true());
             let template = yieldfv!(template.csrf_token(csrf_token.clone()));
             let template = yieldfi!(template.next());

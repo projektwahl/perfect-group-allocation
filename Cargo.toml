@@ -28,16 +28,17 @@ inherits = "release"
 debug = true
 
 [workspace.lints.rust]
-unsafe_code = "deny"
+unsafe_code = { level = "deny", priority = 0 }
 
 [workspace.lints.clippy]
-pedantic = "warn"
-nursery = "warn"
-cargo = "warn"
-missing_errors_doc = "allow"
-missing_panics_doc = "allow"
-module_name_repetitions = "allow"
-struct_field_names = "allow"
+pedantic = { level = "warn", priority = 0 }
+nursery = { level = "warn", priority = 0 }
+cargo = { level = "warn", priority = 0 }
+missing_errors_doc = { level = "allow", priority = 1 }
+missing_panics_doc = { level = "allow", priority = 1 }
+module_name_repetitions = { level = "allow", priority = 1 }
+struct_field_names = { level = "allow", priority = 1 }
+too_many_lines = { level = "allow", priority = 1 }
 
 [patch.crates-io]
 h3 = { git = "https://github.com/hyperium/h3.git", branch = "master" } # http version 1

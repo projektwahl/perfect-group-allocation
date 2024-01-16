@@ -25,9 +25,6 @@ impl CsrfToken for OpenIdLoginPayload {
 }
 
 pub async fn openid_login(
-    _request: hyper::Request<
-        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
-    >,
     session: Session,
     config: Config,
     //_form: CsrfSafeForm<OpenIdLoginPayload>,

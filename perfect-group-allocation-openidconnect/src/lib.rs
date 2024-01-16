@@ -16,7 +16,7 @@ use openidconnect::core::{
 };
 pub use openidconnect::EndUserEmail;
 use openidconnect::{
-    AccessTokenHash, EmptyAdditionalClaims, IdToken, IdTokenClaims, IdTokenFields, IssuerUrl,
+    AccessTokenHash, EmptyAdditionalClaims, IdTokenClaims, IdTokenFields, IssuerUrl,
     Nonce, TokenResponse,
 };
 use perfect_group_allocation_config::Config;
@@ -189,7 +189,7 @@ pub async fn finish_authentication(
         }
     }
 
-    println!("{:?}", claims);
+    println!("{claims:?}");
 
     let Some(_email) = claims.email() else {
         return Err(OpenIdConnectError::MissingEmailAddress);
@@ -208,6 +208,6 @@ pub async fn id_token_claims(
     let client = get_openid_client(config).await?;
 
     let id_token: CoreIdToken = serde_json::from_str(&id_token).unwrap();
-    let claims = id_token.claims(&client.id_token_verifier(), |v: Option<&Nonce>| Ok(()))?;
+    let claims = id_token.claims(&client.id_token_verifier(), |_v: Option<&Nonce>| Ok(()))?;
     Ok(claims.clone())
 }

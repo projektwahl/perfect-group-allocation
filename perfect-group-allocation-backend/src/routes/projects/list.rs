@@ -22,9 +22,6 @@ use crate::session::{ResponseSessionExt as _, Session};
 use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
 pub async fn list(
-    _request: hyper::Request<
-        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
-    >,
     session: Session,
     pool: Pool,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>

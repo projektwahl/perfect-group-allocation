@@ -6,13 +6,6 @@
 #![feature(type_alias_impl_trait)]
 #![feature(error_generic_member_access)]
 #![feature(try_blocks)]
-#![allow(
-    clippy::missing_errors_doc,
-    clippy::missing_panics_doc,
-    clippy::module_name_repetitions,
-    clippy::too_many_lines,
-    reason = "not yet ready for that"
-)]
 
 extern crate alloc;
 
@@ -320,15 +313,13 @@ impl<
 
         // just store csrf token here? (static files are the only ones that theoretically don't need one)
         let session = Session::new(&req);
-        let error_session = session.without_temporary_openidconnect_state().clone(); // at some point we may also want to show the logged in user etc so just clone the whole thing
+        let error_session = session.without_temporary_openidconnect_state(); // at some point we may also want to show the logged in user etc so just clone the whole thing
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option1(async move {
-                    Ok(index(req, session, config)
-                        .await?
-                        .map(EitherBodyRouter::Option1))
+                    Ok(index(session, config).await?.map(EitherBodyRouter::Option1))
                 })
             }
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
@@ -337,9 +328,7 @@ impl<
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option3(async move {
-                    Ok(list(req, session, pool)
-                        .await?
-                        .map(EitherBodyRouter::Option3))
+                    Ok(list(session, pool).await?.map(EitherBodyRouter::Option3))
                 })
             }
             (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
@@ -356,7 +345,7 @@ impl<
             (&Method::POST, "/openidconnect-login") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option6(async move {
-                    Ok(openid_login(req, session, config)
+                    Ok(openid_login(session, config)
                         .await?
                         .map(EitherBodyRouter::Option6))
                 })
