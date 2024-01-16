@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/projektwahl/perfect-group-allocation
+      options: --privileged # for valgrind
     steps:
       - uses: actions/cache@v3
         with:
