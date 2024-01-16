@@ -24,7 +24,6 @@ jobs:
     container:
       image: node:slim
     steps:
-      - run: apt update && apt install -y git cmake gcc zstd curl mold coinor-libcbc-dev
       - uses: actions/cache@v3
         with:
           path: |
@@ -34,11 +33,6 @@ jobs:
             ~/.cargo/git/db/
             target/      
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
-      - run: rustup toolchain install nightly --allow-downgrade --profile minimal --component rustfmt,clippy
-      - run: cargo install --locked --version 0.10.0 iai-callgrind-runner
-      - run: cargo install --locked cargo-hack
-      - run: cargo install --locked cargo-deny
       - uses: actions/checkout@v3
       - run: cargo fmt --check
       - run: cargo hack build --workspace --feature-powerset --optional-deps --all-targets
