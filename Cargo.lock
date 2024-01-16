@@ -2390,6 +2390,7 @@ dependencies = [
  "perfect-group-allocation-config",
  "rand 0.8.5",
  "tokio",
+ "tokio-rustls",
  "tracing",
  "tracing-subscriber",
  "webdriver-bidi",

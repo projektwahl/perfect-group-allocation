@@ -30,6 +30,7 @@ rand = { default-features = false, version = "0.8" }
 tracing = { default-features = false, version = "0.1" }
 tracing-subscriber = { default-features = false, version = "0.3", features = ["env-filter"] }
 perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
+tokio-rustls = { default-features = false, version = "0.25", features = ["default"] }
 
 [[bench]]
 name = "http_e2e"
