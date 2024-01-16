@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/projektwahl/perfect-group-allocation
-      options: --privileged # for valgrind
+      options: --privileged --cap-add NET_BIND_SERVICE --sysctl net.ipv4.ip_unprivileged_port_start=0 # for valgrind
     steps:
       - uses: actions/cache@v3
         with:

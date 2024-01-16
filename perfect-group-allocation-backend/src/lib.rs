@@ -21,6 +21,7 @@ pub mod session;
 use core::convert::Infallible;
 use std::marker::PhantomData;
 use std::net::{Ipv4Addr, SocketAddrV4};
+use std::path::Path;
 use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
@@ -545,7 +546,7 @@ pub async fn run_http2_server(
     })
 }
 
-fn load_certs(filename: &str) -> std::io::Result<Vec<CertificateDer>> {
+fn load_certs(filename: &Path) -> std::io::Result<Vec<CertificateDer<'static>>> {
     // TODO FIXME async
     let certfile = std::fs::File::open(filename)?;
     let mut reader = std::io::BufReader::new(certfile);
@@ -554,7 +555,7 @@ fn load_certs(filename: &str) -> std::io::Result<Vec<CertificateDer>> {
 }
 
 // Load private key from file.
-fn load_private_key(filename: &str) -> std::io::Result<PrivateKeyDer> {
+fn load_private_key(filename: &Path) -> std::io::Result<PrivateKeyDer<'static>> {
     let keyfile = std::fs::File::open(filename)?;
     let mut reader = std::io::BufReader::new(keyfile);
 
@@ -564,14 +565,23 @@ fn load_private_key(filename: &str) -> std::io::Result<PrivateKeyDer> {
 
 pub fn load_certs_key_pair()
 -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), AppError> {
-    let certs = load_certs(CERT_PATH)?;
-    let key = load_private_key(KEY_PATH)?;
+    eprintln!("{:?}", std::env::current_dir());
+    let certs = load_certs(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(CERT_PATH)
+            .as_path(),
+    )?;
+    let key = load_private_key(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(KEY_PATH)
+            .as_path(),
+    )?;
 
     Ok((certs, key))
 }
 
-pub const CERT_PATH: &str = ".lego/certificates/h3.selfmade4u.de.crt";
-pub const KEY_PATH: &str = ".lego/certificates/h3.selfmade4u.de.key";
+pub const CERT_PATH: &str = "../h3.selfmade4u.de.pem";
+pub const KEY_PATH: &str = "../h3.selfmade4u.de-key.pem";
 pub const PORT: u16 = 443;
 pub const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 

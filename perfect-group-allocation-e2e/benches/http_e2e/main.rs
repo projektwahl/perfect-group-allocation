@@ -1,4 +1,4 @@
-use iai_callgrind::{library_benchmark, library_benchmark_group, main};
+use iai_callgrind::{library_benchmark, library_benchmark_group, main, LibraryBenchmarkConfig};
 use libc::{c_uint, size_t, ssize_t};
 use perfect_group_allocation_e2e::http_e2e::bench_client_server_function_http;
 use rand::{RngCore, SeedableRng};
@@ -25,4 +25,7 @@ library_benchmark_group!(
     benchmarks = bench_client_server
 );
 
-main!(library_benchmark_groups = bench_client_server_http);
+main!(
+    config = LibraryBenchmarkConfig::default().pass_through_env("RUST_BACKTRACE");
+    library_benchmark_groups = bench_client_server_http
+);
