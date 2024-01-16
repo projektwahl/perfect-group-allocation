@@ -19,7 +19,7 @@ defaults:
 
 jobs:
   rust:
-    runs-on: docker
+    #runs-on: docker
     container:
       image: node:slim
     steps:
