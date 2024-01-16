@@ -15,7 +15,7 @@ pub unsafe extern "C" fn getrandom(buf: *mut u8, buflen: size_t, _flags: c_uint)
 }
 
 #[library_benchmark]
-#[bench::short(1000)]
+#[bench::short(1)]
 fn bench_client_server(value: u64) {
     bench_client_server_function_http(value);
 }
