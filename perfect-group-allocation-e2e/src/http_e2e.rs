@@ -19,7 +19,12 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
     let port = url.port_u16().unwrap_or(443);
     let addr = format!("{host}:{port}");
 
-    let certs = load_certs_key_pair().unwrap().0;
+    let certs = load_certs(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../rootCA.pem")
+            .as_path(),
+    )
+    .unwrap();
     let mut root_store = RootCertStore::empty();
     root_store.add_parsable_certificates(certs);
 
@@ -61,9 +66,10 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
 }
 
 use std::future::Future;
+use std::path::Path;
 use std::sync::Arc;
 
-use perfect_group_allocation_backend::{load_certs_key_pair, setup_http2_http3_server};
+use perfect_group_allocation_backend::{load_certs, load_certs_key_pair, setup_http2_http3_server};
 
 // podman run --rm --detach --name postgres-testing --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
 

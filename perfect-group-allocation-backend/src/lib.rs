@@ -546,7 +546,7 @@ pub async fn run_http2_server(
     })
 }
 
-fn load_certs(filename: &Path) -> std::io::Result<Vec<CertificateDer<'static>>> {
+pub fn load_certs(filename: &Path) -> std::io::Result<Vec<CertificateDer<'static>>> {
     // TODO FIXME async
     let certfile = std::fs::File::open(filename)?;
     let mut reader = std::io::BufReader::new(certfile);
@@ -555,7 +555,7 @@ fn load_certs(filename: &Path) -> std::io::Result<Vec<CertificateDer<'static>>> 
 }
 
 // Load private key from file.
-fn load_private_key(filename: &Path) -> std::io::Result<PrivateKeyDer<'static>> {
+pub fn load_private_key(filename: &Path) -> std::io::Result<PrivateKeyDer<'static>> {
     let keyfile = std::fs::File::open(filename)?;
     let mut reader = std::io::BufReader::new(keyfile);
 

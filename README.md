@@ -127,6 +127,7 @@ cargo test
 cargo +stable install cargo-hack --locked
 
 mkcert -install
+cp $(mkcert -CAROOT)/rootCA.pem .
 mkcert h3.selfmade4u.de
 
 cargo install diesel_cli --no-default-features --features postgres

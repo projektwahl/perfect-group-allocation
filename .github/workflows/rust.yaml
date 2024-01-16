@@ -35,6 +35,7 @@ jobs:
       - run: cargo hack build --workspace --feature-powerset --optional-deps --all-targets
       - run: cargo hack clippy --workspace --feature-powerset --optional-deps --all-targets -- -D warnings
       - run: mkcert -install
+      - run: cp $(mkcert -CAROOT)/rootCA.pem .
       - run: mkcert h3.selfmade4u.de
       - run: RUST_BACKTRACE=1 cargo hack test --workspace --feature-powerset --optional-deps --all-targets
       - run: cargo deny check
