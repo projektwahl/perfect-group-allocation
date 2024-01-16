@@ -113,7 +113,7 @@ pub fn run_http3_server_s2n(
 
     let mut server = s2n_quic::Server::builder()
         .with_tls((Path::new(CERT_PATH), Path::new(KEY_PATH)))?
-        .with_io(format!("127.0.0.1:{PORT}").as_str())?
+        .with_io(format!("0.0.0.0:{PORT}").as_str())?
         .start()?;
 
     info!("listening on localhost:{PORT}");

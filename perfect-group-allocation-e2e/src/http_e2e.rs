@@ -11,7 +11,8 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>
 
 pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
     let host = url.host().expect("uri has no host");
-    let port = url.port_u16().unwrap_or(80);
+    // TODO FIXME and tls
+    let port = url.port_u16().unwrap_or(443);
     let addr = format!("{host}:{port}");
     let stream = TcpStream::connect(addr).await?;
     let io = TokioIo::new(stream);
@@ -48,7 +49,7 @@ use perfect_group_allocation_backend::setup_http2_http3_server;
 
 pub async fn test_as_client(repeat: u64) {
     for _ in 0..repeat {
-        fetch_url("http://localhost:3000/".parse::<hyper::Uri>().unwrap())
+        fetch_url("https://h3.selfmade4u.de".parse::<hyper::Uri>().unwrap())
             .await
             .unwrap();
     }

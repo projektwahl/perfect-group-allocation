@@ -85,7 +85,7 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
             browsing_context::navigate::Command {
                 params: browsing_context::navigate::Parameters {
                     context: browsing_context.clone(),
-                    url: "http://localhost:3000".to_owned(),
+                    url: "https://h3.selfmade4u.de".to_owned(),
                     wait: Some(browsing_context::ReadinessState::Complete),
                 },
             },

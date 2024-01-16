@@ -26,7 +26,7 @@ pub async fn bench_client_server_function_service(value: u64) {
         service
             .call(
                 Request::builder()
-                    .uri("http://localhost:3000/")
+                    .uri("https://h3.selfmade4u.de")
                     .body(http_body_util::Empty::new().map_err(|error| match error {}))
                     .unwrap(),
             )
