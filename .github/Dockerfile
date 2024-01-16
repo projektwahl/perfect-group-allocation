@@ -11,7 +11,6 @@ RUN apt-get install -y nodejs
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup toolchain install nightly --allow-downgrade --profile minimal --component rustfmt,clippy
-RUN rustup default nightly
 RUN cargo install --locked --version 0.10.0 iai-callgrind-runner
 RUN cargo install --locked cargo-hack
 RUN cargo install --locked cargo-deny
