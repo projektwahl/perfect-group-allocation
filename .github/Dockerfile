@@ -14,3 +14,4 @@ RUN rustup toolchain install nightly --allow-downgrade --profile minimal --compo
 RUN cargo install --locked --version 0.10.0 iai-callgrind-runner
 RUN cargo install --locked cargo-hack
 RUN cargo install --locked cargo-deny
+RUN apt-get install -y mkcert

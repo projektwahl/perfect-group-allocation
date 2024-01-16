@@ -34,5 +34,7 @@ jobs:
       - run: cargo fmt --check
       - run: cargo hack build --workspace --feature-powerset --optional-deps --all-targets
       - run: cargo hack clippy --workspace --feature-powerset --optional-deps --all-targets -- -D warnings
-      - run: cargo hack test --workspace --feature-powerset --optional-deps --all-targets
+      - run: mkcert -install
+      - run: mkcert h3.selfmade4u.de
+      - run: RUST_BACKTRACE=1 cargo hack test --workspace --feature-powerset --optional-deps --all-targets
       - run: cargo deny check
