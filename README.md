@@ -30,7 +30,7 @@ podman run --userns=keep-id --env DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/po
 ## Updating dependencies
 
 ```
-cargo install cargo-edit
+cargo install --locked cargo-edit
 cargo upgrade --verbose --incompatible allow --pinned allow
 ```
 
