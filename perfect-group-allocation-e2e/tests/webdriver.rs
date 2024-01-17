@@ -23,6 +23,8 @@ use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 pub async fn main() -> Result<(), webdriver_bidi::Error> {
     let _guard = setup_telemetry();
 
+    // https://docs.docker.com/compose/production/
+
     // https://www.redhat.com/sysadmin/quadlet-podman
     // printf "postgrespassword" | podman secret create postgres_password -
 

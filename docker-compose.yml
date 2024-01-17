@@ -139,8 +139,8 @@ services:
     labels:
       - io.containers.autoupdate=registry
     environment:
-      - POSTGRES_INITDB_ARGS: "--data-checksums"
-      - POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
     ports:
       - 5432:5432
     secrets:
