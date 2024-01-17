@@ -8,7 +8,6 @@ use hyper::Request;
 use hyper_util::rt::TokioIo;
 use perfect_group_allocation_config::{Config, OpenIdConnectConfig};
 use tokio::net::TcpStream;
-use tokio_rustls::rustls::client::danger::{ServerCertVerified, ServerCertVerifier};
 use tokio_rustls::rustls::{pki_types, RootCertStore};
 use tokio_rustls::{rustls, TlsConnector};
 
@@ -39,7 +38,7 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
         .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid dnsname"))?
         .to_owned();
 
-    let mut stream = connector.connect(domain, stream).await?;
+    let stream = connector.connect(domain, stream).await?;
 
     let io = TokioIo::new(stream);
 
@@ -69,7 +68,7 @@ use std::future::Future;
 use std::path::Path;
 use std::sync::Arc;
 
-use perfect_group_allocation_backend::{load_certs, load_certs_key_pair, setup_http2_http3_server};
+use perfect_group_allocation_backend::{load_certs, setup_http2_http3_server};
 
 // podman run --rm --detach --name postgres-testing --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
 

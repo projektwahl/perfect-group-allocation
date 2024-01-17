@@ -1,9 +1,5 @@
-use core::slice;
-
 use iai_callgrind::{library_benchmark, library_benchmark_group, main, LibraryBenchmarkConfig};
-use libc::{c_uint, size_t, ssize_t};
 use perfect_group_allocation_e2e::service_e2e::bench_client_server_function_service;
-use rand::{RngCore, SeedableRng};
 
 /*
 /// # Safety
