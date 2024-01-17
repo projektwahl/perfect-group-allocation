@@ -31,6 +31,7 @@ tracing = { default-features = false, version = "0.1" }
 tracing-subscriber = { default-features = false, version = "0.3", features = ["env-filter"] }
 perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
 tokio-rustls = { default-features = false, version = "0.25", features = ["default"] }
+perfect-group-allocation-telemetry = { default-features = false, path = "../perfect-group-allocation-telemetry" }
 
 [[bench]]
 name = "http_e2e"

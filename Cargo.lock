@@ -2388,6 +2388,7 @@ dependencies = [
  "libc",
  "perfect-group-allocation-backend",
  "perfect-group-allocation-config",
+ "perfect-group-allocation-telemetry",
  "rand 0.8.5",
  "tokio",
  "tokio-rustls",

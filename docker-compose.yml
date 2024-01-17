@@ -1,4 +1,4 @@
-version: '3'
+version: '3.7'
 services:
   opensearch-node1:
     image: opensearchproject/opensearch:latest
@@ -127,6 +127,12 @@ services:
     profiles: ["telemetry"]
   postgres:
     image: docker.io/postgres
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     # ADD A VOLUME IN PRODUCTION
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust # DO NOT USE IN PRODUCTION
