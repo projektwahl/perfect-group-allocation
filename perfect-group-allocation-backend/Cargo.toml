@@ -20,43 +20,43 @@ workspace = true
 profiling = []
 
 [dependencies]
-futures-util = "0.3"
+futures-util = { default-features = false, version = "0.3" }
 itertools = { default-features = false, version = "0.12", features = [ "use_alloc", "use_std" ] }
-tokio = { version = "1", features = ["full"] }
-tokio-rustls = "0.24"
-rustls-pemfile = "1"
-hyper = { version = "1", features = ["full"] }
-h3 = { git = "https://github.com/hyperium/h3.git" }
-h3-quinn = { git = "https://github.com/hyperium/h3.git" }
-s2n-quic-h3 = { git = "https://github.com/aws/s2n-quic.git" }
-s2n-quic = { git = "https://github.com/aws/s2n-quic.git" }
-quinn = "0.10"
-http-body = "1"
-tokio-util = { version = "0.7", features = ["io"] }
-anyhow = "1"
-serde_json = "1"
-serde = { version = "1", features = ["derive"] }
-rand = "0.8"
-thiserror = "1"
-once_cell = "1"
-chrono = "0.4"
-http = "1"
-headers = "0.4"
-mime = "0.3"
-zero-cost-templating = { git = "https://github.com/mohe2015/zero-cost-templating.git", branch = "work" }
-bytes = "1"
-pin-project = "1"
-hyper-util = "0.1"
-http-body-util = "0.1"
-serde_urlencoded = "0.7"
-paste = "1"
-diesel = "2"
-diesel-async = { version = "0.4", features = ["postgres", "deadpool"] }
-cookie = "0.18"
-sha2 = { version = "0.10", features = ["asm"] }
-log = { version = "0.4", features = ["release_max_level_off"] }
-tracing = { version = "0.1", features = ["release_max_level_off"] }
-perfect-group-allocation-telemetry = { path = "../perfect-group-allocation-telemetry" }
-perfect-group-allocation-database = { path = "../perfect-group-allocation-database" }
-perfect-group-allocation-openidconnect = { path = "../perfect-group-allocation-openidconnect" }
-perfect-group-allocation-css = { path = "../perfect-group-allocation-css" }
+tokio = { default-features = false, version = "1", features = ["full"] }
+tokio-rustls = { default-features = false, version = "0.25", features = ["default"] }
+rustls-pemfile = { default-features = false, version = "2", features = ["std"] }
+hyper = { default-features = false, version = "1", features = ["full"] }
+h3 = { default-features = false, git = "https://github.com/hyperium/h3.git", branch = "master" }
+s2n-quic-h3 = { default-features = false, git = "https://github.com/aws/s2n-quic.git" }
+s2n-quic = { default-features = false, git = "https://github.com/aws/s2n-quic.git" }
+#h3-quinn = { default-features = false, git = "https://github.com/hyperium/h3.git", branch = "master" }
+#quinn = { default-features = false, version = "0.10" } # depends on old version of tokio-rustls
+http-body = { default-features = false, version = "1" }
+tokio-util = { default-features = false, version = "0.7", features = ["io"] }
+serde_json = { default-features = false, version = "1" }
+serde = { default-features = false, version = "1", features = ["derive"] }
+rand = { default-features = false, version = "0.8" }
+thiserror = { default-features = false, version = "1" }
+once_cell = { default-features = false, version = "1" }
+chrono = { default-features = false, version = "0.4" }
+http = { default-features = false, version = "1" }
+headers = { default-features = false, version = "0.4" }
+mime = { default-features = false, version = "0.3" }
+zero-cost-templating = { default-features = false, git = "https://github.com/mohe2015/zero-cost-templating.git", branch = "work" }
+bytes = { default-features = false, version = "1" }
+pin-project = { default-features = false, version = "1" }
+hyper-util = { default-features = false, version = "0.1", features = ["tokio", "server-auto"] }
+http-body-util = { default-features = false, version = "0.1" }
+serde_urlencoded = { default-features = false, version = "0.7" }
+paste = { default-features = false, version = "1" }
+diesel = { default-features = false, version = "2" }
+diesel-async = { default-features = false, version = "0.4", features = ["postgres", "deadpool"] }
+cookie = { default-features = false, version = "0.18" }
+sha2 = { default-features = false, version = "0.10", features = ["asm"] }
+log = { default-features = false, version = "0.4", features = ["release_max_level_off"] }
+tracing = { default-features = false, version = "0.1", features = ["release_max_level_off"] }
+perfect-group-allocation-telemetry = { default-features = false, path = "../perfect-group-allocation-telemetry" }
+perfect-group-allocation-database = { default-features = false, path = "../perfect-group-allocation-database" }
+perfect-group-allocation-openidconnect = { default-features = false, path = "../perfect-group-allocation-openidconnect" }
+perfect-group-allocation-css = { default-features = false, path = "../perfect-group-allocation-css" }
+perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }

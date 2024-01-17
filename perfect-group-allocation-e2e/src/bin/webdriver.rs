@@ -1,4 +1,5 @@
 use perfect_group_allocation_backend::setup_http2_http3_server;
+use perfect_group_allocation_config::{Config, OpenIdConnectConfig};
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
@@ -29,10 +30,17 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
         .with(fmt_layer)
         .init();
 
-    let fut =
-        setup_http2_http3_server("postgres://postgres@localhost/pga?sslmode=disable".to_owned())
-            .await
-            .unwrap();
+    let fut = setup_http2_http3_server(Config {
+        url: "https://h3.selfmade4u.de".to_owned(),
+        database_url: "postgres://postgres@localhost/pga?sslmode=disable".to_owned(),
+        openidconnect: OpenIdConnectConfig {
+            issuer_url: "http://localhost:8080/realms/pga".to_owned(),
+            client_id: "pga".to_owned(),
+            client_secret: "test".to_owned(),
+        },
+    })
+    .await
+    .unwrap();
     tokio::spawn(async move {
         fut.await.unwrap();
     });
@@ -77,7 +85,7 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
             browsing_context::navigate::Command {
                 params: browsing_context::navigate::Parameters {
                     context: browsing_context.clone(),
-                    url: "http://localhost:3000".to_owned(),
+                    url: "https://h3.selfmade4u.de".to_owned(),
                     wait: Some(browsing_context::ReadinessState::Complete),
                 },
             },

@@ -1,7 +1,7 @@
 cargo-features = ["edition2024"]
 
 [package]
-name = "determinism-hack"
+name = "perfect-group-allocation-config"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
@@ -11,15 +11,12 @@ keywords.workspace = true
 categories.workspace = true
 readme.workspace = true
 
-[lib]
-crate-type = ["cdylib"]
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libc = "0.2"
-rand = "0.8"
-
+figment = { version = "0.10", features = ["toml", "env"] }
+serde = { default-features = false, version = "1", features = ["derive"] }
+thiserror = { default-features = false, version = "1" }
 
 [lints]
 workspace = true

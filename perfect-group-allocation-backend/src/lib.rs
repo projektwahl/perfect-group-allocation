@@ -3,14 +3,9 @@
 #![feature(let_chains)]
 #![feature(hash_raw_entry)]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(type_alias_impl_trait)]
 #![feature(error_generic_member_access)]
-#![allow(
-    clippy::missing_errors_doc,
-    clippy::missing_panics_doc,
-    clippy::module_name_repetitions,
-    clippy::too_many_lines,
-    reason = "not yet ready for that"
-)]
+#![feature(try_blocks)]
 
 extern crate alloc;
 
@@ -26,14 +21,14 @@ pub mod session;
 use core::convert::Infallible;
 use std::marker::PhantomData;
 use std::net::{Ipv4Addr, SocketAddrV4};
+use std::path::Path;
 use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
-use cookie::Cookie;
 use error::AppError;
 use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
 use h3::run_http3_server_s2n;
-use http::header::{ALT_SVC, COOKIE};
+use http::header::ALT_SVC;
 use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use http_body::Body;
 use http_body_util::{BodyExt, Full, Limited};
@@ -41,6 +36,7 @@ use hyper::body::Incoming;
 use hyper::service::{service_fn, Service};
 use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
+use perfect_group_allocation_config::Config;
 use perfect_group_allocation_database::{get_database_connection, Pool};
 use routes::index::index;
 use routes::indexcss::indexcss;
@@ -50,7 +46,8 @@ use session::Session;
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::watch;
-use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
+use tokio_rustls::rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use tokio_rustls::rustls::ServerConfig;
 use tokio_rustls::TlsAcceptor;
 use tracing::{error, info, warn};
 
@@ -102,14 +99,14 @@ where
 {
     async fn from_request(
         request: hyper::Request<
-            impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
+            impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + '_,
         >,
-        session: Session,
+        session: &Session,
     ) -> Result<Self, AppError> {
         let not_get_or_head =
             !(request.method() == Method::GET || request.method() == Method::HEAD);
 
-        let expected_csrf_token = session.session().0;
+        let expected_csrf_token = session.csrf_token();
 
         let body: Bytes = Limited::new(request.into_body(), 100)
             .collect()
@@ -202,6 +199,7 @@ use headers::{Header, HeaderMapExt};
 
 use crate::routes::favicon::favicon_ico;
 use crate::routes::openid_login::openid_login;
+use crate::routes::openid_redirect::openid_redirect;
 use crate::routes::projects::create::create;
 use crate::routes::projects::list::list;
 
@@ -280,6 +278,7 @@ macro_rules! yieldfi {
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
 pub struct Svc<RequestBodyBuf: Buf + Send + 'static> {
+    config: Config,
     pool: Pool,
     phantom_data: PhantomData<RequestBodyBuf>,
 }
@@ -287,14 +286,16 @@ pub struct Svc<RequestBodyBuf: Buf + Send + 'static> {
 impl<RequestBodyBuf: Buf + Send + 'static> Clone for Svc<RequestBodyBuf> {
     fn clone(&self) -> Self {
         Self {
+            config: self.config.clone(),
             pool: self.pool.clone(),
             phantom_data: self.phantom_data,
         }
     }
 }
 
-either_http_body!(EitherBodyRouter 1 2 3 4 5 6 7 8);
-either_future!(EitherFutureRouter 1 2 3 4 5 6 7);
+// boxed improves lifetime error messages by a lot
+either_http_body!(boxed EitherBodyRouter 1 2 3 4 5 6 7 404 500);
+either_future!(boxed EitherFutureRouter 1 2 3 4 5 6 7 404);
 
 impl<
     RequestBodyBuf: Buf + Send + 'static,
@@ -308,35 +309,27 @@ impl<
 
     fn call(&self, req: Request<RequestBody>) -> Self::Future {
         // TODO FIXME only parse cookies when needed
-        let cookies = req
-            .headers()
-            .get_all(COOKIE)
-            .into_iter()
-            .filter_map(|value| value.to_str().ok())
-            .map(std::borrow::ToOwned::to_owned)
-            .flat_map(Cookie::split_parse)
-            .filter_map(std::result::Result::ok);
-        let mut jar = cookie::CookieJar::new();
-        for cookie in cookies {
-            jar.add_original(cookie);
-        }
-
-        let session = Session::new(jar);
-        let err_session = session.clone(); // TODO FIXME
 
         println!("{} {}", req.method(), req.uri().path());
 
+        // just store csrf token here? (static files are the only ones that theoretically don't need one)
+        let session = Session::new(&req);
+        let error_session = session.without_temporary_openidconnect_state(); // at some point we may also want to show the logged in user etc so just clone the whole thing
+
         match (req.method(), req.uri().path()) {
-            (&Method::GET, "/") => EitherFutureRouter::Option1(async move {
-                Ok(index(session).await?.map(EitherBodyRouter::Option1))
-            }),
+            (&Method::GET, "/") => {
+                let config = self.config.clone();
+                EitherFutureRouter::Option1(async move {
+                    Ok(index(session, config).await?.map(EitherBodyRouter::Option1))
+                })
+            }
             (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
                 Ok(indexcss(req).map(EitherBodyRouter::Option2))
             }),
             (&Method::GET, "/list") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option3(async move {
-                    Ok(list(pool, session).await?.map(EitherBodyRouter::Option3))
+                    Ok(list(session, pool).await?.map(EitherBodyRouter::Option3))
                 })
             }
             (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
@@ -345,25 +338,41 @@ impl<
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
                 EitherFutureRouter::Option5(async move {
-                    Ok(create(req, pool, session)
+                    Ok(create(req, session, pool)
                         .await?
                         .map(EitherBodyRouter::Option5))
                 })
             }
-            (&Method::GET, "/openidconnect-login") => EitherFutureRouter::Option6(async move {
-                Ok(openid_login(session).await?.map(EitherBodyRouter::Option6))
-            }),
-            (_, _) => EitherFutureRouter::Option7(async move {
+            (&Method::POST, "/openidconnect-login") => {
+                let config = self.config.clone();
+                EitherFutureRouter::Option6(async move {
+                    Ok(openid_login(session, config)
+                        .await?
+                        .map(EitherBodyRouter::Option6))
+                })
+            }
+            (&Method::GET, "/openidconnect-redirect") => {
+                let config = self.config.clone();
+                EitherFutureRouter::Option7(async move {
+                    Ok(openid_redirect(req, session, config)
+                        .await?
+                        .map(EitherBodyRouter::Option7))
+                })
+            }
+            (_, _) => EitherFutureRouter::Option404(async move {
                 let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found.map(EitherBodyRouter::Option7))
+                Ok(not_found.map(EitherBodyRouter::Option404))
             }),
         }
         .map(|fut: Result<_, AppError>| match fut {
             Ok(ok) => Ok(ok),
-            Err(err) => Ok(err
-                .build_error_template(err_session)
-                .map(EitherBodyRouter::Option8)),
+            Err(err) => {
+                let response = err
+                    .build_error_template(error_session)
+                    .map(EitherBodyRouter::Option500);
+                Ok(response)
+            }
         })
         .map_ok(|result: Response<_>| {
             result.untyped_header(ALT_SVC, HeaderValue::from_static(ALT_SVC_HEADER))
@@ -372,7 +381,7 @@ impl<
 }
 
 pub fn setup_server<B: Buf + Send + 'static>(
-    database_url: &str,
+    config: Config,
 ) -> std::result::Result<Svc<B>, AppError> {
     info!("starting up server...");
 
@@ -382,7 +391,7 @@ pub fn setup_server<B: Buf + Send + 'static>(
 
     // https://github.com/hyperium/hyper/blob/master/examples/state.rs
 
-    let pool = get_database_connection(database_url)?;
+    let pool = get_database_connection(&config.database_url)?;
 
     //let service = ServeDir::new("frontend");
 
@@ -396,6 +405,7 @@ pub fn setup_server<B: Buf + Send + 'static>(
     //.route(&Method::GET, "/openidconnect-redirect", openid_redirect);
 
     let app = Svc {
+        config,
         pool,
         phantom_data: PhantomData,
     };
@@ -410,14 +420,14 @@ pub fn setup_server<B: Buf + Send + 'static>(
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 
 pub async fn setup_http2_http3_server(
-    database_url: String,
+    config: Config,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let (certs, key) = load_certs_key_pair()?;
 
     // needs a service that accepts some non-controllable impl Buf
-    let http3_server = run_http3_server_s2n(database_url.clone())?;
+    let http3_server = run_http3_server_s2n(config.clone())?;
     // needs a service that accepts Bytes, therefore we to create separate services
-    let http2_server = run_http2_server(database_url, certs, key).await?;
+    let http2_server = run_http2_server(config, certs, key).await?;
 
     #[allow(clippy::redundant_pub_crate)]
     Ok(async move {
@@ -439,19 +449,18 @@ pub async fn setup_http2_http3_server(
 /// Outer future returns when server started listening. Inner future returns when server stopped.
 #[allow(clippy::cognitive_complexity)]
 pub async fn run_http2_server(
-    database_url: String,
-    certs: Vec<Certificate>,
-    key: PrivateKey,
+    config: Config,
+    certs: Vec<CertificateDer<'static>>, // TODO FIXME put these into the config file
+    key: PrivateKeyDer<'static>,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
-    let service = setup_server(&database_url)?;
+    let service = setup_server(config)?;
 
     let incoming = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), PORT))
         .await
         .unwrap();
 
     let mut server_config = ServerConfig::builder()
-        .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(certs, key)?;
     server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec(), b"http/1.0".to_vec()];
@@ -537,38 +546,42 @@ pub async fn run_http2_server(
     })
 }
 
-fn load_certs(filename: &str) -> std::io::Result<Vec<Certificate>> {
+pub fn load_certs(filename: &Path) -> std::io::Result<Vec<CertificateDer<'static>>> {
     // TODO FIXME async
-    // Open certificate file.
     let certfile = std::fs::File::open(filename)?;
     let mut reader = std::io::BufReader::new(certfile);
 
-    // Load and return certificate.
-    let certs = rustls_pemfile::certs(&mut reader)?;
-    Ok(certs.into_iter().map(Certificate).collect())
+    rustls_pemfile::certs(&mut reader).collect()
 }
 
 // Load private key from file.
-fn load_private_key(filename: &str) -> std::io::Result<PrivateKey> {
-    // Open keyfile.
+pub fn load_private_key(filename: &Path) -> std::io::Result<PrivateKeyDer<'static>> {
     let keyfile = std::fs::File::open(filename)?;
     let mut reader = std::io::BufReader::new(keyfile);
 
-    // Load and return a single private key.
-    let keys = rustls_pemfile::ec_private_keys(&mut reader)?;
-
-    Ok(PrivateKey(keys[0].clone()))
+    // TODO FIXME remove unwrap
+    Ok(rustls_pemfile::private_key(&mut reader)?.unwrap())
 }
 
-pub fn load_certs_key_pair() -> Result<(Vec<Certificate>, PrivateKey), AppError> {
-    let certs = load_certs(CERT_PATH)?;
-    let key = load_private_key(KEY_PATH)?;
+pub fn load_certs_key_pair()
+-> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), AppError> {
+    eprintln!("{:?}", std::env::current_dir());
+    let certs = load_certs(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(CERT_PATH)
+            .as_path(),
+    )?;
+    let key = load_private_key(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(KEY_PATH)
+            .as_path(),
+    )?;
 
     Ok((certs, key))
 }
 
-pub const CERT_PATH: &str = ".lego/certificates/h3.selfmade4u.de.crt";
-pub const KEY_PATH: &str = ".lego/certificates/h3.selfmade4u.de.key";
+pub const CERT_PATH: &str = "../h3.selfmade4u.de.pem";
+pub const KEY_PATH: &str = "../h3.selfmade4u.de-key.pem";
 pub const PORT: u16 = 443;
 pub const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 

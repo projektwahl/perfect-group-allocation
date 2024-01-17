@@ -1,8 +1,7 @@
-use iai_callgrind::{library_benchmark, library_benchmark_group, main};
-use libc::{c_uint, size_t, ssize_t};
+use iai_callgrind::{library_benchmark, library_benchmark_group, main, LibraryBenchmarkConfig};
 use perfect_group_allocation_e2e::http_e2e::bench_client_server_function_http;
-use rand::{RngCore, SeedableRng};
 
+/*
 /// # Safety
 /// Totally unsafe.
 #[allow(unsafe_code)]
@@ -13,9 +12,10 @@ pub unsafe extern "C" fn getrandom(buf: *mut u8, buflen: size_t, _flags: c_uint)
     rng.fill_bytes(slice);
     buflen.try_into().unwrap()
 }
+*/
 
 #[library_benchmark]
-#[bench::short(1000)]
+#[bench::short(10)]
 fn bench_client_server(value: u64) {
     bench_client_server_function_http(value);
 }
@@ -25,4 +25,7 @@ library_benchmark_group!(
     benchmarks = bench_client_server
 );
 
-main!(library_benchmark_groups = bench_client_server_http);
+main!(
+    config = LibraryBenchmarkConfig::default().pass_through_env("RUST_BACKTRACE");
+    library_benchmark_groups = bench_client_server_http
+);

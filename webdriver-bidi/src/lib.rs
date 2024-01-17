@@ -1,7 +1,5 @@
 #![feature(error_generic_member_access)]
 #![feature(lint_reasons)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::missing_panics_doc)]
 
 //! Client for the [WebDriver BiDi protocol](https://w3c.github.io/webdriver-bidi/).
 //!

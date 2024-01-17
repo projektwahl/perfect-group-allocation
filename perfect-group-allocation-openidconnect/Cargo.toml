@@ -14,12 +14,14 @@ readme.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-openidconnect = "3"
-oauth2 = "4"
-reqwest = "0.11"
-thiserror = "1"
-serde = { version = "1", features = ["derive"] }
-tokio = { version = "1", features = ["full"] }
+openidconnect = { default-features = false, version = "3" }
+oauth2 = { default-features = false, version = "4", features = [ "reqwest" ] }
+reqwest = { default-features = false, version = "0.11" }
+thiserror = { default-features = false, version = "1" }
+serde = { default-features = false, version = "1", features = ["derive"] }
+serde_json = { default-features = false, version = "1" }
+tokio = { default-features = false, version = "1", features = ["full"] }
+perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
 
 [lints]
 workspace = true

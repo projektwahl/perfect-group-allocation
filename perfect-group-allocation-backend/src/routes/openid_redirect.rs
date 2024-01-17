@@ -5,7 +5,8 @@ use headers::ContentType;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
-use http_body_util::{BodyExt as _, Empty, Limited, StreamBody};
+use http_body_util::{Empty, StreamBody};
+use perfect_group_allocation_config::Config;
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_openidconnect::{
     finish_authentication, OpenIdRedirect, OpenIdRedirectInner,
@@ -15,7 +16,7 @@ use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
-use crate::session::Session;
+use crate::session::{ResponseSessionExt as _, Session};
 use crate::{either_http_body, yieldfi, yieldfv, ResponseTypedHeaderExt};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
@@ -27,30 +28,27 @@ pub struct OpenIdRedirectErrorTemplate {
     error_description: String,
 }
 
-either_http_body!(EitherBody 1 2);
+either_http_body!(either EitherBody 1 2);
 
 pub async fn openid_redirect(
     request: hyper::Request<
-        impl http_body::Body<Data = impl Buf + Send, Error = hyper::Error> + Send + 'static,
+        impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
-    mut session: Session, // what if this here could be a reference?
-) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible>>, AppError> {
-    let session_ref = &mut session;
+    session: Session,
+    config: Config,
+) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
+{
+    let body = request.uri().query().unwrap();
 
-    let body: Bytes = Limited::new(request.into_body(), 100)
-        .collect()
-        .await
-        .unwrap()
-        .to_bytes();
-
-    let form: OpenIdRedirect<OpenIdRedirectInner> = serde_urlencoded::from_bytes(&body).unwrap();
+    // TODO FIXME unwrap
+    let form: OpenIdRedirect<OpenIdRedirectInner> = serde_urlencoded::from_str(body).unwrap();
 
     // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
     // TODO FIXME errors also need to return the session?
 
-    let expected_csrf_token = session_ref.session().0;
+    let expected_csrf_token = session.csrf_token();
 
-    let openid_session = session_ref.get_and_remove_openidconnect()?;
+    let (openid_session, session) = session.get_and_remove_temporary_openidconnect_state()?;
 
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
@@ -83,6 +81,7 @@ pub async fn openid_redirect(
             };
             let stream = AsyncIteratorStream(result);
             Ok(Response::builder()
+                .with_session(session)
                 .status(StatusCode::OK)
                 .typed_header(ContentType::html())
                 .body(EitherBody::Option1(StreamBody::new(stream)))
@@ -90,6 +89,7 @@ pub async fn openid_redirect(
         }
         OpenIdRedirectInner::Success(ok) => {
             let result = finish_authentication(
+                config,
                 openid_session,
                 OpenIdRedirect {
                     state: form.state,
@@ -98,10 +98,11 @@ pub async fn openid_redirect(
             )
             .await?;
 
-            session_ref.set_openid_session(Some(result));
+            let session = session.with_openidconnect_session(result);
 
             Ok(Response::builder()
-                .status(StatusCode::TEMPORARY_REDIRECT)
+                .with_session(session)
+                .status(StatusCode::SEE_OTHER)
                 .header(LOCATION, "/list")
                 .body(EitherBody::Option2(Empty::new()))
                 .unwrap())

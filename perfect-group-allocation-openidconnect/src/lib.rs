@@ -11,13 +11,15 @@ use oauth2::{
 };
 use openidconnect::core::{
     CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreClient, CoreGenderClaim,
-    CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
-    CoreJwsSigningAlgorithm, CoreProviderMetadata,
+    CoreIdToken, CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse,
+    CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm, CoreProviderMetadata,
 };
 pub use openidconnect::EndUserEmail;
 use openidconnect::{
-    AccessTokenHash, EmptyAdditionalClaims, IdTokenFields, IssuerUrl, Nonce, TokenResponse,
+    AccessTokenHash, EmptyAdditionalClaims, IdTokenClaims, IdTokenFields, IssuerUrl, Nonce,
+    TokenResponse,
 };
+use perfect_group_allocation_config::Config;
 use serde::{Deserialize, Serialize};
 use tokio::sync::OnceCell;
 
@@ -87,12 +89,13 @@ pub struct OpenIdSession {
 static OPENID_CLIENT: OnceCell<OpenIdConnectClientType> = OnceCell::const_new();
 
 #[allow(unused)]
-// TODO FIXME initialize on request, to make it not fail on intermittend failures. cache response (forever?)
-pub async fn get_openid_client() -> Result<&'static OpenIdConnectClientType, OpenIdConnectError> {
+pub async fn get_openid_client(
+    config: Config,
+) -> Result<&'static OpenIdConnectClientType, OpenIdConnectError> {
     OPENID_CLIENT
         .get_or_try_init(|| async {
             let provider_metadata = CoreProviderMetadata::discover_async(
-                IssuerUrl::new("http://localhost:8080/realms/pga".to_owned())?,
+                IssuerUrl::new(config.openidconnect.issuer_url)?,
                 async_http_client,
             )
             .await?;
@@ -101,26 +104,27 @@ pub async fn get_openid_client() -> Result<&'static OpenIdConnectClientType, Ope
             // and token URL.
             let client = CoreClient::from_provider_metadata(
                 provider_metadata,
-                ClientId::new("pga".to_owned()),
-                Some(ClientSecret::new(
-                    "cGRSAwBaSfTENHt7npPrsAfcqqWM1uqU".to_owned(),
-                )),
+                ClientId::new(config.openidconnect.client_id),
+                Some(ClientSecret::new(config.openidconnect.client_secret)),
             )
             // Set the URL the user will be redirected to after the authorization process.
-            .set_redirect_uri(RedirectUrl::new(
-                "http://localhost:3000/openidconnect-redirect".to_owned(),
-            )?);
+            .set_redirect_uri(RedirectUrl::new(format!(
+                "{}/openidconnect-redirect",
+                config.url
+            ))?);
             Ok(client)
         })
         .await
 }
 
-pub async fn begin_authentication() -> Result<(String, OpenIdSession), OpenIdConnectError> {
+pub async fn begin_authentication(
+    config: Config,
+) -> Result<(String, OpenIdSession), OpenIdConnectError> {
     // Generate a PKCE challenge.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
     // Generate the full authorization URL.
-    let (auth_url, csrf_token, nonce) = get_openid_client()
+    let (auth_url, csrf_token, nonce) = get_openid_client(config)
         .await?
         .authorize_url(
             CoreAuthenticationFlow::AuthorizationCode,
@@ -142,6 +146,7 @@ pub async fn begin_authentication() -> Result<(String, OpenIdSession), OpenIdCon
 }
 
 pub async fn finish_authentication(
+    config: Config,
     session: OpenIdSession,
     input: OpenIdRedirect<OpenIdRedirectSuccess>,
 ) -> Result<String, OpenIdConnectError> {
@@ -149,7 +154,7 @@ pub async fn finish_authentication(
         return Err(OpenIdConnectError::WrongCsrfToken);
     };
 
-    let client = get_openid_client().await?;
+    let client = get_openid_client(config).await?;
 
     // TODO FIXME isn't it possible to directly get the id token?
     // maybe the other way the client also gets the data / the browser history (but I would think its encrypted)
@@ -184,6 +189,8 @@ pub async fn finish_authentication(
         }
     }
 
+    println!("{claims:?}");
+
     let Some(_email) = claims.email() else {
         return Err(OpenIdConnectError::MissingEmailAddress);
     };
@@ -191,5 +198,16 @@ pub async fn finish_authentication(
     // TODO FIXME our application should work without refresh token but use it for efficiency?
     // token_response.refresh_token()
 
-    Ok("authentication done".to_owned())
+    Ok(serde_json::to_string(id_token).unwrap())
+}
+
+pub async fn id_token_claims(
+    config: Config,
+    id_token: String,
+) -> Result<IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>, OpenIdConnectError> {
+    let client = get_openid_client(config).await?;
+
+    let id_token: CoreIdToken = serde_json::from_str(&id_token).unwrap();
+    let claims = id_token.claims(&client.id_token_verifier(), |_v: Option<&Nonce>| Ok(()))?;
+    Ok(claims.clone())
 }

@@ -7,21 +7,138 @@
 3. Low Latency
 4. Low Resource usage on the server
 
+## Development Notes
+
+`http_body::Body` should always have a `+ 'static` annotation to avoid errors occuring at the wrong place.
+
+## CI
+
+Using Forgejo Actions
+```
+systemctl --user enable --now podman
+
+# you need to enable actions on the repository and then add it to the repository itself
+podman run --userns=keep-id --env DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock" -v $XDG_RUNTIME_DIR/podman/podman.sock:$XDG_RUNTIME_DIR/podman/podman.sock --name forgejo --rm code.forgejo.org/forgejo/runner:3.3.0 bash -c "forgejo-runner register --no-interactive --token XXX --name runner --instance https://codeberg.org && forgejo-runner daemon"
+
+podman exec forgejo forgejo-runner cache-server
+
+# broken
+podman run --userns=keep-id --env DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock" -v $XDG_RUNTIME_DIR/podman/podman.sock:$XDG_RUNTIME_DIR/podman/podman.sock -v .:/data --rm code.forgejo.org/forgejo/runner:3.3.0 forgejo-runner exec
+
+```
+
+## Updating dependencies
+
+```
+cargo install cargo-edit
+cargo upgrade --verbose --incompatible allow --pinned allow
+```
+
+## Keycloak
+
+https://www.keycloak.org/docs/latest/server_admin/index.html#admin-cli
+
+podman exec -it perfect-group-allocation_keycloak_1 bash
+cd /tmp
+export PATH=$PATH:/opt/keycloak/bin
+#kc.sh export --dir test
+kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin
+#kcadm.sh delete realms/pga
+kcadm.sh create realms -s realm=pga -s enabled=true
+kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
+kcadm.sh set-password -r pga --username test --new-password test
+CID=$(kcadm.sh create clients -r pga -s clientId=pga -s 'redirectUris=["https://h3.selfmade4u.de/*"]' -i)
+CID=$(kcadm.sh get clients -r pga --fields id -q clientId=pga --format csv --noquotes)
+CLIENT_SECRET=$(kcadm.sh get clients/$CID/client-secret -r pga --fields value --format csv --noquotes)
+echo $CLIENT_SECRET
+
+http://localhost:8080/admin/master/console/
+admin
+admin
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#configuring-realms
+
+Create Realm "pga"
+Import file from deployment/pga.json
+
+http://localhost:8080/admin/master/console/#/pga/realm-settings/localization
+
+Internationalization -> Deutsch
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#assembly-managing-users_server_administration_guide
+
+Create test user, add password
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#con-user-impersonation_server_administration_guide
+
+Impersonate user for testing
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#_identity_broker
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#_client_suggested_idp
+
+https://www.keycloak.org/docs/23.0.4/securing_apps/#_java_adapter_logout
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#sso-protocols
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#_oidc-logout
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#assembly-managing-clients_server_administration_guide
+
+Create an OpenID client
+
+Clients -> Create Client -> ...
+
+Client Authentication On
+
+Only enable Standard Flow
+
+Valid redirect urls:
+https://h3.selfmade4u.de
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#configuring-auditing-to-track-events
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#auditing-admin-events
+
+CRITIAL SECURITY NOTES:
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#host
+
+https://www.keycloak.org/docs/23.0.4/server_admin/#admin-cli
+
+http://localhost:8080/realms/pga/account/
+
+/realms/{realm-name}/.well-known/openid-configuration
+
+Add GitHub as identity provider for demo
+
+Identity Providers -> Manage display order
+
+
 ## Testing
 
 ```bash
-podman run --rm --name postgres-testing --env POSTGRES_PASSWORD=password --publish 5431:5432 docker.io/postgres
 cargo test
 ```
 
 ## Dev
 
 ```bash
+cargo +stable install cargo-hack --locked
+
 mkcert -install
+cp $(mkcert -CAROOT)/rootCA.pem .
 mkcert h3.selfmade4u.de
+
+cargo install diesel_cli --no-default-features --features postgres
+export DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
+cd perfect-group-allocation-database/
+diesel database reset
 
 # for chrome and h3 you need to listen on a port < 1024 AND you need a certificate with a public root
 HETZNER_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx lego --email Moritz.Hedtke@t-online.de --dns hetzner --domains h3.selfmade4u.de run
+export PGA_DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
+#sudo sysctl net.ipv4.ip_unprivileged_port_start=0
 cargo build --bin server && sudo setcap 'cap_net_bind_service=+ep' target/debug/server && ./target/debug/server
 SSLKEYLOGFILE=/tmp/sslkeylogfile.txt firefox
 
@@ -63,8 +180,6 @@ Callgrind
 # DO NOT USE TRUST AUTHENTICATION IN PRODUCTION! For profiling we don't want to measure sha2 hashing overhead
 podman run --rm --detach --name postgres-profiling --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
 
-export DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
-diesel database reset
 
 https://nnethercote.github.io/perf-book/profiling.html
 
@@ -80,13 +195,3 @@ use zed attack proxy to create some requests
 
 export DEBUGINFOD_URLS="https://debuginfod.archlinux.org"
 kcachegrind callgrind.out.110536
-```
-https://www.keycloak.org/getting-started/getting-started-podman
-podman run -p 8080:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:22.0.5 start-dev
-podman start b217886c51eb
-
-http://localhost:8080/realms/pga/account/
-
-Add GitHub as identity provider for demo
-
-Identity Providers -> Manage display order

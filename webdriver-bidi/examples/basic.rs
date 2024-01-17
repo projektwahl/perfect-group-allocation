@@ -1,6 +1,4 @@
 #![feature(lint_reasons)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::missing_panics_doc)]
 
 use tracing::{info, trace, Level};
 use tracing_subscriber::FmtSubscriber;

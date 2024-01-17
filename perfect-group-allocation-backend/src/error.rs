@@ -3,8 +3,10 @@ use std::convert::Infallible;
 use std::fmt::{Debug, Display};
 
 use bytes::Bytes;
+use headers::ContentType;
 use http::{Response, StatusCode};
 use http_body_util::StreamBody;
+use perfect_group_allocation_config::ConfigError;
 use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::DatabaseError;
 use perfect_group_allocation_openidconnect::error::OpenIdConnectError;
@@ -12,8 +14,8 @@ use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::Unsafe;
 
 use crate::routes::error;
-use crate::session::Session;
-use crate::{yieldfi, yieldfv};
+use crate::session::{ResponseSessionExt, Session};
+use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
 #[derive(thiserror::Error)]
 pub enum AppError {
@@ -27,8 +29,6 @@ pub enum AppError {
     Hyper(#[from] hyper::Error, Backtrace),
     #[error("webserver h3 error: {0}\n{1}")]
     H3(#[from] h3::Error, Backtrace),
-    #[error("unknown error: {0}\n{1}")]
-    Other(#[from] anyhow::Error, Backtrace),
     #[error("env var error: {0}\n{1}")]
     EnvVar(#[from] std::env::VarError, Backtrace),
     #[error("rustls error: {0}\n{1}")]
@@ -39,6 +39,8 @@ pub enum AppError {
     Join(#[from] tokio::task::JoinError, Backtrace),
     #[error("quic start error: {0}\n{1}")]
     S2nStart(#[from] s2n_quic::provider::StartError, Backtrace),
+    #[error("configuration error: {0}")]
+    Configuration(#[from] ConfigError),
     // #[cfg(feature = "perfect-group-allocation-telemetry")]
     //#[error("trace error: {0}")]
     //Trace(#[from] TraceError),
@@ -83,11 +85,18 @@ impl From<diesel_async::pooled_connection::deadpool::PoolError> for AppError {
     }
 }
 
+impl From<diesel::result::Error> for AppError {
+    fn from(value: diesel::result::Error) -> Self {
+        Self::from(DatabaseError::from(value))
+    }
+}
+
 impl AppError {
     pub fn build_error_template(
         self,
-        session: Session,
-    ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send> {
+        session: Session<Option<String>, ()>,
+    ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send + 'static> {
+        let csrf_token = session.csrf_token();
         let result = async gen move {
             let template = yieldfi!(error());
             let template = yieldfi!(template.next());
@@ -100,7 +109,7 @@ impl AppError {
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next_email_false());
-            let template = yieldfv!(template.csrf_token(session.session().0));
+            let template = yieldfv!(template.csrf_token(csrf_token));
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
@@ -113,6 +122,8 @@ impl AppError {
         let stream = AsyncIteratorStream(result);
         Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .typed_header(ContentType::html())
+            .with_session(session)
             .body(StreamBody::new(stream))
             .unwrap()
     }

@@ -15,14 +15,14 @@ use crate::{either_http_body, ResponseTypedHeaderExt as _};
 // or for dev simply enforce unbundled development where chrome directly modifies the files
 // so maybe simply don't implement watcher at all
 
-either_http_body!(EitherBody 1 2);
+either_http_body!(either EitherBody 1 2);
 
 #[expect(clippy::needless_pass_by_value)]
 pub fn indexcss(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf, Error = impl Into<AppError>> + Send + 'static,
     >,
-) -> hyper::Response<impl Body<Data = Bytes, Error = Infallible>> {
+) -> hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static> {
     let if_none_match: Option<IfNoneMatch> = request.headers().typed_get();
     let etag_string = "\"xyzzy\"";
     let etag = etag_string.parse::<ETag>().unwrap();

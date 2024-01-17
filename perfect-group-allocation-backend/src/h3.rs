@@ -1,6 +1,4 @@
-use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
-use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
 use futures_util::Future;
@@ -9,14 +7,11 @@ use http::Response;
 use http_body::{Body, Frame};
 use http_body_util::BodyExt as _;
 use hyper::service::Service as _;
-use tokio_rustls::rustls::version::TLS13;
-use tokio_rustls::rustls::{Certificate, PrivateKey};
-use tracing::{error, info, trace_span};
+use perfect_group_allocation_config::Config;
+use tracing::{error, info};
 
 use crate::error::AppError;
 use crate::{setup_server, Svc, CERT_PATH, KEY_PATH, PORT};
-
-static ALPN: &[u8] = b"h3";
 
 pub struct H3Body<S: h3::quic::RecvStream + 'static>(h3::server::RequestStream<S, Bytes>);
 
@@ -111,15 +106,14 @@ service: Svc::<<H3Body<MyRecvStream> as Body>::Data>, // the service needs to us
 
 type TestS2n = <H3Body<s2n_quic_h3::RecvStream> as Body>::Data;
 
-#[expect(clippy::needless_pass_by_value)]
 pub fn run_http3_server_s2n(
-    database_url: String,
+    config: Config,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let service = setup_server::<TestS2n>(&database_url)?;
+    let service = setup_server::<TestS2n>(config)?;
 
     let mut server = s2n_quic::Server::builder()
         .with_tls((Path::new(CERT_PATH), Path::new(KEY_PATH)))?
-        .with_io(format!("127.0.0.1:{PORT}").as_str())?
+        .with_io(format!("0.0.0.0:{PORT}").as_str())?
         .start()?;
 
     info!("listening on localhost:{PORT}");
@@ -142,6 +136,10 @@ pub fn run_http3_server_s2n(
         Ok(())
     })
 }
+
+/*
+// depends on old version of tokio-rustls
+static ALPN: &[u8] = b"h3";
 
 type TestQuinn = <H3Body<h3_quinn::RecvStream> as Body>::Data;
 
@@ -204,3 +202,4 @@ pub fn run_http3_server_quinn(
         Ok(())
     })
 }
+*/

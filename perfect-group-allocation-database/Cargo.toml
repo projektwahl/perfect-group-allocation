@@ -14,11 +14,11 @@ readme.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = "2"
-diesel-async = { version = "0.4", features = ["postgres", "deadpool"] }
-thiserror = "1"
-http = "1"
-async-trait = "0.1"
+diesel = { default-features = false, version = "2" }
+diesel-async = { default-features = false, version = "0.4", features = ["postgres", "deadpool"] }
+thiserror = { default-features = false, version = "1" }
+http = { default-features = false, version = "1", features = ["std"] }
+async-trait = { default-features = false, version = "0.1" }
 
 [lints]
 workspace = true
