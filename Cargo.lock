@@ -999,9 +999,9 @@ checksum = "27573eac26f4dd11e2b1916c3fe1baa56407c83c71a773a8ba17ec0bca03b6b7"
 
 [[package]]
 name = "figment"
-version = "0.10.13"
+version = "0.10.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7629b8c7bcd214a072c2c88b263b5bb3ceb54c34365d8c41c1665461aeae0993"
+checksum = "2b6e5bc7bd59d60d0d45a6ccab6cf0f4ce28698fb4e81e750ddf229c9b824026"
 dependencies = [
  "atomic",
  "pear",
@@ -4630,7 +4630,7 @@ checksum = "1367295b8f788d371ce2dbc842c7b709c73ee1364d30351dd300ec2203b12377"
 [[package]]
 name = "zero-cost-templating"
 version = "0.1.0"
-source = "git+https://github.com/mohe2015/zero-cost-templating.git?branch=work#c51f34bca1d7d7b1c0dc7a6489f6e7e4e3589bc1"
+source = "git+https://github.com/mohe2015/zero-cost-templating.git?branch=work#987f99be6eb45dd5b6ced55939d1f05811116a33"
 dependencies = [
  "futures",
  "futures-core",
@@ -4643,7 +4643,7 @@ dependencies = [
 [[package]]
 name = "zero-cost-templating-lib"
 version = "0.1.0"
-source = "git+https://github.com/mohe2015/zero-cost-templating.git?branch=work#c51f34bca1d7d7b1c0dc7a6489f6e7e4e3589bc1"
+source = "git+https://github.com/mohe2015/zero-cost-templating.git?branch=work#987f99be6eb45dd5b6ced55939d1f05811116a33"
 dependencies = [
  "futures",
  "heck",
@@ -4657,7 +4657,7 @@ dependencies = [
 [[package]]
 name = "zero-cost-templating-macros"
 version = "0.1.0"
-source = "git+https://github.com/mohe2015/zero-cost-templating.git?branch=work#c51f34bca1d7d7b1c0dc7a6489f6e7e4e3589bc1"
+source = "git+https://github.com/mohe2015/zero-cost-templating.git?branch=work#987f99be6eb45dd5b6ced55939d1f05811116a33"
 dependencies = [
  "itertools 0.12.0",
  "petgraph",

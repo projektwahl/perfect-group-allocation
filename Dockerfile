@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
 
+# https://docs.docker.com/language/rust/develop/
+
 # Comments are provided throughout this file to help you get started.
 # If you need more help, visit the Dockerfile reference guide at
 # https://docs.docker.com/engine/reference/builder/
@@ -8,10 +10,12 @@
 # Create a stage for building the application.
 
 ARG RUST_VERSION=1.70.0
-ARG APP_NAME=react-rust-postgres
+ARG APP_NAME=server
 FROM docker.io/rustlang/rust:nightly-bookworm-slim AS build
 ARG APP_NAME
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y cmake coinor-libcbc-dev
 
 # Build the application.
 # Leverage a cache mount to /usr/local/cargo/registry/
