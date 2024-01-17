@@ -138,7 +138,7 @@ diesel database reset
 # for chrome and h3 you need to listen on a port < 1024 AND you need a certificate with a public root
 HETZNER_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx lego --email Moritz.Hedtke@t-online.de --dns hetzner --domains h3.selfmade4u.de run
 export PGA_DATABASE_URL="postgres://postgres@localhost/pga?sslmode=disable"
-#sudo sysctl net.ipv4.ip_unprivileged_port_start=0
+sudo sysctl net.ipv4.ip_unprivileged_port_start=0
 cargo build --bin server && sudo setcap 'cap_net_bind_service=+ep' target/debug/server && ./target/debug/server
 SSLKEYLOGFILE=/tmp/sslkeylogfile.txt firefox
 

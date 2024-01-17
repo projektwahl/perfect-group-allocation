@@ -8,7 +8,7 @@ use http_body::{Body, Frame};
 use http_body_util::BodyExt as _;
 use hyper::service::Service as _;
 use perfect_group_allocation_config::Config;
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 use crate::error::AppError;
 use crate::{setup_server, Svc, CERT_PATH, KEY_PATH, PORT};
@@ -48,7 +48,7 @@ service: Svc::<<H3Body<MyRecvStream> as Body>::Data>, // the service needs to us
     loop {
         match connection.accept().await {
             Ok(Some((req, stream))) => {
-                info!("new request: {:#?}", req);
+                trace!("new request: {:#?}", req);
 
                 let service = service.clone();
 
@@ -111,6 +111,8 @@ pub fn run_http3_server_s2n(
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let service = setup_server::<TestS2n>(config)?;
 
+    // if the error says "no error" it failed to load the certificates
+    // quic start error: Permission denied (os error 13) means it does not have sufficient permissions to listen on the specified port
     let mut server = s2n_quic::Server::builder()
         .with_tls((Path::new(CERT_PATH), Path::new(KEY_PATH)))?
         .with_io(format!("0.0.0.0:{PORT}").as_str())?

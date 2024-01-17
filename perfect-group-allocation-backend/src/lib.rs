@@ -566,22 +566,14 @@ pub fn load_private_key(filename: &Path) -> std::io::Result<PrivateKeyDer<'stati
 pub fn load_certs_key_pair()
 -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), AppError> {
     eprintln!("{:?}", std::env::current_dir());
-    let certs = load_certs(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join(CERT_PATH)
-            .as_path(),
-    )?;
-    let key = load_private_key(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join(KEY_PATH)
-            .as_path(),
-    )?;
+    let certs = load_certs(Path::new(CERT_PATH))?;
+    let key = load_private_key(Path::new(KEY_PATH))?;
 
     Ok((certs, key))
 }
 
-pub const CERT_PATH: &str = "../h3.selfmade4u.de.pem";
-pub const KEY_PATH: &str = "../h3.selfmade4u.de-key.pem";
+pub const CERT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../h3.selfmade4u.de.pem");
+pub const KEY_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../h3.selfmade4u.de-key.pem");
 pub const PORT: u16 = 443;
 pub const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 

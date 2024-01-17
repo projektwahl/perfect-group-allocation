@@ -38,8 +38,8 @@ impl Drop for OpenTelemetryGuard {
 
 #[must_use]
 pub fn setup_telemetry() -> OpenTelemetryGuard {
-    const DEFAULT_LOG_LEVEL: &str = "trace,tokio=debug,runtime=debug,hyper=info,reqwest=info,\
-                                     h2=info,tower=info,tonic=info,tower_http=trace";
+    const DEFAULT_LOG_LEVEL: &str = "h2=info,tokio=debug,runtime=debug,hyper=info,reqwest=info,\
+                                     tower=info,tonic=info,tower_http=trace,trace";
     let resource = Resource::from_detectors(
         Duration::from_secs(1),
         vec![
