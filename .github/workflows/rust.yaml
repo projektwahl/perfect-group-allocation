@@ -14,7 +14,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  rust:
+  fmt-build-deny-check:
+    #runs-on: docker
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/projektwahl/perfect-group-allocation
+    steps:
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/      
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+      - uses: actions/checkout@v4
+      - run: cargo fmt --check
+      - run: cargo hack build --workspace --feature-powerset --optional-deps --all-targets
+      - run: cargo deny check
+  clippy:
+    #runs-on: docker
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/projektwahl/perfect-group-allocation
+    steps:
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/      
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+      - uses: actions/checkout@v4
+      - run: cargo hack clippy --workspace --feature-powerset --optional-deps --all-targets -- -D warnings
+  test:
     #runs-on: docker
     runs-on: ubuntu-latest
     container:
@@ -31,11 +67,7 @@ jobs:
             target/      
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
       - uses: actions/checkout@v4
-      - run: cargo fmt --check
-      - run: cargo hack build --workspace --feature-powerset --optional-deps --all-targets
-      - run: cargo hack clippy --workspace --feature-powerset --optional-deps --all-targets -- -D warnings
       - run: mkcert -install
       - run: cp $(mkcert -CAROOT)/rootCA.pem .
       - run: mkcert h3.selfmade4u.de
       - run: RUST_BACKTRACE=1 cargo hack test --workspace --feature-powerset --optional-deps --all-targets
-      - run: cargo deny check
