@@ -23,11 +23,16 @@ use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 pub async fn main() -> Result<(), webdriver_bidi::Error> {
     let _guard = setup_telemetry();
 
+    // https://www.redhat.com/sysadmin/quadlet-podman
+    // printf "postgrespassword" | podman secret create postgres_password -
+
     // the integration code should be as close as possible to production so we should use podman compose
 
     // podman run --rm --detach --name postgres-profiling --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
     // podman wait --condition healthy perfect-group-allocation_postgres_1
     // podman inspect perfect-group-allocation_postgres_1
+
+    // I think we should not start it here like that but use podman to properly start it to minimize the differences. Some lower level testing may use this here?
 
     let fut = setup_http2_http3_server(Config {
         url: "https://h3.selfmade4u.de".to_owned(),

@@ -126,18 +126,25 @@ services:
       - opensearch-net
     profiles: ["telemetry"]
   postgres:
-    image: docker.io/postgres
+    # https://github.com/docker-library/docs/blob/master/postgres/README.md#locale-customization
+    image: docker.io/postgres:16.1
     healthcheck:
       test: ["CMD", "pg_isready"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 5s
-    # ADD A VOLUME IN PRODUCTION
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    labels:
+      - io.containers.autoupdate=registry
     environment:
-      - POSTGRES_HOST_AUTH_METHOD=trust # DO NOT USE IN PRODUCTION
+      - POSTGRES_INITDB_ARGS: "--data-checksums"
+      - POSTGRES_PASSWORD_FILE: /run/secrets/postgres-passwd
     ports:
       - 5432:5432
+    secrets:
+      - postgres_password
     networks:
       - opensearch-net
   keycloak:
@@ -150,32 +157,15 @@ services:
       - 8080:8080
     networks:
       - opensearch-net
-  # https://grafana.com/docs/agent/latest/flow/setup/install/docker/
-  #docker run \
-  #-e AGENT_MODE=flow \
-  #-v CONFIG_FILE_PATH:/etc/agent/config.river \
-  #-p 12345:12345 \
-  #grafana/agent:latest \
-  #  run --server.http.listen-addr=0.0.0.0:12345 /etc/agent/config.river
-  # https://grafana.com/docs/mimir/latest/configure/configure-otel-collector/
-  # so install mimir?
-  # https://grafana.com/docs/mimir/latest/get-started/
-  # also shows how to add mimir to grafana
-  # to my understanding mimir is just a data backend for grafana so we can also use prometheus as data backend
-  #grafana-mimir:
-  #  image: grafana/mimir:latest
-  #  container_name: mimir
-  #  command: --config.file=/etc/mimir/demo.yaml
-  #  ports:
-  #    - 9009:9009
-  #  volumes:
-  #    - ./grafana-mimir.yaml:/etc/mimir/demo.yaml
-  #  networks:
-  #    - opensearch-net
 
 volumes:
+  postgres:
   opensearch-data1:
   opensearch-data2:
 
 networks:
   opensearch-net:
+
+secrets:
+  postgres_password:
+    external: true
