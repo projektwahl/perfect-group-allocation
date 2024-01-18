@@ -1,4 +1,3 @@
-#![feature(error_generic_member_access)]
 use core::fmt::{Debug, Display};
 use std::backtrace::Backtrace;
 

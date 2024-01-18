@@ -1,5 +1,3 @@
-#![feature(proc_macro_quote)]
-
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::Path;
 

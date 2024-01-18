@@ -1,14 +1,3 @@
-#![feature(gen_blocks)]
-#![feature(lint_reasons)]
-#![feature(let_chains)]
-#![feature(hash_raw_entry)]
-#![feature(impl_trait_in_assoc_type)]
-#![feature(type_alias_impl_trait)]
-#![feature(error_generic_member_access)]
-#![feature(const_hash)]
-#![feature(try_blocks)]
-#![feature(lazy_cell)]
-
 extern crate alloc;
 
 // determinism?

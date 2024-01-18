@@ -1,6 +1,3 @@
-#![feature(error_generic_member_access)]
-#![feature(lint_reasons)]
-
 //! Client for the [WebDriver BiDi protocol](https://w3c.github.io/webdriver-bidi/).
 //!
 //! <div class="warning">This crate is in a very early stage of development! Expect frequent breaking changes.</div>
