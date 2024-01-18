@@ -53,8 +53,11 @@ perfect-group-allocation-telemetry = { default-features = false, path = "../perf
 pin-project = { default-features = false, version = "1" }
 rand = { default-features = false, version = "0.8" }
 rustls-pemfile = { default-features = false, version = "2", features = ["std"] }
-s2n-quic = { default-features = false, git = "https://github.com/aws/s2n-quic.git" }
-s2n-quic-h3 = { default-features = false, git = "https://github.com/aws/s2n-quic.git" }
+s2n-quic = { default-features = false, git = "https://github.com/mohe2015/s2n-quic.git", branch = "patch-1", features = [
+    "provider-address-token-default",
+    "provider-tls-rustls",
+] }
+s2n-quic-h3 = { default-features = false, git = "https://github.com/mohe2015/s2n-quic.git", branch = "patch-1" }
 serde = { default-features = false, version = "1", features = ["derive"] }
 serde_json = { default-features = false, version = "1" }
 serde_urlencoded = { default-features = false, version = "0.7" }
