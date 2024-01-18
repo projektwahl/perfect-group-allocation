@@ -1,13 +1,10 @@
-use std::backtrace::Backtrace;
-
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-#[error("{inner}\n{backtrace}")]
+#[error("{inner}")]
 pub struct Error {
     #[from]
     inner: ErrorInner,
-    backtrace: Backtrace,
 }
 
 #[derive(Error, Debug)]

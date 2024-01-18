@@ -145,7 +145,7 @@ static ALPN: &[u8] = b"h3";
 
 type TestQuinn = <H3Body<h3_quinn::RecvStream> as Body>::Data;
 
-#[expect(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 pub fn run_http3_server_quinn(
     database_url: String,
     certs: Vec<Certificate>,

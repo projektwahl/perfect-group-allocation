@@ -26,7 +26,7 @@ pub static INDEX_CSS_VERSION: LazyLock<u64> = LazyLock::new(|| {
     hasher.finish()
 });
 
-#[expect(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 pub fn indexcss(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf, Error = impl Into<AppError>> + Send + 'static,
