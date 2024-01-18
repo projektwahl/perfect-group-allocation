@@ -21,7 +21,7 @@ tracing-subscriber = { default-features = false, version = "0.3", features = ["e
 #console-subscriber = { default-features = false, version = "0.2" }
 opentelemetry = { default-features = false, version = "0.21", features = ["trace", "metrics", "logs"] }
 opentelemetry_sdk  = { default-features = false, version = "0.21", features = ["trace", "metrics", "logs", "rt-tokio" ] }
-opentelemetry-otlp = { default-features = false, version = "0.14", features = ["trace", "metrics", "logs", "grpc-tonic", "http-proto", "reqwest-client" ] }
+opentelemetry-otlp = { default-features = false, version = "0.14", features = ["trace", "metrics", "logs", "http-proto" ] }
 opentelemetry-semantic-conventions = { default-features = false, version = "0.13" }
 opentelemetry-appender-log = { default-features = false, version = "0.2" }
 opentelemetry-appender-tracing = { default-features = false, version = "0.2" }

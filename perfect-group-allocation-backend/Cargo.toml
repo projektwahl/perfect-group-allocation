@@ -38,7 +38,6 @@ serde = { default-features = false, version = "1", features = ["derive"] }
 rand = { default-features = false, version = "0.8" }
 thiserror = { default-features = false, version = "1" }
 once_cell = { default-features = false, version = "1" }
-chrono = { default-features = false, version = "0.4" }
 http = { default-features = false, version = "1" }
 headers = { default-features = false, version = "0.4" }
 mime = { default-features = false, version = "0.3" }

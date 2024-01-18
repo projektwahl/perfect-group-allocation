@@ -18,7 +18,6 @@ proc-macro = true
 
 [dependencies]
 lightningcss = { default-features = false, version = "1.0.0-alpha.52", features = ["bundler", "grid"] }
-parcel_sourcemap = { default-features = false, version = "2" }
 
 [lints]
 workspace = true
