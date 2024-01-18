@@ -45,10 +45,8 @@ log = { default-features = false, version = "0.4", features = [
     "release_max_level_off",
 ] }
 mime = { default-features = false, version = "0.3" }
-once_cell = { default-features = false, version = "1" }
 paste = { default-features = false, version = "1" }
 perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
-perfect-group-allocation-css = { default-features = false, path = "../perfect-group-allocation-css" }
 perfect-group-allocation-database = { default-features = false, path = "../perfect-group-allocation-database" }
 perfect-group-allocation-openidconnect = { default-features = false, path = "../perfect-group-allocation-openidconnect" }
 perfect-group-allocation-telemetry = { default-features = false, path = "../perfect-group-allocation-telemetry" }

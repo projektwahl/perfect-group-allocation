@@ -7,7 +7,6 @@ use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::{Empty, StreamBody};
 use perfect_group_allocation_config::Config;
-use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_openidconnect::{
     finish_authentication, OpenIdRedirect, OpenIdRedirectInner,
 };
@@ -16,6 +15,7 @@ use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
+use crate::routes::indexcss::INDEX_CSS_VERSION;
 use crate::session::{ResponseSessionExt as _, Session};
 use crate::{either_http_body, yieldfi, yieldfv, ResponseTypedHeaderExt};
 
@@ -62,10 +62,10 @@ pub async fn openid_redirect(
                 let template = yieldfi!(template.next());
                 let template = yieldfv!(template.page_title("Create Project"));
                 let template = yieldfi!(template.next());
-                let template = yieldfv!(
-                    template
-                        .indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
-                );
+                let template =
+                    yieldfv!(template.indexcss_version_unsafe(Unsafe::unsafe_input(
+                        INDEX_CSS_VERSION.to_string()
+                    )));
                 let template = yieldfi!(template.next());
                 let template = yieldfi!(template.next());
                 let template = yieldfi!(template.next_email_false());

@@ -7,13 +7,13 @@ use headers::ContentType;
 use http::{Response, StatusCode};
 use http_body_util::StreamBody;
 use perfect_group_allocation_config::ConfigError;
-use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_database::DatabaseError;
 use perfect_group_allocation_openidconnect::error::OpenIdConnectError;
 use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
 use zero_cost_templating::Unsafe;
 
 use crate::routes::error;
+use crate::routes::indexcss::INDEX_CSS_VERSION;
 use crate::session::{ResponseSessionExt, Session};
 use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
@@ -104,7 +104,8 @@ impl AppError {
             let template = yieldfv!(template.page_title("Internal Server Error"));
             let template = yieldfi!(template.next());
             let template = yieldfv!(
-                template.indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
+                template
+                    .indexcss_version_unsafe(Unsafe::unsafe_input(INDEX_CSS_VERSION.to_string()))
             );
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());

@@ -1,4 +1,6 @@
 use std::convert::Infallible;
+use std::hash::{DefaultHasher, Hash, Hasher};
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use bytes::{Buf, Bytes};
@@ -6,7 +8,6 @@ use headers::{CacheControl, ContentType, ETag, HeaderMapExt, IfNoneMatch};
 use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::{Empty, Full};
-use perfect_group_allocation_css::index_css;
 
 use crate::error::AppError;
 use crate::{either_http_body, ResponseTypedHeaderExt as _};
@@ -16,6 +17,14 @@ use crate::{either_http_body, ResponseTypedHeaderExt as _};
 // so maybe simply don't implement watcher at all
 
 either_http_body!(either EitherBody 1 2);
+
+pub static INDEX_CSS: &[u8] = include_bytes!("../../../frontend/bundle.css");
+
+pub static INDEX_CSS_VERSION: LazyLock<u64> = LazyLock::new(|| {
+    let mut hasher = DefaultHasher::new();
+    INDEX_CSS.hash(&mut hasher);
+    hasher.finish()
+});
 
 #[expect(clippy::needless_pass_by_value)]
 pub fn indexcss(
@@ -38,7 +47,7 @@ pub fn indexcss(
                     .with_max_age(Duration::from_secs(31_536_000)),
             )
             .body(EitherBody::Option1(Full::new(Bytes::from_static(
-                index_css!().0,
+                INDEX_CSS,
             ))))
             .unwrap()
     } else {
