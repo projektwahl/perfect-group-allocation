@@ -19,33 +19,33 @@ use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
 #[derive(thiserror::Error)]
 pub enum AppError {
-    #[error("header error: {0}\n{1}")]
-    Header(#[from] headers::Error, Backtrace),
-    #[error("IO error: {0}\n{1}")]
-    File(#[from] std::io::Error, Backtrace),
-    #[error("json error: {0}\n{1}")]
-    Json(#[from] serde_json::Error, Backtrace),
+    #[error("header error: {0}")]
+    Header(#[from] headers::Error),
+    #[error("IO error: {0}")]
+    File(#[from] std::io::Error),
+    #[error("json error: {0}")]
+    Json(#[from] serde_json::Error),
     #[error("webserver error: {0}\n{1}")]
-    Hyper(#[from] hyper::Error, Backtrace),
-    #[error("webserver h3 error: {0}\n{1}")]
-    H3(#[from] h3::Error, Backtrace),
-    #[error("env var error: {0}\n{1}")]
-    EnvVar(#[from] std::env::VarError, Backtrace),
-    #[error("rustls error: {0}\n{1}")]
-    Rustls(#[from] tokio_rustls::rustls::Error, Backtrace),
-    #[error("poison error: {0}\n{1}")]
-    Poison(#[from] std::sync::PoisonError<()>, Backtrace),
-    #[error("join error: {0}\n{1}")]
-    Join(#[from] tokio::task::JoinError, Backtrace),
-    #[error("quic start error: {0}\n{1}")]
-    S2nStart(#[from] s2n_quic::provider::StartError, Backtrace),
+    Hyper(#[from] hyper::Error),
+    #[error("webserver h3 error: {0}")]
+    H3(#[from] h3::Error),
+    #[error("env var error: {0}")]
+    EnvVar(#[from] std::env::VarError),
+    #[error("rustls error: {0}")]
+    Rustls(#[from] tokio_rustls::rustls::Error),
+    #[error("poison error: {0}")]
+    Poison(#[from] std::sync::PoisonError<()>),
+    #[error("join error: {0}")]
+    Join(#[from] tokio::task::JoinError),
+    #[error("quic start error: {0}")]
+    S2nStart(#[from] s2n_quic::provider::StartError),
     #[error("configuration error: {0}")]
     Configuration(#[from] ConfigError),
     // #[cfg(feature = "perfect-group-allocation-telemetry")]
     //#[error("trace error: {0}")]
     //Trace(#[from] TraceError),
-    #[error("database error: {0}\n{1}")]
-    Database(#[from] DatabaseError, Backtrace),
+    #[error("database error: {0}")]
+    Database(#[from] DatabaseError),
     #[error("wrong csrf token")]
     WrongCsrfToken,
     #[error("no accept remaining")]
@@ -55,8 +55,8 @@ pub enum AppError {
          response?"
     )]
     SessionStillHeld,
-    #[error("openid connect error: {0}\n{1}")]
-    OpenIdConnect(#[from] OpenIdConnectError, Backtrace),
+    #[error("openid connect error: {0}")]
+    OpenIdConnect(#[from] OpenIdConnectError),
     #[error(
         "Höchstwahrscheinlich ist deine Anmeldesession abgelaufen und du musst es erneut \
          versuchen. Wenn dies wieder auftritt, melde das Problem bitte an einen \

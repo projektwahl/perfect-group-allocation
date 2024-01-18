@@ -1,8 +1,5 @@
 use core::fmt::{Debug, Display};
-use std::backtrace::Backtrace;
 
-use figment::providers::{Env, Format, Toml};
-use figment::Figment;
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
@@ -21,8 +18,8 @@ pub struct Config {
 
 #[derive(thiserror::Error)]
 pub enum ConfigError {
-    #[error("config error: {0}\n{1}")]
-    Header(#[from] figment::Error, Backtrace),
+    #[error("config error: {0}")]
+    Header(#[from] figment::Error),
 }
 
 impl Debug for ConfigError {
