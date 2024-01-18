@@ -14,11 +14,9 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-trait = { default-features = false, version = "0.1" }
-diesel = { default-features = false, version = "2" }
-diesel-async = { default-features = false, version = "0.4", features = [
-    "deadpool",
+sqlx = { default-features = false, version = "0.7", features = [
     "postgres",
+    "runtime-tokio",
 ] }
 thiserror = { default-features = false, version = "1" }
 

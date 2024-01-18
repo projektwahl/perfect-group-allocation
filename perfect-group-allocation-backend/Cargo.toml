@@ -22,11 +22,6 @@ profiling = []
 [dependencies]
 bytes = { default-features = false, version = "1" }
 cookie = { default-features = false, version = "0.18" }
-diesel = { default-features = false, version = "2" }
-diesel-async = { default-features = false, version = "0.4", features = [
-    "deadpool",
-    "postgres",
-] }
 futures-util = { default-features = false, version = "0.3" }
 h3 = { default-features = false, git = "https://github.com/hyperium/h3.git", branch = "master" }
 headers = { default-features = false, version = "0.4" }
