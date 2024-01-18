@@ -259,10 +259,10 @@ unknown-git = "warn"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # List of URLs for allowed Git repositories
 allow-git = [
+    "https://github.com/aws/s2n-quic#2d060fe5336fe25e415a3f436465b5bd664b05a9",
+    "https://github.com/hyperium/h3#e7c7ab9d634ef73784d6cbc424a270dbaa4f1c99",
     "https://github.com/mohe2015/syn?branch=gen#2a7a721f80d81d786da72703eb16dea4c78e686d",
     "https://github.com/mohe2015/zero-cost-templating?branch=work#6fcc0591b1db2f5e3d0da72a1d2c70c0d41b93ce",
-    "https://github.com/hyperium/h3#e7c7ab9d634ef73784d6cbc424a270dbaa4f1c99",
-    "https://github.com/aws/s2n-quic#2d060fe5336fe25e415a3f436465b5bd664b05a9",
 ]
 
 [sources.allow-org]
