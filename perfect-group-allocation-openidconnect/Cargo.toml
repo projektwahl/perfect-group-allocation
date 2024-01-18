@@ -21,10 +21,15 @@ serde = { default-features = false, version = "1", features = ["derive"] }
 serde_json = { default-features = false, version = "1" }
 tokio = { default-features = false, version = "1", features = ["full"] }
 perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
-tokio-rustls = { default-features = false, version = "0.25", features = ["default"] }
+tokio-rustls = { default-features = false, version = "0.25", features = [
+    "default",
+] }
 webpki-roots = { default-features = false, version = "0.26.0" }
-hyper-util = { default-features = false, version = "0.1", features = ["tokio", "server-auto"] }
-hyper = { default-features = false, version = "1", features = ["full"] }
+hyper-util = { default-features = false, version = "0.1", features = ["tokio"] }
+hyper = { default-features = false, version = "1", features = [
+    "client",
+    "http1",
+] }
 http-body-util = { default-features = false, version = "0.1" }
 
 [lints]

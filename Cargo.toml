@@ -10,8 +10,9 @@ members = [
     "perfect-group-allocation-telemetry",
     "perfect-group-allocation-openidconnect",
     "perfect-group-allocation-css",
-    "perfect-group-allocation-optimizer"
-, "perfect-group-allocation-config"]
+    "perfect-group-allocation-optimizer",
+    "perfect-group-allocation-config",
+]
 
 [workspace.package]
 edition = "2024"

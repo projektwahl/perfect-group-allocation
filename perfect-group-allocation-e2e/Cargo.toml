@@ -17,20 +17,26 @@ readme.workspace = true
 workspace = true
 
 [dependencies]
-iai-callgrind = { default-features = false, version = "0.10", features = ["default"] }
+iai-callgrind = { default-features = false, version = "0.10", features = [
+    "default",
+] }
 perfect-group-allocation-backend = { default-features = false, path = "../perfect-group-allocation-backend" }
 webdriver-bidi = { default-features = false, path = "../webdriver-bidi" }
-hyper = { default-features = false, version = "1", features = ["full"] }
+hyper = { default-features = false, version = "1" }
 tokio = { default-features = false, version = "1", features = ["full"] }
 http-body-util = { default-features = false, version = "0.1" }
-hyper-util = { default-features = false, version = "0.1", features = ["full"] }
+hyper-util = { default-features = false, version = "0.1" }
 bytes = { default-features = false, version = "1" }
 libc = { default-features = false, version = "0.2" }
 rand = { default-features = false, version = "0.8" }
 tracing = { default-features = false, version = "0.1" }
-tracing-subscriber = { default-features = false, version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { default-features = false, version = "0.3", features = [
+    "env-filter",
+] }
 perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
-tokio-rustls = { default-features = false, version = "0.25", features = ["default"] }
+tokio-rustls = { default-features = false, version = "0.25", features = [
+    "default",
+] }
 perfect-group-allocation-telemetry = { default-features = false, path = "../perfect-group-allocation-telemetry" }
 
 [[bench]]

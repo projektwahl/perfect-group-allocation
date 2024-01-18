@@ -5,9 +5,8 @@
 
 use std::time::Duration;
 
-use opentelemetry::global::{self, logger_provider};
+use opentelemetry::global::{self};
 use opentelemetry::KeyValue;
-use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::metrics::MeterProvider as SdkMeterProvider;
 use opentelemetry_sdk::propagation::{
@@ -61,7 +60,7 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
         .tracing()
         .with_exporter(
             opentelemetry_otlp::new_exporter()
-                .tonic()
+                .http()
                 .with_endpoint("http://localhost:4317"),
         )
         .with_trace_config(opentelemetry_sdk::trace::config().with_resource(resource.clone()))
@@ -74,7 +73,7 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
         .metrics(opentelemetry_sdk::runtime::Tokio)
         .with_exporter(
             opentelemetry_otlp::new_exporter()
-                .tonic()
+                .http()
                 .with_endpoint("http://localhost:4317"),
         )
         .with_resource(resource.clone())
@@ -83,7 +82,7 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
     let opentelemetry_metrics = MetricsLayer::new(meter_provider.clone());
 
     tracing_subscriber::registry()
-        .with(console_subscriber::spawn())
+        //.with(console_subscriber::spawn())
         .with(
             stdout_log.with_filter(
                 tracing_subscriber::EnvFilter::try_from_default_env()
@@ -107,20 +106,20 @@ pub fn setup_telemetry() -> OpenTelemetryGuard {
     ]);
     global::set_text_map_propagator(composite_propagator);
 
-    let _logger = opentelemetry_otlp::new_pipeline()
-        .logging()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint("http://localhost:4317"),
-        )
-        .with_log_config(opentelemetry_sdk::logs::Config::default().with_resource(resource))
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
-        .unwrap();
+    /*let _logger = opentelemetry_otlp::new_pipeline()
+            .logging()
+            .with_exporter(
+                opentelemetry_otlp::new_exporter()
+                    .http()
+                    .with_endpoint("http://localhost:4317"),
+            )
+            .with_log_config(opentelemetry_sdk::logs::Config::default().with_resource(resource))
+            .install_batch(opentelemetry_sdk::runtime::Tokio)
+            .unwrap();
 
-    let logger_provider = logger_provider();
-    OpenTelemetryTracingBridge::new(&logger_provider);
-
+        let logger_provider = logger_provider();
+        OpenTelemetryTracingBridge::new(&logger_provider);
+    */
     tracing::Span::current().set_attribute(
         opentelemetry_semantic_conventions::trace::SERVER_ADDRESS,
         "localhost",
