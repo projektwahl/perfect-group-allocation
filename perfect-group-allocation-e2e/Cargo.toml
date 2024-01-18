@@ -35,7 +35,6 @@ tracing = { default-features = false, version = "0.1" }
 iai-callgrind = { default-features = false, version = "0.10", features = [
     "default",
 ] }
-perfect-group-allocation-telemetry = { default-features = false, path = "../perfect-group-allocation-telemetry" }
 tracing-subscriber = { default-features = false, version = "0.3", features = [
     "env-filter",
 ] }

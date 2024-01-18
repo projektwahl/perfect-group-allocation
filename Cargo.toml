@@ -1,7 +1,7 @@
 cargo-features = ["named-profiles"]
 
 [workspace]
-exclude = ["perfect-group-allocation-css"]
+exclude = ["perfect-group-allocation-css", "perfect-group-allocation-telemetry"]
 members = [
     "perfect-group-allocation-backend",
     "perfect-group-allocation-config",
@@ -9,7 +9,6 @@ members = [
     "perfect-group-allocation-e2e",
     "perfect-group-allocation-openidconnect",
     "perfect-group-allocation-optimizer",
-    "perfect-group-allocation-telemetry",
     "webdriver-bidi",
 ]
 resolver = "2"
