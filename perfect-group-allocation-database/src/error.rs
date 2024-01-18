@@ -1,4 +1,3 @@
-use std::backtrace::Backtrace;
 use std::env::VarError;
 
 use thiserror::Error;
