@@ -5,7 +5,9 @@ use openidconnect::{ClaimsVerificationError, DiscoveryError, SigningError};
 #[derive(thiserror::Error, Debug)]
 pub enum OpenIdConnectError {
     #[error("request token error: {0}")]
-    RequestToken(#[from] RequestTokenError<String, StandardErrorResponse<BasicErrorResponseType>>),
+    RequestToken(
+        #[from] RequestTokenError<HttpError, StandardErrorResponse<BasicErrorResponseType>>,
+    ),
     #[error("claims verification error: {0}")]
     ClaimsVerification(#[from] ClaimsVerificationError),
     #[error("openid signing error: {0}")]
@@ -13,7 +15,7 @@ pub enum OpenIdConnectError {
     #[error("oauth error: {0}")]
     Oauth2Parse(#[from] oauth2::url::ParseError),
     #[error("discovery error: {0}")]
-    Discovery(#[from] DiscoveryError<String>),
+    Discovery(#[from] DiscoveryError<HttpError>),
     #[error("wrong csrf token")]
     WrongCsrfToken,
     #[error("server did not return id token")]
@@ -22,6 +24,10 @@ pub enum OpenIdConnectError {
     InvalidAccessToken,
     #[error("missing email address")]
     MissingEmailAddress,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum HttpError {
     #[error("hyper {0}")]
     Hyper(#[from] hyper::Error),
     #[error("hyper http {0}")]
