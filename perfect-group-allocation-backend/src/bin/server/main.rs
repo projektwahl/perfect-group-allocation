@@ -9,6 +9,8 @@ pub fn main() -> Result<(), AppError> {
         .build()
         .unwrap()
         .block_on(async {
+            println!("main");
+
             let _guard = setup_telemetry();
 
             setup_http2_http3_server(get_config()?).await?.await
