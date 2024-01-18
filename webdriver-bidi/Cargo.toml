@@ -21,11 +21,13 @@ serde_json = { default-features = false, version = "1", features = ["alloc"] }
 serde_path_to_error = { default-features = false, version = "0.1" }
 tempfile = { default-features = false, version = "3" }
 thiserror = { default-features = false, version = "1" }
-tokio = { default-features = false, version = "1", features = ["full"] }
+tokio = { default-features = false, version = "1" }
 tokio-tungstenite = { default-features = false, version = "0.21", features = [
     "connect",
 ] }
 tracing = { default-features = false, version = "0.1" }
+
+[dev-dependencies]
 tracing-subscriber = { default-features = false, version = "0.3", features = [
     "fmt",
 ] }

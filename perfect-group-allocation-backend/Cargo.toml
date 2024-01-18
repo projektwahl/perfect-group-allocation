@@ -41,10 +41,6 @@ hyper = { default-features = false, version = "1", features = [
 hyper-util = { default-features = false, version = "0.1", features = [
     "server-auto",
 ] }
-itertools = { default-features = false, version = "0.12", features = [
-    "use_alloc",
-    "use_std",
-] }
 log = { default-features = false, version = "0.4", features = [
     "release_max_level_off",
 ] }
@@ -66,7 +62,7 @@ serde_json = { default-features = false, version = "1" }
 serde_urlencoded = { default-features = false, version = "0.7" }
 sha2 = { default-features = false, version = "0.10", features = ["asm"] }
 thiserror = { default-features = false, version = "1" }
-tokio = { default-features = false, version = "1", features = ["full"] }
+tokio = { default-features = false, version = "1" }
 tokio-rustls = { default-features = false, version = "0.25", features = [
     "default",
 ] }

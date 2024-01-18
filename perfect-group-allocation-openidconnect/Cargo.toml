@@ -26,7 +26,7 @@ perfect-group-allocation-config = { default-features = false, path = "../perfect
 serde = { default-features = false, version = "1", features = ["derive"] }
 serde_json = { default-features = false, version = "1" }
 thiserror = { default-features = false, version = "1" }
-tokio = { default-features = false, version = "1", features = ["full"] }
+tokio = { default-features = false, version = "1" }
 tokio-rustls = { default-features = false, version = "0.25", features = [
     "default",
 ] }
