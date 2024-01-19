@@ -5,7 +5,7 @@
 # make package public
 FROM debian
 
-RUN apt-get update && apt-get install -y valgrind git cmake gcc zstd curl mold coinor-libcbc-dev
+RUN apt-get update && apt-get upgrade && apt-get install -y valgrind git cmake gcc zstd curl mold coinor-libcbc-dev mkcert
 RUN curl -fsSL https://deb.nodesource.com/setup_21.x | bash -
 RUN apt-get install -y nodejs
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
@@ -14,5 +14,4 @@ RUN rustup toolchain install nightly --allow-downgrade --profile minimal --compo
 RUN cargo install --locked --version 0.10.0 iai-callgrind-runner
 RUN cargo install --locked cargo-hack
 RUN cargo install --locked cargo-deny
-RUN cargo install lightningcss@1.0.0-alpha.52
-RUN apt-get install -y mkcert
+RUN cargo install --locked lightningcss@1.0.0-alpha.52

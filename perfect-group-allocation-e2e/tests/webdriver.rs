@@ -1,6 +1,5 @@
 use perfect_group_allocation_backend::setup_http2_http3_server;
 use perfect_group_allocation_config::{Config, OpenIdConnectConfig};
-use perfect_group_allocation_telemetry::setup_telemetry;
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
@@ -21,8 +20,6 @@ use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
 pub async fn main() -> Result<(), webdriver_bidi::Error> {
-    let _guard = setup_telemetry();
-
     // https://docs.docker.com/compose/production/
 
     // https://www.redhat.com/sysadmin/quadlet-podman
