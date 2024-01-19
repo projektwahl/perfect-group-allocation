@@ -1,9 +1,6 @@
 use perfect_group_allocation_backend::setup_http2_http3_server;
 use perfect_group_allocation_config::{Config, OpenIdConnectConfig};
 use tracing::info;
-use tracing_subscriber::layer::SubscriberExt as _;
-use tracing_subscriber::util::SubscriberInitExt as _;
-use tracing_subscriber::EnvFilter;
 use webdriver_bidi::browsing_context::{self};
 use webdriver_bidi::input::perform_actions::{
     Origin, PointerCommonProperties, PointerDownAction, PointerMoveAction, PointerSourceAction,

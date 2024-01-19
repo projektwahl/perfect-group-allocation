@@ -39,6 +39,3 @@ nursery = { level = "warn", priority = 0 }
 pedantic = { level = "warn", priority = 0 }
 struct_field_names = { level = "allow", priority = 1 }
 too_many_lines = { level = "allow", priority = 1 }
-
-[patch.crates-io]
-h3 = { git = "https://github.com/hyperium/h3.git", branch = "master" } # http version 1

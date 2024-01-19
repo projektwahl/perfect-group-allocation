@@ -41,10 +41,8 @@ pub async fn create<'a>(
     let empty_title = form.value.title.is_empty();
     let empty_description = form.value.description.is_empty();
 
-    let mut global_error = Ok::<(), AppError>(());
-
-    if !empty_title && !empty_description {
-        global_error = try {
+    let global_error = if !empty_title && !empty_description {
+        try {
             let mut connection = pool.get().await?;
             diesel::insert_into(project_history::table)
                 .values(NewProject {
@@ -65,8 +63,10 @@ pub async fn create<'a>(
                 .header(LOCATION, "/list")
                 .body(EitherBody::Option1(Empty::new()))
                 .unwrap());
-        };
-    }
+        }
+    } else {
+        Ok::<(), AppError>(())
+    };
 
     let csrf_token = session.csrf_token();
     let result = async gen move {

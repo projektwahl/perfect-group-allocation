@@ -1,4 +1,3 @@
-use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::fmt::{Debug, Display};
 
@@ -92,6 +91,7 @@ impl From<diesel::result::Error> for AppError {
 }
 
 impl AppError {
+    #[must_use]
     pub fn build_error_template(
         self,
         session: Session<Option<String>, ()>,
