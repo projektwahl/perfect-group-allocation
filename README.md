@@ -10,7 +10,8 @@
 ## Development Notes
 
 ```
-lightningcss --bundle --minify --sourcemap --output-file frontend/bundle.css frontend/index.css
+cargo local-registry --sync Cargo.lock registry
+cargo lightningcss --bundle --minify --sourcemap --output-file frontend/bundle.css frontend/index.css
 ```
 
 `http_body::Body` should always have a `+ 'static` annotation to avoid errors occuring at the wrong place.

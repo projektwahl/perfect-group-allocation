@@ -14,4 +14,4 @@ RUN rustup toolchain install nightly --allow-downgrade --profile minimal --compo
 RUN cargo install --locked --version 0.10.0 iai-callgrind-runner
 RUN cargo install --locked cargo-hack
 RUN cargo install --locked cargo-deny
-RUN cargo install --locked lightningcss@1.0.0-alpha.52
+RUN cargo install --locked --features=cli lightningcss@1.0.0-alpha.52
