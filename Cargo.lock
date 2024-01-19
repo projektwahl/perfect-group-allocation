@@ -1467,6 +1467,8 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "cookie",
+ "diesel",
+ "diesel-async",
  "futures-util",
  "headers",
  "http 1.0.0",

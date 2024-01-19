@@ -52,6 +52,11 @@ rustls-pemfile = { default-features = false, version = "2", features = ["std"] }
 #    "provider-tls-rustls",
 #] }
 #s2n-quic-h3 = { default-features = false, git = "https://github.com/mohe2015/s2n-quic.git", branch = "patch-1" }
+diesel = { default-features = false, version = "2" }
+diesel-async = { default-features = false, version = "0.4", features = [
+    "deadpool",
+    "postgres",
+] }
 serde = { default-features = false, version = "1", features = ["derive"] }
 serde_json = { default-features = false, version = "1" }
 serde_urlencoded = { default-features = false, version = "0.7" }

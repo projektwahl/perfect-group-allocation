@@ -25,10 +25,10 @@ pub enum AppError {
     File(#[from] std::io::Error),
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("webserver error: {0}\n{1}")]
+    #[error("webserver error: {0}")]
     Hyper(#[from] hyper::Error),
-    #[error("webserver h3 error: {0}")]
-    H3(#[from] h3::Error),
+    //#[error("webserver h3 error: {0}")]
+    //H3(#[from] h3::Error),
     #[error("env var error: {0}")]
     EnvVar(#[from] std::env::VarError),
     #[error("rustls error: {0}")]
@@ -37,8 +37,8 @@ pub enum AppError {
     Poison(#[from] std::sync::PoisonError<()>),
     #[error("join error: {0}")]
     Join(#[from] tokio::task::JoinError),
-    #[error("quic start error: {0}")]
-    S2nStart(#[from] s2n_quic::provider::StartError),
+    //#[error("quic start error: {0}")]
+    //S2nStart(#[from] s2n_quic::provider::StartError),
     #[error("configuration error: {0}")]
     Configuration(#[from] ConfigError),
     // #[cfg(feature = "perfect-group-allocation-telemetry")]

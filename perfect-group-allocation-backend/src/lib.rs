@@ -1,3 +1,7 @@
+#![feature(gen_blocks)]
+#![feature(impl_trait_in_assoc_type)]
+#![feature(lazy_cell)]
+#![feature(try_blocks)]
 extern crate alloc;
 
 // determinism?
@@ -5,7 +9,7 @@ extern crate alloc;
 pub mod csrf_protection;
 pub mod either;
 pub mod error;
-pub mod h3;
+//pub mod h3;
 pub mod routes;
 pub mod session;
 
@@ -18,7 +22,6 @@ use std::sync::Arc;
 use bytes::{Buf, Bytes};
 use error::AppError;
 use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
-use h3::run_http3_server_s2n;
 use http::header::ALT_SVC;
 use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use http_body::Body;
@@ -416,23 +419,23 @@ pub async fn setup_http2_http3_server(
     let (certs, key) = load_certs_key_pair()?;
 
     // needs a service that accepts some non-controllable impl Buf
-    let http3_server = run_http3_server_s2n(config.clone())?;
+    // let http3_server = run_http3_server_s2n(config.clone())?;
     // needs a service that accepts Bytes, therefore we to create separate services
     let http2_server = run_http2_server(config, certs, key).await?;
 
     #[allow(clippy::redundant_pub_crate)]
     Ok(async move {
         let mut http2_server = tokio::spawn(http2_server);
-        let mut http3_server = tokio::spawn(http3_server);
+        //let mut http3_server = tokio::spawn(http3_server);
         select! {
             http2_result = &mut http2_server => {
-                http2_result??;
-                http3_server.await?
+                http2_result?
+                //http3_server.await?
             }
-            http3_result = &mut http3_server => {
+            /*http3_result = &mut http3_server => {
                 http3_result??;
                 http2_server.await?
-            }
+            }*/
         }
     })
 }
