@@ -30,6 +30,7 @@ jobs:
             target/      
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
       - uses: actions/checkout@v4
+      - run: lightningcss --bundle --minify --sourcemap --output-file frontend/bundle.css frontend/index.css
       - run: cargo fmt --check
       - run: cargo hack build --workspace --feature-powerset --optional-deps --all-targets
       - run: cargo deny check
@@ -49,6 +50,7 @@ jobs:
             target/      
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
       - uses: actions/checkout@v4
+      - run: lightningcss --bundle --minify --sourcemap --output-file frontend/bundle.css frontend/index.css
       - run: cargo hack clippy --workspace --feature-powerset --optional-deps --all-targets -- -D warnings
   test:
     #runs-on: docker
@@ -67,6 +69,7 @@ jobs:
             target/      
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
       - uses: actions/checkout@v4
+      - run: lightningcss --bundle --minify --sourcemap --output-file frontend/bundle.css frontend/index.css
       - run: mkcert -install
       - run: cp $(mkcert -CAROOT)/rootCA.pem .
       - run: mkcert h3.selfmade4u.de
