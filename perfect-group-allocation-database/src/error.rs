@@ -1,5 +1,6 @@
 use std::env::VarError;
 
+use diesel_async::pooled_connection::deadpool;
 use thiserror::Error;
 
 #[allow(clippy::module_name_repetitions)]
