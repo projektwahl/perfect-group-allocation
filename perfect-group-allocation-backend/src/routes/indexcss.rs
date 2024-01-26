@@ -1,6 +1,5 @@
 use std::convert::Infallible;
-use std::hash::{DefaultHasher, Hash, Hasher};
-use std::sync::LazyLock;
+use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
 use bytes::{Buf, Bytes};

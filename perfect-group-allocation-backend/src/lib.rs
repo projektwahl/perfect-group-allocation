@@ -1,7 +1,3 @@
-#![feature(gen_blocks)]
-#![feature(impl_trait_in_assoc_type)]
-#![feature(lazy_cell)]
-#![feature(try_blocks)]
 extern crate alloc;
 
 // determinism?
@@ -292,9 +288,9 @@ either_http_body!(boxed EitherBodyRouter 1 2 3 4 5 6 7 404 500);
 either_future!(boxed EitherFutureRouter 1 2 3 4 5 6 7 404);
 
 impl<
-    RequestBodyBuf: Buf + Send + 'static,
-    RequestBody: http_body::Body<Data = RequestBodyBuf, Error = AppError> + Send + 'static,
-> Service<Request<RequestBody>> for Svc<RequestBodyBuf>
+        RequestBodyBuf: Buf + Send + 'static,
+        RequestBody: http_body::Body<Data = RequestBodyBuf, Error = AppError> + Send + 'static,
+    > Service<Request<RequestBody>> for Svc<RequestBodyBuf>
 {
     type Error = Infallible;
     type Response = Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send>;
@@ -557,8 +553,8 @@ pub fn load_private_key(filename: &Path) -> std::io::Result<PrivateKeyDer<'stati
     Ok(rustls_pemfile::private_key(&mut reader)?.unwrap())
 }
 
-pub fn load_certs_key_pair()
--> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), AppError> {
+pub fn load_certs_key_pair(
+) -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), AppError> {
     eprintln!("{:?}", std::env::current_dir());
     let certs = load_certs(Path::new(CERT_PATH))?;
     let key = load_private_key(Path::new(KEY_PATH))?;

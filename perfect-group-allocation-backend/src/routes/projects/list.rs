@@ -12,12 +12,9 @@ use perfect_group_allocation_database::models::ProjectHistoryEntry;
 use perfect_group_allocation_database::schema::project_history;
 use perfect_group_allocation_database::Pool;
 use tracing::error;
-use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::Unsafe;
 
 use crate::error::AppError;
 use crate::routes::indexcss::INDEX_CSS_VERSION;
-use crate::routes::list_projects;
 use crate::session::{ResponseSessionExt as _, Session};
 use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
@@ -27,15 +24,15 @@ pub async fn list(
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
     let csrf_token = session.csrf_token();
-    let result = async gen move {
+    let result = async move {
         let template = yieldfi!(list_projects());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfv!(template.page_title("Projects"));
         let template = yieldfi!(template.next());
-        let template = yieldfv!(
-            template.indexcss_version_unsafe(Unsafe::unsafe_input(INDEX_CSS_VERSION.to_string()))
-        );
+        let template =
+            yieldfv!(template
+                .indexcss_version_unsafe(Unsafe::unsafe_input(INDEX_CSS_VERSION.to_string())));
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next());
         let template = yieldfi!(template.next_email_false());

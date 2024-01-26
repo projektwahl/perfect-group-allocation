@@ -1,6 +1,9 @@
 use std::convert::Infallible;
 use std::fmt::{Debug, Display};
 
+use crate::routes::indexcss::INDEX_CSS_VERSION;
+use crate::session::{ResponseSessionExt, Session};
+use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 use bytes::Bytes;
 use headers::ContentType;
 use http::{Response, StatusCode};
@@ -8,13 +11,6 @@ use http_body_util::StreamBody;
 use perfect_group_allocation_config::ConfigError;
 use perfect_group_allocation_database::DatabaseError;
 use perfect_group_allocation_openidconnect::error::OpenIdConnectError;
-use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::Unsafe;
-
-use crate::routes::error;
-use crate::routes::indexcss::INDEX_CSS_VERSION;
-use crate::session::{ResponseSessionExt, Session};
-use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
 #[derive(thiserror::Error)]
 pub enum AppError {
@@ -97,16 +93,14 @@ impl AppError {
         session: Session<Option<String>, ()>,
     ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send + 'static> {
         let csrf_token = session.csrf_token();
-        let result = async gen move {
+        let result = async move {
             let template = yieldfi!(error());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfv!(template.page_title("Internal Server Error"));
             let template = yieldfi!(template.next());
-            let template = yieldfv!(
-                template
-                    .indexcss_version_unsafe(Unsafe::unsafe_input(INDEX_CSS_VERSION.to_string()))
-            );
+            let template = yieldfv!(template
+                .indexcss_version_unsafe(Unsafe::unsafe_input(INDEX_CSS_VERSION.to_string())));
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next());
             let template = yieldfi!(template.next_email_false());
