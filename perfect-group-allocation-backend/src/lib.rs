@@ -226,46 +226,6 @@ impl<T> ResponseTypedHeaderExt for Response<T> {
     }
 }
 
-// Yieldok a value.
-#[macro_export]
-macro_rules! yieldfv {
-    ($e:expr) => {{
-        let expr = $e;
-        let value = expr.1;
-        let ret = expr.0;
-        yield Ok::<::http_body::Frame<::bytes::Bytes>, ::core::convert::Infallible>(
-            ::http_body::Frame::data(match value {
-                ::alloc::borrow::Cow::Owned(v) => ::bytes::Bytes::from(v),
-                ::alloc::borrow::Cow::Borrowed(v) => ::bytes::Bytes::from(v),
-            }),
-        );
-        ret
-    }};
-}
-
-/// Yieldok an iterator.
-#[macro_export]
-macro_rules! yieldfi {
-    ($e:expr) => {{
-        let expr = $e;
-        let mut iterator = expr.1;
-        let ret = expr.0;
-        loop {
-            let value = ::std::iter::Iterator::next(&mut iterator);
-            // maybe match has bad liveness analysis?
-            if value.is_some() {
-                let value = value.unwrap();
-                yield Ok::<::http_body::Frame<::bytes::Bytes>, ::core::convert::Infallible>(
-                    ::http_body::Frame::data(::bytes::Bytes::from(value)),
-                );
-            } else {
-                break;
-            }
-        }
-        ret
-    }};
-}
-
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
 pub struct Svc<RequestBodyBuf: Buf + Send + 'static> {
     config: Config,

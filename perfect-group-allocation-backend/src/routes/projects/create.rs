@@ -39,7 +39,7 @@ pub async fn create<'a>(
     let empty_description = form.value.description.is_empty();
 
     let global_error = if !empty_title && !empty_description {
-        try {
+        return (|| async {
             let mut connection = pool.get().await?;
             diesel::insert_into(project_history::table)
                 .values(NewProject {
@@ -54,13 +54,14 @@ pub async fn create<'a>(
                 })
                 .execute(&mut connection)
                 .await?;
-            return Ok(Response::builder()
+            Ok(Response::builder()
                 .with_session(session)
                 .status(StatusCode::SEE_OTHER)
                 .header(LOCATION, "/list")
                 .body(EitherBody::Option1(Empty::new()))
-                .unwrap());
-        }
+                .unwrap())
+        })()
+        .await;
     } else {
         Ok::<(), AppError>(())
     };
