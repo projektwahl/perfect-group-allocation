@@ -16,6 +16,10 @@ pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
     inner: I,
 ) -> impl Future<Output = ()> {
     // TODO support if let and while let and while and normal for?
+    // TODO allow executing normal code that affects scope in the template
+    // see demo below, use { } for blocks of code and () for variable interpolation
+
+    // TODO fixme templates should take a &FutureToStream so we can pass it multiple times
 
     let openidconnect_session = session.openidconnect_session();
     let email;
@@ -79,6 +83,7 @@ pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
         </nav>
         <main>
             { inner(stream).await }
+            ( variable )
         </main>
     </body>
 

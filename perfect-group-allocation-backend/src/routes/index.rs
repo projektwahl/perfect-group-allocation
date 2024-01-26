@@ -10,7 +10,6 @@ use perfect_group_allocation_openidconnect::id_token_claims;
 use crate::error::AppError;
 use crate::routes::indexcss::INDEX_CSS_VERSION;
 use crate::session::{ResponseSessionExt as _, Session};
-use crate::{yieldfi, yieldfv};
 
 pub async fn index(
     session: Session,
