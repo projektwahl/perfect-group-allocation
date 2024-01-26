@@ -1,3 +1,4 @@
+use std::collections::hash_map::DefaultHasher;
 use std::convert::Infallible;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
@@ -7,6 +8,7 @@ use headers::{CacheControl, ContentType, ETag, HeaderMapExt, IfNoneMatch};
 use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::{Empty, Full};
+use once_cell::sync::Lazy;
 
 use crate::error::AppError;
 use crate::{either_http_body, ResponseTypedHeaderExt as _};
@@ -19,7 +21,7 @@ either_http_body!(either EitherBody 1 2);
 
 pub static INDEX_CSS: &[u8] = include_bytes!("../../../frontend/bundle.css");
 
-pub static INDEX_CSS_VERSION: LazyLock<u64> = LazyLock::new(|| {
+pub static INDEX_CSS_VERSION: Lazy<u64> = Lazy::new(|| {
     let mut hasher = DefaultHasher::new();
     INDEX_CSS.hash(&mut hasher);
     hasher.finish()
