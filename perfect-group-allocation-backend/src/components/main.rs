@@ -1,18 +1,22 @@
 use std::pin::pin;
 
-use async_zero_cost_templating::{html, TheStream};
+use async_zero_cost_templating::{html, FutureToStream, TheStream};
 use bytes::Bytes;
-use futures_util::Stream;
+use futures_util::{Future, Stream};
 use perfect_group_allocation_config::Config;
 use perfect_group_allocation_openidconnect::id_token_claims;
 
 use crate::session::Session;
 
-pub async fn main(
+pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
+    stream: FutureToStream,
     page_title: Bytes,
     session: Session,
     config: Config,
-) -> impl Stream<Item = Bytes> {
+    inner: I,
+) -> impl Future<Output = ()> {
+    // TODO support if let and while let and while and normal for?
+
     let openidconnect_session = session.openidconnect_session();
     let email;
     if let Some(openidconnect_session) = openidconnect_session {
@@ -74,11 +78,11 @@ pub async fn main(
             </ul>
         </nav>
         <main>
-            { Bytes::from_static(b"") }
+            { inner(stream).await }
         </main>
     </body>
 
     </html>
     };
-    TheStream::new(html)
+    html(stream)
 }
