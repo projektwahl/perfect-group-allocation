@@ -20,7 +20,7 @@ pub fn main(page_title: Bytes) -> impl Stream<Item = Bytes> {
 
     <body>
         <nav>
-            <span>PGA</span>
+            <span>"PGA"</span>
             <input id="open-nav" type="checkbox" checked>
             <label for="open-nav" class="hamb">
                 <svg viewBox="0 0 100 100">
@@ -31,23 +31,23 @@ pub fn main(page_title: Bytes) -> impl Stream<Item = Bytes> {
             </label>
             <ul>
                 <li>
-                    <a href="/">Home</a>
+                    <a href="/">"Home"</a>
                 </li>
                 <li>
-                    <a href="/list">Projects</a>
+                    <a href="/list">"Projects"</a>
                 </li>
                 <li>
                     if email {
                         <form method="post" action="/openidconnect-logout" enctype="application/x-www-form-urlencoded">
                             <input type="hidden" name="csrf_token" value="{{csrf_token}}">
 
-                            <button class="submit-link" type="submit">Logout {email}</button>
+                            <button class="submit-link" type="submit">"Logout "{email}</button>
                         </form>
                     } else {
                         <form method="post" action="/openidconnect-login" enctype="application/x-www-form-urlencoded">
                             <input type="hidden" name="csrf_token" value="{{csrf_token}}">
 
-                            <button class="submit-link" type="submit">Login</button>
+                            <button class="submit-link" type="submit">"Login"</button>
                         </form>
                     }
                 </li>
