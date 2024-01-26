@@ -1,5 +1,3 @@
-cargo-features = ["edition2024"]
-
 [package]
 categories.workspace = true
 description.workspace = true

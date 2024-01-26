@@ -1,4 +1,4 @@
-FROM docker.io/rustlang/rust:nightly-bookworm-slim AS builder
+FROM docker.io/rustlang/rust:bookworm-slim AS builder
 WORKDIR /usr/src/myapp
 
 RUN apt-get update && apt-get install -y cmake coinor-libcbc-dev

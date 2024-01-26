@@ -1,5 +1,3 @@
-cargo-features = ["named-profiles"]
-
 [workspace]
 exclude = ["perfect-group-allocation-css", "perfect-group-allocation-telemetry"]
 members = [
@@ -16,7 +14,7 @@ resolver = "2"
 [workspace.package]
 categories = ["web-programming"]
 description = "Allocate people to groups according to their preferences while honoring specified restrictions."
-edition = "2024"
+edition = "2021"
 keywords = ["management", "service", "web"]
 license = "AGPL-3.0-or-later"
 readme = "README.md"

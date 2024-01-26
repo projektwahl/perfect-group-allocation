@@ -1,5 +1,3 @@
-cargo-features = ["edition2024"]
-
 [package]
 categories.workspace = true
 description.workspace = true
@@ -52,6 +50,7 @@ rustls-pemfile = { default-features = false, version = "2", features = ["std"] }
 #    "provider-tls-rustls",
 #] }
 #s2n-quic-h3 = { default-features = false, git = "https://github.com/mohe2015/s2n-quic.git", branch = "patch-1" }
+async-zero-cost-templating = { default-features = false, git = "https://github.com/mohe2015/async-zero-cost-templating.git", branch = "work" }
 diesel = { default-features = false, version = "2" }
 diesel-async = { default-features = false, version = "0.4", features = [
     "deadpool",
@@ -73,6 +72,5 @@ tracing = { default-features = false, version = "0.1", features = [
 tracing-subscriber = { default-features = false, version = "0.3", features = [
     "fmt",
 ] }
-zero-cost-templating = { default-features = false, git = "https://github.com/mohe2015/zero-cost-templating.git", branch = "work" }
 #h3-quinn = { default-features = false, git = "https://github.com/hyperium/h3.git", branch = "master" }
 #quinn = { default-features = false, version = "0.10" } # depends on old version of tokio-rustls
