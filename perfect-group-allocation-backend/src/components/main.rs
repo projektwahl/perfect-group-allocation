@@ -3,9 +3,29 @@ use std::pin::pin;
 use async_zero_cost_templating::{html, TheStream};
 use bytes::Bytes;
 use futures_util::Stream;
+use perfect_group_allocation_config::Config;
+use perfect_group_allocation_openidconnect::id_token_claims;
 
-pub fn main(page_title: Bytes) -> impl Stream<Item = Bytes> {
-    // TODO FIXME implement self closing tags /> if they are valid in html5
+use crate::session::Session;
+
+pub async fn main(
+    page_title: Bytes,
+    session: Session,
+    config: Config,
+) -> impl Stream<Item = Bytes> {
+    let openidconnect_session = session.openidconnect_session();
+    let email;
+    if let Some(openidconnect_session) = openidconnect_session {
+        let claims = id_token_claims(config, openidconnect_session)
+            .await
+            .unwrap();
+        email = claims.email().map(|email| email.to_string());
+    } else {
+        email = None;
+    }
+    let csrf_token = session.csrf_token();
+    let indexcss_version = Bytes::from_static(b"1");
+
     let html = html! {
     <!doctype html>
     <html lang="en">
@@ -14,8 +34,8 @@ pub fn main(page_title: Bytes) -> impl Stream<Item = Bytes> {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{page_title}</title>
-        <link rel="icon" r#type="image/x-icon" href="/favicon.ico?v=1">
-        <link rel="stylesheet" href="/bundle.css?v={{indexcss_version}}">
+        <link rel="icon" type="image/x-icon" href="/favicon.ico?v=1">
+        <link rel="stylesheet" href=["/bundle.css?v=" {indexcss_version}]>
     </head>
 
     <body>
@@ -37,15 +57,15 @@ pub fn main(page_title: Bytes) -> impl Stream<Item = Bytes> {
                     <a href="/list">"Projects"</a>
                 </li>
                 <li>
-                    if email {
+                    if email.is_some() {
                         <form method="post" action="/openidconnect-logout" enctype="application/x-www-form-urlencoded">
-                            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+                            <input type="hidden" name="csrf_token" value=[{csrf_token.into()}]>
 
-                            <button class="submit-link" type="submit">"Logout "{email}</button>
+                            <button class="submit-link" type="submit">"Logout "{email.unwrap().into()}</button>
                         </form>
                     } else {
                         <form method="post" action="/openidconnect-login" enctype="application/x-www-form-urlencoded">
-                            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+                            <input type="hidden" name="csrf_token" value=[{csrf_token.into()}]>
 
                             <button class="submit-link" type="submit">"Login"</button>
                         </form>
