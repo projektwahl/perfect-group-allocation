@@ -19,6 +19,40 @@ pub fn main(page_title: Bytes) -> impl Stream<Item = Bytes> {
     </head>
 
     <body>
+        <nav>
+            <span>PGA</span>
+            <input id="open-nav" type="checkbox" checked>
+            <label for="open-nav" class="hamb">
+                <svg viewBox="0 0 100 100">
+                    <rect y="10" width="100" height="20"></rect>
+                    <rect y="40" width="100" height="20"></rect>
+                    <rect y="70" width="100" height="20"></rect>
+                </svg>
+            </label>
+            <ul>
+                <li>
+                    <a href="/">Home</a>
+                </li>
+                <li>
+                    <a href="/list">Projects</a>
+                </li>
+                <li>
+                    if email {
+                        <form method="post" action="/openidconnect-logout" enctype="application/x-www-form-urlencoded">
+                            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+
+                            <button class="submit-link" type="submit">Logout {email}</button>
+                        </form>
+                    } else {
+                        <form method="post" action="/openidconnect-login" enctype="application/x-www-form-urlencoded">
+                            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+
+                            <button class="submit-link" type="submit">Login</button>
+                        </form>
+                    }
+                </li>
+            </ul>
+        </nav>
         <main>
             { Bytes::from_static(b"") }
         </main>
