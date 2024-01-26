@@ -6,6 +6,7 @@ pub mod csrf_protection;
 pub mod either;
 pub mod error;
 //pub mod h3;
+pub mod components;
 pub mod routes;
 pub mod session;
 
