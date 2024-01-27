@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use async_zero_cost_templating::html;
 use bytes::{Buf, Bytes};
 use diesel_async::RunQueryDsl;
 use headers::ContentType;
@@ -67,6 +68,34 @@ pub async fn create<'a>(
     };
 
     let csrf_token = session.csrf_token();
+    let html = html! {
+        <h1 class="center">"Create project"</h1>
+
+        <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
+            if error {
+                <div class="error-message">"Es ist ein Fehler aufgetreten: "(error_message)</div>
+            }
+
+            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+
+            if title_error {
+                <div class="error-message">(title_error)</div>
+            }
+            <label for="title">"Title:"</label>
+            <input if title_error { class="error" } id="title" name="title" type="text" if title { value=[(title)] } >
+
+            if description_error {
+                <div class="error-message">(description_error)</div>
+            }
+            <label for="description">"Description:"</label>
+            <input if description_error { class="error" } id="description" name="description" type="text" if description { value=[(description)] } >
+
+            <button type="submit">"Create"</button>
+
+            <a href="/list">"Show all projects"</a>
+        </form>
+    };
+
     let result = async move {
         let template = yieldfi!(create_project());
         let template = yieldfi!(template.next());

@@ -16,7 +16,6 @@ pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
     inner: I,
 ) -> impl Future<Output = ()> {
     // TODO support if let and while let and while and normal for?
-    // TODO allow executing normal code that affects scope in the template
 
     // TODO fixme templates should take a &FutureToStream so we can pass it multiple times
 
