@@ -17,7 +17,6 @@ pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
 ) -> impl Future<Output = ()> {
     // TODO support if let and while let and while and normal for?
     // TODO allow executing normal code that affects scope in the template
-    // see demo below, use { } for blocks of code and () for variable interpolation
 
     // TODO fixme templates should take a &FutureToStream so we can pass it multiple times
 
@@ -41,9 +40,9 @@ pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{page_title}</title>
+        <title>(page_title)</title>
         <link rel="icon" type="image/x-icon" href="/favicon.ico?v=1">
-        <link rel="stylesheet" href=["/bundle.css?v=" {indexcss_version}]>
+        <link rel="stylesheet" href=["/bundle.css?v=" (indexcss_version)]>
     </head>
 
     <body>
@@ -67,13 +66,13 @@ pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
                 <li>
                     if email.is_some() {
                         <form method="post" action="/openidconnect-logout" enctype="application/x-www-form-urlencoded">
-                            <input type="hidden" name="csrf_token" value=[{csrf_token.into()}]>
+                            <input type="hidden" name="csrf_token" value=[(csrf_token.into())]>
 
-                            <button class="submit-link" type="submit">"Logout "{email.unwrap().into()}</button>
+                            <button class="submit-link" type="submit">"Logout "(email.unwrap().into())</button>
                         </form>
                     } else {
                         <form method="post" action="/openidconnect-login" enctype="application/x-www-form-urlencoded">
-                            <input type="hidden" name="csrf_token" value=[{csrf_token.into()}]>
+                            <input type="hidden" name="csrf_token" value=[(csrf_token.into())]>
 
                             <button class="submit-link" type="submit">"Login"</button>
                         </form>
@@ -83,7 +82,6 @@ pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
         </nav>
         <main>
             { inner(stream).await }
-            ( variable )
         </main>
     </body>
 
