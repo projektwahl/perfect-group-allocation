@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use async_zero_cost_templating::html;
+use async_zero_cost_templating::{html, FutureToStream};
 use bytes::{Buf, Bytes};
 use diesel_async::RunQueryDsl;
 use headers::ContentType;
@@ -9,16 +9,16 @@ use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
 use http_body_util::{Empty, StreamBody};
+use perfect_group_allocation_config::Config;
 use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
 use perfect_group_allocation_database::Pool;
 
+use crate::components::main::main;
 use crate::error::AppError;
 use crate::routes::indexcss::INDEX_CSS_VERSION;
 use crate::session::{ResponseSessionExt, Session};
-use crate::{
-    either_http_body, yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt,
-};
+use crate::{either_http_body, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt};
 
 either_http_body!(boxed EitherBody 1 2);
 
@@ -29,6 +29,7 @@ pub async fn create<'a>(
         impl http_body::Body<Data = impl Buf + Send + 'static, Error = AppError> + Send + 'static,
     >,
     session: Session,
+    config: Config,
     pool: Pool,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
@@ -67,51 +68,40 @@ pub async fn create<'a>(
         Ok::<(), AppError>(())
     };
 
-    let csrf_token = session.csrf_token();
-    let html = html! {
-        <h1 class="center">"Create project"</h1>
+    let abc = |stream: FutureToStream| async {
+        let csrf_token = session.csrf_token();
 
-        <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
-            if error {
-                <div class="error-message">"Es ist ein Fehler aufgetreten: "(error_message)</div>
-            }
+        let html = html! {
+            <h1 class="center">"Create project"</h1>
 
-            <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+            <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
+                if error {
+                    <div class="error-message">"Es ist ein Fehler aufgetreten: "(error_message)</div>
+                }
 
-            if title_error {
-                <div class="error-message">(title_error)</div>
-            }
-            <label for="title">"Title:"</label>
-            <input if title_error { class="error" } id="title" name="title" type="text" if title { value=[(title)] } >
+                <input type="hidden" name="csrf_token" value="{{csrf_token}}">
 
-            if description_error {
-                <div class="error-message">(description_error)</div>
-            }
-            <label for="description">"Description:"</label>
-            <input if description_error { class="error" } id="description" name="description" type="text" if description { value=[(description)] } >
+                if title_error {
+                    <div class="error-message">(title_error)</div>
+                }
+                <label for="title">"Title:"</label>
+                <input if title_error { class="error" } id="title" name="title" type="text" if title { value=[(title)] } >
 
-            <button type="submit">"Create"</button>
+                if description_error {
+                    <div class="error-message">(description_error)</div>
+                }
+                <label for="description">"Description:"</label>
+                <input if description_error { class="error" } id="description" name="description" type="text" if description { value=[(description)] } >
 
-            <a href="/list">"Show all projects"</a>
-        </form>
+                <button type="submit">"Create"</button>
+
+                <a href="/list">"Show all projects"</a>
+            </form>
+        };
+        main(stream, "Create Project".into(), session, config, html)
     };
 
     let result = async move {
-        let template = yieldfi!(create_project());
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next());
-        let template = yieldfv!(template.page_title("Create Project"));
-        let template = yieldfi!(template.next());
-        let template =
-            yieldfv!(template
-                .indexcss_version_unsafe(Unsafe::unsafe_input(INDEX_CSS_VERSION.to_string())));
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next_email_false());
-        let template = yieldfv!(template.csrf_token(csrf_token.clone()));
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next());
         let template = if let Err(global_error) = global_error {
             let inner_template = yieldfi!(template.next_error_true());
             let inner_template = yieldfv!(inner_template.error_message(global_error.to_string()));
