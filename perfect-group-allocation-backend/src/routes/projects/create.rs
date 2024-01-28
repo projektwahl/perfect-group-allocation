@@ -84,13 +84,13 @@ pub async fn create<'a>(
                 if title_error {
                     <div class="error-message">(title_error)</div>
                 }
-                <label for="title">"Title:"</label>
+                <label r#for="title">"Title:"</label>
                 <input if title_error { class="error" } id="title" name="title" type="text" if title { value=[(title)] } >
 
                 if description_error {
                     <div class="error-message">(description_error)</div>
                 }
-                <label for="description">"Description:"</label>
+                <label r#for="description">"Description:"</label>
                 <input if description_error { class="error" } id="description" name="description" type="text" if description { value=[(description)] } >
 
                 <button type="submit">"Create"</button>
