@@ -69,6 +69,9 @@ pub fn main<
                         <form method="post" action="/" enctype="application/x-www-form-urlencoded">
                             <input type="hidden" name="csrf_token" value=[(Cow::Owned(csrf_token.clone()))]>
 
+                            <input name="title" type="hidden" value=[(Cow::Borrowed(""))]>
+                            <input name="description" type="hidden" value=[(Cow::Borrowed(""))] >
+
                             <button class="submit-link" type="submit">"Create project"</button>
                         </form>
                     </li>
