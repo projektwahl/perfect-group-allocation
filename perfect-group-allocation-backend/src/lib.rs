@@ -30,8 +30,8 @@ use hyper::Method;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use perfect_group_allocation_config::Config;
 use perfect_group_allocation_database::{get_database_connection, Pool};
+use routes::bundlecss::bundlecss;
 use routes::index::index;
-use routes::indexcss::indexcss;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use session::Session;
@@ -278,8 +278,8 @@ impl<
                         Ok(index(session, config).await?.map(EitherBodyRouter::Option1))
                     })
                 }
-                (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
-                    Ok(indexcss(req).map(EitherBodyRouter::Option2))
+                (&Method::GET, "/bundle.css") => EitherFutureRouter::Option2(async move {
+                    Ok(bundlecss(req).map(EitherBodyRouter::Option2))
                 }),
                 (&Method::GET, "/list") => {
                     let pool = self.pool.clone();

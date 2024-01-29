@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::components::main::main;
 use crate::error::AppError;
-use crate::routes::indexcss::INDEX_CSS_VERSION;
+use crate::routes::bundlecss::BUNDLE_CSS_VERSION;
 use crate::session::{ResponseSessionExt as _, Session};
 use crate::{either_http_body, ResponseTypedHeaderExt};
 

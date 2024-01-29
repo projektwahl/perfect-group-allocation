@@ -12,7 +12,7 @@ use perfect_group_allocation_openidconnect::id_token_claims;
 
 use crate::components::main::main;
 use crate::error::AppError;
-use crate::routes::indexcss::INDEX_CSS_VERSION;
+use crate::routes::bundlecss::BUNDLE_CSS_VERSION;
 use crate::session::{ResponseSessionExt as _, Session};
 
 pub async fn index(

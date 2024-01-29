@@ -25,15 +25,15 @@ pub fn main<
         let openidconnect_session = session.openidconnect_session().into_cookie_value();
         let email;
         if let Some(openidconnect_session) = openidconnect_session {
-            let claims = id_token_claims(config, openidconnect_session)
-                .await
-                .unwrap(); // TODO FIXME avoid crashing at all costs because this is used on the error page
-            email = claims.email().map(|email| email.to_string());
+            let claims = id_token_claims(config, openidconnect_session).await; // TODO FIXME avoid crashing at all costs because this is used on the error page
+            email = claims
+                .ok()
+                .and_then(|value| value.email().map(|email| email.to_string()));
         } else {
             email = None;
         }
         let csrf_token = session.csrf_token();
-        let indexcss_version = Cow::Borrowed("1");
+        let indexcss_version = Cow::Borrowed("42");
 
         let html = async {
             html! {

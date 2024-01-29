@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display};
 use std::pin::pin;
 
 use crate::components::main::main;
-use crate::routes::indexcss::INDEX_CSS_VERSION;
+use crate::routes::bundlecss::BUNDLE_CSS_VERSION;
 use crate::session::{ResponseSessionExt, Session};
 use crate::ResponseTypedHeaderExt as _;
 use async_zero_cost_templating::{html, TemplateToStream};
