@@ -110,8 +110,9 @@ pub async fn create<'a>(
                 </form>
             }
         };
-        let future = main(&tx_orig, "Create Project".into(), &session, &config, future);
+        let future = main(tx_orig, "Create Project".into(), &session, &config, future);
         let stream = pin!(TemplateToStream::new(future, rx));
+        // I think we should sent it at once with a content length when it is not too large
         stream.collect::<String>().await
     };
 
