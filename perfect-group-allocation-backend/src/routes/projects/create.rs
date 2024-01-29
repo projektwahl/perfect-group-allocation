@@ -75,23 +75,23 @@ pub async fn create<'a>(
             <h1 class="center">"Create project"</h1>
 
             <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
-                if error {
-                    <div class="error-message">"Es ist ein Fehler aufgetreten: "(error_message)</div>
+                if let Err(global_error) = global_error {
+                    <div class="error-message">"Es ist ein Fehler aufgetreten: "(Bytes::from(global_error.to_string()))</div>
                 }
 
-                <input type="hidden" name="csrf_token" value="{{csrf_token}}">
+                <input type="hidden" name="csrf_token" value=[(Bytes::from(csrf_token))]>
 
-                if title_error {
-                    <div class="error-message">(title_error)</div>
+                if empty_title {
+                    <div class="error-message">"title must not be empty"</div>
                 }
-                <label r#for="title">"Title:"</label>
-                <input if title_error { class="error" } id="title" name="title" type="text" if title { value=[(title)] } >
+                <label for="title">"Title:"</label>
+                <input if empty_title { class="error" } id="title" name="title" type="text" value=[(Bytes::from(form.value.title))]>
 
-                if description_error {
-                    <div class="error-message">(description_error)</div>
+                if empty_description {
+                    <div class="error-message">"description must not be empty"</div>
                 }
-                <label r#for="description">"Description:"</label>
-                <input if description_error { class="error" } id="description" name="description" type="text" if description { value=[(description)] } >
+                <label for="description">"Description:"</label>
+                <input if empty_description { class="error" } id="description" name="description" type="text" value=[(Bytes::from(form.value.description.clone()))] >
 
                 <button type="submit">"Create"</button>
 
@@ -101,38 +101,6 @@ pub async fn create<'a>(
         main(stream, "Create Project".into(), session, config, html)
     };
 
-    let result = async move {
-        let template = if let Err(global_error) = global_error {
-            let inner_template = yieldfi!(template.next_error_true());
-            let inner_template = yieldfv!(inner_template.error_message(global_error.to_string()));
-            yieldfi!(inner_template.next())
-        } else {
-            yieldfi!(template.next_error_false())
-        };
-        let template = yieldfv!(template.csrf_token(csrf_token));
-        let template = yieldfi!(template.next());
-        let template = if empty_title {
-            let template = yieldfi!(template.next_title_error_true());
-            let template = yieldfv!(template.title_error("title must not be empty"));
-            yieldfi!(template.next())
-        } else {
-            yieldfi!(template.next_title_error_false())
-        };
-        let template = yieldfv!(template.title(form.value.title.clone()));
-        let template = yieldfi!(template.next());
-        let template = if empty_description {
-            let template = yieldfi!(template.next_description_error_true());
-            let template = yieldfv!(template.description_error("description must not be empty"));
-            yieldfi!(template.next())
-        } else {
-            yieldfi!(template.next_description_error_false())
-        };
-        let template = yieldfv!(template.description(form.value.description.clone()));
-        let template = yieldfi!(template.next());
-
-        yieldfi!(template.next());
-    };
-    let stream = AsyncIteratorStream(result);
     Ok(Response::builder()
         .with_session(session)
         .status(StatusCode::OK)
