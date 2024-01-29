@@ -43,7 +43,7 @@ pub async fn create<'a>(
     let empty_description = form.value.description.is_empty();
 
     let global_error = if !empty_title && !empty_description {
-        return (|| async {
+        return async {
             let mut connection = pool.get().await?;
             diesel::insert_into(project_history::table)
                 .values(NewProject {
@@ -64,7 +64,7 @@ pub async fn create<'a>(
                 .header(LOCATION, "/list")
                 .body(EitherBody::Option1(Empty::new()))
                 .unwrap())
-        })()
+        }
         .await;
     } else {
         Ok::<(), AppError>(())
