@@ -9,7 +9,7 @@ use headers::ContentType;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
-use http_body_util::{Empty, StreamBody};
+use http_body_util::Empty;
 use perfect_group_allocation_config::Config;
 use perfect_group_allocation_openidconnect::{
     finish_authentication, OpenIdRedirect, OpenIdRedirectInner,
@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::components::main::main;
 use crate::error::AppError;
-use crate::routes::bundlecss::BUNDLE_CSS_VERSION;
+
 use crate::session::{ResponseSessionExt as _, Session};
 use crate::{either_http_body, ResponseTypedHeaderExt};
 
@@ -49,7 +49,7 @@ pub async fn openid_redirect(
     // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
     // TODO FIXME errors also need to return the session?
 
-    let expected_csrf_token = session.csrf_token();
+    let _expected_csrf_token = session.csrf_token();
 
     let (openid_session, session) = session.get_and_remove_temporary_openidconnect_state()?;
 
@@ -74,7 +74,7 @@ pub async fn openid_redirect(
                     tx_orig,
                     "OpenID Redirect Error".into(),
                     &session,
-                    &config,
+                    config,
                     future,
                 );
                 let stream = pin!(TemplateToStream::new(future, rx));
@@ -91,7 +91,7 @@ pub async fn openid_redirect(
         }
         OpenIdRedirectInner::Success(ok) => {
             let result = finish_authentication(
-                &config,
+                config,
                 openid_session,
                 OpenIdRedirect {
                     state: form.state,

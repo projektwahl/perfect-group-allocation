@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display};
 use std::pin::pin;
 
 use crate::components::main::main;
-use crate::routes::bundlecss::BUNDLE_CSS_VERSION;
+
 use crate::session::{ResponseSessionExt, Session};
 use crate::ResponseTypedHeaderExt as _;
 use async_zero_cost_templating::{html, TemplateToStream};
@@ -12,7 +12,7 @@ use bytes::Bytes;
 use futures_util::StreamExt;
 use headers::ContentType;
 use http::{Response, StatusCode};
-use http_body_util::StreamBody;
+
 use perfect_group_allocation_config::{Config, ConfigError};
 use perfect_group_allocation_database::DatabaseError;
 use perfect_group_allocation_openidconnect::error::OpenIdConnectError;
@@ -102,7 +102,7 @@ impl AppError {
         session: Session<Option<String>, ()>,
         config: Config,
     ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send + 'static> {
-        let csrf_token = session.csrf_token();
+        let _csrf_token = session.csrf_token();
         let request_id = "REQUESTID";
         let error = self.to_string();
         let error = &error;

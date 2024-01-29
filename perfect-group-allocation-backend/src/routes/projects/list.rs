@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 use headers::ContentType;
 use http::{Response, StatusCode};
 use http_body::Body;
-use http_body_util::StreamBody;
+
 use perfect_group_allocation_config::Config;
 use perfect_group_allocation_database::models::ProjectHistoryEntry;
 use perfect_group_allocation_database::schema::project_history;
@@ -19,7 +19,7 @@ use tracing::error;
 
 use crate::components::main::main;
 use crate::error::AppError;
-use crate::routes::bundlecss::BUNDLE_CSS_VERSION;
+
 use crate::session::{ResponseSessionExt as _, Session};
 use crate::ResponseTypedHeaderExt as _;
 
@@ -29,7 +29,7 @@ pub async fn list(
     pool: Pool,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
-    let csrf_token = session.csrf_token();
+    let _csrf_token = session.csrf_token();
 
     let result = {
         let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
@@ -40,7 +40,7 @@ pub async fn list(
                     {
                         let mut connection = match pool.get().await {
                             Ok(connection) => connection,
-                            Err(erroro) => {
+                            Err(_erroro) => {
                                 // AppError::from(erroro)
                                 return;
                             }
@@ -78,9 +78,9 @@ pub async fn list(
                         }
                     }
                 </div>
-            )
+            );
         };
-        let future = main(tx_orig, "Projects".into(), &session, &config, future);
+        let future = main(tx_orig, "Projects".into(), &session, config, future);
         let stream = pin!(TemplateToStream::new(future, rx));
         // I think we should sent it at once with a content length when it is not too large
         stream.collect::<String>().await

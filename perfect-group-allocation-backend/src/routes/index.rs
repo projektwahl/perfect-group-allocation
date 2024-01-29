@@ -6,13 +6,12 @@ use bytes::Bytes;
 use futures_util::StreamExt as _;
 use http::{Response, StatusCode};
 use http_body::Body;
-use http_body_util::StreamBody;
+
 use perfect_group_allocation_config::Config;
-use perfect_group_allocation_openidconnect::id_token_claims;
 
 use crate::components::main::main;
 use crate::error::AppError;
-use crate::routes::bundlecss::BUNDLE_CSS_VERSION;
+
 use crate::session::{ResponseSessionExt as _, Session};
 
 pub async fn index(

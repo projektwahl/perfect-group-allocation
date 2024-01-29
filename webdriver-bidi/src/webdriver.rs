@@ -174,7 +174,7 @@ impl WebDriver {
     pub fn request_subscribe<C: Send, R: Send>(
         &self,
         send_command_constructor: impl FnOnce(C, oneshot::Sender<broadcast::Receiver<R>>) -> SendCommand
-        + Send,
+            + Send,
         command: C,
     ) -> impl Future<Output = crate::error::Result<broadcast::Receiver<R>>> {
         let (tx, rx) = oneshot::channel();
