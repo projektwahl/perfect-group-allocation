@@ -55,7 +55,7 @@ dependencies = [
 [[package]]
 name = "async-zero-cost-templating"
 version = "0.1.0"
-source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=experiment#76965e1b99d7534f026ab4e339e5a03f1c271216"
+source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=experiment#b3e6de1b053dba58d9b8de1d54960ccb1c97e514"
 dependencies = [
  "async-zero-cost-templating-proc-macro",
  "async-zero-cost-templating-proc-macro2",
@@ -71,7 +71,7 @@ dependencies = [
 [[package]]
 name = "async-zero-cost-templating-proc-macro"
 version = "0.1.0"
-source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=experiment#76965e1b99d7534f026ab4e339e5a03f1c271216"
+source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=experiment#b3e6de1b053dba58d9b8de1d54960ccb1c97e514"
 dependencies = [
  "async-zero-cost-templating-proc-macro2",
 ]
@@ -79,7 +79,7 @@ dependencies = [
 [[package]]
 name = "async-zero-cost-templating-proc-macro2"
 version = "0.1.0"
-source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=experiment#76965e1b99d7534f026ab4e339e5a03f1c271216"
+source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=experiment#b3e6de1b053dba58d9b8de1d54960ccb1c97e514"
 dependencies = [
  "proc-macro2",
  "proc-macro2-diagnostics",
