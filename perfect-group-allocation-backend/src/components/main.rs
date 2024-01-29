@@ -84,7 +84,7 @@ pub fn main<
                     </ul>
                 </nav>
                 <main>
-                    { inner.await }
+                    { inner.await; }
                 </main>
             </body>
 
