@@ -71,6 +71,10 @@ pub async fn create<'a>(
     };
 
     let csrf_token = session.csrf_token();
+    let csrf_token = &csrf_token;
+
+    let title_value = &form.value.title;
+    let description_value = &form.value.description;
 
     let result = {
         let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
@@ -85,19 +89,19 @@ pub async fn create<'a>(
                     <div class="error-message">"Es ist ein Fehler aufgetreten: "(Cow::Owned(global_error.to_string()))</div>
                 }
 
-                <input type="hidden" name="csrf_token" value=[(Cow::Borrowed(&csrf_token))]>
+                <input type="hidden" name="csrf_token" value=[(Cow::Borrowed(csrf_token))]>
 
                 if empty_title {
                     <div class="error-message">"title must not be empty"</div>
                 }
                 <label for="title">"Title:"</label>
-                <input if empty_title { class="error" } id="title" name="title" type="text" value=[(Cow::Borrowed(&form.value.title))]>
+                <input if empty_title { class="error" } id="title" name="title" type="text" value=[(Cow::Borrowed(title_value))]>
 
                 if empty_description {
                     <div class="error-message">"description must not be empty"</div>
                 }
                 <label for="description">"Description:"</label>
-                <input if empty_description { class="error" } id="description" name="description" type="text" value=[(Cow::Borrowed(&form.value.description))] >
+                <input if empty_description { class="error" } id="description" name="description" type="text" value=[(Cow::Borrowed(description_value))] >
 
                 <button type="submit">"Create"</button>
 
