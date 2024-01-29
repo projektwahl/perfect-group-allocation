@@ -35,62 +35,66 @@ pub fn main<
         let csrf_token = session.csrf_token();
         let indexcss_version = Cow::Borrowed("42");
 
-        let html = async {
-            html! {
-            <!doctype html>
-            <html lang="en">
+        html! {
+        <!doctype html>
+        <html lang="en">
 
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <title>(page_title)</title>
-                <link rel="icon" type="image/x-icon" href="/favicon.ico?v=1">
-                <link rel="stylesheet" href=["/bundle.css?v=" (indexcss_version)]>
-            </head>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>(page_title)</title>
+            <link rel="icon" type="image/x-icon" href="/favicon.ico?v=1">
+            <link rel="stylesheet" href=["/bundle.css?v=" (indexcss_version)]>
+        </head>
 
-            <body>
-                <nav>
-                    <span>"PGA"</span>
-                    <input id="open-nav" type="checkbox" checked>
-                    <label for="open-nav" class="hamb">
-                        <svg viewBox="0 0 100 100">
-                            <rect y="10" width="100" height="20"></rect>
-                            <rect y="40" width="100" height="20"></rect>
-                            <rect y="70" width="100" height="20"></rect>
-                        </svg>
-                    </label>
-                    <ul>
-                        <li>
-                            <a href="/">"Home"</a>
-                        </li>
-                        <li>
-                            <a href="/list">"Projects"</a>
-                        </li>
-                        <li>
-                            if email.is_some() {
-                                <form method="post" action="/openidconnect-logout" enctype="application/x-www-form-urlencoded">
-                                    <input type="hidden" name="csrf_token" value=[(csrf_token.into())]>
+        <body>
+            <nav>
+                <span>"PGA"</span>
+                <input id="open-nav" type="checkbox" checked>
+                <label for="open-nav" class="hamb">
+                    <svg viewBox="0 0 100 100">
+                        <rect y="10" width="100" height="20"></rect>
+                        <rect y="40" width="100" height="20"></rect>
+                        <rect y="70" width="100" height="20"></rect>
+                    </svg>
+                </label>
+                <ul>
+                    <li>
+                        <a href="/">"Home"</a>
+                    </li>
+                    <li>
+                        <a href="/list">"Projects"</a>
+                    </li>
+                    <li>
+                        <form method="post" action="/" enctype="application/x-www-form-urlencoded">
+                            <input type="hidden" name="csrf_token" value=[(Cow::Owned(csrf_token.clone()))]>
 
-                                    <button class="submit-link" type="submit">"Logout "(email.unwrap().into())</button>
-                                </form>
-                            } else {
-                                <form method="post" action="/openidconnect-login" enctype="application/x-www-form-urlencoded">
-                                    <input type="hidden" name="csrf_token" value=[(csrf_token.into())]>
+                            <button class="submit-link" type="submit">"Create project"</button>
+                        </form>
+                    </li>
+                    <li>
+                        if email.is_some() {
+                            <form method="post" action="/openidconnect-logout" enctype="application/x-www-form-urlencoded">
+                                <input type="hidden" name="csrf_token" value=[(Cow::Owned(csrf_token.clone()))]>
 
-                                    <button class="submit-link" type="submit">"Login"</button>
-                                </form>
-                            }
-                        </li>
-                    </ul>
-                </nav>
-                <main>
-                    { inner.await; }
-                </main>
-            </body>
+                                <button class="submit-link" type="submit">"Logout "(email.unwrap().into())</button>
+                            </form>
+                        } else {
+                            <form method="post" action="/openidconnect-login" enctype="application/x-www-form-urlencoded">
+                                <input type="hidden" name="csrf_token" value=[(Cow::Owned(csrf_token.clone()))]>
 
-            </html>
-            }
-        };
-        html.await
+                                <button class="submit-link" type="submit">"Login"</button>
+                            </form>
+                        }
+                    </li>
+                </ul>
+            </nav>
+            <main>
+                { inner.await; }
+            </main>
+        </body>
+
+        </html>
+        }
     }
 }
