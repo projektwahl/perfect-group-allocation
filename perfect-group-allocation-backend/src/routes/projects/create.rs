@@ -71,17 +71,19 @@ pub async fn create<'a>(
     };
 
     let csrf_token = session.csrf_token();
-    let csrf_token = &csrf_token;
-
-    let title_value = &form.value.title;
-    let description_value = &form.value.description;
 
     let result = {
+        let csrf_token = &csrf_token;
+
+        let title_value = &form.value.title;
+        let description_value = &form.value.description;
+        let global_error = &global_error;
+
         let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
 
         let tx = tx_orig.clone();
 
-        let future = async {
+        let future = async move {
             html! {
                 <h1 class="center">"Create project"</h1>
 
