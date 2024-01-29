@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::convert::Infallible;
 use std::pin::pin;
 
@@ -66,12 +67,13 @@ pub async fn list(
                             }
                         };
                     }
-                    for project in projects {
-                        if error {
-                            <div class="error-message">"Es ist ein Fehler aufgetreten: "(error_message)</div>
+                    while let Some(project) = projects.next().await {
+                        if false {
+                            //<div class="error-message">"Es ist ein Fehler aufgetreten: "(error_message)</div>
                         } else {
-                            "title: "(title)<br>
-                            "description: "(description)<br>
+                            { let project = project.unwrap(); }
+                            "title: "(Cow::Owned(project.title))<br>
+                            "description: "(Cow::Owned(project.info))<br>
                             <br>
                         }
                     }
@@ -83,24 +85,10 @@ pub async fn list(
         // I think we should sent it at once with a content length when it is not too large
         stream.collect::<String>().await
     };
-    let result = async move {
-        while let Some(x) = stream.next().await {
-            let inner_template = yieldfi!(template.next_enter_loop());
-            let inner_template = yieldfi!(inner_template.next_error_false());
-            let x = x.unwrap();
-            let inner_template = yieldfv!(inner_template.title(x.title));
-            let inner_template = yieldfi!(inner_template.next());
-            let inner_template = yieldfv!(inner_template.description(x.info));
-            template = yieldfi!(inner_template.next());
-        }
-        let template = yieldfi!(template.next_end_loop());
-        yieldfi!(template.next());
-    };
-    let stream = AsyncIteratorStream(result);
     Ok(Response::builder()
         .with_session(session)
         .status(StatusCode::OK)
         .typed_header(ContentType::html())
-        .body(StreamBody::new(stream))
+        .body(result)
         .unwrap())
 }
