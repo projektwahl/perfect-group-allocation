@@ -23,6 +23,10 @@ pub enum AppError {
     Header(#[from] headers::Error),
     #[error("IO error: {0}")]
     File(#[from] std::io::Error),
+    #[error("Tls certificate failed to load {0}")]
+    TlsCertificate(std::io::Error),
+    #[error("Tls key failed to load {0}")]
+    TlsKey(std::io::Error),
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("webserver error: {0}")]

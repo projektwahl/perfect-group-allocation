@@ -510,17 +510,22 @@ pub async fn run_http2_server(
     })
 }
 
-pub fn load_certs(filename: &Path) -> std::io::Result<Vec<CertificateDer<'static>>> {
+pub fn load_certs(filename: &Path) -> Result<Vec<CertificateDer<'static>>, AppError> {
     // TODO FIXME async
-    let certfile = std::fs::File::open(filename)?;
+    let certfile = std::fs::File::open(filename).map_err(AppError::TlsCertificate)?;
     let mut reader = std::io::BufReader::new(certfile);
 
-    rustls_pemfile::certs(&mut reader).collect()
+    rustls_pemfile::certs(&mut reader)
+        .map(|value| match value {
+            Ok(ok) => Ok(ok),
+            Err(err) => Err(AppError::TlsCertificate(err)),
+        })
+        .collect()
 }
 
 // Load private key from file.
-pub fn load_private_key(filename: &Path) -> std::io::Result<PrivateKeyDer<'static>> {
-    let keyfile = std::fs::File::open(filename)?;
+pub fn load_private_key(filename: &Path) -> Result<PrivateKeyDer<'static>, AppError> {
+    let keyfile = std::fs::File::open(filename).map_err(AppError::TlsKey)?;
     let mut reader = std::io::BufReader::new(keyfile);
 
     // TODO FIXME remove unwrap
