@@ -288,8 +288,9 @@ impl<
             }),
             (&Method::POST, "/") => {
                 let pool = self.pool.clone();
+                let config = self.config.clone();
                 EitherFutureRouter::Option5(async move {
-                    Ok(create(req, session, pool)
+                    Ok(create(req, session, config, pool)
                         .await?
                         .map(EitherBodyRouter::Option5))
                 })
@@ -297,7 +298,7 @@ impl<
             (&Method::POST, "/openidconnect-login") => {
                 let config = self.config.clone();
                 EitherFutureRouter::Option6(async move {
-                    Ok(openid_login(session, config)
+                    Ok(openid_login(session, &config)
                         .await?
                         .map(EitherBodyRouter::Option6))
                 })
