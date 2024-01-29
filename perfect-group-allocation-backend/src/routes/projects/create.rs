@@ -73,7 +73,9 @@ pub async fn create<'a>(
     let csrf_token = session.csrf_token();
 
     let result = {
-        let (tx, rx) = tokio::sync::mpsc::channel(1);
+        let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
+
+        let tx = tx_orig.clone();
 
         let future = html! {
             <h1 class="center">"Create project"</h1>
@@ -102,7 +104,7 @@ pub async fn create<'a>(
                 <a href="/list">"Show all projects"</a>
             </form>
         };
-        let future = main(tx, "Create Project".into(), &session, &config, future);
+        let future = main(&tx_orig, "Create Project".into(), &session, &config, future);
         let stream = pin!(TemplateToStream::new(future, rx));
         stream.collect::<String>().await
     };
