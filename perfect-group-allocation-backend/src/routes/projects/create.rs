@@ -81,32 +81,34 @@ pub async fn create<'a>(
 
         let tx = tx_orig.clone();
 
-        let future = html! {
-            <h1 class="center">"Create project"</h1>
+        let future = async {
+            html! {
+                <h1 class="center">"Create project"</h1>
 
-            <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
-                if let Err(global_error) = global_error {
-                    <div class="error-message">"Es ist ein Fehler aufgetreten: "(Cow::Owned(global_error.to_string()))</div>
-                }
+                <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
+                    if let Err(global_error) = global_error {
+                        <div class="error-message">"Es ist ein Fehler aufgetreten: "(Cow::Owned(global_error.to_string()))</div>
+                    }
 
-                <input type="hidden" name="csrf_token" value=[(Cow::Borrowed(csrf_token))]>
+                    <input type="hidden" name="csrf_token" value=[(Cow::Borrowed(csrf_token))]>
 
-                if empty_title {
-                    <div class="error-message">"title must not be empty"</div>
-                }
-                <label for="title">"Title:"</label>
-                <input if empty_title { class="error" } id="title" name="title" type="text" value=[(Cow::Borrowed(title_value))]>
+                    if empty_title {
+                        <div class="error-message">"title must not be empty"</div>
+                    }
+                    <label for="title">"Title:"</label>
+                    <input if empty_title { class="error" } id="title" name="title" type="text" value=[(Cow::Borrowed(title_value))]>
 
-                if empty_description {
-                    <div class="error-message">"description must not be empty"</div>
-                }
-                <label for="description">"Description:"</label>
-                <input if empty_description { class="error" } id="description" name="description" type="text" value=[(Cow::Borrowed(description_value))] >
+                    if empty_description {
+                        <div class="error-message">"description must not be empty"</div>
+                    }
+                    <label for="description">"Description:"</label>
+                    <input if empty_description { class="error" } id="description" name="description" type="text" value=[(Cow::Borrowed(description_value))] >
 
-                <button type="submit">"Create"</button>
+                    <button type="submit">"Create"</button>
 
-                <a href="/list">"Show all projects"</a>
-            </form>
+                    <a href="/list">"Show all projects"</a>
+                </form>
+            }
         };
         let future = main(&tx_orig, "Create Project".into(), &session, &config, future);
         let stream = pin!(TemplateToStream::new(future, rx));
