@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use async_zero_cost_templating::{html, FutureToStream};
+use async_zero_cost_templating::{html, FutureToStream, TheStream};
 use bytes::{Buf, Bytes};
 use diesel_async::RunQueryDsl;
 use headers::ContentType;
@@ -98,8 +98,9 @@ pub async fn create<'a>(
                 <a href="/list">"Show all projects"</a>
             </form>
         };
-        main(stream, "Create Project".into(), session, config, html)
+        main(stream, "Create Project".into(), session, config, html).await;
     };
+    let stream = TheStream::new(abc);
 
     Ok(Response::builder()
         .with_session(session)
