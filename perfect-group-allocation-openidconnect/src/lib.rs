@@ -152,7 +152,7 @@ pub async fn get_openid_client(
     OPENID_CLIENT
         .get_or_try_init(|| async {
             let provider_metadata = CoreProviderMetadata::discover_async(
-                IssuerUrl::new(config.openidconnect.issuer_url.to_owned())?,
+                IssuerUrl::new(config.openidconnect.issuer_url.clone())?,
                 my_http_client,
             )
             .await?;
@@ -161,9 +161,9 @@ pub async fn get_openid_client(
             // and token URL.
             let client = CoreClient::from_provider_metadata(
                 provider_metadata,
-                ClientId::new(config.openidconnect.client_id.to_owned()),
+                ClientId::new(config.openidconnect.client_id.clone()),
                 Some(ClientSecret::new(
-                    config.openidconnect.client_secret.to_owned(),
+                    config.openidconnect.client_secret.clone(),
                 )),
             )
             // Set the URL the user will be redirected to after the authorization process.
