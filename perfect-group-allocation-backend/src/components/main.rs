@@ -5,21 +5,24 @@ use futures_util::Future;
 use perfect_group_allocation_config::Config;
 use perfect_group_allocation_openidconnect::id_token_claims;
 
-use crate::session::Session;
+use crate::session::{IntoCookieValue, Session};
 
-pub fn main<'a, F: Future<Output = ()> + 'a>(
+pub fn main<
+    'a,
+    F: Future<Output = ()> + 'a,
+    OpenIdConnectSession: IntoCookieValue + Clone,
+    TemporaryOpenIdConnectState: IntoCookieValue,
+>(
     tx: tokio::sync::mpsc::Sender<Cow<'a, str>>,
     page_title: Cow<'a, str>,
-    session: &'a Session,
+    session: &'a Session<OpenIdConnectSession, TemporaryOpenIdConnectState>,
     config: &'a Config,
     inner: F,
 ) -> impl Future<Output = ()> + 'a {
     async move {
         // TODO support if let and while let and while and normal for?
 
-        // TODO fixme templates should take a &FutureToStream so we can pass it multiple times
-
-        let openidconnect_session = session.openidconnect_session();
+        let openidconnect_session = session.openidconnect_session().into_cookie_value();
         let email;
         if let Some(openidconnect_session) = openidconnect_session {
             let claims = id_token_claims(config, openidconnect_session)

@@ -266,6 +266,7 @@ impl<
         // just store csrf token here? (static files are the only ones that theoretically don't need one)
         let session = Session::new(&req);
         let error_session = session.without_temporary_openidconnect_state(); // at some point we may also want to show the logged in user etc so just clone the whole thing
+        let error_config = self.config.clone();
 
         match (req.method(), req.uri().path()) {
             (&Method::GET, "/") => {
@@ -321,7 +322,7 @@ impl<
             Ok(ok) => Ok(ok),
             Err(err) => {
                 let response = err
-                    .build_error_template(error_session)
+                    .build_error_template(error_session, error_config)
                     .map(EitherBodyRouter::Option500);
                 Ok(response)
             }

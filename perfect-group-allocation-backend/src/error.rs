@@ -1,14 +1,19 @@
+use std::borrow::Cow;
 use std::convert::Infallible;
 use std::fmt::{Debug, Display};
+use std::pin::pin;
 
+use crate::components::main::main;
 use crate::routes::indexcss::INDEX_CSS_VERSION;
 use crate::session::{ResponseSessionExt, Session};
-use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
+use crate::ResponseTypedHeaderExt as _;
+use async_zero_cost_templating::{html, TemplateToStream};
 use bytes::Bytes;
+use futures_util::StreamExt;
 use headers::ContentType;
 use http::{Response, StatusCode};
 use http_body_util::StreamBody;
-use perfect_group_allocation_config::ConfigError;
+use perfect_group_allocation_config::{Config, ConfigError};
 use perfect_group_allocation_database::DatabaseError;
 use perfect_group_allocation_openidconnect::error::OpenIdConnectError;
 
@@ -88,38 +93,47 @@ impl From<diesel::result::Error> for AppError {
 
 impl AppError {
     #[must_use]
-    pub fn build_error_template(
+    pub async fn build_error_template(
         self,
         session: Session<Option<String>, ()>,
+        config: Config,
     ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send + 'static> {
         let csrf_token = session.csrf_token();
-        let result = async move {
-            let template = yieldfi!(error());
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next());
-            let template = yieldfv!(template.page_title("Internal Server Error"));
-            let template = yieldfi!(template.next());
-            let template = yieldfv!(template
-                .indexcss_version_unsafe(Unsafe::unsafe_input(INDEX_CSS_VERSION.to_string())));
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next_email_false());
-            let template = yieldfv!(template.csrf_token(csrf_token));
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next());
-            let template = yieldfv!(template.request_id("REQUESTID"));
-            let template = yieldfi!(template.next());
-            let template = yieldfv!(template.error(self.to_string()));
-            let template = yieldfi!(template.next());
-            yieldfi!(template.next());
+        let request_id = "REQUESTID";
+        let error = self.to_string();
+
+        let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
+
+        let tx = tx_orig.clone();
+        let future = async move {
+            html! {
+                <div>
+                    <h1 class="center">"Internal Server Error"</h1>
+
+                    "Es ist ein interner Fehler aufgetreten! Bitte melde diesen an die Serveradministratoren. Ihnen können folgende
+                    Informationen helfen:"<br>
+
+                    "Request-ID: "(Cow::Borrowed(request_id))<br>
+                    "Fehler: "(Cow::Borrowed(&error))<br>
+                </div>
+            }
         };
-        let stream = AsyncIteratorStream(result);
+        let future = main(
+            tx_orig,
+            "Internal Server Error".into(),
+            &session,
+            &config,
+            future,
+        );
+        let stream = pin!(TemplateToStream::new(future, rx));
+        // I think we should sent it at once with a content length when it is not too large
+        let result = stream.collect::<String>().await;
+
         Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .typed_header(ContentType::html())
             .with_session(session)
-            .body(StreamBody::new(stream))
+            .body(result)
             .unwrap()
     }
 }
