@@ -55,7 +55,7 @@ dependencies = [
 [[package]]
 name = "async-zero-cost-templating"
 version = "0.1.0"
-source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=work#0f475500c86ba0eea54b828c925bc1abdfc910d1"
+source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=experiment#e127f635c90c084b1edfbb6aef8c6e84e10c00d0"
 dependencies = [
  "async-zero-cost-templating-proc-macro",
  "async-zero-cost-templating-proc-macro2",
@@ -71,7 +71,7 @@ dependencies = [
 [[package]]
 name = "async-zero-cost-templating-proc-macro"
 version = "0.1.0"
-source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=work#0f475500c86ba0eea54b828c925bc1abdfc910d1"
+source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=experiment#e127f635c90c084b1edfbb6aef8c6e84e10c00d0"
 dependencies = [
  "async-zero-cost-templating-proc-macro2",
 ]
@@ -79,7 +79,7 @@ dependencies = [
 [[package]]
 name = "async-zero-cost-templating-proc-macro2"
 version = "0.1.0"
-source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=work#0f475500c86ba0eea54b828c925bc1abdfc910d1"
+source = "git+https://github.com/mohe2015/async-zero-cost-templating.git?branch=experiment#e127f635c90c084b1edfbb6aef8c6e84e10c00d0"
 dependencies = [
  "proc-macro2",
  "proc-macro2-diagnostics",
@@ -1102,9 +1102,9 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25db6b064527c5d482d0423354fcd07a89a2dfe07b67892e62411946db7f07b0"
+checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
 dependencies = [
  "either",
 ]
@@ -1595,7 +1595,7 @@ name = "perfect-group-allocation-optimizer"
 version = "0.1.0"
 dependencies = [
  "good_lp",
- "itertools 0.12.0",
+ "itertools 0.12.1",
  "tracing",
 ]
 

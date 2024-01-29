@@ -1,14 +1,17 @@
+use std::borrow::Cow;
 use std::convert::Infallible;
+use std::pin::pin;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use async_zero_cost_templating::{html, FutureToStream, TheStream};
+use async_zero_cost_templating::{html, TemplateToStream};
 use bytes::{Buf, Bytes};
 use diesel_async::RunQueryDsl;
+use futures_util::StreamExt;
 use headers::ContentType;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
-use http_body_util::{Empty, StreamBody};
+use http_body_util::Empty;
 use perfect_group_allocation_config::Config;
 use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
@@ -16,7 +19,6 @@ use perfect_group_allocation_database::Pool;
 
 use crate::components::main::main;
 use crate::error::AppError;
-use crate::routes::indexcss::INDEX_CSS_VERSION;
 use crate::session::{ResponseSessionExt, Session};
 use crate::{either_http_body, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt};
 
@@ -68,44 +70,47 @@ pub async fn create<'a>(
         Ok::<(), AppError>(())
     };
 
-    let abc = |stream: FutureToStream| async {
-        let csrf_token = session.csrf_token();
+    let csrf_token = session.csrf_token();
 
-        let html = html! {
+    let result = {
+        let (tx, rx) = tokio::sync::mpsc::channel(1);
+
+        let future = html! {
             <h1 class="center">"Create project"</h1>
 
             <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
                 if let Err(global_error) = global_error {
-                    <div class="error-message">"Es ist ein Fehler aufgetreten: "(Bytes::from(global_error.to_string()))</div>
+                    <div class="error-message">"Es ist ein Fehler aufgetreten: "(Cow::Owned(global_error.to_string()))</div>
                 }
 
-                <input type="hidden" name="csrf_token" value=[(Bytes::from(csrf_token))]>
+                <input type="hidden" name="csrf_token" value=[(Cow::Borrowed(&csrf_token))]>
 
                 if empty_title {
                     <div class="error-message">"title must not be empty"</div>
                 }
                 <label for="title">"Title:"</label>
-                <input if empty_title { class="error" } id="title" name="title" type="text" value=[(Bytes::from(form.value.title))]>
+                <input if empty_title { class="error" } id="title" name="title" type="text" value=[(Cow::Borrowed(&form.value.title))]>
 
                 if empty_description {
                     <div class="error-message">"description must not be empty"</div>
                 }
                 <label for="description">"Description:"</label>
-                <input if empty_description { class="error" } id="description" name="description" type="text" value=[(Bytes::from(form.value.description.clone()))] >
+                <input if empty_description { class="error" } id="description" name="description" type="text" value=[(Cow::Borrowed(&form.value.description))] >
 
                 <button type="submit">"Create"</button>
 
                 <a href="/list">"Show all projects"</a>
             </form>
         };
-        main(stream, "Create Project".into(), session, config, html).await;
+        let future = main(tx, "Create Project".into(), &session, &config, future);
+        let stream = pin!(TemplateToStream::new(future, rx));
+        stream.collect::<String>().await
     };
-    let stream = TheStream::new(abc);
 
     Ok(Response::builder()
         .with_session(session)
         .status(StatusCode::OK)
         .typed_header(ContentType::html())
-        .body(EitherBody::Option2(StreamBody::new(stream)))
+        .body(EitherBody::Option2(result))
         .unwrap())
 }

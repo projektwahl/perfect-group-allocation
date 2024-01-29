@@ -147,12 +147,12 @@ pub async fn my_http_client(request: HttpRequest) -> Result<HttpResponse, HttpEr
 
 #[allow(unused)]
 pub async fn get_openid_client(
-    config: Config,
+    config: &Config,
 ) -> Result<&'static OpenIdConnectClientType, OpenIdConnectError> {
     OPENID_CLIENT
         .get_or_try_init(|| async {
             let provider_metadata = CoreProviderMetadata::discover_async(
-                IssuerUrl::new(config.openidconnect.issuer_url)?,
+                IssuerUrl::new(config.openidconnect.issuer_url.to_owned())?,
                 my_http_client,
             )
             .await?;
@@ -161,8 +161,10 @@ pub async fn get_openid_client(
             // and token URL.
             let client = CoreClient::from_provider_metadata(
                 provider_metadata,
-                ClientId::new(config.openidconnect.client_id),
-                Some(ClientSecret::new(config.openidconnect.client_secret)),
+                ClientId::new(config.openidconnect.client_id.to_owned()),
+                Some(ClientSecret::new(
+                    config.openidconnect.client_secret.to_owned(),
+                )),
             )
             // Set the URL the user will be redirected to after the authorization process.
             .set_redirect_uri(RedirectUrl::new(format!(
@@ -175,7 +177,7 @@ pub async fn get_openid_client(
 }
 
 pub async fn begin_authentication(
-    config: Config,
+    config: &Config,
 ) -> Result<(String, OpenIdSession), OpenIdConnectError> {
     // Generate a PKCE challenge.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -203,7 +205,7 @@ pub async fn begin_authentication(
 }
 
 pub async fn finish_authentication(
-    config: Config,
+    config: &Config,
     session: OpenIdSession,
     input: OpenIdRedirect<OpenIdRedirectSuccess>,
 ) -> Result<String, OpenIdConnectError> {
@@ -259,7 +261,7 @@ pub async fn finish_authentication(
 }
 
 pub async fn id_token_claims(
-    config: Config,
+    config: &Config,
     id_token: String,
 ) -> Result<IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>, OpenIdConnectError> {
     let client = get_openid_client(config).await?;

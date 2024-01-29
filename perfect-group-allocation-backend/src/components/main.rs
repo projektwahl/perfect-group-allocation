@@ -1,20 +1,19 @@
-use std::pin::pin;
+use std::borrow::Cow;
 
-use async_zero_cost_templating::{html, FutureToStream, TheStream};
-use bytes::Bytes;
-use futures_util::{Future, Stream};
+use async_zero_cost_templating::html;
+use futures_util::Future;
 use perfect_group_allocation_config::Config;
 use perfect_group_allocation_openidconnect::id_token_claims;
 
 use crate::session::Session;
 
-pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
-    stream: FutureToStream,
-    page_title: Bytes,
-    session: Session,
-    config: Config,
-    inner: I,
-) -> impl Future<Output = ()> {
+pub async fn main<'a, F: Future<Output = ()> + 'a>(
+    tx: &tokio::sync::mpsc::Sender<Cow<'a, str>>,
+    page_title: Cow<'a, str>,
+    session: &Session,
+    config: &Config,
+    inner: F,
+) {
     // TODO support if let and while let and while and normal for?
 
     // TODO fixme templates should take a &FutureToStream so we can pass it multiple times
@@ -30,7 +29,7 @@ pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
         email = None;
     }
     let csrf_token = session.csrf_token();
-    let indexcss_version = Bytes::from_static(b"1");
+    let indexcss_version = Cow::Borrowed("1");
 
     let html = html! {
     <!doctype html>
@@ -80,11 +79,11 @@ pub async fn main<I: FnOnce(FutureToStream) -> F, F: Future<Output = ()>>(
             </ul>
         </nav>
         <main>
-            { inner(stream).await }
+            { inner.await }
         </main>
     </body>
 
     </html>
     };
-    html(stream)
+    html.await
 }

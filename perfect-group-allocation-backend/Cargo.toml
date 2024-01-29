@@ -50,7 +50,7 @@ rustls-pemfile = { default-features = false, version = "2", features = ["std"] }
 #    "provider-tls-rustls",
 #] }
 #s2n-quic-h3 = { default-features = false, git = "https://github.com/mohe2015/s2n-quic.git", branch = "patch-1" }
-async-zero-cost-templating = { default-features = false, git = "https://github.com/mohe2015/async-zero-cost-templating.git", branch = "work" }
+async-zero-cost-templating = { default-features = false, git = "https://github.com/mohe2015/async-zero-cost-templating.git", branch = "experiment" }
 diesel = { default-features = false, version = "2" }
 diesel-async = { default-features = false, version = "0.4", features = [
     "deadpool",
