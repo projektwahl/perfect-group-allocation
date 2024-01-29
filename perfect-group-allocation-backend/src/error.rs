@@ -106,6 +106,8 @@ impl AppError {
 
         let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
 
+        // TODO FIXME check that the error page can show you as logged in
+
         let tx = tx_orig.clone();
         let future = async move {
             html! {

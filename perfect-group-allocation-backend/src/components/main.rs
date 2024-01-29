@@ -27,7 +27,7 @@ pub fn main<
         if let Some(openidconnect_session) = openidconnect_session {
             let claims = id_token_claims(config, openidconnect_session)
                 .await
-                .unwrap();
+                .unwrap(); // TODO FIXME avoid crashing at all costs because this is used on the error page
             email = claims.email().map(|email| email.to_string());
         } else {
             email = None;

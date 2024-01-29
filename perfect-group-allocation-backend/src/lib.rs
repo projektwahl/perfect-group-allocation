@@ -268,69 +268,73 @@ impl<
         let error_session = session.without_temporary_openidconnect_state(); // at some point we may also want to show the logged in user etc so just clone the whole thing
         let error_config = self.config.clone();
 
-        match (req.method(), req.uri().path()) {
-            (&Method::GET, "/") => {
-                let config = self.config.clone();
-                EitherFutureRouter::Option1(async move {
-                    Ok(index(session, config).await?.map(EitherBodyRouter::Option1))
-                })
+        let result: EitherFutureRouter<Result<Response<EitherBodyRouter>, AppError>> =
+            match (req.method(), req.uri().path()) {
+                (&Method::GET, "/") => {
+                    let config = self.config.clone();
+                    EitherFutureRouter::Option1(async move {
+                        Ok(index(session, config).await?.map(EitherBodyRouter::Option1))
+                    })
+                }
+                (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
+                    Ok(indexcss(req).map(EitherBodyRouter::Option2))
+                }),
+                (&Method::GET, "/list") => {
+                    let pool = self.pool.clone();
+                    EitherFutureRouter::Option3(async move {
+                        Ok(list(session, pool).await?.map(EitherBodyRouter::Option3))
+                    })
+                }
+                (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
+                    Ok(favicon_ico(req).map(EitherBodyRouter::Option4))
+                }),
+                (&Method::POST, "/") => {
+                    let pool = self.pool.clone();
+                    let config = self.config.clone();
+                    EitherFutureRouter::Option5(async move {
+                        Ok(create(req, session, config, pool)
+                            .await?
+                            .map(EitherBodyRouter::Option5))
+                    })
+                }
+                (&Method::POST, "/openidconnect-login") => {
+                    let config = self.config.clone();
+                    EitherFutureRouter::Option6(async move {
+                        Ok(openid_login(session, &config)
+                            .await?
+                            .map(EitherBodyRouter::Option6))
+                    })
+                }
+                (&Method::GET, "/openidconnect-redirect") => {
+                    let config = self.config.clone();
+                    EitherFutureRouter::Option7(async move {
+                        Ok(openid_redirect(req, session, config)
+                            .await?
+                            .map(EitherBodyRouter::Option7))
+                    })
+                }
+                (_, _) => EitherFutureRouter::Option404(async move {
+                    let mut not_found =
+                        Response::new(Full::new(Bytes::from_static(b"404 not found")));
+                    *not_found.status_mut() = StatusCode::NOT_FOUND;
+                    Ok(not_found.map(EitherBodyRouter::Option404))
+                }),
+            };
+        async {
+            match result.await {
+                Ok(ok) => Ok(ok),
+                Err(err) => {
+                    let response = err
+                        .build_error_template(error_session, error_config)
+                        .await
+                        .map(EitherBodyRouter::Option500);
+                    Ok(response)
+                }
             }
-            (&Method::GET, "/index.css") => EitherFutureRouter::Option2(async move {
-                Ok(indexcss(req).map(EitherBodyRouter::Option2))
-            }),
-            (&Method::GET, "/list") => {
-                let pool = self.pool.clone();
-                EitherFutureRouter::Option3(async move {
-                    Ok(list(session, pool).await?.map(EitherBodyRouter::Option3))
-                })
-            }
-            (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
-                Ok(favicon_ico(req).map(EitherBodyRouter::Option4))
-            }),
-            (&Method::POST, "/") => {
-                let pool = self.pool.clone();
-                let config = self.config.clone();
-                EitherFutureRouter::Option5(async move {
-                    Ok(create(req, session, config, pool)
-                        .await?
-                        .map(EitherBodyRouter::Option5))
-                })
-            }
-            (&Method::POST, "/openidconnect-login") => {
-                let config = self.config.clone();
-                EitherFutureRouter::Option6(async move {
-                    Ok(openid_login(session, &config)
-                        .await?
-                        .map(EitherBodyRouter::Option6))
-                })
-            }
-            (&Method::GET, "/openidconnect-redirect") => {
-                let config = self.config.clone();
-                EitherFutureRouter::Option7(async move {
-                    Ok(openid_redirect(req, session, config)
-                        .await?
-                        .map(EitherBodyRouter::Option7))
-                })
-            }
-            (_, _) => EitherFutureRouter::Option404(async move {
-                let mut not_found = Response::new(Full::new(Bytes::from_static(b"404 not found")));
-                *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found.map(EitherBodyRouter::Option404))
-            }),
         }
-        .map(|fut: Result<_, AppError>| match fut {
-            Ok(ok) => Ok(ok),
-            Err(err) => {
-                let response = err
-                    .build_error_template(error_session, error_config)
-                    .await
-                    .map(EitherBodyRouter::Option500);
-                Ok(response)
-            }
-        })
-        .map_ok(|result: Response<_>| {
+        /* .map_ok(|result: Response<_>| {
             result.untyped_header(ALT_SVC, HeaderValue::from_static(ALT_SVC_HEADER))
-        })
+        })*/
     }
 }
 
