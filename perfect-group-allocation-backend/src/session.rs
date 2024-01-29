@@ -154,13 +154,15 @@ impl Session {
                 COOKIE_NAME_OPENIDCONNECT_SESSION => {
                     openidconnect_session = Some(cookie.value().to_owned());
                 }
-                COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE => {
-                    if let Ok(cookie) = serde_json::from_str(cookie.value()) {
-                        temporary_openidconnect_state = cookie;
-                    } else {
-                        debug!("failed to parse {}", cookie.value());
-                    }
-                }
+                COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE => serde_json::from_str(cookie.value())
+                    .map_or_else(
+                        |_| {
+                            debug!("failed to parse {}", cookie.value());
+                        },
+                        |cookie| {
+                            temporary_openidconnect_state = cookie;
+                        },
+                    ),
                 _ => {
                     // ignore the cookies that are not interesting for us
                 }

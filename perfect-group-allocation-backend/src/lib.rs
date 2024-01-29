@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
 use error::AppError;
-use futures_util::{pin_mut, Future, FutureExt, TryFutureExt};
+use futures_util::{pin_mut, Future};
 
 use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
 use http_body::Body;

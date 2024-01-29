@@ -7,9 +7,10 @@ use perfect_group_allocation_openidconnect::id_token_claims;
 
 use crate::session::{IntoCookieValue, Session};
 
+#[allow(clippy::future_not_send)]
 pub async fn main<
     'a,
-    F: Future<Output = ()> + 'a,
+    F: Future<Output = ()> + Send + 'a,
     OpenIdConnectSession: IntoCookieValue + Clone,
     TemporaryOpenIdConnectState: IntoCookieValue,
 >(
@@ -22,6 +23,7 @@ pub async fn main<
     // TODO support if let and while let and while and normal for?
 
     let openidconnect_session = session.openidconnect_session().into_cookie_value();
+    let csrf_token = session.csrf_token();
     let email;
     if let Some(openidconnect_session) = openidconnect_session {
         let claims = id_token_claims(config, openidconnect_session).await; // TODO FIXME avoid crashing at all costs because this is used on the error page
@@ -31,7 +33,6 @@ pub async fn main<
     } else {
         email = None;
     }
-    let csrf_token = session.csrf_token();
     let indexcss_version = Cow::Borrowed("42");
 
     html! {
