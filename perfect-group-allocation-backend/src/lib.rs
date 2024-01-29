@@ -14,6 +14,7 @@ use core::convert::Infallible;
 use std::marker::PhantomData;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use bytes::{Buf, Bytes};
@@ -245,6 +246,7 @@ impl<RequestBodyBuf: Buf + Send + 'static> Clone for Svc<RequestBodyBuf> {
 }
 
 // boxed improves lifetime error messages by a lot
+// TODO FIXME remove heap allocation again
 either_http_body!(boxed EitherBodyRouter 1 2 3 4 5 6 7 404 500);
 either_future!(boxed EitherFutureRouter 1 2 3 4 5 6 7 404);
 
@@ -254,9 +256,9 @@ impl<
     > Service<Request<RequestBody>> for Svc<RequestBodyBuf>
 {
     type Error = Infallible;
-    type Response = Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send>;
+    type Response = Response<EitherBodyRouter>;
 
-    type Future = impl Future<Output = Result<Self::Response, Self::Error>> + Send + 'static;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn call(&self, req: Request<RequestBody>) -> Self::Future {
         // TODO FIXME only parse cookies when needed
@@ -281,8 +283,11 @@ impl<
                 }),
                 (&Method::GET, "/list") => {
                     let pool = self.pool.clone();
+                    let config = self.config.clone();
                     EitherFutureRouter::Option3(async move {
-                        Ok(list(session, pool).await?.map(EitherBodyRouter::Option3))
+                        Ok(list(session, &config, pool)
+                            .await?
+                            .map(EitherBodyRouter::Option3))
                     })
                 }
                 (&Method::GET, "/favicon.ico") => EitherFutureRouter::Option4(async move {
@@ -308,7 +313,7 @@ impl<
                 (&Method::GET, "/openidconnect-redirect") => {
                     let config = self.config.clone();
                     EitherFutureRouter::Option7(async move {
-                        Ok(openid_redirect(req, session, config)
+                        Ok(openid_redirect(req, session, &config)
                             .await?
                             .map(EitherBodyRouter::Option7))
                     })
@@ -320,7 +325,8 @@ impl<
                     Ok(not_found.map(EitherBodyRouter::Option404))
                 }),
             };
-        async {
+        // TODO FIXME don't Box for performance
+        Box::pin(async move {
             match result.await {
                 Ok(ok) => Ok(ok),
                 Err(err) => {
@@ -331,7 +337,7 @@ impl<
                     Ok(response)
                 }
             }
-        }
+        })
         /* .map_ok(|result: Response<_>| {
             result.untyped_header(ALT_SVC, HeaderValue::from_static(ALT_SVC_HEADER))
         })*/

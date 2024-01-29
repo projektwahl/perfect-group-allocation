@@ -2,7 +2,7 @@
 macro_rules! either_http_body {
     (boxed $name: ident $($ident:literal)*) => {
         ::paste::paste! {
-            struct $name(::core::pin::Pin<Box<dyn ::http_body::Body<Data = ::bytes::Bytes, Error = ::core::convert::Infallible> + Send>>);
+            pub struct $name(::core::pin::Pin<Box<dyn ::http_body::Body<Data = ::bytes::Bytes, Error = ::core::convert::Infallible> + Send>>);
 
             impl $name {
                 $(
@@ -30,7 +30,7 @@ macro_rules! either_http_body {
     (either $name: ident $($ident:literal)*) => {
         ::paste::paste! {
             #[::pin_project::pin_project(project = [<$name Proj>])]
-            enum $name<
+            pub enum $name<
                 $([<Option $ident>]: ::http_body::Body<Data = ::bytes::Bytes, Error = ::core::convert::Infallible>,)*
             > {
                 $([<Option $ident>](#[pin] [<Option $ident>]),)*
@@ -63,7 +63,7 @@ macro_rules! either_http_body {
 macro_rules! either_future {
     (boxed $name: ident $($ident:literal)*) => {
         ::paste::paste! {
-            struct $name<Output>(::core::pin::Pin<Box<dyn ::core::future::Future<Output = Output> + Send>>);
+            pub struct $name<Output>(::core::pin::Pin<Box<dyn ::core::future::Future<Output = Output> + Send>>);
 
             impl<Output> $name<Output> {
                 $(
@@ -90,7 +90,7 @@ macro_rules! either_future {
     (either $name: ident $($ident:literal)*) => {
         ::paste::paste! {
             #[::pin_project::pin_project(project = [<$name Proj>])]
-            enum $name<
+            pub enum $name<
                 Output,
                 $([<Option $ident>]: ::core::future::Future<Output = Output>,)*
             > {

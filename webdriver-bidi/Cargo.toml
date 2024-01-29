@@ -19,7 +19,10 @@ serde_json = { default-features = false, version = "1", features = ["alloc"] }
 serde_path_to_error = { default-features = false, version = "0.1" }
 tempfile = { default-features = false, version = "3" }
 thiserror = { default-features = false, version = "1" }
-tokio = { default-features = false, version = "1", features = ["process"] }
+tokio = { default-features = false, version = "1", features = [
+    "process",
+    "rt-multi-thread",
+] }
 tokio-tungstenite = { default-features = false, version = "0.21", features = [
     "connect",
 ] }
