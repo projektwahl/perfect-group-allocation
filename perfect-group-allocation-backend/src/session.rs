@@ -61,8 +61,10 @@ pub struct Session<
     temporary_openidconnect_state: (TemporaryOpenIdConnectState, bool),
 }
 
-impl<OpenIdConnectSession: IntoCookieValue + Clone, TemporaryOpenIdConnectState: IntoCookieValue>
-    Session<OpenIdConnectSession, TemporaryOpenIdConnectState>
+impl<
+        OpenIdConnectSession: IntoCookieValue + Clone,
+        TemporaryOpenIdConnectState: IntoCookieValue,
+    > Session<OpenIdConnectSession, TemporaryOpenIdConnectState>
 {
     pub fn csrf_token(&self) -> String {
         self.csrf_token.0.clone()

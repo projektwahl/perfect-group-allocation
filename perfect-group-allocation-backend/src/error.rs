@@ -101,6 +101,8 @@ impl AppError {
         let csrf_token = session.csrf_token();
         let request_id = "REQUESTID";
         let error = self.to_string();
+        let error = &error;
+        let my_session = session.clone();
 
         let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
 
@@ -114,14 +116,14 @@ impl AppError {
                     Informationen helfen:"<br>
 
                     "Request-ID: "(Cow::Borrowed(request_id))<br>
-                    "Fehler: "(Cow::Borrowed(&error))<br>
+                    "Fehler: "(Cow::Borrowed(error))<br>
                 </div>
             }
         };
         let future = main(
             tx_orig,
             "Internal Server Error".into(),
-            &session,
+            &my_session,
             &config,
             future,
         );

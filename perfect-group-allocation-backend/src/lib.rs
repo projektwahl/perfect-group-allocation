@@ -323,6 +323,7 @@ impl<
             Err(err) => {
                 let response = err
                     .build_error_template(error_session, error_config)
+                    .await
                     .map(EitherBodyRouter::Option500);
                 Ok(response)
             }
