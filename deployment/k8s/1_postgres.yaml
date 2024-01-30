@@ -1,0 +1,32 @@
+# https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
+# https://kubernetes.io/docs/concepts/workloads/pods/
+# https://kubernetes.io/docs/setup/
+# https://kubernetes.io/partners/#iframe-landscape-conformance
+# I think k3s or kubeadm (probably k3s because of their load balancer)
+#https://kubernetes.io/docs/concepts/overview/working-with-objects/object-management/#declarative-object-configuration
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: development
+  name: postgres
+spec:
+  containers:
+  - name: postgres
+    image: postgres:16.1
+    ports:
+    - containerPort: 5432
+# curl -sfL https://get.k3s.io | sh - 
+# Check for Ready node, takes ~30 seconds 
+# sudo k3s kubectl get node
+# export KUBECONFIG=~/.kube/config
+# mkdir -p ~/.kube
+# sudo k3s kubectl config view --raw > "$KUBECONFIG"
+# chmod 600 "$KUBECONFIG"
+# kubectl get pods --all-namespaces
+
+# kubectl diff -R -f deployment/k8s/
+# kubectl apply -R -f deployment/k8s/
+# kubectl config set-context --current --namespace=development
+# kubectl get pods
+
+# https://kubernetes.io/docs/concepts/workloads/pods/
