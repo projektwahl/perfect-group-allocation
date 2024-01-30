@@ -11,7 +11,7 @@ RUN apt-get install -y nodejs
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup toolchain install stable --allow-downgrade --profile minimal --component rustfmt,clippy
-RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 RUN cargo install --locked cargo-hack
 RUN cargo install --locked cargo-deny
 RUN cargo install --locked --features=cli lightningcss@1.0.0-alpha.52
+RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
