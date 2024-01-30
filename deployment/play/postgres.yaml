@@ -1,0 +1,11 @@
+# podman play kube deployment/play/postgres.yaml
+# podman secret ls
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+type: Opaque
+stringData:
+  password: bestpassword
+---
+
