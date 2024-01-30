@@ -1,6 +1,8 @@
 # podman kube --help
+# man podman-kube-play
 # podman kube play --replace deployment/play/postgres.yaml
-# podman kube down deployment/play/postgres.yaml
+# https://github.com/containers/podman/blob/main/docs/kubernetes_support.md?plain=1
+# podman stats
 
 # podman secret ls
 apiVersion: v1
@@ -9,7 +11,7 @@ metadata:
   name: postgres-secret
 type: Opaque
 stringData:
-  password: bestpassword
+  password: bestpassword # TODO FIXME don't put this here
 ---
 apiVersion: v1
 kind: Pod
@@ -20,9 +22,13 @@ spec:
     - name: postgres
       image: docker.io/library/postgres:16.1
       env:
+        - name: "POSTGRES_INITDB_ARGS"
+          value: "--data-checksums"
         - name: "POSTGRES_PASSWORD_FILE"
           value: "/etc/postgres-secret-volume/password"
       volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: postgres-volume
         - name: postgres-secret-volume
           mountPath: "/etc/postgres-secret-volume"
           readOnly: true
@@ -39,3 +45,18 @@ spec:
     - name: postgres-secret-volume
       secret:
         secretName: postgres-secret
+    - name: postgres-volume
+      persistentVolumeClaim:
+        claimName: postgres-claim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-claim
+spec:
+  storageClassName: local-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
