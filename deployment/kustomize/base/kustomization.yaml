@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 0_namespace.yaml
+  - 0_secret.yaml
+  - 1_postgres.yaml
+# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
