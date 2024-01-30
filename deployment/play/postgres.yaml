@@ -27,7 +27,7 @@ spec:
         - name: "POSTGRES_PASSWORD_FILE"
           value: "/etc/postgres-secret-volume/password"
       volumeMounts:
-        - mountPath: "/usr/share/nginx/html"
+        - mountPath: "/var/lib/postgresql/data"
           name: postgres-volume
         - name: postgres-secret-volume
           mountPath: "/etc/postgres-secret-volume"
