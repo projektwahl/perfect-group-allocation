@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  fmt-build-deny-check:
+  rust:
     #runs-on: docker
     runs-on: ubuntu-latest
     container:
