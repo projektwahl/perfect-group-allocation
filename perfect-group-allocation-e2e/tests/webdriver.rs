@@ -26,7 +26,7 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
     // https://docs.docker.com/compose/production/
 
     // https://www.redhat.com/sysadmin/quadlet-podman
-    // printf "postgrespassword" | podman secret create postgres_password -
+    // printf "postgrespassword" | podman secret create deployment_postgres_password -
 
     // the integration code should be as close as possible to production so we should use podman compose
 
