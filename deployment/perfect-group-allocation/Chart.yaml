@@ -22,3 +22,8 @@ version: 0.1.0
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
 appVersion: "1.16.0"
+# https://helm.sh/docs/chart_template_guide/getting_started/
+# https://helm.sh/docs/topics/charts/
+# https://pkg.go.dev/text/template
+# https://github.com/Masterminds/sprig
+# https://helm.sh/docs/howto/charts_tips_and_tricks/
