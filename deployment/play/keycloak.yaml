@@ -23,8 +23,11 @@ spec:
           value: bestpassword # FIXME don't put password here
         - name: KC_HOSTNAME
           value: localhost
-        # keytool -genkeypair -storepass password -storetype PKCS12 -keyalg RSA -keysize 2048 -dname "CN=server" -alias server -ext "SAN:c=DNS:localhost,IP:127.0.0.1" -keystore server.keystore
-        - name: KC_HTTPS_KEY_STORE_FILE
+        # https://www.keycloak.org/server/enabletls
+        # TODO https://www.keycloak.org/server/vault
+        - name: KC_HTTPS_CERTIFICATE_FILE
+          value: test
+        - name: KC_HTTPS_CERTIFICATE_KEY_FILE
           value: test
       ports:
         - containerPort: 8443
@@ -35,3 +38,7 @@ spec:
         limits:
           memory: "1Gi"
           cpu: "4"
+---
+# mkcert keycloak.localhost
+# podman secret create keycloak-tls-cert keycloak.localhost.pem
+# podman secret create keycloak-tls-key keycloak.localhost-key.pem
