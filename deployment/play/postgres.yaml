@@ -1,4 +1,7 @@
-# podman play kube deployment/play/postgres.yaml
+# podman kube --help
+# podman kube play --replace deployment/play/postgres.yaml
+# podman kube down deployment/play/postgres.yaml
+
 # podman secret ls
 apiVersion: v1
 kind: Secret
@@ -8,4 +11,31 @@ type: Opaque
 stringData:
   password: bestpassword
 ---
-
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres
+spec:
+  containers:
+    - name: postgres
+      image: docker.io/library/postgres:16.1
+      env:
+        - name: "POSTGRES_PASSWORD_FILE"
+          value: "/etc/postgres-secret-volume/password"
+      volumeMounts:
+        - name: postgres-secret-volume
+          mountPath: "/etc/postgres-secret-volume"
+          readOnly: true
+      ports:
+        - containerPort: 5432
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "1"
+        limits:
+          memory: "1Gi"
+          cpu: "4"
+  volumes:
+    - name: postgres-secret-volume
+      secret:
+        secretName: postgres-secret
