@@ -54,5 +54,6 @@ spec:
         secretName: keycloak-tls-key
 ---
 # mkcert keycloak.localhost
+# use kustomize secretGenerator
 # podman secret create keycloak-tls-cert keycloak.localhost.pem
 # podman secret create keycloak-tls-key keycloak.localhost-key.pem

@@ -1,0 +1,6 @@
+secretGenerator:
+  - name: keycloak-tls
+    type: "kubernetes.io/tls"
+    files:
+      - tls.crt=password.txt
+      - tls.key=efwfef
