@@ -15,7 +15,13 @@ spec:
       image: postgres:16.1
       env:
         # maybe switch to mtls at some point?
+        # https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume
         - name: "POSTGRES_PASSWORD_FILE"
+          value: "/etc/postgres-secret-volume/password"
+      volumeMounts:
+        - name: postgres-secret-volume
+          mountPath: "/etc/postgres-secret-volume"
+          readOnly: true
       ports:
         - containerPort: 5432
       resources:
@@ -25,6 +31,10 @@ spec:
         limits:
           memory: "1Gi"
           cpu: "4"
+  volumes:
+    - name: postgres-secret-volume
+      secret:
+        secretName: postgres-secret
 # curl -sfL https://get.k3s.io | sh -
 # Check for Ready node, takes ~30 seconds
 # sudo k3s kubectl get node
