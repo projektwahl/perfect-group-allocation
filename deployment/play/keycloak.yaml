@@ -29,6 +29,13 @@ spec:
           value: test
         - name: KC_HTTPS_CERTIFICATE_KEY_FILE
           value: test
+      volumeMounts:
+        - name: keycloak-tls-cert-volume
+          mountPath: "/etc/tls-cert"
+          readOnly: true
+        - name: keycloak-tls-key-volume
+          mountPath: "/etc/tls-key"
+          readOnly: true
       ports:
         - containerPort: 8443
       resources:
@@ -38,6 +45,13 @@ spec:
         limits:
           memory: "1Gi"
           cpu: "4"
+  volumes:
+    - name: keycloak-tls-cert-volume
+      secret:
+        secretName: keycloak-tls-cert
+    - name: keycloak-tls-key-volume
+      secret:
+        secretName: keycloak-tls-key
 ---
 # mkcert keycloak.localhost
 # podman secret create keycloak-tls-cert keycloak.localhost.pem
