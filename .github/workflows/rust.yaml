@@ -24,11 +24,12 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: |
+            ~/.cargo/bin/
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/      
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/checkout@v4
       - run: lightningcss --bundle --minify --sourcemap --output-file frontend/bundle.css frontend/index.css
       - run: cargo fmt --check
