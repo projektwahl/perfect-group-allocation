@@ -35,6 +35,9 @@ spec:
     - name: postgres-secret-volume
       secret:
         secretName: postgres-secret
+# especially check firewall config
+# https://docs.k3s.io/installation/requirements
+
 # curl -sfL https://get.k3s.io | sh -
 # Check for Ready node, takes ~30 seconds
 # sudo k3s kubectl get node
