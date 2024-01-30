@@ -1,0 +1,37 @@
+# podman kube --help
+# man podman-kube-play
+# cd deployment/play # this is important so the image build works
+# podman kube play --replace keycloak.yaml
+# podman logs keycloak-keycloak
+# https://github.com/containers/podman/blob/main/docs/kubernetes_support.md?plain=1
+# podman stats
+apiVersion: v1
+kind: Pod
+metadata:
+  name: keycloak
+spec:
+  containers:
+    - name: keycloak
+      image: keycloak
+      args: ["start", "--optimized"]
+      env:
+        - name: KC_DB_URL
+          value: jdbc:postgresql://postgres/postgres
+        - name: KC_DB_USERNAME
+          value: postgres
+        - name: KC_DB_PASSWORD
+          value: bestpassword # FIXME don't put password here
+        - name: KC_HOSTNAME
+          value: localhost
+        # keytool -genkeypair -storepass password -storetype PKCS12 -keyalg RSA -keysize 2048 -dname "CN=server" -alias server -ext "SAN:c=DNS:localhost,IP:127.0.0.1" -keystore server.keystore
+        - name: KC_HTTPS_KEY_STORE_FILE
+          value: test
+      ports:
+        - containerPort: 8443
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "1"
+        limits:
+          memory: "1Gi"
+          cpu: "4"
