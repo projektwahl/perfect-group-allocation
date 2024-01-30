@@ -54,3 +54,6 @@ spec:
 # kubectl logs pod/postgres
 
 # https://kubernetes.io/docs/concepts/workloads/pods/
+# cilium and istio?
+
+# https://docs.k3s.io/installation/network-options
