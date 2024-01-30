@@ -111,7 +111,7 @@ services:
     ports:
       - 9090:9090
     volumes:
-      ./prometheus.yml:/prometheus/prometheus.yml
+      - ./prometheus.yml:/prometheus/prometheus.yml
     networks:
       - opensearch-net
     profiles: ["telemetry"]
@@ -148,7 +148,7 @@ services:
     networks:
       - opensearch-net
   keycloak:
-    image: quay.io/keycloak/keycloak:23.0.4
+    image: quay.io/keycloak/keycloak:23.0
     command: start-dev
     environment:
       - KEYCLOAK_ADMIN=admin
@@ -169,3 +169,4 @@ networks:
 secrets:
   postgres_password:
     external: true
+    name: "${COMPOSE_PROJECT_NAME}_postgres_password"

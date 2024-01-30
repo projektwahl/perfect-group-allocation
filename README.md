@@ -151,7 +151,8 @@ sudo nano /etc/sysctl.conf
 vm.max_map_count=262144
 sudo sysctl -p
 
-pipx install https://github.com/containers/podman-compose/archive/devel.tar.gz # profile support not yet in 1.0.6
+#pipx install https://github.com/containers/podman-compose/archive/devel.tar.gz # profile support not yet in 1.0.6
+# install docker-compose as that is a much better implementation. podman compose will then automatically use it.
 clear && podman compose down && podman compose up
 # clear && podman compose --profile opensearch up
 

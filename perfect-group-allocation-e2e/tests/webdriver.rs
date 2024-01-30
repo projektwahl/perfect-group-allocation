@@ -13,6 +13,12 @@ use webdriver_bidi::script::{
 };
 use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 
+// here
+// we want to be able to run tests without starting keycloak again and again?
+
+// so I think we should have n categories of setup (fully working, broken keycloak, crashed keycloak) that you can keep running between test setups? maybe some option to fully reset the database between runs (by restarting and deleting volume)?
+// for non-CI I think we should restart our server in between runs to get code updates
+
 // cargo run --bin webdriver
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
@@ -30,20 +36,12 @@ pub async fn main() -> Result<(), webdriver_bidi::Error> {
 
     // I think we should not start it here like that but use podman to properly start it to minimize the differences. Some lower level testing may use this here?
 
-    let fut = setup_http2_http3_server(Config {
-        url: "https://h3.selfmade4u.de".to_owned(),
-        database_url: "postgres://postgres@localhost/pga?sslmode=disable".to_owned(),
-        openidconnect: OpenIdConnectConfig {
-            issuer_url: "http://localhost:8080/realms/pga".to_owned(),
-            client_id: "pga".to_owned(),
-            client_secret: "test".to_owned(),
-        },
-    })
-    .await
-    .unwrap();
-    tokio::spawn(async move {
-        fut.await.unwrap();
-    });
+    let output = tokio::process::Command::new("ls")
+        .arg("-l")
+        .arg("-a")
+        .output()
+        .await
+        .unwrap();
 
     let driver = WebDriver::new(Browser::Firefox).await?;
     let _session = driver
