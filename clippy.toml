@@ -1,11 +1,1 @@
 avoid-breaking-exported-api = false
-#enforced-import-renames = [
-#    { path = "std::task::Context", rename = "FullyQualifyPath" },
-
-#    { path = "http::request::Parts", rename = "FullyQualifyPath" },
-
-#    { path = "hyper::Request", rename = "HyperRequest" },
-
-#    { path = "oauth2::TokenResponse", rename = "OAuth2TokenResponse" },
-#    { path = "openidconnect::TokenResponse", rename = "OpenIdTokenResponse" },
-#]

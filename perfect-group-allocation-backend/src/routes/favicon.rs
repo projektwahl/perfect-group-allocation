@@ -16,7 +16,7 @@ static FAVICON_ICO: &[u8] = include_bytes!("../../../frontend/favicon.ico");
 either_http_body!(either EitherBody 1 2);
 
 // Etag and cache busting
-#[expect(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 pub fn favicon_ico(
     request: hyper::Request<
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,

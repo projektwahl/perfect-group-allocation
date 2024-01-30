@@ -1,26 +1,26 @@
+use std::borrow::Cow;
 use std::convert::Infallible;
+use std::pin::pin;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use async_zero_cost_templating::{html, TemplateToStream};
 use bytes::{Buf, Bytes};
 use diesel_async::RunQueryDsl;
+use futures_util::StreamExt;
 use headers::ContentType;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
-use http_body_util::{Empty, StreamBody};
-use perfect_group_allocation_css::index_css;
+use http_body_util::Empty;
+use perfect_group_allocation_config::Config;
 use perfect_group_allocation_database::models::NewProject;
 use perfect_group_allocation_database::schema::project_history;
 use perfect_group_allocation_database::Pool;
-use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::Unsafe;
 
+use crate::components::main::main;
 use crate::error::AppError;
-use crate::routes::create_project;
 use crate::session::{ResponseSessionExt, Session};
-use crate::{
-    either_http_body, yieldfi, yieldfv, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt,
-};
+use crate::{either_http_body, CreateProjectPayload, CsrfSafeForm, ResponseTypedHeaderExt};
 
 either_http_body!(boxed EitherBody 1 2);
 
@@ -31,6 +31,7 @@ pub async fn create<'a>(
         impl http_body::Body<Data = impl Buf + Send + 'static, Error = AppError> + Send + 'static,
     >,
     session: Session,
+    config: Config,
     pool: Pool,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
@@ -41,10 +42,8 @@ pub async fn create<'a>(
     let empty_title = form.value.title.is_empty();
     let empty_description = form.value.description.is_empty();
 
-    let mut global_error = Ok::<(), AppError>(());
-
-    if !empty_title && !empty_description {
-        global_error = try {
+    let global_error = if !empty_title && !empty_description {
+        return async {
             let mut connection = pool.get().await?;
             diesel::insert_into(project_history::table)
                 .values(NewProject {
@@ -59,67 +58,70 @@ pub async fn create<'a>(
                 })
                 .execute(&mut connection)
                 .await?;
-            return Ok(Response::builder()
+            Ok(Response::builder()
                 .with_session(session)
                 .status(StatusCode::SEE_OTHER)
                 .header(LOCATION, "/list")
                 .body(EitherBody::Option1(Empty::new()))
-                .unwrap());
-        };
-    }
+                .unwrap())
+        }
+        .await;
+    } else {
+        Ok::<(), AppError>(())
+    };
 
     let csrf_token = session.csrf_token();
-    let result = async gen move {
-        let template = yieldfi!(create_project());
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next());
-        let template = yieldfv!(template.page_title("Create Project"));
-        let template = yieldfi!(template.next());
-        let template = yieldfv!(
-            template.indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
-        );
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next_email_false());
-        let template = yieldfv!(template.csrf_token(csrf_token.clone()));
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next());
-        let template = yieldfi!(template.next());
-        let template = if let Err(global_error) = global_error {
-            let inner_template = yieldfi!(template.next_error_true());
-            let inner_template = yieldfv!(inner_template.error_message(global_error.to_string()));
-            yieldfi!(inner_template.next())
-        } else {
-            yieldfi!(template.next_error_false())
-        };
-        let template = yieldfv!(template.csrf_token(csrf_token));
-        let template = yieldfi!(template.next());
-        let template = if empty_title {
-            let template = yieldfi!(template.next_title_error_true());
-            let template = yieldfv!(template.title_error("title must not be empty"));
-            yieldfi!(template.next())
-        } else {
-            yieldfi!(template.next_title_error_false())
-        };
-        let template = yieldfv!(template.title(form.value.title.clone()));
-        let template = yieldfi!(template.next());
-        let template = if empty_description {
-            let template = yieldfi!(template.next_description_error_true());
-            let template = yieldfv!(template.description_error("description must not be empty"));
-            yieldfi!(template.next())
-        } else {
-            yieldfi!(template.next_description_error_false())
-        };
-        let template = yieldfv!(template.description(form.value.description.clone()));
-        let template = yieldfi!(template.next());
 
-        yieldfi!(template.next());
+    let result = {
+        let csrf_token = &csrf_token;
+
+        let title_value = &form.value.title;
+        let description_value = &form.value.description;
+        let global_error = &global_error;
+
+        let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
+
+        let tx = tx_orig.clone();
+
+        let future = async move {
+            html! {
+                <h1 class="center">"Create project"</h1>
+
+                <form class="container-small" method="post" enctype="application/x-www-form-urlencoded">
+                    if let Err(global_error) = global_error {
+                        <div class="error-message">"Es ist ein Fehler aufgetreten: "(Cow::Owned(global_error.to_string()))</div>
+                    }
+
+                    <input type="hidden" name="csrf_token" value=[(Cow::Borrowed(csrf_token))]>
+
+                    if empty_title {
+                        <div class="error-message">"title must not be empty"</div>
+                    }
+                    <label for="title">"Title:"</label>
+                    <input if empty_title { class="error" } id="title" name="title" type="text" value=[(Cow::Borrowed(title_value))]>
+
+                    if empty_description {
+                        <div class="error-message">"description must not be empty"</div>
+                    }
+                    <label for="description">"Description:"</label>
+                    <input if empty_description { class="error" } id="description" name="description" type="text" value=[(Cow::Borrowed(description_value))] >
+
+                    <button type="submit">"Create"</button>
+
+                    <a href="/list">"Show all projects"</a>
+                </form>
+            }
+        };
+        let future = main(tx_orig, "Create Project".into(), &session, &config, future);
+        let stream = pin!(TemplateToStream::new(future, rx));
+        // I think we should sent it at once with a content length when it is not too large
+        stream.collect::<String>().await
     };
-    let stream = AsyncIteratorStream(result);
+
     Ok(Response::builder()
         .with_session(session)
         .status(StatusCode::OK)
         .typed_header(ContentType::html())
-        .body(EitherBody::Option2(StreamBody::new(stream)))
+        .body(EitherBody::Option2(result))
         .unwrap())
 }

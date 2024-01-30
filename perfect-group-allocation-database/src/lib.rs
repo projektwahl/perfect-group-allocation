@@ -1,5 +1,3 @@
-#![feature(error_generic_member_access)]
-
 mod error;
 pub mod models;
 pub mod schema;

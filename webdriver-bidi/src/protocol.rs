@@ -72,7 +72,7 @@ where
         where
             E: serde::de::Error,
         {
-            #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             Ok(v as u64)
         }
     }

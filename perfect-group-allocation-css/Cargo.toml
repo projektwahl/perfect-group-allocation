@@ -1,15 +1,13 @@
-cargo-features = ["edition2024"]
-
 [package]
-name = "perfect-group-allocation-css"
-edition.workspace = true
-version.workspace = true
-license.workspace = true
-repository.workspace = true
-description.workspace = true
-keywords.workspace = true
 categories.workspace = true
+description.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+name = "perfect-group-allocation-css"
 readme.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [lib]
 proc-macro = true
@@ -17,8 +15,10 @@ proc-macro = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lightningcss = { default-features = false, version = "1.0.0-alpha.51", features = ["bundler", "grid"] }
-parcel_sourcemap = { default-features = false, version = "2" }
+lightningcss = { default-features = false, version = "1.0.0-alpha.52", features = [
+    "bundler",
+    "grid",
+] }
 
 [lints]
 workspace = true

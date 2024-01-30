@@ -1,12 +1,9 @@
-#![feature(proc_macro_quote)]
-
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::Path;
 
 use lightningcss::bundler::{Bundler, FileProvider};
 use lightningcss::stylesheet::{ParserOptions, PrinterOptions};
 use lightningcss::targets::Targets;
-use parcel_sourcemap::SourceMap;
 use proc_macro::{quote, TokenStream, TokenTree};
 
 // TODO FIXME automatic recompilation
@@ -24,12 +21,12 @@ pub fn index_css(_item: TokenStream) -> TokenStream {
             loc: error.loc,
         })
         .unwrap();
-    let mut source_map = SourceMap::new(".");
+    // let mut source_map = SourceMap::new(".");
 
     let result = stylesheet
         .to_css(PrinterOptions {
             minify: true,
-            source_map: Some(&mut source_map),
+            source_map: None, //Some(&mut source_map),
             project_root: None,
             targets: Targets::default(),
             analyze_dependencies: None,

@@ -1,44 +1,39 @@
-cargo-features = ["named-profiles"]
-
 [workspace]
-resolver = "2"
+exclude = ["perfect-group-allocation-css", "perfect-group-allocation-telemetry"]
 members = [
     "perfect-group-allocation-backend",
+    "perfect-group-allocation-config",
     "perfect-group-allocation-database",
     "perfect-group-allocation-e2e",
-    "webdriver-bidi",
-    "perfect-group-allocation-telemetry",
     "perfect-group-allocation-openidconnect",
-    "perfect-group-allocation-css",
-    "perfect-group-allocation-optimizer"
-, "perfect-group-allocation-config"]
+    "perfect-group-allocation-optimizer",
+    "webdriver-bidi",
+]
+resolver = "2"
 
 [workspace.package]
-edition = "2024"
-version = "0.1.0"
-license = "AGPL-3.0-or-later"
-repository = "https://github.com/projektwahl/perfect-group-allocation"
-description = "Allocate people to groups according to their preferences while honoring specified restrictions."
-keywords = ["web", "management", "service"]
 categories = ["web-programming"]
+description = "Allocate people to groups according to their preferences while honoring specified restrictions."
+edition = "2021"
+keywords = ["management", "service", "web"]
+license = "AGPL-3.0-or-later"
 readme = "README.md"
+repository = "https://github.com/projektwahl/perfect-group-allocation"
+version = "0.1.0"
 
 [profile.release-with-debug]
-inherits = "release"
 debug = true
+inherits = "release"
 
 [workspace.lints.rust]
 unsafe_code = { level = "deny", priority = 0 }
 
 [workspace.lints.clippy]
-pedantic = { level = "warn", priority = 0 }
-nursery = { level = "warn", priority = 0 }
 cargo = { level = "warn", priority = 0 }
 missing_errors_doc = { level = "allow", priority = 1 }
 missing_panics_doc = { level = "allow", priority = 1 }
 module_name_repetitions = { level = "allow", priority = 1 }
+nursery = { level = "warn", priority = 0 }
+pedantic = { level = "warn", priority = 0 }
 struct_field_names = { level = "allow", priority = 1 }
 too_many_lines = { level = "allow", priority = 1 }
-
-[patch.crates-io]
-h3 = { git = "https://github.com/hyperium/h3.git", branch = "master" } # http version 1

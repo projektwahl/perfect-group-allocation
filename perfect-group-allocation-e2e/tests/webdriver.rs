@@ -1,9 +1,6 @@
 use perfect_group_allocation_backend::setup_http2_http3_server;
 use perfect_group_allocation_config::{Config, OpenIdConnectConfig};
 use tracing::info;
-use tracing_subscriber::layer::SubscriberExt as _;
-use tracing_subscriber::util::SubscriberInitExt as _;
-use tracing_subscriber::EnvFilter;
 use webdriver_bidi::browsing_context::{self};
 use webdriver_bidi::input::perform_actions::{
     Origin, PointerCommonProperties, PointerDownAction, PointerMoveAction, PointerSourceAction,
@@ -16,19 +13,22 @@ use webdriver_bidi::script::{
 };
 use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 
-// RUST_LOG=debug,webdriver_bidi=trace cargo run --bin webdriver
+// cargo run --bin webdriver
 #[tokio::main]
 #[allow(clippy::too_many_lines)]
 pub async fn main() -> Result<(), webdriver_bidi::Error> {
-    let fmt_layer = tracing_subscriber::fmt::layer();
-    let filter_layer = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("debug,webdriver_bidi=trace"))
-        .unwrap();
+    // https://docs.docker.com/compose/production/
 
-    tracing_subscriber::registry()
-        .with(filter_layer)
-        .with(fmt_layer)
-        .init();
+    // https://www.redhat.com/sysadmin/quadlet-podman
+    // printf "postgrespassword" | podman secret create postgres_password -
+
+    // the integration code should be as close as possible to production so we should use podman compose
+
+    // podman run --rm --detach --name postgres-profiling --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
+    // podman wait --condition healthy perfect-group-allocation_postgres_1
+    // podman inspect perfect-group-allocation_postgres_1
+
+    // I think we should not start it here like that but use podman to properly start it to minimize the differences. Some lower level testing may use this here?
 
     let fut = setup_http2_http3_server(Config {
         url: "https://h3.selfmade4u.de".to_owned(),

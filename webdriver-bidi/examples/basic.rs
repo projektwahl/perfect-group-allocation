@@ -1,5 +1,3 @@
-#![feature(lint_reasons)]
-
 use tracing::{info, trace, Level};
 use tracing_subscriber::FmtSubscriber;
 use webdriver_bidi::browsing_context::create::Type;

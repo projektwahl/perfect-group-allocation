@@ -81,16 +81,14 @@ impl WebDriverHandler {
         event: String,
         sender: oneshot::Sender<broadcast::Receiver<R>>,
         global_event_subscription: impl Fn(
-            &mut GlobalEventSubscription,
-        ) -> &mut Option<(
-            broadcast::Sender<R>,
-            broadcast::Receiver<R>,
-        )> + Send,
+                &mut GlobalEventSubscription,
+            ) -> &mut Option<(broadcast::Sender<R>, broadcast::Receiver<R>)>
+            + Send,
         respond_command_constructor: impl FnOnce(
-            broadcast::Receiver<R>,
-            oneshot::Sender<broadcast::Receiver<R>>,
-        ) -> RespondCommand
-        + Send,
+                broadcast::Receiver<R>,
+                oneshot::Sender<broadcast::Receiver<R>>,
+            ) -> RespondCommand
+            + Send,
     ) -> crate::error::Result<()> {
         match global_event_subscription(&mut self.global_subscriptions) {
             Some(subscription) => {
@@ -141,16 +139,15 @@ impl WebDriverHandler {
         command_data: BrowsingContext,
         sender: oneshot::Sender<broadcast::Receiver<R>>,
         event_subscription: impl Fn(
-            &mut EventSubscription,
-        ) -> &mut HashMap<
-            BrowsingContext,
-            (broadcast::Sender<R>, broadcast::Receiver<R>),
-        > + Send,
+                &mut EventSubscription,
+            )
+                -> &mut HashMap<BrowsingContext, (broadcast::Sender<R>, broadcast::Receiver<R>)>
+            + Send,
         respond_command_constructor: impl FnOnce(
-            broadcast::Receiver<R>,
-            oneshot::Sender<broadcast::Receiver<R>>,
-        ) -> RespondCommand
-        + Send,
+                broadcast::Receiver<R>,
+                oneshot::Sender<broadcast::Receiver<R>>,
+            ) -> RespondCommand
+            + Send,
     ) -> crate::error::Result<()> {
         if let Some(subscription) = event_subscription(&mut self.subscriptions).get(&command_data) {
             sender

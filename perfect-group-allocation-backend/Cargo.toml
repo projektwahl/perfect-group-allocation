@@ -1,15 +1,13 @@
-cargo-features = ["edition2024"]
-
 [package]
-name = "perfect-group-allocation-backend"
-edition.workspace = true
-version.workspace = true
-license.workspace = true
-repository.workspace = true
-description.workspace = true
-keywords.workspace = true
 categories.workspace = true
+description.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+name = "perfect-group-allocation-backend"
 readme.workspace = true
+repository.workspace = true
+version.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,43 +18,62 @@ workspace = true
 profiling = []
 
 [dependencies]
-futures-util = { default-features = false, version = "0.3" }
-itertools = { default-features = false, version = "0.12", features = [ "use_alloc", "use_std" ] }
-tokio = { default-features = false, version = "1", features = ["full"] }
-tokio-rustls = { default-features = false, version = "0.25", features = ["default"] }
-rustls-pemfile = { default-features = false, version = "2", features = ["std"] }
-hyper = { default-features = false, version = "1", features = ["full"] }
-h3 = { default-features = false, git = "https://github.com/hyperium/h3.git", branch = "master" }
-s2n-quic-h3 = { default-features = false, git = "https://github.com/aws/s2n-quic.git" }
-s2n-quic = { default-features = false, git = "https://github.com/aws/s2n-quic.git" }
-#h3-quinn = { default-features = false, git = "https://github.com/hyperium/h3.git", branch = "master" }
-#quinn = { default-features = false, version = "0.10" } # depends on old version of tokio-rustls
-http-body = { default-features = false, version = "1" }
-tokio-util = { default-features = false, version = "0.7", features = ["io"] }
-serde_json = { default-features = false, version = "1" }
-serde = { default-features = false, version = "1", features = ["derive"] }
-rand = { default-features = false, version = "0.8" }
-thiserror = { default-features = false, version = "1" }
-once_cell = { default-features = false, version = "1" }
-chrono = { default-features = false, version = "0.4" }
-http = { default-features = false, version = "1" }
-headers = { default-features = false, version = "0.4" }
-mime = { default-features = false, version = "0.3" }
-zero-cost-templating = { default-features = false, git = "https://github.com/mohe2015/zero-cost-templating.git", branch = "work" }
 bytes = { default-features = false, version = "1" }
-pin-project = { default-features = false, version = "1" }
-hyper-util = { default-features = false, version = "0.1", features = ["tokio", "server-auto"] }
-http-body-util = { default-features = false, version = "0.1" }
-serde_urlencoded = { default-features = false, version = "0.7" }
-paste = { default-features = false, version = "1" }
-diesel = { default-features = false, version = "2" }
-diesel-async = { default-features = false, version = "0.4", features = ["postgres", "deadpool"] }
 cookie = { default-features = false, version = "0.18" }
-sha2 = { default-features = false, version = "0.10", features = ["asm"] }
-log = { default-features = false, version = "0.4", features = ["release_max_level_off"] }
-tracing = { default-features = false, version = "0.1", features = ["release_max_level_off"] }
-perfect-group-allocation-telemetry = { default-features = false, path = "../perfect-group-allocation-telemetry" }
+futures-util = { default-features = false, version = "0.3" }
+#h3 = { default-features = false, git = "https://github.com/hyperium/h3.git", branch = "master" }
+headers = { default-features = false, version = "0.4" }
+http = { default-features = false, version = "1" }
+http-body = { default-features = false, version = "1" }
+http-body-util = { default-features = false, version = "0.1" }
+hyper = { default-features = false, version = "1", features = [
+    "http1",
+    "http2",
+    "server",
+] }
+hyper-util = { default-features = false, version = "0.1", features = [
+    "server-auto",
+] }
+log = { default-features = false, version = "0.4", features = [
+    "release_max_level_off",
+] }
+mime = { default-features = false, version = "0.3" }
+paste = { default-features = false, version = "1" }
+perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
 perfect-group-allocation-database = { default-features = false, path = "../perfect-group-allocation-database" }
 perfect-group-allocation-openidconnect = { default-features = false, path = "../perfect-group-allocation-openidconnect" }
-perfect-group-allocation-css = { default-features = false, path = "../perfect-group-allocation-css" }
-perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
+pin-project = { default-features = false, version = "1" }
+rand = { default-features = false, version = "0.8" }
+rustls-pemfile = { default-features = false, version = "2", features = ["std"] }
+#s2n-quic = { default-features = false, git = "https://github.com/mohe2015/s2n-quic.git", branch = "patch-1", features = [
+#    "provider-address-token-default",
+#    "provider-tls-rustls",
+#] }
+#s2n-quic-h3 = { default-features = false, git = "https://github.com/mohe2015/s2n-quic.git", branch = "patch-1" }
+async-zero-cost-templating = { default-features = false, git = "https://github.com/mohe2015/async-zero-cost-templating.git", branch = "experiment" }
+diesel = { default-features = false, version = "2" }
+diesel-async = { default-features = false, version = "0.4", features = [
+    "deadpool",
+    "postgres",
+] }
+serde = { default-features = false, version = "1", features = ["derive"] }
+serde_json = { default-features = false, version = "1" }
+serde_urlencoded = { default-features = false, version = "0.7" }
+sha2 = { default-features = false, version = "0.10", features = ["asm"] }
+thiserror = { default-features = false, version = "1" }
+tokio = { default-features = false, version = "1", features = [
+    "rt-multi-thread",
+] }
+tokio-rustls = { default-features = false, version = "0.25", features = [
+    "default",
+] }
+tokio-util = { default-features = false, version = "0.7", features = ["io"] }
+tracing = { default-features = false, version = "0.1", features = [
+    "release_max_level_off",
+] }
+tracing-subscriber = { default-features = false, version = "0.3", features = [
+    "fmt",
+] }
+#h3-quinn = { default-features = false, git = "https://github.com/hyperium/h3.git", branch = "master" }
+#quinn = { default-features = false, version = "0.10" } # depends on old version of tokio-rustls
+once_cell = "1.19.0"

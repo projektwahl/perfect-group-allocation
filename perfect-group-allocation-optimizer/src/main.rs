@@ -1,5 +1,3 @@
-#![feature(lint_reasons)]
-
 extern crate alloc;
 
 mod examples;
@@ -16,7 +14,7 @@ use crate::examples::workshops::{
     WorkshopTopic, WorkshopTopicSize,
 };
 
-#[expect(unused, reason = "tmp")]
+#[allow(unused)]
 fn group_pairs<A, B, I>(items: I) -> BTreeMap<A, Vec<B>>
 where
     A: Ord,

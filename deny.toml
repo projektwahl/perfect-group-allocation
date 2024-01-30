@@ -73,9 +73,7 @@ yanked = "warn"
 notice = "warn"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
-ignore = [
-    "RUSTSEC-2023-0071",
-]
+ignore = ["RUSTSEC-2023-0071"]
 # Threshold for security vulnerabilities, any vulnerability with a CVSS score
 # lower than the range specified will be ignored. Note that ignored advisories
 # will still output a note when they are encountered.
@@ -158,7 +156,7 @@ expression = "MIT AND ISC AND OpenSSL"
 # depending on the rest of your configuration
 license-files = [
     # Each entry is a crate relative path, and the (opaque) hash of its contents
-    { path = "LICENSE", hash = 0xbd0eed23 }
+    { path = "LICENSE", hash = 0xbd0eed23 },
 ]
 
 [licenses.private]
@@ -261,9 +259,10 @@ unknown-git = "warn"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # List of URLs for allowed Git repositories
 allow-git = [
+    "https://github.com/aws/s2n-quic#2d060fe5336fe25e415a3f436465b5bd664b05a9",
+    "https://github.com/hyperium/h3#e7c7ab9d634ef73784d6cbc424a270dbaa4f1c99",
     "https://github.com/mohe2015/syn?branch=gen#2a7a721f80d81d786da72703eb16dea4c78e686d",
     "https://github.com/mohe2015/zero-cost-templating?branch=work#6fcc0591b1db2f5e3d0da72a1d2c70c0d41b93ce",
-
 ]
 
 [sources.allow-org]

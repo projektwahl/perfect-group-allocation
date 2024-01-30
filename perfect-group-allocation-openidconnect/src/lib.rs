@@ -1,13 +1,18 @@
 pub mod error;
 
+use std::str::FromStr;
+use std::sync::Arc;
+
+use error::HttpError;
+use http_body_util::BodyExt;
+use hyper_util::rt::TokioIo;
 use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
-use oauth2::reqwest::async_http_client;
 pub use oauth2::RefreshToken;
 use oauth2::{
-    AuthorizationCode, ClientId, ClientSecret, EmptyExtraTokenFields, PkceCodeChallenge,
-    PkceCodeVerifier, RedirectUrl, RevocationErrorResponseType, StandardErrorResponse,
-    StandardRevocableToken, StandardTokenIntrospectionResponse, StandardTokenResponse,
-    TokenResponse as _,
+    AuthorizationCode, ClientId, ClientSecret, EmptyExtraTokenFields, HttpRequest, HttpResponse,
+    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RevocationErrorResponseType,
+    StandardErrorResponse, StandardRevocableToken, StandardTokenIntrospectionResponse,
+    StandardTokenResponse, TokenResponse as _,
 };
 use openidconnect::core::{
     CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreClient, CoreGenderClaim,
@@ -21,7 +26,11 @@ use openidconnect::{
 };
 use perfect_group_allocation_config::Config;
 use serde::{Deserialize, Serialize};
+use tokio::net::TcpStream;
 use tokio::sync::OnceCell;
+use tokio_rustls::rustls::pki_types::ServerName;
+use tokio_rustls::rustls::{ClientConfig, RootCertStore};
+use tokio_rustls::TlsConnector;
 
 use crate::error::OpenIdConnectError;
 
@@ -88,15 +97,63 @@ pub struct OpenIdSession {
 
 static OPENID_CLIENT: OnceCell<OpenIdConnectClientType> = OnceCell::const_new();
 
+pub async fn my_http_client(request: HttpRequest) -> Result<HttpResponse, HttpError> {
+    let url = request.url;
+    let host = url.host().expect("uri has no host");
+    let port = url.port_or_known_default().unwrap();
+    let addr = format!("{host}:{port}");
+
+    let mut root_cert_store = RootCertStore::empty();
+    root_cert_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    let config = ClientConfig::builder()
+        .with_root_certificates(root_cert_store)
+        .with_no_client_auth();
+    let connector = TlsConnector::from(Arc::new(config));
+    let dnsname = ServerName::try_from(host.to_string()).unwrap();
+
+    let stream = TcpStream::connect(addr).await?;
+    let stream = connector.connect(dnsname, stream).await?;
+
+    let io = TokioIo::new(stream);
+
+    let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await?;
+    tokio::task::spawn(async move { if let Err(_err) = conn.await {} });
+
+    let authority = url.authority();
+
+    let request = hyper::Request::builder()
+        .uri(url.to_string())
+        .header(hyper::header::HOST, authority)
+        .body(String::new())?;
+
+    let response = sender.send_request(request).await?;
+
+    Ok(HttpResponse {
+        // this is http 0.2
+        status_code: oauth2::http::StatusCode::from_u16(response.status().as_u16()).unwrap(),
+        headers: response
+            .headers()
+            .iter()
+            .map(|(name, value)| {
+                (
+                    oauth2::http::HeaderName::from_str(name.as_str()).unwrap(),
+                    oauth2::http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+                )
+            })
+            .collect(),
+        body: response.collect().await?.to_bytes().to_vec(),
+    })
+}
+
 #[allow(unused)]
 pub async fn get_openid_client(
-    config: Config,
+    config: &Config,
 ) -> Result<&'static OpenIdConnectClientType, OpenIdConnectError> {
     OPENID_CLIENT
         .get_or_try_init(|| async {
             let provider_metadata = CoreProviderMetadata::discover_async(
-                IssuerUrl::new(config.openidconnect.issuer_url)?,
-                async_http_client,
+                IssuerUrl::new(config.openidconnect.issuer_url.clone())?,
+                my_http_client,
             )
             .await?;
 
@@ -104,8 +161,10 @@ pub async fn get_openid_client(
             // and token URL.
             let client = CoreClient::from_provider_metadata(
                 provider_metadata,
-                ClientId::new(config.openidconnect.client_id),
-                Some(ClientSecret::new(config.openidconnect.client_secret)),
+                ClientId::new(config.openidconnect.client_id.clone()),
+                Some(ClientSecret::new(
+                    config.openidconnect.client_secret.clone(),
+                )),
             )
             // Set the URL the user will be redirected to after the authorization process.
             .set_redirect_uri(RedirectUrl::new(format!(
@@ -118,7 +177,7 @@ pub async fn get_openid_client(
 }
 
 pub async fn begin_authentication(
-    config: Config,
+    config: &Config,
 ) -> Result<(String, OpenIdSession), OpenIdConnectError> {
     // Generate a PKCE challenge.
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -146,7 +205,7 @@ pub async fn begin_authentication(
 }
 
 pub async fn finish_authentication(
-    config: Config,
+    config: &Config,
     session: OpenIdSession,
     input: OpenIdRedirect<OpenIdRedirectSuccess>,
 ) -> Result<String, OpenIdConnectError> {
@@ -166,7 +225,7 @@ pub async fn finish_authentication(
         .exchange_code(AuthorizationCode::new(input.inner.code))
         // Set the PKCE code verifier.
         .set_pkce_verifier(session.verifier)
-        .request_async(async_http_client)
+        .request_async(my_http_client)
         .await?;
 
     // the token_response may be signed and then we could store it in the cookie
@@ -202,7 +261,7 @@ pub async fn finish_authentication(
 }
 
 pub async fn id_token_claims(
-    config: Config,
+    config: &Config,
     id_token: String,
 ) -> Result<IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>, OpenIdConnectError> {
     let client = get_openid_client(config).await?;

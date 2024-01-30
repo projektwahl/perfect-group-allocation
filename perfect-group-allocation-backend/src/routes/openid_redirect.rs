@@ -1,23 +1,26 @@
+use std::borrow::Cow;
 use std::convert::Infallible;
+use std::pin::pin;
 
+use async_zero_cost_templating::{html, TemplateToStream};
 use bytes::{Buf, Bytes};
+use futures_util::StreamExt as _;
 use headers::ContentType;
 use http::header::LOCATION;
 use http::{Response, StatusCode};
 use http_body::Body;
-use http_body_util::{Empty, StreamBody};
+use http_body_util::Empty;
 use perfect_group_allocation_config::Config;
-use perfect_group_allocation_css::index_css;
 use perfect_group_allocation_openidconnect::{
     finish_authentication, OpenIdRedirect, OpenIdRedirectInner,
 };
 use serde::{Deserialize, Serialize};
-use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::Unsafe;
 
+use crate::components::main::main;
 use crate::error::AppError;
+
 use crate::session::{ResponseSessionExt as _, Session};
-use crate::{either_http_body, yieldfi, yieldfv, ResponseTypedHeaderExt};
+use crate::{either_http_body, ResponseTypedHeaderExt};
 
 // TODO FIXME check that form does an exact check and no unused inputs are accepted
 
@@ -35,7 +38,7 @@ pub async fn openid_redirect(
         impl http_body::Body<Data = impl Buf + Send, Error = AppError> + Send + 'static,
     >,
     session: Session,
-    config: Config,
+    config: &Config,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
     let body = request.uri().query().unwrap();
@@ -46,7 +49,7 @@ pub async fn openid_redirect(
     // what if privatecookiejar (and session?) would be non-owning (I don't want to clone them)
     // TODO FIXME errors also need to return the session?
 
-    let expected_csrf_token = session.csrf_token();
+    let _expected_csrf_token = session.csrf_token();
 
     let (openid_session, session) = session.get_and_remove_temporary_openidconnect_state()?;
 
@@ -56,35 +59,34 @@ pub async fn openid_redirect(
 
     match form.inner {
         OpenIdRedirectInner::Error(err) => {
-            let result = async gen move {
-                let template = yieldfi!(crate::routes::openid_redirect());
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next());
-                let template = yieldfv!(template.page_title("Create Project"));
-                let template = yieldfi!(template.next());
-                let template = yieldfv!(
-                    template
-                        .indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
+            let result = {
+                let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
+                let tx = tx_orig.clone();
+                let future = async move {
+                    html! {
+                        <h1 class="center">"OpenID Redirect"</h1>
+
+                        <h2>"Error: "(Cow::Owned(err.error))</h2>
+                        <span>"Error details: "(Cow::Owned(err.error_description))</span>
+                    }
+                };
+                let future = main(
+                    tx_orig,
+                    "OpenID Redirect Error".into(),
+                    &session,
+                    config,
+                    future,
                 );
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next_email_false());
-                let template = yieldfv!(template.csrf_token(expected_csrf_token));
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next());
-                let template = yieldfi!(template.next());
-                let template = yieldfv!(template.error(err.error));
-                let template = yieldfi!(template.next());
-                let template = yieldfv!(template.error_description(err.error_description));
-                let template = yieldfi!(template.next());
-                yieldfi!(template.next());
+                let stream = pin!(TemplateToStream::new(future, rx));
+                // I think we should sent it at once with a content length when it is not too large
+                stream.collect::<String>().await
             };
-            let stream = AsyncIteratorStream(result);
+
             Ok(Response::builder()
                 .with_session(session)
                 .status(StatusCode::OK)
                 .typed_header(ContentType::html())
-                .body(EitherBody::Option1(StreamBody::new(stream)))
+                .body(EitherBody::Option1(result))
                 .unwrap())
         }
         OpenIdRedirectInner::Success(ok) => {

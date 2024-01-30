@@ -1,51 +1,55 @@
-use std::backtrace::Backtrace;
+use std::borrow::Cow;
 use std::convert::Infallible;
 use std::fmt::{Debug, Display};
+use std::pin::pin;
 
+use crate::components::main::main;
+
+use crate::session::{ResponseSessionExt, Session};
+use crate::ResponseTypedHeaderExt as _;
+use async_zero_cost_templating::{html, TemplateToStream};
 use bytes::Bytes;
+use futures_util::StreamExt;
 use headers::ContentType;
 use http::{Response, StatusCode};
-use http_body_util::StreamBody;
-use perfect_group_allocation_config::ConfigError;
-use perfect_group_allocation_css::index_css;
+
+use perfect_group_allocation_config::{Config, ConfigError};
 use perfect_group_allocation_database::DatabaseError;
 use perfect_group_allocation_openidconnect::error::OpenIdConnectError;
-use zero_cost_templating::async_iterator_extension::AsyncIteratorStream;
-use zero_cost_templating::Unsafe;
-
-use crate::routes::error;
-use crate::session::{ResponseSessionExt, Session};
-use crate::{yieldfi, yieldfv, ResponseTypedHeaderExt as _};
 
 #[derive(thiserror::Error)]
 pub enum AppError {
-    #[error("header error: {0}\n{1}")]
-    Header(#[from] headers::Error, Backtrace),
-    #[error("IO error: {0}\n{1}")]
-    File(#[from] std::io::Error, Backtrace),
-    #[error("json error: {0}\n{1}")]
-    Json(#[from] serde_json::Error, Backtrace),
-    #[error("webserver error: {0}\n{1}")]
-    Hyper(#[from] hyper::Error, Backtrace),
-    #[error("webserver h3 error: {0}\n{1}")]
-    H3(#[from] h3::Error, Backtrace),
-    #[error("env var error: {0}\n{1}")]
-    EnvVar(#[from] std::env::VarError, Backtrace),
-    #[error("rustls error: {0}\n{1}")]
-    Rustls(#[from] tokio_rustls::rustls::Error, Backtrace),
-    #[error("poison error: {0}\n{1}")]
-    Poison(#[from] std::sync::PoisonError<()>, Backtrace),
-    #[error("join error: {0}\n{1}")]
-    Join(#[from] tokio::task::JoinError, Backtrace),
-    #[error("quic start error: {0}\n{1}")]
-    S2nStart(#[from] s2n_quic::provider::StartError, Backtrace),
+    #[error("header error: {0}")]
+    Header(#[from] headers::Error),
+    #[error("IO error: {0}")]
+    File(#[from] std::io::Error),
+    #[error("Tls certificate failed to load {0}")]
+    TlsCertificate(std::io::Error),
+    #[error("Tls key failed to load {0}")]
+    TlsKey(std::io::Error),
+    #[error("json error: {0}")]
+    Json(#[from] serde_json::Error),
+    #[error("webserver error: {0}")]
+    Hyper(#[from] hyper::Error),
+    //#[error("webserver h3 error: {0}")]
+    //H3(#[from] h3::Error),
+    #[error("env var error: {0}")]
+    EnvVar(#[from] std::env::VarError),
+    #[error("rustls error: {0}")]
+    Rustls(#[from] tokio_rustls::rustls::Error),
+    #[error("poison error: {0}")]
+    Poison(#[from] std::sync::PoisonError<()>),
+    #[error("join error: {0}")]
+    Join(#[from] tokio::task::JoinError),
+    //#[error("quic start error: {0}")]
+    //S2nStart(#[from] s2n_quic::provider::StartError),
     #[error("configuration error: {0}")]
     Configuration(#[from] ConfigError),
     // #[cfg(feature = "perfect-group-allocation-telemetry")]
     //#[error("trace error: {0}")]
     //Trace(#[from] TraceError),
-    #[error("database error: {0}\n{1}")]
-    Database(#[from] DatabaseError, Backtrace),
+    #[error("database error: {0}")]
+    Database(#[from] DatabaseError),
     #[error("wrong csrf token")]
     WrongCsrfToken,
     #[error("no accept remaining")]
@@ -55,8 +59,8 @@ pub enum AppError {
          response?"
     )]
     SessionStillHeld,
-    #[error("openid connect error: {0}\n{1}")]
-    OpenIdConnect(#[from] OpenIdConnectError, Backtrace),
+    #[error("openid connect error: {0}")]
+    OpenIdConnect(#[from] OpenIdConnectError),
     #[error(
         "Höchstwahrscheinlich ist deine Anmeldesession abgelaufen und du musst es erneut \
          versuchen. Wenn dies wieder auftritt, melde das Problem bitte an einen \
@@ -92,39 +96,52 @@ impl From<diesel::result::Error> for AppError {
 }
 
 impl AppError {
-    pub fn build_error_template(
+    #[must_use]
+    pub async fn build_error_template(
         self,
         session: Session<Option<String>, ()>,
+        config: Config,
     ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send + 'static> {
-        let csrf_token = session.csrf_token();
-        let result = async gen move {
-            let template = yieldfi!(error());
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next());
-            let template = yieldfv!(template.page_title("Internal Server Error"));
-            let template = yieldfi!(template.next());
-            let template = yieldfv!(
-                template.indexcss_version_unsafe(Unsafe::unsafe_input(index_css!().1.to_string()))
-            );
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next_email_false());
-            let template = yieldfv!(template.csrf_token(csrf_token));
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next());
-            let template = yieldfi!(template.next());
-            let template = yieldfv!(template.request_id("REQUESTID"));
-            let template = yieldfi!(template.next());
-            let template = yieldfv!(template.error(self.to_string()));
-            let template = yieldfi!(template.next());
-            yieldfi!(template.next());
+        let _csrf_token = session.csrf_token();
+        let request_id = "REQUESTID";
+        let error = self.to_string();
+        let error = &error;
+        let my_session = session.clone();
+
+        let (tx_orig, rx) = tokio::sync::mpsc::channel(1);
+
+        // TODO FIXME check that the error page can show you as logged in
+
+        let tx = tx_orig.clone();
+        let future = async move {
+            html! {
+                <div>
+                    <h1 class="center">"Internal Server Error"</h1>
+
+                    "Es ist ein interner Fehler aufgetreten! Bitte melde diesen an die Serveradministratoren. Ihnen können folgende
+                    Informationen helfen:"<br>
+
+                    "Request-ID: "(Cow::Borrowed(request_id))<br>
+                    "Fehler: "(Cow::Borrowed(error))<br>
+                </div>
+            }
         };
-        let stream = AsyncIteratorStream(result);
+        let future = main(
+            tx_orig,
+            "Internal Server Error".into(),
+            &my_session,
+            &config,
+            future,
+        );
+        let stream = pin!(TemplateToStream::new(future, rx));
+        // I think we should sent it at once with a content length when it is not too large
+        let result = stream.collect::<String>().await;
+
         Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .typed_header(ContentType::html())
             .with_session(session)
-            .body(StreamBody::new(stream))
+            .body(result)
             .unwrap()
     }
 }

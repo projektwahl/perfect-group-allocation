@@ -1,3 +1,5 @@
+bundle.css
+bundle.css.map
 *.dot
 rustc-ice-*.txt
 
