@@ -40,12 +40,13 @@ spec:
       ports:
         - containerPort: 8443
       startupProbe:
+        # for kubernetes use an http check and don't bundle curl with the container.
         exec:
           command:
             - "curl"
+            - "--fail-with-body"
             - "--insecure"
-            - "--verbose"
-            - "https://localhost:8443/health/ready"
+            - "https://localhost:8443/health/started"
         periodSeconds: 1
         failureThreshold: 30
       # https://www.keycloak.org/server/health
@@ -53,8 +54,16 @@ spec:
         exec:
           command:
             - "curl"
+            - "--fail-with-body"
             - "--insecure"
-            - "--verbose"
+            - "https://localhost:8443/health/live"
+        periodSeconds: 1
+      readinessProbe:
+        exec:
+          command:
+            - "curl"
+            - "--fail-with-body"
+            - "--insecure"
             - "https://localhost:8443/health/ready"
         periodSeconds: 1
       resources:
