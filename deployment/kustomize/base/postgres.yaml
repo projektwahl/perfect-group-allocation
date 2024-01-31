@@ -36,6 +36,10 @@ spec:
           readOnly: true
       ports:
         - containerPort: 5432
+      livenessProbe:
+        exec:
+          command:
+            - pg_isready
       resources:
         requests:
           memory: "512Mi"

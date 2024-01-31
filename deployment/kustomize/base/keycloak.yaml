@@ -29,6 +29,10 @@ spec:
           value: /run/secrets/tls-cert/tls.crt
         - name: KC_HTTPS_CERTIFICATE_KEY_FILE
           value: /run/secrets/tls-cert/tls.key
+        - name: KEYCLOAK_ADMIN
+          value: admin
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          value: test
       volumeMounts:
         - name: keycloak-tls-cert-volume
           mountPath: "/run/secrets/tls-cert"

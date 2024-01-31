@@ -10,6 +10,7 @@ resources:
 # cd deployment/kustomize/base
 # kustomize build . | podman kube play --replace --publish-all -
 # https://keycloak.localhost:8443
+# podman healthcheck run postgres-postgres # returns 0 on success
 
 # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
 # https://kubernetes.io/docs/concepts/workloads/pods/

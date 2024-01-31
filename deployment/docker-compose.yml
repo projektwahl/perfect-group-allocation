@@ -169,4 +169,5 @@ networks:
 secrets:
   postgres_password:
     external: true
+    # podman doesn't support this
     name: "${COMPOSE_PROJECT_NAME}_postgres_password"
