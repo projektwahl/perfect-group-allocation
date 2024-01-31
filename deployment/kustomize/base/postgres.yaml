@@ -24,6 +24,8 @@ spec:
       env:
         - name: "POSTGRES_INITDB_ARGS"
           value: "--data-checksums"
+          # maybe switch to mtls at some point?
+          # https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume
         - name: "POSTGRES_PASSWORD_FILE"
           value: "/etc/postgres-secret-volume/password"
       volumeMounts:

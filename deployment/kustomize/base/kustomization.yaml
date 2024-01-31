@@ -1,7 +1,34 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - 0_namespace.yaml
-  - 0_secret.yaml
-  - 1_postgres.yaml
-# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+secretGenerator:
+  - name: keycloak-tls
+    type: "kubernetes.io/tls"
+    files:
+      - tls.crt=password.txt
+      - tls.key=efwfef
+# https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
+# https://kubernetes.io/docs/concepts/workloads/pods/
+# https://kubernetes.io/docs/setup/
+# https://kubernetes.io/partners/#iframe-landscape-conformance
+# I think k3s or kubeadm (probably k3s because of their load balancer)
+#https://kubernetes.io/docs/concepts/overview/working-with-objects/object-management/#declarative-object-configuration
+# especially check firewall config
+# https://docs.k3s.io/installation/requirements
+
+# curl -sfL https://get.k3s.io | sh -
+# Check for Ready node, takes ~30 seconds
+# sudo k3s kubectl get node
+# export KUBECONFIG=~/.kube/config
+# mkdir -p ~/.kube
+# sudo k3s kubectl config view --raw > "$KUBECONFIG"
+# chmod 600 "$KUBECONFIG"
+# kubectl get pods --all-namespaces
+
+# kubectl diff -R -f deployment/k8s/
+# kubectl apply -R -f deployment/k8s/
+# kubectl config set-context --current --namespace=development
+# kubectl get pods
+# kubectl logs pod/postgres
+
+# https://kubernetes.io/docs/concepts/workloads/pods/
+# cilium and istio?
+
+# https://docs.k3s.io/installation/network-options
