@@ -7,7 +7,8 @@ secretGenerator:
 resources:
   - ./keycloak.yaml
   - ./postgres.yaml
-# kustomize build deployment/kustomize/dev | podman kube play --replace -
+# cd deployment/kustomize/base
+# kustomize build . | podman kube play --replace -
 
 # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
 # https://kubernetes.io/docs/concepts/workloads/pods/
