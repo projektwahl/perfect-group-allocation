@@ -26,15 +26,12 @@ spec:
         # https://www.keycloak.org/server/enabletls
         # TODO https://www.keycloak.org/server/vault
         - name: KC_HTTPS_CERTIFICATE_FILE
-          value: test
+          value: /run/secrets/tls-cert/tls.crt
         - name: KC_HTTPS_CERTIFICATE_KEY_FILE
-          value: test
+          value: /run/secrets/tls-cert/tls.key
       volumeMounts:
         - name: keycloak-tls-cert-volume
-          mountPath: "/etc/tls-cert"
-          readOnly: true
-        - name: keycloak-tls-key-volume
-          mountPath: "/etc/tls-key"
+          mountPath: "/run/secrets/tls-cert"
           readOnly: true
       ports:
         - containerPort: 8443
@@ -49,11 +46,5 @@ spec:
     - name: keycloak-tls-cert-volume
       secret:
         secretName: keycloak-tls-cert
-    - name: keycloak-tls-key-volume
-      secret:
-        secretName: keycloak-tls-key
 ---
 # mkcert keycloak.localhost
-# use kustomize secretGenerator
-# podman secret create keycloak-tls-cert keycloak.localhost.pem
-# podman secret create keycloak-tls-key keycloak.localhost-key.pem
