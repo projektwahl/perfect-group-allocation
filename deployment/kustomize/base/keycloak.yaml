@@ -46,6 +46,34 @@ spec:
         limits:
           memory: "1Gi"
           cpu: "4"
+    - name: curl
+      image: docker.io/curlimages/curl
+      command: ["sleep", "10000"]
+      startupProbe:
+        exec:
+          command:
+            - "curl"
+            - "--insecure"
+            - "--verbose"
+            - "https://localhost:8443/"
+        periodSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        exec:
+          command:
+            - "curl"
+            - "--insecure"
+            - "--verbose"
+            - "https://localhost:8443/"
+        periodSeconds: 1
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "100m"
+        limits:
+          memory: "64Mi"
+          cpu: "100m"
+
   volumes:
     - name: keycloak-tls-cert-volume
       secret:

@@ -8,10 +8,10 @@ resources:
   - ./keycloak.yaml
   - ./postgres.yaml
 # cd deployment/kustomize/base
-# kustomize build . | podman kube play --replace --publish-all -
+# clear && kustomize build . | podman kube play --replace --publish-all -
 # kustomize build . | podman kube play --down -
 # https://keycloak.localhost:8443
-# podman inspect postgres-postgres | jq '.[0].State'
+# podman inspect keycloak-curl | jq '.[0].State'
 ## podman volume DANGER postgres-claim
 
 # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
