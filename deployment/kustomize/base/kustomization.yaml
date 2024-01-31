@@ -8,7 +8,8 @@ resources:
   - ./keycloak.yaml
   - ./postgres.yaml
 # cd deployment/kustomize/base
-# kustomize build . | podman kube play --replace -
+# kustomize build . | podman kube play --replace --publish-all -
+# https://keycloak.localhost:8443
 
 # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
 # https://kubernetes.io/docs/concepts/workloads/pods/
