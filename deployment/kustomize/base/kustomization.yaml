@@ -12,6 +12,7 @@ resources:
 # kustomize build . | podman kube play --down -
 # https://keycloak.localhost:8443
 # podman inspect keycloak-curl | jq '.[0].State'
+# watch 'podman inspect keycloak-curl | jq '.[0].State' | tail -n 10'
 ## podman volume DANGER postgres-claim
 
 # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/
