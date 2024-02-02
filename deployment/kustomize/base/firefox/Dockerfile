@@ -14,5 +14,4 @@ ENV WAYLAND_DISPLAY=/tmp/wayland-0
 
 USER ff
 
-# podman build -t firefoxy . && podman run --user=$(id -u):$(id -g) --security-opt label=type:container_runtime_ts --userns=keep-id --device /dev/dri --volume "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY":/tmp/wayland-0:Z --rm -it firefoxy firefox
-# podman run -it --userns=keep-id --user=$(id -u):$(id -g) -e XDG_RUNTIME_DIR=/tmp -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY firefoxy
+# podman build -t firefoxy . && podman run --userns=keep-id --user=$(id -u):$(id -g) -e XDG_RUNTIME_DIR=/tmp -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY firefoxy firefox
