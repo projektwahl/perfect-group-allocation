@@ -54,20 +54,18 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         .map(char::from)
         .collect();
 
-    let base_path = concat!(concat!(
-        "../..",
-        env!("CARGO_MANIFEST_DIR"),
-        "/../deployment/kustomize/base"
-    ));
+    let base_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../deployment/kustomize/base");
+
+    let relative_base_path = "../..".to_owned() + base_path;
 
     let output = tokio::process::Command::new("/usr/bin/kustomize")
         .arg("create")
         .arg("--resources")
-        .arg(base_path)
+        .arg(relative_base_path)
         .arg("--nameprefix")
         .arg(rand_string)
         .current_dir(tmp_dir.path())
-        .output()
+        .status()
         .await
         .unwrap();
 
@@ -80,25 +78,24 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
     let kustomize_build_stdout: Stdio = kustomize_build.stdout.unwrap().try_into().unwrap();
 
+    // maybe we should also start webdriver inside the container by default but we should probably also support running it manually for debugging
+
     // podman stop --all
     // podman rm --all
     let podman_play = tokio::process::Command::new("podman")
         .arg("kube")
         .arg("play")
+        //.arg("--build")
         //.arg("--replace")
         .arg("--publish")
         .arg("8443")
         .arg("-")
-        .current_dir(tmp_dir.path())
+        .current_dir(base_path)
         .stdin(kustomize_build_stdout)
-        .stdout(Stdio::piped())
-        .spawn()
+        .stdout(Stdio::inherit())
+        .status()
+        .await
         .unwrap();
-
-    let output = podman_play.wait_with_output().await.unwrap();
-
-    println!("{}", std::str::from_utf8(&output.stdout).unwrap());
-    println!("{}", std::str::from_utf8(&output.stderr).unwrap());
 
     println!("{:?}", tmp_dir);
 
