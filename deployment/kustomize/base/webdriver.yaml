@@ -2,10 +2,17 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: webdriver-pod
+  annotations:
+    # I think this forces the container to use 65k uids so we need more globally
+    # /etc/subuid /etc/subgid
+    # moritz:100000:65536000
+    "io.podman.annotations.userns": "keep-id"
 spec:
   containers:
     - command:
-        - firefox
+        - ls
+        - "-la"
+        - "/tmp"
       env:
         - name: WAYLAND_DISPLAY
           value: wayland-0
@@ -22,11 +29,18 @@ spec:
         runAsGroup: 1000
         runAsUser: 1000
       volumeMounts:
+        # socket has wrong user
         - mountPath: /tmp/wayland-0
           name: run-user-1000-wayland-0-host-0
-  hostUsers: false
+        - name: dev-dri-host-1
+          mountPath: /dev/dri
+  #hostUsers: true
   volumes:
     - hostPath:
         path: /run/user/1000/wayland-0
         type: File
       name: run-user-1000-wayland-0-host-0
+    - name: dev-dri-host-1
+      hostPath:
+        path: /dev/dri
+        type: Directory

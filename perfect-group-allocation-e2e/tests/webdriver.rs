@@ -82,6 +82,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
     // podman stop --all
     // podman rm --all
+    // podman volume prune
     let podman_play = tokio::process::Command::new("podman")
         .arg("kube")
         .arg("play")
