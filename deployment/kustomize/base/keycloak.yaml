@@ -22,7 +22,7 @@ spec:
         - name: KC_DB_PASSWORD
           value: bestpassword # FIXME don't put password here
         - name: KC_HOSTNAME
-          value: keycloak.localhost
+          value: keycloak.localhost # this probably needs to match the port?
         # https://www.keycloak.org/server/enabletls
         # TODO https://www.keycloak.org/server/vault
         - name: KC_HTTPS_CERTIFICATE_FILE
