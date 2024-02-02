@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webdriver-pod
+spec:
+  containers:
+    - command:
+        - firefox
+      env:
+        - name: WAYLAND_DISPLAY
+          value: wayland-0
+      image: localhost/firefoxy:latest
+      name: webdriver
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "1"
+        limits:
+          memory: "1Gi"
+          cpu: "4"
+      securityContext:
+        runAsGroup: 1000
+        runAsUser: 1000
+      volumeMounts:
+        - mountPath: /tmp/wayland-0
+          name: run-user-1000-wayland-0-host-0
+  hostUsers: false
+  volumes:
+    - hostPath:
+        path: /run/user/1000/wayland-0
+        type: File
+      name: run-user-1000-wayland-0-host-0
