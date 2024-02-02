@@ -1565,6 +1565,7 @@ dependencies = [
  "perfect-group-allocation-backend",
  "perfect-group-allocation-config",
  "rand",
+ "tempfile",
  "tokio",
  "tokio-rustls",
  "tracing",

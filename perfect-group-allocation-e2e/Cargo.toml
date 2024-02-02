@@ -33,6 +33,7 @@ tracing = { default-features = false, version = "0.1" }
 iai-callgrind = { default-features = false, version = "0.10", features = [
     "default",
 ] }
+tempfile = { default-features = false, version = "3" }
 tracing-subscriber = { default-features = false, version = "0.3", features = [
     "env-filter",
 ] }
