@@ -80,11 +80,13 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
     let kustomize_build_stdout: Stdio = kustomize_build.stdout.unwrap().try_into().unwrap();
 
+    // podman stop --all
+    // podman rm --all
     let podman_play = tokio::process::Command::new("podman")
         .arg("kube")
         .arg("play")
-        .arg("--replace")
-        .arg("--publish-all")
+        //.arg("--replace")
+        //.arg("--publish-all")
         .arg("-")
         .current_dir(tmp_dir.path())
         .stdin(kustomize_build_stdout)
