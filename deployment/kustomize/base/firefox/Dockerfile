@@ -10,8 +10,8 @@ RUN groupadd -g $GROUP_ID ff \
     && useradd -u $USER_ID -g $GROUP_ID -G audio,video -m ff
 
 ENV WAYLAND_DISPLAY=/tmp/wayland-0
-#ENV DBUS_SESSION_BUS_ADDRESS="unix:path=/tmp/bus"
+ENV XDG_RUNTIME_DIR=/tmp
 
 USER ff
 
-# podman build -t firefoxy . && podman run --userns=keep-id --user=$(id -u):$(id -g) -e XDG_RUNTIME_DIR=/tmp -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY firefoxy firefox
+# podman build -t firefoxy . && podman run --device /dev/dri --userns=keep-id --user=$(id -u):$(id -g) -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY firefoxy firefox
