@@ -1,0 +1,9 @@
+{
+    "policies": {
+        "Certificates": {
+            "Install": [
+                "/home/test/.local/share/mkcert/rootCA.pem"
+            ]
+        }
+    }
+}

@@ -33,6 +33,13 @@ pub async fn run_test() {
 // cargo test -p perfect-group-allocation-e2e --test webdriver
 #[allow(clippy::too_many_lines)]
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
+    let output = tokio::process::Command::new("mkcert")
+        .arg("-install")
+        .env("TRUST_STORES", "nss")
+        .status()
+        .await
+        .unwrap();
+
     // podman wait --condition healthy perfect-group-allocation_postgres_1
     // podman inspect perfect-group-allocation_postgres_1
     /*
@@ -142,7 +149,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             browsing_context::navigate::Command {
                 params: browsing_context::navigate::Parameters {
                     context: browsing_context.clone(),
-                    url: "https://h3.selfmade4u.de".to_owned(),
+                    url: "https://perfect-group-allocation".to_owned(),
                     wait: Some(browsing_context::ReadinessState::Complete),
                 },
             },

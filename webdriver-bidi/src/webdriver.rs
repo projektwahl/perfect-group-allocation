@@ -33,6 +33,7 @@ impl WebDriver {
                 let mut child = tokio::process::Command::new("firefox")
                     .kill_on_drop(true)
                     .args([
+                        "-g",
                         "--profile",
                         &tmp_dir.path().to_string_lossy(),
                         "--no-remote",
@@ -68,7 +69,7 @@ impl WebDriver {
                     .await
                     .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
                 {
-                    trace!("{line}");
+                    eprintln!("{line}");
                     if let Some(p) =
                         line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:")
                     {

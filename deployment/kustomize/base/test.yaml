@@ -5,7 +5,7 @@ metadata:
   annotations:
     io.podman.annotations.userns: keep-id # this feature is not in a stable release yet, so you need an unreleased version
 spec:
-  restartPolicy: OnFailure
+  restartPolicy: Never
   containers:
     - env:
         - name: WAYLAND_DISPLAY
@@ -25,6 +25,8 @@ spec:
       volumeMounts:
         - name: test-binary
           mountPath: /bin/test
+        - name: root-ca
+          mountPath: /home/test/.local/share/mkcert/rootCA.pem
         - mountPath: /tmp/wayland-0
           name: run-user-1000-wayland-0-host-0
           readOnly: true
@@ -36,6 +38,10 @@ spec:
       hostPath:
         type: File
         path: ../target/debug/TODO
+    - name: root-ca
+      hostPath:
+        type: File
+        path: TODO
     - hostPath:
         path: /run/user/1000/wayland-0
         type: File
