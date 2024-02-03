@@ -100,7 +100,7 @@ impl AppError {
     pub async fn build_error_template(
         self,
         session: Session<Option<String>, ()>,
-        config: Config,
+        config: &Config,
     ) -> Response<impl http_body::Body<Data = Bytes, Error = Infallible> + Send + 'static> {
         let _csrf_token = session.csrf_token();
         let request_id = "REQUESTID";

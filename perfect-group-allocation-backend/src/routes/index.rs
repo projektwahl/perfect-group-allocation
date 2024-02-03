@@ -1,5 +1,6 @@
 use std::convert::Infallible;
 use std::pin::pin;
+use std::sync::Arc;
 
 use async_zero_cost_templating::{html, TemplateToStream};
 use bytes::Bytes;
@@ -16,7 +17,7 @@ use crate::session::{ResponseSessionExt as _, Session};
 
 pub async fn index(
     session: Session,
-    config: Config,
+    config: &Config,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
     let result = {

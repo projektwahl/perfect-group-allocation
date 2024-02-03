@@ -31,7 +31,7 @@ pub async fn create<'a>(
         impl http_body::Body<Data = impl Buf + Send + 'static, Error = AppError> + Send + 'static,
     >,
     session: Session,
-    config: Config,
+    config: &Config,
     pool: Pool,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
