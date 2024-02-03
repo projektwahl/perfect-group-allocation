@@ -53,11 +53,11 @@ async fn read_file(path: PathBuf) -> Result<String, ConfigError> {
 pub async fn reread_config(config_directory: &Path) -> Result<Config, ConfigError> {
     let url = read_file(config_directory.join("url")).await?;
     let database_url = read_file(config_directory.join("database_url")).await?;
-    let issuer_url = read_file(config_directory.join("openidconnect/issuer_url")).await?;
-    let client_id = read_file(config_directory.join("openidconnect/client_id")).await?;
-    let client_secret = read_file(config_directory.join("openidconnect/client_secret")).await?;
-    let cert = read_file(config_directory.join("tls/cert")).await?;
-    let key = read_file(config_directory.join("tls/key")).await?;
+    let issuer_url = read_file(config_directory.join("openidconnect.issuer_url")).await?;
+    let client_id = read_file(config_directory.join("openidconnect.client_id")).await?;
+    let client_secret = read_file(config_directory.join("openidconnect.client_secret")).await?;
+    let cert = read_file(config_directory.join("tls.cert")).await?;
+    let key = read_file(config_directory.join("tls.key")).await?;
 
     Ok(Config {
         url,

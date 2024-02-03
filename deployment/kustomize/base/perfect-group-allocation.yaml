@@ -11,6 +11,8 @@ spec:
       env:
         - name: PGA_CONFIG_DIR
           value: /run/secrets
+        - name: RUST_LOG
+          value: info
       volumeMounts:
         - name: secret-volume
           mountPath: "/run/secrets"
@@ -18,7 +20,7 @@ spec:
         - name: server-binary-volume
           mountPath: /bin/server
       ports:
-        - containerPort: 8443
+        - containerPort: 443
       #livenessProbe:
       #  # for kubernetes use an http check and don't bundle curl with the container.
       #  exec:
