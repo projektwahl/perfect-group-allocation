@@ -138,6 +138,8 @@ impl WebDriver {
             }
         };
 
+        println!("GOT A PORT");
+
         let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session"))
                 .await

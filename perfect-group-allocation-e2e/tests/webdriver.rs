@@ -33,6 +33,8 @@ pub async fn run_test() {
 // cargo test -p perfect-group-allocation-e2e --test webdriver
 #[allow(clippy::too_many_lines)]
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
+    tracing_subscriber::fmt::init();
+
     let output = tokio::process::Command::new("mkcert")
         .arg("-install")
         .env("TRUST_STORES", "nss")
@@ -110,6 +112,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         // TODO FIXME cleanup
     */
     let driver = WebDriver::new(Browser::Firefox).await?;
+    println!("DONE WITH STARTING WEBDRIVER");
     let _session = driver
         .send_command(
             SendCommand::SessionNew,
@@ -123,6 +126,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             },
         )
         .await?;
+    println!("FIRST COMMAND");
 
     let browsing_context = driver
         .send_command(

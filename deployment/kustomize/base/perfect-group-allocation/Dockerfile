@@ -12,4 +12,4 @@ RUN groupadd -g $GROUP_ID test \
 
 USER test
 
-CMD ["/bin/sh", "-c", "echo hi && ls -a -R /bin/server && sleep 100000"]
+ENTRYPOINT ["/bin/server"]

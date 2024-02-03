@@ -17,8 +17,5 @@ FROM quay.io/keycloak/keycloak:23.0
 COPY --from=ubi-micro-build /mnt/rootfs /
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
-ENV KC_HEALTH_ENABLED=true
-ENV KC_METRICS_ENABLED=true
-ENV KC_DB=postgres
-
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh" "start", "--optimized"]
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
+CMD ["start", "--optimized"]
