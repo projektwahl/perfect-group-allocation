@@ -6,24 +6,27 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, Empty};
 use hyper::Request;
 use hyper_util::rt::TokioIo;
-use perfect_group_allocation_config::{Config, OpenIdConnectConfig};
+use perfect_group_allocation_backend::error::AppError;
+use perfect_group_allocation_config::{Config, OpenIdConnectConfig, TlsConfig};
 use tokio::net::TcpStream;
+use tokio_rustls::rustls::pki_types::CertificateDer;
 use tokio_rustls::rustls::{pki_types, RootCertStore};
 use tokio_rustls::{rustls, TlsConnector};
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
     let host = url.host().expect("uri has no host");
     let port = url.port_u16().unwrap_or(443);
     let addr = format!("{host}:{port}");
 
-    let certs = load_certs(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../rootCA.pem")
-            .as_path(),
-    )
-    .unwrap();
+    let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(todo!())
+        .map(|value| match value {
+            Ok(ok) => Ok(ok),
+            Err(err) => Err(Box::new(AppError::TlsCertificate(err)) as Box<dyn std::error::Error>),
+        })
+        .collect::<Result<Vec<CertificateDer<'static>>>>()?;
+
     let mut root_store = RootCertStore::empty();
     root_store.add_parsable_certificates(certs);
 
@@ -68,7 +71,7 @@ use std::future::Future;
 use std::path::Path;
 use std::sync::Arc;
 
-use perfect_group_allocation_backend::{load_certs, setup_http2_http3_server};
+use perfect_group_allocation_backend::setup_http2_http3_server;
 
 // podman run --rm --detach --name postgres-testing --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
 
@@ -83,7 +86,7 @@ pub async fn test_as_client(repeat: u64) {
 }
 
 pub async fn test_server() -> impl Future<Output = ()> {
-    let fut = setup_http2_http3_server(Config {
+    let (tx, rx) = tokio::sync::watch::channel(Arc::new(Config {
         url: "https://h3.selfmade4u.de".to_owned(),
         database_url: "postgres://postgres@localhost/pga?sslmode=disable".to_owned(),
         openidconnect: OpenIdConnectConfig {
@@ -91,9 +94,14 @@ pub async fn test_server() -> impl Future<Output = ()> {
             client_id: "pga".to_owned(),
             client_secret: "test".to_owned(),
         },
-    })
-    .await
-    .unwrap();
+        // TODO FIXME generate test certificates
+        tls: TlsConfig {
+            cert: todo!(),
+            key: todo!(),
+        },
+    }));
+
+    let fut = setup_http2_http3_server(rx).await.unwrap();
     async move {
         fut.await.unwrap();
     }

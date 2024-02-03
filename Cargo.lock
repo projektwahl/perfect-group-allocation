@@ -1577,6 +1577,7 @@ dependencies = [
  "perfect-group-allocation-backend",
  "perfect-group-allocation-config",
  "rand",
+ "rustls-pemfile",
  "tempfile",
  "tokio",
  "tokio-rustls",
