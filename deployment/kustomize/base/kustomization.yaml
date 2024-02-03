@@ -20,5 +20,5 @@ secretGenerator:
 resources:
   - ./keycloak.yaml
   - ./postgres.yaml
-  - ./webdriver.yaml
+  - ./test.yaml
   - ./perfect-group-allocation.yaml
