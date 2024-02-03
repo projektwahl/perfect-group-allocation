@@ -3,15 +3,12 @@ kind: Pod
 metadata:
   name: webdriver-pod
   annotations:
-    # I think this forces the container to use 65k uids so we need more globally
-    # /etc/subuid /etc/subgid
-    # moritz:100000:65536000
-    "io.podman.annotations.userns": "keep-id"
+    io.podman.annotations.userns: keep-id
 spec:
   containers:
     - command:
         - ls
-        - "-la"
+        - "-ln"
         - "/tmp"
       env:
         - name: WAYLAND_DISPLAY
@@ -32,9 +29,10 @@ spec:
         # socket has wrong user
         - mountPath: /tmp/wayland-0
           name: run-user-1000-wayland-0-host-0
+          readOnly: true
         - name: dev-dri-host-1
           mountPath: /dev/dri
-  #hostUsers: true
+  hostUsers: true
   volumes:
     - hostPath:
         path: /run/user/1000/wayland-0
@@ -44,3 +42,4 @@ spec:
       hostPath:
         path: /dev/dri
         type: Directory
+# podman --log-level=debug kube play --replace ../webdriver.yaml  &&  podman logs webdriver-pod-webdriver
