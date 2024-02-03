@@ -1,5 +1,7 @@
-# podman build --file deployment/kustomize/base/application/Dockerfile .
+# podman build -t application --file deployment/kustomize/base/application/Dockerfile .
 FROM docker.io/library/debian:stable-slim
+
+RUN apt-get update && apt install -y curl
 
 ARG UID=10001
 RUN adduser \
@@ -12,9 +14,7 @@ RUN adduser \
     appuser
 USER appuser
 
-COPY pga.toml /etc/pga.toml
 COPY target/debug/server /bin/server
 
-EXPOSE 3000
-WORKDIR /etc
+EXPOSE 443
 CMD ["/bin/server"]

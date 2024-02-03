@@ -1,0 +1,39 @@
+# mkcert application.localhost
+apiVersion: v1
+kind: Pod
+metadata:
+  name: perfect-group-allocation
+spec:
+  restartPolicy: OnFailure
+  containers:
+    - name: perfect-group-allocation
+      image: perfect-group-allocation
+      env:
+        - name: PGA_CONFIG_DIR
+          value: /run/secrets
+      volumeMounts:
+        - name: secret-volume
+          mountPath: "/run/secrets"
+          readOnly: true
+      ports:
+        - containerPort: 8443
+      livenessProbe:
+        # for kubernetes use an http check and don't bundle curl with the container.
+        exec:
+          command:
+            - "curl"
+            - "--fail-with-body"
+            - "--insecure"
+            - "https://localhost:8443/health/live"
+        periodSeconds: 1
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "1"
+        limits:
+          memory: "1Gi"
+          cpu: "4"
+  volumes:
+    - name: secret-volume
+      secret:
+        secretName: application-config
