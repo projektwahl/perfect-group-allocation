@@ -3,13 +3,12 @@ kind: Pod
 metadata:
   name: webdriver-pod
   annotations:
-    io.podman.annotations.userns: keep-id
+    io.podman.annotations.userns: keep-id # this feature is not in a stable release yet, so you need an unreleased version
 spec:
+  restartPolicy: OnFailure
   containers:
     - command:
-        - ls
-        - "-ln"
-        - "/tmp"
+        - firefox
       env:
         - name: WAYLAND_DISPLAY
           value: wayland-0
@@ -26,13 +25,12 @@ spec:
         runAsGroup: 1000
         runAsUser: 1000
       volumeMounts:
-        # socket has wrong user
         - mountPath: /tmp/wayland-0
           name: run-user-1000-wayland-0-host-0
           readOnly: true
         - name: dev-dri-host-1
           mountPath: /dev/dri
-  hostUsers: true
+
   volumes:
     - hostPath:
         path: /run/user/1000/wayland-0

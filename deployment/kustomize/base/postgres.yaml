@@ -18,6 +18,7 @@ kind: Pod
 metadata:
   name: postgres
 spec:
+  restartPolicy: OnFailure
   containers:
     - name: postgres
       image: docker.io/library/postgres:16.1

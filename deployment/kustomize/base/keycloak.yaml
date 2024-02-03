@@ -10,6 +10,7 @@ kind: Pod
 metadata:
   name: keycloak
 spec:
+  restartPolicy: OnFailure
   containers:
     - name: keycloak
       image: keycloak
