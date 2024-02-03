@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 
-use notify::{RecursiveMode, Watcher as _};
+use notify::{RecommendedWatcher, RecursiveMode, Watcher as _};
 
 #[derive(Debug, Default)]
 pub struct OpenIdConnectConfig {
@@ -75,7 +75,13 @@ pub async fn reread_config(config_directory: &Path) -> Result<Config, ConfigErro
 /// https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod
 /// https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume
 /// Secrets can be hot-reloaded so we can update configuration at runtime
-pub async fn get_config() -> Result<tokio::sync::watch::Receiver<Arc<Config>>, ConfigError> {
+pub async fn get_config() -> Result<
+    (
+        RecommendedWatcher,
+        tokio::sync::watch::Receiver<Arc<Config>>,
+    ),
+    ConfigError,
+> {
     let config_directory =
         std::env::var_os("PGA_CONFIG_DIR").expect("PGA_CONFIG_DIR env variable set");
     let config_directory = PathBuf::from(config_directory);
@@ -108,8 +114,9 @@ pub async fn get_config() -> Result<tokio::sync::watch::Receiver<Arc<Config>>, C
             // TODO FIXME don't unwrap but log
             let new_config = reread_config(&config_directory2).await.unwrap();
             tx.send(Arc::new(new_config)).unwrap();
+            println!("updated config");
         }
     });
 
-    Ok(rx)
+    Ok((watcher, rx))
 }

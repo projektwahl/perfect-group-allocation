@@ -1,7 +1,0 @@
-database_url = "postgres://postgres@localhost/pga?sslmode=disable"
-url = "https://h3.selfmade4u.de"
-
-[openidconnect]
-client_id = "pga"
-client_secret = "e6w0UbK1FNZXL2VLBcx6nJzMxKEOfF9p"
-issuer_url = "http://localhost:8080/realms/pga"
