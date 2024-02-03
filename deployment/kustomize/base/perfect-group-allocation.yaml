@@ -21,8 +21,9 @@ spec:
         - name: secret-volume
           mountPath: "/run/secrets"
           readOnly: true
-        - name: server-binary-volume
-          mountPath: /bin/server
+        - name: server-binary
+          mountPath: "/bin/server"
+          readOnly: true
       #ports:
       #  - containerPort: 443
       #livenessProbe:
@@ -45,7 +46,7 @@ spec:
     - name: secret-volume
       secret:
         secretName: application-config
-    - name: server-binary-volume
+    - name: server-binary
       hostPath:
         type: File
-        path: ../target/debug/server
+        path: TODO/target/debug/server

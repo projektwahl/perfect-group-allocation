@@ -14,4 +14,4 @@ RUN adduser \
     appuser
 USER appuser
 
-ENTRYPOINT ["/bin/server"]
+CMD ["/bin/sh", "-c", "echo hi && ls -a -R /bin/server && sleep 100000"]
