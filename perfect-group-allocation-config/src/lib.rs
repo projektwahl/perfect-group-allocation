@@ -1,23 +1,31 @@
 use core::fmt::{Debug, Display};
-use std::{path::Path, result};
+use std::{
+    path::{Path, PathBuf},
+    result,
+    sync::Arc,
+};
 
 use notify::{RecursiveMode, Watcher as _};
 
+#[derive(Debug, Default)]
 pub struct OpenIdConnectConfig {
     pub issuer_url: String,
     pub client_id: String,
     pub client_secret: String,
 }
 
+#[derive(Debug, Default)]
 pub struct TlsConfig {
-    pub cert_path: String,
-    pub key_path: String,
+    pub cert: String,
+    pub key: String,
 }
 
+#[derive(Debug, Default)]
 pub struct Config {
     pub url: String,
     pub database_url: String,
     pub openidconnect: OpenIdConnectConfig,
+    pub tls: TlsConfig,
 }
 
 #[derive(thiserror::Error)]
@@ -34,27 +42,64 @@ impl Debug for ConfigError {
     }
 }
 
-pub async fn reread_config(config_dir: &Path) -> Result<Config, ConfigError> {
-    let url = tokio::fs::read_to_string(config_dir.join("url")).await?;
+pub async fn reread_config(config_directory: &Path) -> Result<Config, ConfigError> {
+    let url = tokio::fs::read_to_string(config_directory.join("url")).await?;
+    let database_url = tokio::fs::read_to_string(config_directory.join("database_url")).await?;
+    let issuer_url =
+        tokio::fs::read_to_string(config_directory.join("openidconnect/issuer_url")).await?;
+    let client_id =
+        tokio::fs::read_to_string(config_directory.join("openidconnect/client_id")).await?;
+    let client_secret =
+        tokio::fs::read_to_string(config_directory.join("openidconnect/client_secret")).await?;
+    let cert = tokio::fs::read_to_string(config_directory.join("tls/cert")).await?;
+    let key = tokio::fs::read_to_string(config_directory.join("tls/key")).await?;
 
-    Ok(todo!())
+    Ok(Config {
+        url,
+        database_url,
+        openidconnect: OpenIdConnectConfig {
+            issuer_url,
+            client_id,
+            client_secret,
+        },
+        tls: TlsConfig { cert, key },
+    })
 }
 
 /// https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod
 /// https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume
 /// Secrets can be hot-reloaded so we can update configuration at runtime
-pub fn get_config() -> Result<Config, ConfigError> {
+pub async fn get_config() -> Result<tokio::sync::watch::Receiver<Arc<Config>>, ConfigError> {
     let config_directory = std::env::var_os("PGA_CONFIG_DIR").unwrap();
-    let notify = tokio::sync::Notify::new();
+    let config_directory = PathBuf::from(config_directory);
+    let notify = Arc::new(tokio::sync::Notify::new());
+    let notify2 = notify.clone();
 
-    let config = None;
-
-    let mut watcher = notify::recommended_watcher(|res| match res {
+    let mut watcher = notify::recommended_watcher(move |res| match res {
         Ok(event) => {
             println!("event: {:?}", event);
+            notify.notify_one();
         }
         Err(e) => println!("watch error: {:?}", e),
     })?;
 
-    watcher.watch(&Path::new(&config_directory), RecursiveMode::Recursive)?;
+    watcher.watch(&config_directory, RecursiveMode::Recursive)?;
+
+    let (tx, rx) = tokio::sync::watch::channel(Arc::new(Config::default()));
+    let config_directory2 = config_directory.clone();
+
+    // we watched before so it should be safe to first read the initial config and then watch for changes.
+    let new_config = reread_config(&config_directory).await?;
+    tx.send(Arc::new(new_config)).unwrap();
+
+    tokio::spawn(async move {
+        loop {
+            notify2.notified().await;
+            // TODO FIXME don't unwrap but log
+            let new_config = reread_config(&config_directory2).await.unwrap();
+            tx.send(Arc::new(new_config)).unwrap();
+        }
+    });
+
+    Ok(rx)
 }
