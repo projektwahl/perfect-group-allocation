@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     result,
     sync::Arc,
+    time::Duration,
 };
 
 use notify::{RecommendedWatcher, RecursiveMode, Watcher as _};
@@ -85,13 +86,11 @@ pub async fn get_config() -> Result<
     let config_directory =
         std::env::var_os("PGA_CONFIG_DIR").expect("PGA_CONFIG_DIR env variable set");
     let config_directory = PathBuf::from(config_directory);
-    let notify = Arc::new(tokio::sync::Notify::new());
-    let notify2 = notify.clone();
+    let (notify_tx, mut notify_rx) = tokio::sync::watch::channel(());
 
     let mut watcher = notify::recommended_watcher(move |res| match res {
         Ok(event) => {
-            println!("event: {:?}", event);
-            notify.notify_one();
+            notify_tx.send(()).unwrap();
         }
         Err(e) => println!("watch error: {:?}", e),
     })
@@ -110,7 +109,11 @@ pub async fn get_config() -> Result<
 
     tokio::spawn(async move {
         loop {
-            notify2.notified().await;
+            if notify_rx.changed().await.is_err() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await; // basic debouncing
+            notify_rx.borrow_and_update();
             // TODO FIXME don't unwrap but log
             let new_config = reread_config(&config_directory2).await.unwrap();
             tx.send(Arc::new(new_config)).unwrap();
