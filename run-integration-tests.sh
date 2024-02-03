@@ -35,6 +35,6 @@ cp -r deployment/kustomize/base/* tmp/
     kustomize build --output kubernetes.yaml &&
     (podman kube down --force kubernetes.yaml || exit 0) && # WARNING: this also removes volumes
     podman kube play kubernetes.yaml &&
-    podman logs --color --names --follow tmp-keycloak-keycloak tmp-postgres-postgres tmp-test-test tmp-perfect-group-allocation-perfect-group-allocation
+    podman logs --color --names --follow tmp-test-test #tmp-keycloak-keycloak tmp-postgres-postgres tmp-perfect-group-allocation-perfect-group-allocation
 
 )
