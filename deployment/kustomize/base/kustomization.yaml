@@ -10,7 +10,6 @@ resources:
   - ./keycloak.yaml
   - ./postgres.yaml
   - ./webdriver.yaml
-namePrefix: pga-dev-
 # podman kube generate c405e96100cc0970b2059248bb2e6eb2b3aaf469eb51a221e44d5a7195b336c4
 # cd deployment/kustomize/base
 # clear && kustomize build . | podman kube play --replace --publish-all - #  --build

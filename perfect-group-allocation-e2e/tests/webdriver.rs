@@ -30,7 +30,7 @@ pub async fn run_test() {
     test().await.unwrap();
 }
 
-// cargo test -p perfect-group-allocation-e2e --test webdriver -- --help
+// cargo test -p perfect-group-allocation-e2e --test webdriver
 #[allow(clippy::too_many_lines)]
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     // https://docs.docker.com/compose/production/
@@ -52,7 +52,8 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         .sample_iter(&Alphanumeric)
         .take(10)
         .map(char::from)
-        .collect();
+        .collect::<String>()
+        + "-";
 
     let base_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../deployment/kustomize/base");
 
@@ -63,7 +64,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         .arg("--resources")
         .arg(relative_base_path)
         .arg("--nameprefix")
-        .arg(rand_string)
+        .arg(&rand_string)
         .current_dir(tmp_dir.path())
         .status()
         .await
@@ -100,7 +101,16 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
     println!("{:?}", tmp_dir);
 
-    exit(0);
+    let logs = tokio::process::Command::new("podman")
+        .args(["logs", "--color", "--names", "--follow"])
+        .arg(format!("{rand_string}keycloak-keycloak"))
+        .arg(format!("{rand_string}postgres-postgres"))
+        .arg(format!("{rand_string}webdriver-pod-webdriver"))
+        .status()
+        .await
+        .unwrap();
+
+    // TODO FIXME cleanup
 
     let driver = WebDriver::new(Browser::Firefox).await?;
     let _session = driver
