@@ -15,17 +15,19 @@ spec:
         - name: secret-volume
           mountPath: "/run/secrets"
           readOnly: true
+        - name: server-binary-volume
+          mountPath: /bin/server
       ports:
         - containerPort: 8443
-      livenessProbe:
-        # for kubernetes use an http check and don't bundle curl with the container.
-        exec:
-          command:
-            - "curl"
-            - "--fail-with-body"
-            - "--insecure"
-            - "https://localhost:8443/health/live"
-        periodSeconds: 1
+      #livenessProbe:
+      #  # for kubernetes use an http check and don't bundle curl with the container.
+      #  exec:
+      #    command:
+      #      - "curl"
+      #      - "--fail-with-body"
+      #      - "--insecure"
+      #      - "https://localhost:8443/health/live"
+      #  periodSeconds: 1
       resources:
         requests:
           memory: "512Mi"
@@ -37,3 +39,7 @@ spec:
     - name: secret-volume
       secret:
         secretName: application-config
+    - name: server-binary-volume
+      hostPath:
+        type: File
+        path: ../target/debug/server
