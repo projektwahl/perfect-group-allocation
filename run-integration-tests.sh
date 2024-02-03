@@ -5,9 +5,6 @@ set -o pipefail  # don't hide errors within pipes
 
 function cleanup {
     echo cleanup up pods
-    podman pod stop tmp-keycloak tmp-postgres tmp-webdriver-pod tmp-perfect-group-allocation
-    podman pod rm tmp-keycloak tmp-postgres tmp-webdriver-pod tmp-perfect-group-allocation
-    podman volume rm tmp-postgres-claim 
 }
 
 #trap cleanup EXIT INT
@@ -24,10 +21,10 @@ cp -r deployment/kustomize/base/* tmp/
     mkcert keycloak &&
     mkcert perfect-group-allocation &&
     kustomize edit set nameprefix tmp- &&
-    kustomize edit add patch --kind Pod --name test --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"redis"}}]}}' &&
+    kustomize edit add patch --kind Pod --name test --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}' &&
     kustomize build --output kubernetes.yaml &&
     (podman kube down --force kubernetes.yaml || exit 0) && # WARNING: this also removes volumes
     podman kube play kubernetes.yaml &&
-    podman logs --color --names --follow tmp-keycloak-keycloak tmp-postgres-postgres tmp-webdriver-pod-webdriver tmp-perfect-group-allocation-perfect-group-allocation
+    podman logs --color --names --follow tmp-keycloak-keycloak tmp-postgres-postgres tmp-test-test tmp-perfect-group-allocation-perfect-group-allocation
 
 )

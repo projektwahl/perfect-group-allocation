@@ -35,73 +35,73 @@ pub async fn run_test() {
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     // podman wait --condition healthy perfect-group-allocation_postgres_1
     // podman inspect perfect-group-allocation_postgres_1
+    /*
+        let tmp_dir = tempdir().map_err(webdriver_bidi::ErrorInner::TmpDirCreate)?;
 
-    let tmp_dir = tempdir().map_err(webdriver_bidi::ErrorInner::TmpDirCreate)?;
+        let rand_string: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect::<String>()
+            + "-";
 
-    let rand_string: String = thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(10)
-        .map(char::from)
-        .collect::<String>()
-        + "-";
+        let base_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../deployment/kustomize/base");
 
-    let base_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../deployment/kustomize/base");
+        let relative_base_path = "../..".to_owned() + base_path;
 
-    let relative_base_path = "../..".to_owned() + base_path;
+        let output = tokio::process::Command::new("/usr/bin/kustomize")
+            .arg("create")
+            .arg("--resources")
+            .arg(relative_base_path)
+            .arg("--nameprefix")
+            .arg(&rand_string)
+            .current_dir(tmp_dir.path())
+            .status()
+            .await
+            .unwrap();
 
-    let output = tokio::process::Command::new("/usr/bin/kustomize")
-        .arg("create")
-        .arg("--resources")
-        .arg(relative_base_path)
-        .arg("--nameprefix")
-        .arg(&rand_string)
-        .current_dir(tmp_dir.path())
-        .status()
-        .await
-        .unwrap();
+        let kustomize_build = tokio::process::Command::new("/usr/bin/kustomize")
+            .arg("build")
+            .current_dir(tmp_dir.path())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
 
-    let kustomize_build = tokio::process::Command::new("/usr/bin/kustomize")
-        .arg("build")
-        .current_dir(tmp_dir.path())
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
+        let kustomize_build_stdout: Stdio = kustomize_build.stdout.unwrap().try_into().unwrap();
 
-    let kustomize_build_stdout: Stdio = kustomize_build.stdout.unwrap().try_into().unwrap();
+        // maybe we should also start webdriver inside the container by default but we should probably also support running it manually for debugging
 
-    // maybe we should also start webdriver inside the container by default but we should probably also support running it manually for debugging
+        // podman stop --all
+        // podman rm --all
+        // podman volume prune
+        let podman_play = tokio::process::Command::new("podman")
+            .arg("kube")
+            .arg("play")
+            //.arg("--build")
+            //.arg("--replace")
+            .arg("--publish")
+            .arg("8443")
+            .arg("-")
+            .current_dir(base_path)
+            .stdin(kustomize_build_stdout)
+            .stdout(Stdio::inherit())
+            .status()
+            .await
+            .unwrap();
 
-    // podman stop --all
-    // podman rm --all
-    // podman volume prune
-    let podman_play = tokio::process::Command::new("podman")
-        .arg("kube")
-        .arg("play")
-        //.arg("--build")
-        //.arg("--replace")
-        .arg("--publish")
-        .arg("8443")
-        .arg("-")
-        .current_dir(base_path)
-        .stdin(kustomize_build_stdout)
-        .stdout(Stdio::inherit())
-        .status()
-        .await
-        .unwrap();
+        println!("{:?}", tmp_dir);
 
-    println!("{:?}", tmp_dir);
+        let logs = tokio::process::Command::new("podman")
+            .args(["logs", "--color", "--names", "--follow"])
+            .arg(format!("{rand_string}keycloak-keycloak"))
+            .arg(format!("{rand_string}postgres-postgres"))
+            .arg(format!("{rand_string}webdriver-pod-webdriver"))
+            .status()
+            .await
+            .unwrap();
 
-    let logs = tokio::process::Command::new("podman")
-        .args(["logs", "--color", "--names", "--follow"])
-        .arg(format!("{rand_string}keycloak-keycloak"))
-        .arg(format!("{rand_string}postgres-postgres"))
-        .arg(format!("{rand_string}webdriver-pod-webdriver"))
-        .status()
-        .await
-        .unwrap();
-
-    // TODO FIXME cleanup
-
+        // TODO FIXME cleanup
+    */
     let driver = WebDriver::new(Browser::Firefox).await?;
     let _session = driver
         .send_command(
