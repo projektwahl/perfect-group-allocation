@@ -15,9 +15,6 @@ ENV XDG_RUNTIME_DIR=/tmp
 
 USER ff
 
-# cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable'
-COPY target/debug/deps/webdriver-* /bin/
-
 CMD ["/bin/webdriver"]
 
 # podman build -t webdriver --file deployment/kustomize/base/webdriver/Dockerfile . && podman run --device /dev/dri --userns=keep-id:uid=1000,gid=1000 --user=$(id -u):$(id -g) -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY firefoxy firefox

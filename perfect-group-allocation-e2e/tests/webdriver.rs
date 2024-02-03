@@ -33,18 +33,8 @@ pub async fn run_test() {
 // cargo test -p perfect-group-allocation-e2e --test webdriver
 #[allow(clippy::too_many_lines)]
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
-    // https://docs.docker.com/compose/production/
-
-    // https://www.redhat.com/sysadmin/quadlet-podman
-    // printf "postgrespassword" | podman secret create deployment_postgres_password -
-
-    // the integration code should be as close as possible to production so we should use podman compose
-
-    // podman run --rm --detach --name postgres-profiling --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
     // podman wait --condition healthy perfect-group-allocation_postgres_1
     // podman inspect perfect-group-allocation_postgres_1
-
-    // I think we should not start it here like that but use podman to properly start it to minimize the differences. Some lower level testing may use this here?
 
     let tmp_dir = tempdir().map_err(webdriver_bidi::ErrorInner::TmpDirCreate)?;
 

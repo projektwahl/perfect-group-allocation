@@ -1,4 +1,4 @@
-# podman build -t application --file deployment/kustomize/base/application/Dockerfile .
+# podman build -t perfect-group-allocation --file deployment/kustomize/base/perfect-group-allocation/Dockerfile .
 FROM docker.io/library/debian:stable-slim
 
 RUN apt-get update && apt install -y curl
@@ -13,8 +13,6 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 USER appuser
-
-COPY target/debug/server /bin/server
 
 EXPOSE 443
 CMD ["/bin/server"]
