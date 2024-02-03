@@ -30,7 +30,7 @@ pub async fn run_test() {
     test().await.unwrap();
 }
 
-// cargo test --test 'webdriver' -- --nocapture
+// cargo test -p perfect-group-allocation-e2e --test webdriver -- --help
 #[allow(clippy::too_many_lines)]
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     // https://docs.docker.com/compose/production/

@@ -12,9 +12,9 @@ version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-figment = { version = "0.10", features = ["env", "toml"] }
-serde = { default-features = false, version = "1", features = ["derive"] }
+notify = { default-features = false, version = "6" }
 thiserror = { default-features = false, version = "1" }
+tokio = { default-features = false, version = "1", features = ["fs", "sync"] }
 
 [lints]
 workspace = true

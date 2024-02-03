@@ -541,8 +541,7 @@ pub fn load_certs_key_pair(
     Ok((certs, key))
 }
 
-pub const CERT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../h3.selfmade4u.de.pem");
-pub const KEY_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../h3.selfmade4u.de-key.pem");
+// TODO FIXME make configurable
 pub const PORT: u16 = 443;
 pub const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 
