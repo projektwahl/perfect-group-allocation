@@ -14,7 +14,6 @@ spec:
   containers:
     - name: keycloak
       image: keycloak
-      args: ["start", "--optimized"]
       env:
         - name: KC_DB_URL
           value: jdbc:postgresql://postgres/postgres

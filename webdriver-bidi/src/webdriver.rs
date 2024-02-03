@@ -33,7 +33,6 @@ impl WebDriver {
                 let mut child = tokio::process::Command::new("firefox")
                     .kill_on_drop(true)
                     .args([
-                        "-g",
                         "--profile",
                         &tmp_dir.path().to_string_lossy(),
                         "--no-remote",

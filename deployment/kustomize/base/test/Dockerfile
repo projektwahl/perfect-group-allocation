@@ -20,7 +20,7 @@ RUN certutil -d sql:$HOME/.pki/nssdb -N
 
 COPY deployment/kustomize/base/test/policies.json /etc/firefox/policies/policies.json
 
-CMD ["/bin/test"]
+ENTRYPOINT ["/bin/test", "--nocapture"]
 
 # podman build -t test --file deployment/kustomize/base/test/Dockerfile . && podman run --device /dev/dri --userns=keep-id:uid=1000,gid=1000 --user=$(id -u):$(id -g) -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY firefoxy firefox
 

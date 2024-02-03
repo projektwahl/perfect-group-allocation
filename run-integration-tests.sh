@@ -9,6 +9,10 @@ function cleanup {
 
 #trap cleanup EXIT INT
 
+podman build -t keycloak --file deployment/kustomize/base/keycloak/Dockerfile .
+podman build -t keycloak --file deployment/kustomize/base/perfect-group-allocation/Dockerfile .
+podman build -t test --file deployment/kustomize/base/test/Dockerfile .
+
 cargo build --bin server
 
 INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')

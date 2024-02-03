@@ -14,4 +14,4 @@ RUN adduser \
     appuser
 USER appuser
 
-CMD ["/bin/server"]
+ENTRYPOINT ["/bin/server"]
