@@ -1,17 +1,17 @@
 # to get latest firefox and chromium
 FROM docker.io/library/debian:sid-slim
 
+RUN apt-get update && apt-get install -y firefox chromium libpci3 libnss3-tools mkcert
+
+ENV WAYLAND_DISPLAY=/tmp/wayland-0
+ENV XDG_RUNTIME_DIR=/tmp
+
 # use your user id and group id
 ARG GROUP_ID=1000
 ARG USER_ID=1000
 
-RUN apt-get update && apt-get install -y firefox chromium libpci3 libnss3-tools mkcert
-
 RUN groupadd -g $GROUP_ID test \
     && useradd -u $USER_ID -g $GROUP_ID -G audio,video -m test
-
-ENV WAYLAND_DISPLAY=/tmp/wayland-0
-ENV XDG_RUNTIME_DIR=/tmp
 
 USER test
 

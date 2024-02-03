@@ -3,15 +3,13 @@ FROM docker.io/library/debian:stable-slim
 
 RUN apt-get update && apt install -y curl
 
-ARG UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    appuser
-USER appuser
+# use your user id and group id
+ARG GROUP_ID=1000
+ARG USER_ID=1000
+
+RUN groupadd -g $GROUP_ID test \
+    && useradd -u $USER_ID -g $GROUP_ID -G audio,video -m test
+
+USER test
 
 CMD ["/bin/sh", "-c", "echo hi && ls -a -R /bin/server && sleep 100000"]
