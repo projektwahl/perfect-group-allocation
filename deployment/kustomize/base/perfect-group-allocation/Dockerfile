@@ -14,5 +14,4 @@ RUN adduser \
     appuser
 USER appuser
 
-EXPOSE 443
 CMD ["/bin/server"]
