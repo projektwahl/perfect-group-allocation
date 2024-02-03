@@ -24,6 +24,7 @@ cp -r deployment/kustomize/base/* tmp/
     mkcert keycloak &&
     mkcert perfect-group-allocation &&
     kustomize edit set nameprefix tmp- &&
+    kustomize edit add patch --patch '{"spec": {"volumes": [{"name": "test-binary","hostPath": {"path":"redis"}}]}}' &&
     kustomize build --output kubernetes.yaml &&
     (podman kube down --force kubernetes.yaml || exit 0) && # WARNING: this also removes volumes
     podman kube play kubernetes.yaml &&

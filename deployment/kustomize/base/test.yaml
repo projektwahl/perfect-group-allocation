@@ -1,19 +1,17 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: webdriver-pod
+  name: test
   annotations:
     io.podman.annotations.userns: keep-id # this feature is not in a stable release yet, so you need an unreleased version
 spec:
   restartPolicy: OnFailure
   containers:
-    - command:
-        - firefox
-      env:
+    - env:
         - name: WAYLAND_DISPLAY
           value: wayland-0
-      image: localhost/firefoxy:latest
-      name: webdriver
+      image: test
+      name: test
       resources:
         requests:
           memory: "512Mi"
@@ -25,6 +23,8 @@ spec:
         runAsGroup: 1000
         runAsUser: 1000
       volumeMounts:
+        - name: test-binary
+          mountPath: /bin/test
         - mountPath: /tmp/wayland-0
           name: run-user-1000-wayland-0-host-0
           readOnly: true
@@ -32,6 +32,10 @@ spec:
           mountPath: /dev/dri
 
   volumes:
+    - name: test-binary
+      hostPath:
+        type: File
+        path: ../target/debug/TODO
     - hostPath:
         path: /run/user/1000/wayland-0
         type: File
