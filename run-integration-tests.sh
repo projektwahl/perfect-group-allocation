@@ -6,9 +6,11 @@ set -o pipefail  # don't hide errors within pipes
 function cleanup {
     echo cleanup up pods
     podman pod stop tmp-keycloak tmp-postgres tmp-webdriver-pod tmp-perfect-group-allocation
+    podman pod rm tmp-keycloak tmp-postgres tmp-webdriver-pod tmp-perfect-group-allocation
+    podman volume rm tmp-postgres-claim 
 }
 
-trap cleanup EXIT
+trap cleanup EXIT INT
 
 INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
 echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
