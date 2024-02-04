@@ -1,7 +1,7 @@
 # to get latest firefox and chromium
 FROM docker.io/library/debian:sid-slim
 
-RUN apt-get update && apt-get install -y firefox chromium chromium-driver libpci3 libnss3-tools mkcert
+RUN apt-get update && apt-get install -y firefox chromium chromium-driver libpci3 p11-kit p11-kit-modules libnss3-tools mkcert
 
 ENV WAYLAND_DISPLAY=/tmp/wayland-0
 ENV XDG_RUNTIME_DIR=/tmp

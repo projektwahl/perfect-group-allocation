@@ -123,9 +123,11 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             session::new::Command {
                 params: session::new::Parameters {
                     capabilities: session::CapabilitiesRequest {
+                        // https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities/firefoxOptions
+                        // https://chromedriver.chromium.org/capabilities
                         always_match: Some(CapabilityRequest {
-                            browser_name: Some("chrome".to_owned()),
-                            extensible: Extensible(
+                            browser_name: Some("firefox".to_owned()), // Some("chrome".to_owned()),
+                            /*extensible: Extensible(
                                 json!({
                                     "goog:chromeOptions": {
                                         "args": ["--ozone-platform=wayland"]
@@ -134,8 +136,18 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                                 .as_object()
                                 .unwrap()
                                 .to_owned(),
+                            ),*/
+                            extensible: Extensible(
+                                json!({
+                                    "moz:firefoxOptions": {
+                                        "log": {"level": "trace"}
+                                    }
+                                })
+                                .as_object()
+                                .unwrap()
+                                .to_owned(),
                             ),
-                            accept_insecure_certs: Some(true),
+                            accept_insecure_certs: Some(false),
                             browser_version: None,
                             platform_name: None,
                             proxy: None,

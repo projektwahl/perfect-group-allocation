@@ -36,12 +36,13 @@ impl WebDriver {
                     .args([
                         "--profile",
                         &tmp_dir.path().to_string_lossy(),
-                        "--no-remote",
-                        "--new-instance",
                         //"--headless",
                         "--remote-debugging-port",
                         "0",
+                        "--setpref",
+                        "\"remote.log.level=Trace\"",
                     ])
+                    .env("MOZ_LOG", "5")
                     .stderr(Stdio::piped())
                     .spawn()
                     .map_err(crate::error::ErrorInner::SpawnBrowser)?;
