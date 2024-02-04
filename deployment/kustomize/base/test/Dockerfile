@@ -13,8 +13,8 @@ ARG USER_ID=1000
 RUN groupadd -g $GROUP_ID test \
     && useradd -u $USER_ID -g $GROUP_ID -G audio,video -m test
 
-# this policy file seems to break stuff
-COPY deployment/kustomize/base/test/policies.json /etc/firefox/policies/policies.json
+RUN dpkg-divert --local --rename --divert /usr/lib.x86_64-linux-gnu.libnssckbi.so.diverted --add /usr/lib/x86_64-linux-gnu/libnssckbi.so
+RUN ln -sr /usr/lib/x86_64-linux-gnu/pkcs11/p11-kit-trust.so /usr/lib/x86_64-linux-gnu/libnssckbi.so
 
 USER test
 
