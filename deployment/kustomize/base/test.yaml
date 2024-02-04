@@ -28,7 +28,7 @@ spec:
         - name: test-binary
           mountPath: /bin/test
           readOnly: true
-        - mountPath: /tmp/wayland-0
+        - mountPath: /run/user/1000/wayland-0
           name: run-user-1000-wayland-0-host-0
           readOnly: true
         - name: dev-dri-host-1
