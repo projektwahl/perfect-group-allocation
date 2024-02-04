@@ -57,3 +57,5 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r p
 (cd base && podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
 (cd base && podman kube play --network pga kubernetes.yaml)
 podman logs --color --names --follow tmp-keycloak-keycloak tmp-postgres-postgres tmp-perfect-group-allocation-perfect-group-allocation tmp-test-test
+
+# localStorage.setItem("test", "hi") broken in firefox

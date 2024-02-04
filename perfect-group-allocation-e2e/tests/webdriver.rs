@@ -39,13 +39,6 @@ pub async fn run_test() {
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     tracing_subscriber::fmt::init();
 
-    let output = tokio::process::Command::new("mkcert")
-        .arg("-install")
-        .env("TRUST_STORES", "nss")
-        .status()
-        .await
-        .unwrap();
-
     // podman wait --condition healthy perfect-group-allocation_postgres_1
     // podman inspect perfect-group-allocation_postgres_1
     /*
@@ -147,7 +140,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                                 .unwrap()
                                 .to_owned(),
                             ),
-                            accept_insecure_certs: Some(false),
+                            accept_insecure_certs: Some(true),
                             browser_version: None,
                             platform_name: None,
                             proxy: None,

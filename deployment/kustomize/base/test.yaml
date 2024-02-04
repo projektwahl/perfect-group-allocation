@@ -28,18 +28,6 @@ spec:
         - name: test-binary
           mountPath: /bin/test
           readOnly: true
-        - name: root-ca
-          mountPath: /home/test/.local/share/mkcert/rootCA.pem
-          readOnly: true
-        - name: root-ca
-          mountPath: /etc/ssl/certs/ca-certificates.crt
-          readOnly: true
-        - name: root-ca
-          mountPath: /usr/lib/mozilla/certificates/rootCA.crt
-          readOnly: true
-        - name: root-ca
-          mountPath: /usr/lib64/mozilla/certificates/rootCA.crt
-          readOnly: true
         - mountPath: /tmp/wayland-0
           name: run-user-1000-wayland-0-host-0
           readOnly: true
@@ -52,10 +40,6 @@ spec:
       hostPath:
         type: File
         path: ../target/debug/TODO
-    - name: root-ca
-      hostPath:
-        type: File
-        path: TODO
     - hostPath:
         path: /run/user/1000/wayland-0
         type: File

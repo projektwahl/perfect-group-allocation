@@ -1,7 +1,7 @@
 # to get latest firefox and chromium
 FROM docker.io/library/debian:sid-slim
 
-RUN apt-get update && apt-get install -y firefox chromium chromium-driver libpci3 p11-kit p11-kit-modules libnss3-tools mkcert
+RUN apt-get update && apt-get install -y firefox chromium chromium-driver
 
 ENV WAYLAND_DISPLAY=/tmp/wayland-0
 ENV XDG_RUNTIME_DIR=/tmp
@@ -13,13 +13,7 @@ ARG USER_ID=1000
 RUN groupadd -g $GROUP_ID test \
     && useradd -u $USER_ID -g $GROUP_ID -G audio,video -m test
 
-RUN dpkg-divert --local --rename --divert /usr/lib.x86_64-linux-gnu.libnssckbi.so.diverted --add /usr/lib/x86_64-linux-gnu/libnssckbi.so
-RUN ln -sr /usr/lib/x86_64-linux-gnu/pkcs11/p11-kit-trust.so /usr/lib/x86_64-linux-gnu/libnssckbi.so
-
 USER test
-
-RUN mkdir -p ~/.pki/nssdb
-RUN certutil -d sql:$HOME/.pki/nssdb -N
 
 ENTRYPOINT ["/bin/test"]
 CMD ["--nocapture"]
