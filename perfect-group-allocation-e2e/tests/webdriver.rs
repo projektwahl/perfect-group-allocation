@@ -1,10 +1,13 @@
+use std::collections::HashMap;
 use std::os::fd::{AsFd, AsRawFd};
 use std::process::{exit, Stdio};
+use std::time::Duration;
 
 use perfect_group_allocation_backend::setup_http2_http3_server;
 use perfect_group_allocation_config::{Config, OpenIdConnectConfig};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
+use serde_json::json;
 use tempfile::tempdir;
 use tracing::info;
 use webdriver_bidi::browsing_context::{self};
@@ -17,6 +20,7 @@ use webdriver_bidi::protocol::Extensible;
 use webdriver_bidi::script::{
     ContextTarget, EvaluateResult, EvaluateResultSuccess, RemoteValue, SharedReference,
 };
+use webdriver_bidi::session::CapabilityRequest;
 use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 
 // here
@@ -111,7 +115,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
         // TODO FIXME cleanup
     */
-    let driver = WebDriver::new(Browser::Firefox).await?;
+    let driver = WebDriver::new(Browser::Chromium).await?;
     println!("DONE WITH STARTING WEBDRIVER");
     let _session = driver
         .send_command(
@@ -119,7 +123,24 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             session::new::Command {
                 params: session::new::Parameters {
                     capabilities: session::CapabilitiesRequest {
-                        always_match: None,
+                        always_match: Some(CapabilityRequest {
+                            browser_name: Some("chrome".to_owned()),
+                            extensible: Extensible(
+                                json!({
+                                    "goog:chromeOptions": {
+                                        "args": ["--ozone-platform=wayland"]
+                                    }
+                                })
+                                .as_object()
+                                .unwrap()
+                                .to_owned(),
+                            ),
+                            accept_insecure_certs: None,
+                            browser_version: None,
+                            platform_name: None,
+                            proxy: None,
+                            web_socket_url: None,
+                        }),
                         first_match: None,
                     },
                 },

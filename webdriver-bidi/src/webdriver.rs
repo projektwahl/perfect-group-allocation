@@ -1,4 +1,5 @@
 use std::process::Stdio;
+use std::time::Duration;
 
 use futures::Future;
 use tempfile::tempdir;
@@ -68,7 +69,7 @@ impl WebDriver {
                     .await
                     .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
                 {
-                    eprintln!("{line}");
+                    trace!("{line}");
                     if let Some(p) =
                         line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:")
                     {
@@ -95,6 +96,8 @@ impl WebDriver {
             }
             Browser::Chromium => {
                 let mut child = tokio::process::Command::new("chromedriver")
+                    .arg("--enable-chrome-logs")
+                    .arg("--log-level=ALL")
                     .kill_on_drop(true)
                     .stdout(Stdio::piped())
                     .spawn()

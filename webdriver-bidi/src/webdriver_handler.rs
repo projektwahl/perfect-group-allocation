@@ -45,6 +45,7 @@ impl WebDriverHandler {
 
     async fn handle_internal(&mut self) {
         loop {
+            trace!("select");
             tokio::select! {
                 // TODO FIXME make this truly parallel. e.g. if receiving a message while sending hangs
                 message = self.stream.next() => {
@@ -128,6 +129,10 @@ impl WebDriverHandler {
                     .send(Message::Text(string))
                     .await
                     .map_err(crate::error::ErrorInner::WebSocket)?;
+                self.stream
+                    .flush()
+                    .await
+                    .map_err(crate::error::ErrorInner::WebSocket)?;
             }
         };
         Ok(())
@@ -185,6 +190,10 @@ impl WebDriverHandler {
                 .send(Message::Text(string))
                 .await
                 .map_err(crate::error::ErrorInner::WebSocket)?;
+            self.stream
+                .flush()
+                .await
+                .map_err(crate::error::ErrorInner::WebSocket)?;
         };
         Ok(())
     }
@@ -211,6 +220,10 @@ impl WebDriverHandler {
 
         self.stream
             .send(Message::Text(string))
+            .await
+            .map_err(crate::error::ErrorInner::WebSocket)?;
+        self.stream
+            .flush()
             .await
             .map_err(crate::error::ErrorInner::WebSocket)?;
 

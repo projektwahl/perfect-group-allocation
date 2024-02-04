@@ -24,12 +24,12 @@ perfect-group-allocation-backend = { default-features = false, path = "../perfec
 perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
 rand = { default-features = false, version = "0.8" }
 rustls-pemfile = { default-features = false, version = "2", features = ["std"] }
+serde_json = { default-features = false, version = "1", features = ["alloc"] }
 tokio = { default-features = false, version = "1" }
 tokio-rustls = { default-features = false, version = "0.25", features = [
     "default",
 ] }
 tracing = { default-features = false, version = "0.1" }
-
 
 [dev-dependencies]
 iai-callgrind = { default-features = false, version = "0.10", features = [
