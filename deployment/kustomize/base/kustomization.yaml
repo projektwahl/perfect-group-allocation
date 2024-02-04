@@ -6,7 +6,7 @@ secretGenerator:
     files:
       - tls.cert=perfect-group-allocation.pem
       - tls.key=perfect-group-allocation-key.pem
-      - openidconnect.client_secret=client_secret
+      - openidconnect.client_secret=client-secret
     literals:
       - openidconnect.client_id=pga
       - openidconnect.issuer_url=https://keycloak/realms/pga
