@@ -37,6 +37,9 @@ spec:
         - name: keycloak-tls-cert-volume
           mountPath: "/run/secrets/tls-cert"
           readOnly: true
+        - name: root-ca
+          mountPath: "/run/rootCA.pem"
+          readOnly: true
       ports:
         - containerPort: 8443
       startupProbe:
@@ -78,5 +81,9 @@ spec:
     - name: keycloak-tls-cert-volume
       secret:
         secretName: keycloak-tls-cert
+    - name: root-ca
+      hostPath:
+        type: File
+        path: TODO
 ---
 # mkcert keycloak.localhost
