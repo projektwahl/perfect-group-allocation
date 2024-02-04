@@ -48,7 +48,7 @@ cp -r deployment/kustomize/base/* tmp/
     CID=$(podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s 'redirectUris=["https://h3.selfmade4u.de/*"]' -i) &&
     #CID=$(kcadm.sh get clients -r pga --fields id -q clientId=pga --format csv --noquotes)
     CLIENT_SECRET=$(podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh get clients/$CID/client-secret -r pga --fields value --format csv --noquotes) &&
-    echo $CLIENT_SECRET &&
-    podman logs --color --names --follow tmp-test-test #tmp-keycloak-keycloak tmp-postgres-postgres tmp-perfect-group-allocation-perfect-group-allocation
-
+    echo $CLIENT_SECRET
+    #podman logs --color --names --follow tmp-test-test #tmp-keycloak-keycloak tmp-postgres-postgres tmp-perfect-group-allocation-perfect-group-allocation
+    # we could use the hot config reload feature
 )
