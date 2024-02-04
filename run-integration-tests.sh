@@ -29,6 +29,7 @@ echo "temporary CA directory: $CAROOT"
 
 podman network create --ignore pga
 
+: '
 (cd keycloak && CAROOT=$CAROOT mkcert keycloak)
 (cd keycloak && kustomize edit set nameprefix tmp-)
 (cd keycloak && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
@@ -45,6 +46,7 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s re
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://h3.selfmade4u.de/*"]'
+'
 
 (cd base && CAROOT=$CAROOT mkcert perfect-group-allocation)
 (cd base && kustomize edit set nameprefix tmp-)
