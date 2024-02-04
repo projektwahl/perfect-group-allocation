@@ -7,4 +7,5 @@ secretGenerator:
     name: keycloak-tls-cert
     type: kubernetes.io/tls
 resources:
+  - ./postgres.yaml
   - ./keycloak.yaml

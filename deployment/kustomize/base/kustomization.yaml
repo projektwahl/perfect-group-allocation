@@ -6,13 +6,12 @@ secretGenerator:
     files:
       - tls.cert=perfect-group-allocation.pem
       - tls.key=perfect-group-allocation-key.pem
+      - openidconnect.client_secret=client_secret
     literals:
       - openidconnect.client_id=pga
-      - openidconnect.client_secret=FIXME
       - openidconnect.issuer_url=https://keycloak/realms/pga
       - database_url=postgres://postgres@postgres/pga?sslmode=disable
       - url=https://perfect-group-allocation
 resources:
-  - ./postgres.yaml
   - ./test.yaml
   - ./perfect-group-allocation.yaml

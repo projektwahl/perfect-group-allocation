@@ -28,17 +28,10 @@ CAROOT=$(mktemp -d)
 echo "temporary CA directory: $CAROOT"
 
 (cd keycloak && CAROOT=$CAROOT mkcert keycloak)
-(cd base && CAROOT=$CAROOT mkcert perfect-group-allocation)
 
 (cd keycloak && kustomize edit set nameprefix tmp-)
-(cd base && kustomize edit set nameprefix tmp-)
 (cd keycloak && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
-(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
-(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}')
-(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"server-binary","hostPath":{"path":"'"$SERVER_BINARY"'"}}]}}')
 (cd keycloak && kustomize build --output kubernetes.yaml)
-(cd base && kustomize build --output kubernetes.yaml)
-(cd base && podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
 (cd keycloak && podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
 (cd keycloak && podman kube play kubernetes.yaml)
 echo waiting for keycloak
@@ -53,8 +46,16 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga
 CID=$(podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s 'redirectUris=["https://h3.selfmade4u.de/*"]' -i)
 #CID=$(kcadm.sh get clients -r pga --fields id -q clientId=pga --format csv --noquotes)
 CLIENT_SECRET=$(podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh get clients/$CID/client-secret -r pga --fields value --format csv --noquotes)
-echo $CLIENT_SECRET
-#podman logs --color --names --follow tmp-test-test #tmp-keycloak-keycloak tmp-postgres-postgres tmp-perfect-group-allocation-perfect-group-allocation
+echo $CLIENT_SECRET # TODO FIXME just specify this in the configuration to also use by keycloak
 # we could use the hot config reload feature
 
+(cd base && CAROOT=$CAROOT mkcert perfect-group-allocation)
+echo $CLIENT_SECRET > base/client_secret
+(cd base && kustomize edit set nameprefix tmp-)
+(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
+(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}')
 (cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"server-binary","hostPath":{"path":"'"$SERVER_BINARY"'"}}]}}')
+(cd base && kustomize build --output kubernetes.yaml)
+(cd base && podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
+(cd base && podman kube play kubernetes.yaml)
+podman logs --color --names --follow tmp-test-test tmp-keycloak-keycloak tmp-postgres-postgres tmp-perfect-group-allocation-perfect-group-allocation
