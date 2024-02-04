@@ -133,7 +133,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                             extensible: Extensible(
                                 json!({
                                     "moz:firefoxOptions": {
-                                        "log": {"level": "trace"}
+                                        //"log": {"level": "trace"}
                                     }
                                 })
                                 .as_object()
