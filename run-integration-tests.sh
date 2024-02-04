@@ -27,13 +27,14 @@ echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 CAROOT=$(mktemp -d)
 echo "temporary CA directory: $CAROOT"
 
-(cd keycloak && CAROOT=$CAROOT mkcert keycloak)
+podman network create --ignore pga
 
+(cd keycloak && CAROOT=$CAROOT mkcert keycloak)
 (cd keycloak && kustomize edit set nameprefix tmp-)
 (cd keycloak && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
 (cd keycloak && kustomize build --output kubernetes.yaml)
 (cd keycloak && podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
-(cd keycloak && podman kube play kubernetes.yaml)
+(cd keycloak && podman kube play --network pga kubernetes.yaml)
 echo waiting for keycloak
 podman wait --condition healthy tmp-keycloak-keycloak
 echo keycloak started
@@ -46,7 +47,7 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga
 CID=$(podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s 'redirectUris=["https://h3.selfmade4u.de/*"]' -i)
 #CID=$(kcadm.sh get clients -r pga --fields id -q clientId=pga --format csv --noquotes)
 CLIENT_SECRET=$(podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh get clients/$CID/client-secret -r pga --fields value --format csv --noquotes)
-echo $CLIENT_SECRET # TODO FIXME just specify this in the configuration to also use by keycloak
+echo $CLIENT_SECRET # TODO FIXME just specify this in the configuration to also use by keycloak, maybe even if we don't depend on it start keycloak separately as its super slow to start and not too important to be identical?
 # we could use the hot config reload feature
 
 (cd base && CAROOT=$CAROOT mkcert perfect-group-allocation)
@@ -57,5 +58,5 @@ echo $CLIENT_SECRET > base/client_secret
 (cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"server-binary","hostPath":{"path":"'"$SERVER_BINARY"'"}}]}}')
 (cd base && kustomize build --output kubernetes.yaml)
 (cd base && podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
-(cd base && podman kube play kubernetes.yaml)
+(cd base && podman kube play --network pga kubernetes.yaml)
 podman logs --color --names --follow tmp-test-test tmp-keycloak-keycloak tmp-postgres-postgres tmp-perfect-group-allocation-perfect-group-allocation

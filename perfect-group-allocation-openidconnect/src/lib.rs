@@ -98,11 +98,13 @@ pub struct OpenIdSession {
 static OPENID_CLIENT: OnceCell<OpenIdConnectClientType> = OnceCell::const_new();
 
 pub async fn my_http_client(request: HttpRequest) -> Result<HttpResponse, HttpError> {
+    println!("{:?}", request);
     let url = request.url;
     let host = url.host().expect("uri has no host");
     let port = url.port_or_known_default().unwrap();
     let addr = format!("{host}:{port}");
 
+    // TODO FIXME self signed certs
     let mut root_cert_store = RootCertStore::empty();
     root_cert_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
     let config = ClientConfig::builder()
@@ -127,6 +129,8 @@ pub async fn my_http_client(request: HttpRequest) -> Result<HttpResponse, HttpEr
         .body(String::new())?;
 
     let response = sender.send_request(request).await?;
+
+    println!("{:?}", response);
 
     Ok(HttpResponse {
         // this is http 0.2

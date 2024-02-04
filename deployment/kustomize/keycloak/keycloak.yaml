@@ -11,6 +11,10 @@ metadata:
   name: keycloak
 spec:
   restartPolicy: OnFailure
+  securityContext:
+    sysctls:
+      - name: net.ipv4.ip_unprivileged_port_start
+        value: "443"
   containers:
     - name: keycloak
       image: keycloak
@@ -22,7 +26,9 @@ spec:
         - name: KC_DB_PASSWORD
           value: bestpassword # FIXME don't put password here
         - name: KC_HOSTNAME
-          value: keycloak.localhost # this probably needs to match the port?
+          value: keycloak
+        - name: KC_HTTPS_PORT
+          value: "443"
         # https://www.keycloak.org/server/enabletls
         # TODO https://www.keycloak.org/server/vault
         - name: KC_HTTPS_CERTIFICATE_FILE
@@ -41,7 +47,7 @@ spec:
           mountPath: "/run/rootCA.pem"
           readOnly: true
       ports:
-        - containerPort: 8443
+        - containerPort: 443
       startupProbe:
         # for kubernetes use an http check and don't bundle curl with the container.
         exec:
@@ -49,7 +55,7 @@ spec:
             - "curl"
             - "--fail-with-body"
             - "--insecure"
-            - "https://localhost:8443/health/started"
+            - "https://keycloak/health/started"
         periodSeconds: 1
         failureThreshold: 30
       # https://www.keycloak.org/server/health
@@ -59,7 +65,7 @@ spec:
             - "curl"
             - "--fail-with-body"
             - "--insecure"
-            - "https://localhost:8443/health/live"
+            - "https://keycloak/health/live"
         periodSeconds: 1
       readinessProbe:
         exec:
@@ -67,7 +73,7 @@ spec:
             - "curl"
             - "--fail-with-body"
             - "--insecure"
-            - "https://localhost:8443/health/ready"
+            - "https://keycloak/health/ready"
         periodSeconds: 1
       resources:
         requests:
