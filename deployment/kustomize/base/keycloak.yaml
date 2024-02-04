@@ -32,7 +32,7 @@ spec:
         - name: KEYCLOAK_ADMIN
           value: admin
         - name: KEYCLOAK_ADMIN_PASSWORD
-          value: test
+          value: admin
       volumeMounts:
         - name: keycloak-tls-cert-volume
           mountPath: "/run/secrets/tls-cert"
