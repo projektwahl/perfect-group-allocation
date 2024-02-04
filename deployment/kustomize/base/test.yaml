@@ -32,7 +32,13 @@ spec:
           mountPath: /home/test/.local/share/mkcert/rootCA.pem
           readOnly: true
         - name: root-ca
-          mountPath: /home/test/.local/share/mkcert/rootCA.crt
+          mountPath: /etc/ssl/certs/ca-certificates.crt
+          readOnly: true
+        - name: root-ca
+          mountPath: /usr/lib/mozilla/certificates/rootCA.crt
+          readOnly: true
+        - name: root-ca
+          mountPath: /usr/lib64/mozilla/certificates/rootCA.crt
           readOnly: true
         - mountPath: /tmp/wayland-0
           name: run-user-1000-wayland-0-host-0

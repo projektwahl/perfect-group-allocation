@@ -13,13 +13,13 @@ ARG USER_ID=1000
 RUN groupadd -g $GROUP_ID test \
     && useradd -u $USER_ID -g $GROUP_ID -G audio,video -m test
 
+# this policy file seems to break stuff
+COPY deployment/kustomize/base/test/policies.json /etc/firefox/policies/policies.json
+
 USER test
 
 RUN mkdir -p ~/.pki/nssdb
 RUN certutil -d sql:$HOME/.pki/nssdb -N
-
-# this policy file seems to break stuff
-#COPY deployment/kustomize/base/test/policies.json /etc/firefox/policies/policies.json
 
 ENTRYPOINT ["/bin/test"]
 CMD ["--nocapture"]
