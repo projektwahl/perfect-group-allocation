@@ -17,7 +17,8 @@ RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown test:test /run/use
 
 USER test
 
-ENTRYPOINT ["firefox"]
+ENTRYPOINT ["/bin/test"]
+CMD ["--nocapture"]
 
 # podman build -t test --file deployment/kustomize/base/test/Dockerfile . && podman run --device /dev/dri --userns=keep-id:uid=1000,gid=1000 --user=$(id -u):$(id -g) -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY test firefox
 

@@ -4,6 +4,7 @@ use std::fmt::Debug;
 use futures::{SinkExt as _, StreamExt as _};
 use serde::Serialize;
 use serde_json::Value;
+use tempfile::TempDir;
 use tokio::net::TcpStream;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
@@ -25,10 +26,13 @@ pub struct WebDriverHandler {
     pending_commands: HashMap<u64, RespondCommand>,
     pub(crate) subscriptions: EventSubscription,
     pub(crate) global_subscriptions: GlobalEventSubscription,
+    // ensure the profile folder is not deleted
+    _tmp_dir: TempDir,
 }
 
 impl WebDriverHandler {
     pub async fn handle(
+        tmp_dir: TempDir,
         stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
         receive_command: mpsc::UnboundedReceiver<SendCommand>,
     ) {
@@ -39,6 +43,7 @@ impl WebDriverHandler {
             pending_commands: HashMap::default(),
             subscriptions: EventSubscription::default(),
             global_subscriptions: GlobalEventSubscription::default(),
+            _tmp_dir: tmp_dir,
         };
         this.handle_internal().await;
     }

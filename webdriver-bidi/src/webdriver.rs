@@ -1,8 +1,9 @@
 use std::process::Stdio;
+use std::sync::Arc;
 use std::time::Duration;
 
 use futures::Future;
-use tempfile::tempdir;
+use tempfile::{tempdir, TempDir};
 use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tracing::{error, trace};
@@ -27,9 +28,11 @@ impl WebDriver {
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
     pub async fn new(browser: Browser) -> Result<Self, crate::error::Error> {
+        let tmp_dir = tempdir().map_err(crate::error::ErrorInner::TmpDirCreate)?;
+
         let port = match browser {
             Browser::Firefox => {
-                let tmp_dir = tempdir().map_err(crate::error::ErrorInner::TmpDirCreate)?;
+                // oh this path is the culprit?
 
                 let mut child = tokio::process::Command::new("firefox")
                     .kill_on_drop(true)
@@ -148,7 +151,8 @@ impl WebDriver {
 
         let (command_sender, command_receiver) = mpsc::unbounded_channel();
 
-        tokio::spawn(WebDriverHandler::handle(stream, command_receiver));
+        // TODO also pass browser process there? or somehow ensure it gets discarded on exit including the profile directroy
+        tokio::spawn(WebDriverHandler::handle(tmp_dir, stream, command_receiver));
 
         Ok(Self {
             send_command: command_sender,
