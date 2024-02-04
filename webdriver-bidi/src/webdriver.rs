@@ -96,8 +96,8 @@ impl WebDriver {
             }
             Browser::Chromium => {
                 let mut child = tokio::process::Command::new("chromedriver")
-                    .arg("--enable-chrome-logs")
-                    .arg("--log-level=ALL")
+                    //.arg("--enable-chrome-logs")
+                    //.arg("--log-level=ALL")
                     .kill_on_drop(true)
                     .stdout(Stdio::piped())
                     .spawn()

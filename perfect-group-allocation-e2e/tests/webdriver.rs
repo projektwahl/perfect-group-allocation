@@ -115,7 +115,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
         // TODO FIXME cleanup
     */
-    let driver = WebDriver::new(Browser::Chromium).await?;
+    let driver = WebDriver::new(Browser::Firefox).await?;
     println!("DONE WITH STARTING WEBDRIVER");
     let _session = driver
         .send_command(
@@ -135,7 +135,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                                 .unwrap()
                                 .to_owned(),
                             ),
-                            accept_insecure_certs: None,
+                            accept_insecure_certs: Some(true),
                             browser_version: None,
                             platform_name: None,
                             proxy: None,

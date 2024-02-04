@@ -18,7 +18,8 @@ USER test
 RUN mkdir -p ~/.pki/nssdb
 RUN certutil -d sql:$HOME/.pki/nssdb -N
 
-COPY deployment/kustomize/base/test/policies.json /etc/firefox/policies/policies.json
+# this policy file seems to break stuff
+#COPY deployment/kustomize/base/test/policies.json /etc/firefox/policies/policies.json
 
 ENTRYPOINT ["/bin/test"]
 CMD ["--nocapture"]
