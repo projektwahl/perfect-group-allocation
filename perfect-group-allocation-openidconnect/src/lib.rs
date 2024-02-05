@@ -114,6 +114,7 @@ pub async fn my_http_client(
     for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
         roots.add(cert).unwrap();
     }
+    println!("certs: {:?}", roots);
 
     let config = ClientConfig::builder()
         .with_root_certificates(roots)
