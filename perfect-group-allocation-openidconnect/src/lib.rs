@@ -4,8 +4,10 @@ use std::future::Future;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use crate::error::OpenIdConnectError;
 use error::HttpError;
 use http_body_util::BodyExt;
+use hyper_openssl::SslStream;
 use hyper_util::rt::TokioIo;
 use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
 pub use oauth2::RefreshToken;
@@ -25,15 +27,11 @@ use openidconnect::{
     AccessTokenHash, EmptyAdditionalClaims, IdTokenClaims, IdTokenFields, IssuerUrl, Nonce,
     TokenResponse,
 };
+use openssl::ssl::{Ssl, SslContext, SslMethod};
 use perfect_group_allocation_config::Config;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
 use tokio::sync::OnceCell;
-use tokio_rustls::rustls::pki_types::ServerName;
-use tokio_rustls::rustls::{self, ClientConfig, RootCertStore};
-use tokio_rustls::TlsConnector;
-
-use crate::error::OpenIdConnectError;
 
 type OpenIdConnectClientType = openidconnect::Client<
     EmptyAdditionalClaims,
@@ -110,24 +108,20 @@ pub async fn my_http_client(
     let port = url.port_or_known_default().unwrap();
     let addr = format!("{host}:{port}");
 
-    let mut roots = rustls::RootCertStore::empty();
-    for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
-        roots.add(cert).unwrap();
-    }
-    println!("certs: {:?}", roots);
+    // rustls has bad error messages
 
-    let config = ClientConfig::builder()
-        .with_root_certificates(roots)
-        .with_no_client_auth();
-    let connector = TlsConnector::from(Arc::new(config));
-    let dnsname = ServerName::try_from(host.to_string()).unwrap();
+    //let dnsname = ServerName::try_from(host.to_string()).unwrap();
 
     let stream = TcpStream::connect(addr).await?;
-    let stream = connector.connect(dnsname, stream).await?;
 
+    let config = SslContext::builder(SslMethod::tls_client())
+        .unwrap()
+        .build();
+    let ssl = Ssl::new(&config).unwrap();
     let io = TokioIo::new(stream);
+    let stream = SslStream::new(ssl, io).unwrap();
 
-    let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await?;
+    let (mut sender, conn) = hyper::client::conn::http1::handshake(stream).await?;
     tokio::task::spawn(async move { if let Err(_err) = conn.await {} });
 
     let authority = url.authority();
