@@ -109,7 +109,6 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         // TODO FIXME cleanup
     */
     let driver = WebDriver::new(Browser::Firefox).await?;
-    println!("DONE WITH STARTING WEBDRIVER");
     let _session = driver
         .send_command(
             SendCommand::SessionNew,
@@ -152,7 +151,6 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             },
         )
         .await?;
-    println!("FIRST COMMAND");
 
     let browsing_context = driver
         .send_command(

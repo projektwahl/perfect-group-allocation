@@ -50,7 +50,6 @@ impl WebDriverHandler {
 
     async fn handle_internal(&mut self) {
         loop {
-            trace!("select");
             tokio::select! {
                 // TODO FIXME make this truly parallel. e.g. if receiving a message while sending hangs
                 message = self.stream.next() => {

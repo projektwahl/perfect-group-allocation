@@ -70,7 +70,7 @@ impl WebDriver {
                     .await
                     .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
                 {
-                    trace!("{line}");
+                    trace!(target: "firefox", "{line}");
                     if let Some(p) =
                         line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:")
                     {
@@ -88,7 +88,7 @@ impl WebDriver {
 
                 tokio::spawn(async move {
                     while let Some(line) = reader.next_line().await? {
-                        trace!("{line}");
+                        trace!(target: "firefox", "{line}");
                     }
                     Ok::<(), std::io::Error>(())
                 });
