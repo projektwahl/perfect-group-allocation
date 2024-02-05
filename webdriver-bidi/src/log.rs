@@ -32,7 +32,7 @@ pub enum Level {
 /// <https://w3c.github.io/webdriver-bidi/#types-log-logentry>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
+// no deny unknown fields because of inner
 pub struct Entry {
     pub level: Level,
     pub source: Source,

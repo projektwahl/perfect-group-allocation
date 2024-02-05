@@ -108,6 +108,10 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
         // TODO FIXME cleanup
     */
+
+    // TODO FIXME add network slowdown for testing
+    // TODO FIXME use user contexts for cookie isolation
+
     let driver = WebDriver::new(Browser::Firefox).await?;
     let _session = driver
         .send_command(
@@ -167,7 +171,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
     let browsing_context = browsing_context.contexts.0[0].context.clone();
     let mut subscription = driver
         .request_subscribe(
-            SendCommand::SubscribeGlobalLogs,
+            SendCommand::SubscribeGlobalBrowsingContextLoad,
             Some(browsing_context.clone()),
         )
         .await?;
@@ -210,6 +214,10 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
     };
     info!("{:?}", node);
 
+    while let Ok(load) = subscription.try_recv() {
+        info!("before: {load:?}");
+    }
+
     let _result = driver
         .send_command(
             SendCommand::InputPerformActions,
@@ -248,8 +256,104 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         )
         .await?;
 
-    while let Ok(log) = subscription.recv().await {
-        info!("received log message: {log:?}");
+    if let Ok(load) = subscription.recv().await {
+        info!("page loaded: {load:?}");
+
+        // TODO FIXME use find element?
+
+        let nodes = driver
+            .send_command(
+                SendCommand::ScriptEvaluate,
+                script::evaluate::Command {
+                    params: script::evaluate::Parameters {
+                        expression: r"document.querySelector(`#username`)".to_owned(),
+                        target: script::Target::Context(ContextTarget {
+                            context: Some(browsing_context.clone()),
+                            sandbox: None,
+                        }),
+                        await_promise: false,
+                        result_ownership: None,
+                        serialization_options: None,
+                        user_activation: None,
+                    },
+                },
+            )
+            .await?;
+
+        let EvaluateResult::Success(EvaluateResultSuccess {
+            result: RemoteValue::Node(username),
+            ..
+        }) = nodes.0
+        else {
+            panic!();
+        };
+        info!("{:?}", username);
+
+        let nodes = driver
+            .send_command(
+                SendCommand::ScriptEvaluate,
+                script::evaluate::Command {
+                    params: script::evaluate::Parameters {
+                        expression: r"document.querySelector(`#password`)".to_owned(),
+                        target: script::Target::Context(ContextTarget {
+                            context: Some(browsing_context.clone()),
+                            sandbox: None,
+                        }),
+                        await_promise: false,
+                        result_ownership: None,
+                        serialization_options: None,
+                        user_activation: None,
+                    },
+                },
+            )
+            .await?;
+
+        let EvaluateResult::Success(EvaluateResultSuccess {
+            result: RemoteValue::Node(password),
+            ..
+        }) = nodes.0
+        else {
+            panic!();
+        };
+        info!("{:?}", password);
+
+        let _result = driver
+            .send_command(
+                SendCommand::InputPerformActions,
+                input::perform_actions::Command {
+                    params: input::perform_actions::Parameters {
+                        context: browsing_context.clone(),
+                        actions: vec![SourceActions::Pointer(PointerSourceActions {
+                            id: "test".to_owned(),
+                            parameters: None,
+                            actions: vec![
+                                PointerSourceAction::PointerMove(PointerMoveAction {
+                                    x: 0,
+                                    y: 0,
+                                    duration: None,
+                                    origin: Some(Origin::Element(ElementOrigin {
+                                        element: SharedReference {
+                                            shared_id: node.shared_id.unwrap().clone(),
+                                            handle: node.handle.clone(),
+                                            extensible: Extensible::default(),
+                                        },
+                                    })),
+                                    common: PointerCommonProperties::default(),
+                                }),
+                                PointerSourceAction::PointerDown(PointerDownAction {
+                                    button: 0,
+                                    common: PointerCommonProperties::default(),
+                                }),
+                                PointerSourceAction::PointerUp(PointerUpAction {
+                                    button: 0,
+                                    common: PointerCommonProperties::default(),
+                                }),
+                            ],
+                        })],
+                    },
+                },
+            )
+            .await?;
     }
 
     Ok(())

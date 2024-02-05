@@ -233,5 +233,7 @@ magic! {
     pub enum {
         /// tmp
         SubscribeGlobalLogs("log.entryAdded" crate::log::EntryAdded),
+        /// https://w3c.github.io/webdriver-bidi/#event-browsingContext-load
+        SubscribeGlobalBrowsingContextLoad("browsingContext.load" crate::browsing_context::Load),
     }
 }
