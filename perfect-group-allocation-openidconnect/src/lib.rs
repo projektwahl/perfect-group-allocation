@@ -1,6 +1,7 @@
 pub mod error;
 
 use std::future::Future;
+use std::pin::{pin, Pin};
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -27,7 +28,7 @@ use openidconnect::{
     AccessTokenHash, EmptyAdditionalClaims, IdTokenClaims, IdTokenFields, IssuerUrl, Nonce,
     TokenResponse,
 };
-use openssl::ssl::{Ssl, SslContext, SslMethod};
+use openssl::ssl::{Ssl, SslConnector, SslContext, SslMethod};
 use perfect_group_allocation_config::Config;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
@@ -110,16 +111,21 @@ pub async fn my_http_client(
 
     // rustls has bad error messages
 
-    //let dnsname = ServerName::try_from(host.to_string()).unwrap();
+    let stream = TcpStream::connect(addr).await.unwrap();
+    let stream = TokioIo::new(stream);
 
-    let stream = TcpStream::connect(addr).await?;
-
-    let config = SslContext::builder(SslMethod::tls_client())
+    let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
+    if let Some(value) = std::env::var_os("SSL_CERT_FILE") {
+        builder.set_ca_file(value).unwrap();
+    }
+    let ssl = builder
+        .build()
+        .configure()
         .unwrap()
-        .build();
-    let ssl = Ssl::new(&config).unwrap();
-    let io = TokioIo::new(stream);
-    let stream = SslStream::new(ssl, io).unwrap();
+        .into_ssl(&host.to_string())
+        .unwrap();
+    let mut stream = SslStream::new(ssl, stream).unwrap();
+    Pin::new(&mut stream).connect().await.unwrap();
 
     let (mut sender, conn) = hyper::client::conn::http1::handshake(stream).await?;
     tokio::task::spawn(async move { if let Err(_err) = conn.await {} });

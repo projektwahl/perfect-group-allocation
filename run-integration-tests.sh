@@ -9,10 +9,18 @@ function cleanup {
 
 #trap cleanup EXIT INT
 
-rm -R tmp
-mkdir -p tmp
-cp -r deployment/kustomize/* tmp/
-cd tmp
+rm -R tmp/kustomize
+mkdir -p tmp/certs
+mkdir -p tmp/kustomize
+cp -r deployment/kustomize/* tmp/kustomize
+
+# don't rotate ca cert so we can keep keycloak running
+cd tmp/certs
+export CAROOT=$PWD
+CAROOT=$CAROOT mkcert -CAROOT
+cd ../..
+
+cd tmp/kustomize
 
 podman build -t keycloak --file keycloak/keycloak/Dockerfile .
 podman build -t perfect-group-allocation --file base/perfect-group-allocation/Dockerfile .
@@ -23,9 +31,6 @@ echo "Compiled server binary: $SERVER_BINARY"
 
 INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
 echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
-
-CAROOT=$(mktemp -d)
-echo "temporary CA directory: $CAROOT"
 
 podman network create --ignore pga
 
@@ -56,6 +61,6 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r p
 (cd base && kustomize build --output kubernetes.yaml)
 (cd base && podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
 (cd base && podman kube play --network pga kubernetes.yaml)
-podman logs --color --names --follow tmp-keycloak-keycloak tmp-postgres-postgres tmp-perfect-group-allocation-perfect-group-allocation tmp-test-test
+podman logs --color --names --follow tmp-perfect-group-allocation-perfect-group-allocation # tmp-keycloak-keycloak tmp-postgres-postgres tmp-test-test
 
 # localStorage.setItem("test", "hi") broken in firefox
