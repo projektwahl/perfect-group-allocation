@@ -50,8 +50,8 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r p
 
 (cd base && CAROOT=$CAROOT mkcert perfect-group-allocation)
 (cd base && kustomize edit set nameprefix tmp-)
-(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
 (cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}')
+(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
 (cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"server-binary","hostPath":{"path":"'"$SERVER_BINARY"'"}}]}}')
 (cd base && kustomize build --output kubernetes.yaml)
 (cd base && podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes

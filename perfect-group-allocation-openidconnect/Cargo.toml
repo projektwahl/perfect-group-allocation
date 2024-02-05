@@ -21,6 +21,7 @@ hyper-util = { default-features = false, version = "0.1", features = ["tokio"] }
 oauth2 = { default-features = false, version = "4" }
 openidconnect = { default-features = false, version = "3" }
 perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
+rustls-native-certs = { default-features = false, version = "0.7.0" }
 serde = { default-features = false, version = "1", features = ["derive"] }
 serde_json = { default-features = false, version = "1" }
 thiserror = { default-features = false, version = "1" }

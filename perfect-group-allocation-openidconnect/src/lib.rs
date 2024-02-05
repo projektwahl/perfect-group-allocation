@@ -1,5 +1,6 @@
 pub mod error;
 
+use std::future::Future;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -29,7 +30,7 @@ use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
 use tokio::sync::OnceCell;
 use tokio_rustls::rustls::pki_types::ServerName;
-use tokio_rustls::rustls::{ClientConfig, RootCertStore};
+use tokio_rustls::rustls::{self, ClientConfig, RootCertStore};
 use tokio_rustls::TlsConnector;
 
 use crate::error::OpenIdConnectError;
@@ -97,18 +98,25 @@ pub struct OpenIdSession {
 
 static OPENID_CLIENT: OnceCell<OpenIdConnectClientType> = OnceCell::const_new();
 
-pub async fn my_http_client(request: HttpRequest) -> Result<HttpResponse, HttpError> {
+pub struct MyHttpClient(Config);
+
+pub async fn my_http_client(
+    config: &Config,
+    request: HttpRequest,
+) -> Result<HttpResponse, HttpError> {
     println!("{:?}", request);
     let url = request.url;
     let host = url.host().expect("uri has no host");
     let port = url.port_or_known_default().unwrap();
     let addr = format!("{host}:{port}");
 
-    // TODO FIXME self signed certs
-    let mut root_cert_store = RootCertStore::empty();
-    root_cert_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    let mut roots = rustls::RootCertStore::empty();
+    for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs") {
+        roots.add(cert).unwrap();
+    }
+
     let config = ClientConfig::builder()
-        .with_root_certificates(root_cert_store)
+        .with_root_certificates(roots)
         .with_no_client_auth();
     let connector = TlsConnector::from(Arc::new(config));
     let dnsname = ServerName::try_from(host.to_string()).unwrap();
@@ -157,7 +165,7 @@ pub async fn get_openid_client(
         .get_or_try_init(|| async {
             let provider_metadata = CoreProviderMetadata::discover_async(
                 IssuerUrl::new(config.openidconnect.issuer_url.clone())?,
-                my_http_client,
+                |request| my_http_client(config, request),
             )
             .await?;
 
@@ -229,7 +237,7 @@ pub async fn finish_authentication(
         .exchange_code(AuthorizationCode::new(input.inner.code))
         // Set the PKCE code verifier.
         .set_pkce_verifier(session.verifier)
-        .request_async(my_http_client)
+        .request_async(|request| my_http_client(config, request))
         .await?;
 
     // the token_response may be signed and then we could store it in the cookie

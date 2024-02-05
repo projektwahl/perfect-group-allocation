@@ -14,7 +14,7 @@ pub enum OpenIdConnectError {
     Signing(#[from] SigningError),
     #[error("oauth error: {0}")]
     Oauth2Parse(#[from] oauth2::url::ParseError),
-    #[error("discovery error: {0}")]
+    #[error("discovery error: {}", match .0 { openidconnect::DiscoveryError::<HttpError>::Request(req) => format!("{req}"), other => format!("{other}") })]
     Discovery(#[from] DiscoveryError<HttpError>),
     #[error("wrong csrf token")]
     WrongCsrfToken,

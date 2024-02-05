@@ -22,12 +22,17 @@ spec:
           value: /run/secrets
         - name: RUST_LOG
           value: info
+        - name: SSL_CERT_FILE
+          value: /run/rootCA.pem
       volumeMounts:
         - name: secret-volume
           mountPath: "/run/secrets"
           readOnly: true
         - name: server-binary
           mountPath: "/bin/server"
+          readOnly: true
+        - name: root-ca
+          mountPath: "/run/rootCA.pem"
           readOnly: true
       #ports:
       #  - containerPort: 443
@@ -55,3 +60,7 @@ spec:
       hostPath:
         type: File
         path: TODO/target/debug/server
+    - name: root-ca
+      hostPath:
+        type: File
+        path: TODO
