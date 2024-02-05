@@ -8,6 +8,7 @@ use std::sync::Arc;
 use crate::error::OpenIdConnectError;
 use error::HttpError;
 use http_body_util::BodyExt;
+use hyper::{HeaderMap, Method};
 use hyper_openssl::SslStream;
 use hyper_util::rt::TokioIo;
 use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
@@ -104,9 +105,8 @@ pub async fn my_http_client(
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
     println!("{:?}", request);
-    let url = request.url;
-    let host = url.host().expect("uri has no host");
-    let port = url.port_or_known_default().unwrap();
+    let host = request.url.host().expect("uri has no host");
+    let port = request.url.port_or_known_default().unwrap();
     let addr = format!("{host}:{port}");
 
     // rustls has bad error messages
@@ -130,12 +130,25 @@ pub async fn my_http_client(
     let (mut sender, conn) = hyper::client::conn::http1::handshake(stream).await?;
     tokio::task::spawn(async move { if let Err(_err) = conn.await {} });
 
-    let authority = url.authority();
+    let authority = request.url.authority();
 
-    let request = hyper::Request::builder()
-        .uri(url.to_string())
+    let mut builder = hyper::Request::builder()
+        .method(Method::from_str(request.method.as_str()).unwrap())
+        .uri(request.url.to_string());
+    let request_headers: HeaderMap = request
+        .headers
+        .iter()
+        .map(|(name, value)| {
+            (
+                hyper::header::HeaderName::from_str(name.as_str()).unwrap(),
+                hyper::header::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+            )
+        })
+        .collect();
+    builder.headers_mut().unwrap().extend(request_headers);
+    let request = builder
         .header(hyper::header::HOST, authority)
-        .body(String::new())?;
+        .body(String::from_utf8(request.body).unwrap())?;
 
     let response = sender.send_request(request).await?;
 

@@ -50,7 +50,7 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh config credentials 
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
-podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://h3.selfmade4u.de/*"]'
+podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://perfect-group-allocation/openidconnect-redirect"]'
 #'
 
 (cd base && CAROOT=$CAROOT mkcert perfect-group-allocation)
