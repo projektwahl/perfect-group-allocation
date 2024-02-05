@@ -22,19 +22,19 @@ cd ../..
 
 cd tmp/kustomize
 
-podman build -t keycloak --file keycloak/keycloak/Dockerfile .
-podman build -t perfect-group-allocation --file base/perfect-group-allocation/Dockerfile .
-podman build -t test --file base/test/Dockerfile .
-
 SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
 echo "Compiled server binary: $SERVER_BINARY"
 
 INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
 echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 
+: '
 podman network create --ignore pga
 
-#: '
+podman build -t keycloak --file keycloak/keycloak/Dockerfile .
+podman build -t perfect-group-allocation --file base/perfect-group-allocation/Dockerfile .
+podman build -t test --file base/test/Dockerfile .
+
 (cd keycloak && CAROOT=$CAROOT mkcert keycloak)
 (cd keycloak && kustomize edit set nameprefix tmp-)
 (cd keycloak && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
@@ -51,7 +51,7 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s re
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://perfect-group-allocation/openidconnect-redirect"]'
-#'
+'
 
 (cd base && CAROOT=$CAROOT mkcert perfect-group-allocation)
 (cd base && kustomize edit set nameprefix tmp-)
@@ -61,6 +61,4 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r p
 (cd base && kustomize build --output kubernetes.yaml)
 (cd base && podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
 (cd base && podman kube play --network pga kubernetes.yaml)
-podman logs --color --names --follow tmp-perfect-group-allocation-perfect-group-allocation # tmp-keycloak-keycloak tmp-postgres-postgres tmp-test-test
-
-# localStorage.setItem("test", "hi") broken in firefox
+podman logs --color --names --follow tmp-test-test # tmp-perfect-group-allocation-perfect-group-allocation # tmp-keycloak-keycloak tmp-postgres-postgres 
