@@ -9,7 +9,7 @@ spec:
   containers:
     - env:
         - name: RUST_LOG
-          value: trace,tokio_tungstenite=debug,tungstenite=debug,firefox=debug,webdriver_bidi::webdriver_handler=debug
+          value: trace,tokio_tungstenite=debug,tungstenite=debug,firefox=debug
       image: test
       name: test
       resources:

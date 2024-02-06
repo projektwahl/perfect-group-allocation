@@ -213,9 +213,9 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         info!("{:?}", password);
 
         click(&driver, &browsing_context, &username).await?;
-        send_keys(&driver, &browsing_context, &username, "admin").await?;
+        send_keys(&driver, &browsing_context, "test").await?;
         click(&driver, &browsing_context, &password).await?;
-        send_keys(&driver, &browsing_context, &password, "admin").await?;
+        send_keys(&driver, &browsing_context, "test").await?;
 
         let login_button = find_element(&driver, &browsing_context, "#kc-login").await?;
         click(&driver, &browsing_context, &login_button).await?;
@@ -236,7 +236,7 @@ pub async fn find_element(
             SendCommand::ScriptEvaluate,
             script::evaluate::Command {
                 params: script::evaluate::Parameters {
-                    expression: format!("document.querySelector(`{}`)", css_selector), // TODO FIXME XSS, maybe use pre
+                    expression: format!("document.querySelector(`{css_selector}`)"), // TODO FIXME XSS, maybe use pre
                     target: script::Target::Context(ContextTarget {
                         context: Some(browsing_context.clone()),
                         sandbox: None,
@@ -266,9 +266,14 @@ pub async fn find_element(
 pub async fn send_keys(
     driver: &WebDriver,
     browsing_context: &BrowsingContext,
-    node: &NodeRemoteValue,
     text: &str,
 ) -> Result<(), webdriver_bidi::Error> {
+    let rand_string: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(10)
+        .map(char::from)
+        .collect::<String>();
+
     let _result = driver
         .send_command(
             SendCommand::InputPerformActions,
@@ -276,7 +281,7 @@ pub async fn send_keys(
                 params: input::perform_actions::Parameters {
                     context: browsing_context.clone(),
                     actions: vec![SourceActions::Key(KeySourceActions {
-                        id: "test".to_owned(),
+                        id: rand_string,
                         actions: vec![KeySourceAction::KeyDown(KeyDownAction {
                             value: text.to_owned(),
                         })],
@@ -293,6 +298,12 @@ pub async fn click(
     browsing_context: &BrowsingContext,
     node: &NodeRemoteValue,
 ) -> Result<(), webdriver_bidi::Error> {
+    let rand_string: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(10)
+        .map(char::from)
+        .collect::<String>();
+
     let _result = driver
         .send_command(
             SendCommand::InputPerformActions,
@@ -300,7 +311,7 @@ pub async fn click(
                 params: input::perform_actions::Parameters {
                     context: browsing_context.clone(),
                     actions: vec![SourceActions::Pointer(PointerSourceActions {
-                        id: "test".to_owned(),
+                        id: rand_string,
                         parameters: None,
                         actions: vec![
                             PointerSourceAction::PointerMove(PointerMoveAction {
