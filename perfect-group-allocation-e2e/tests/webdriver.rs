@@ -10,15 +10,17 @@ use rand::{thread_rng, Rng};
 use serde_json::json;
 use tempfile::tempdir;
 use tracing::info;
-use webdriver_bidi::browsing_context::{self};
+use webdriver_bidi::browsing_context::{self, BrowsingContext};
 use webdriver_bidi::input::perform_actions::{
-    Origin, PointerCommonProperties, PointerDownAction, PointerMoveAction, PointerSourceAction,
-    PointerSourceActions, PointerUpAction, SourceActions,
+    KeyDownAction, KeySourceAction, KeySourceActions, Origin, PointerCommonProperties,
+    PointerDownAction, PointerMoveAction, PointerSourceAction, PointerSourceActions,
+    PointerUpAction, SourceActions,
 };
 use webdriver_bidi::input::ElementOrigin;
 use webdriver_bidi::protocol::Extensible;
 use webdriver_bidi::script::{
-    ContextTarget, EvaluateResult, EvaluateResultSuccess, RemoteValue, SharedReference,
+    ContextTarget, EvaluateResult, EvaluateResultSuccess, NodeRemoteValue, RemoteValue,
+    SharedReference,
 };
 use webdriver_bidi::session::CapabilityRequest;
 use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
@@ -285,6 +287,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             ..
         }) = nodes.0
         else {
+            tokio::time::sleep(Duration::from_secs(10)).await;
             panic!();
         };
         info!("{:?}", username);
@@ -313,48 +316,40 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             ..
         }) = nodes.0
         else {
+            tokio::time::sleep(Duration::from_secs(10)).await;
             panic!();
         };
         info!("{:?}", password);
 
-        let _result = driver
-            .send_command(
-                SendCommand::InputPerformActions,
-                input::perform_actions::Command {
-                    params: input::perform_actions::Parameters {
-                        context: browsing_context.clone(),
-                        actions: vec![SourceActions::Pointer(PointerSourceActions {
-                            id: "test".to_owned(),
-                            parameters: None,
-                            actions: vec![
-                                PointerSourceAction::PointerMove(PointerMoveAction {
-                                    x: 0,
-                                    y: 0,
-                                    duration: None,
-                                    origin: Some(Origin::Element(ElementOrigin {
-                                        element: SharedReference {
-                                            shared_id: node.shared_id.unwrap().clone(),
-                                            handle: node.handle.clone(),
-                                            extensible: Extensible::default(),
-                                        },
-                                    })),
-                                    common: PointerCommonProperties::default(),
-                                }),
-                                PointerSourceAction::PointerDown(PointerDownAction {
-                                    button: 0,
-                                    common: PointerCommonProperties::default(),
-                                }),
-                                PointerSourceAction::PointerUp(PointerUpAction {
-                                    button: 0,
-                                    common: PointerCommonProperties::default(),
-                                }),
-                            ],
-                        })],
-                    },
-                },
-            )
-            .await?;
+        send_keys(&driver, &browsing_context, &username, "username").await?;
+
+        tokio::time::sleep(Duration::from_secs(10)).await;
     }
 
+    Ok(())
+}
+
+pub async fn send_keys(
+    driver: &WebDriver,
+    browsing_context: &BrowsingContext,
+    node: &NodeRemoteValue,
+    text: &str,
+) -> Result<(), webdriver_bidi::Error> {
+    let _result = driver
+        .send_command(
+            SendCommand::InputPerformActions,
+            input::perform_actions::Command {
+                params: input::perform_actions::Parameters {
+                    context: browsing_context.clone(),
+                    actions: vec![SourceActions::Key(KeySourceActions {
+                        id: "test".to_owned(),
+                        actions: vec![KeySourceAction::KeyDown(KeyDownAction {
+                            value: "hi".to_owned(),
+                        })],
+                    })],
+                },
+            },
+        )
+        .await?;
     Ok(())
 }

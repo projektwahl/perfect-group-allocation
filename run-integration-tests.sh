@@ -22,13 +22,15 @@ cd ../..
 
 cd tmp/kustomize
 
+cargo build --bin server
 SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
 echo "Compiled server binary: $SERVER_BINARY"
 
+cargo build --test webdriver
 INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
 echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 
-: '
+#: '
 podman network create --ignore pga
 
 podman build -t keycloak --file keycloak/keycloak/Dockerfile .
@@ -51,7 +53,7 @@ podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s re
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
 podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://perfect-group-allocation/openidconnect-redirect"]'
-'
+#'
 
 (cd base && CAROOT=$CAROOT mkcert perfect-group-allocation)
 (cd base && kustomize edit set nameprefix tmp-)
