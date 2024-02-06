@@ -20,7 +20,7 @@ use webdriver_bidi::input::ElementOrigin;
 use webdriver_bidi::protocol::Extensible;
 use webdriver_bidi::script::{
     ContextTarget, EvaluateResult, EvaluateResultSuccess, NodeRemoteValue, RemoteValue,
-    SharedReference,
+    SerializationOptions, SharedReference,
 };
 use webdriver_bidi::session::CapabilityRequest;
 use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
@@ -251,7 +251,11 @@ pub async fn find_element(
                     }),
                     await_promise: false,
                     result_ownership: None,
-                    serialization_options: None,
+                    serialization_options: Some(SerializationOptions {
+                        max_dom_depth: Some(1),
+                        max_object_depth: None,
+                        include_shadow_tree: None,
+                    }),
                     user_activation: None,
                 },
             },

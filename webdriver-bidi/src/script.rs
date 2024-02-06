@@ -815,15 +815,15 @@ pub struct SerializationOptions {
     // TODO FIXME default
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    max_dom_depth: Option<u64>,
+    pub max_dom_depth: Option<u64>,
     // TODO FIXME default
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    max_object_depth: Option<u64>,
+    pub max_object_depth: Option<u64>,
     // TODO FIXME default
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    include_shadow_tree: Option<ShadowTreeType>,
+    pub include_shadow_tree: Option<ShadowTreeType>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-SerializationOptions>
