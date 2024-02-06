@@ -383,6 +383,7 @@ pub struct RemoteObjectReference {
     pub extensible: Extensible,
 }
 
+// TODO FIXME this breaks the serde-error path which is a known issue. this is also probably recursive
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
