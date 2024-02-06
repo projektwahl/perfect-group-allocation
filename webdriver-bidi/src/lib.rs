@@ -66,7 +66,7 @@ mod webdriver;
 mod webdriver_handler;
 
 use browsing_context::BrowsingContext;
-pub use error::{Error, ErrorInner, Result};
+pub use error::{Error, Result};
 pub use generated::SendCommand;
 pub use webdriver::{Browser, WebDriver};
 

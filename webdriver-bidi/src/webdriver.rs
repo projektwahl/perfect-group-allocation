@@ -28,7 +28,7 @@ impl WebDriver {
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
     pub async fn new(browser: Browser) -> Result<Self, crate::error::Error> {
-        let tmp_dir = tempdir().map_err(crate::error::ErrorInner::TmpDirCreate)?;
+        let tmp_dir = tempdir().map_err(crate::error::Error::TmpDirCreate)?;
 
         let port = match browser {
             Browser::Firefox => {
@@ -45,7 +45,7 @@ impl WebDriver {
                     ])
                     .stderr(Stdio::piped())
                     .spawn()
-                    .map_err(crate::error::ErrorInner::SpawnBrowser)?;
+                    .map_err(crate::error::Error::SpawnBrowser)?;
 
                 let stderr = child.stderr.take().unwrap();
 
@@ -57,7 +57,7 @@ impl WebDriver {
                     let status = child
                         .wait()
                         .await
-                        .map_err(crate::error::ErrorInner::FailedToRunBrowser)?;
+                        .map_err(crate::error::Error::FailedToRunBrowser)?;
 
                     error!("child status was: {status}");
 
@@ -68,22 +68,19 @@ impl WebDriver {
                 while let Some(line) = reader
                     .next_line()
                     .await
-                    .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
+                    .map_err(crate::error::Error::ReadBrowserStderr)?
                 {
                     trace!(target: "firefox", "{line}");
                     if let Some(p) =
                         line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:")
                     {
-                        port = Some(
-                            p.parse::<u16>()
-                                .map_err(crate::error::ErrorInner::PortDetect)?,
-                        );
+                        port = Some(p.parse::<u16>().map_err(crate::error::Error::PortDetect)?);
                         break;
                     }
                 }
 
                 let Some(port) = port else {
-                    return Err(crate::error::ErrorInner::PortNotFound)?;
+                    return Err(crate::error::Error::PortNotFound)?;
                 };
 
                 tokio::spawn(async move {
@@ -102,7 +99,7 @@ impl WebDriver {
                     .kill_on_drop(true)
                     .stdout(Stdio::piped())
                     .spawn()
-                    .map_err(crate::error::ErrorInner::SpawnBrowser)?;
+                    .map_err(crate::error::Error::SpawnBrowser)?;
 
                 let stderr = child.stdout.take().unwrap();
 
@@ -114,7 +111,7 @@ impl WebDriver {
                     let status = child
                         .wait()
                         .await
-                        .map_err(crate::error::ErrorInner::FailedToRunBrowser)?;
+                        .map_err(crate::error::Error::FailedToRunBrowser)?;
 
                     error!("child status was: {status}");
 
@@ -124,7 +121,7 @@ impl WebDriver {
                 while let Some(line) = reader
                     .next_line()
                     .await
-                    .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
+                    .map_err(crate::error::Error::ReadBrowserStderr)?
                 {
                     trace!("{line}");
                     if line == "ChromeDriver was started successfully." {
@@ -147,7 +144,7 @@ impl WebDriver {
         let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session"))
                 .await
-                .map_err(crate::error::ErrorInner::WebSocket)?;
+                .map_err(crate::error::Error::WebSocket)?;
 
         let (command_sender, command_receiver) = mpsc::unbounded_channel();
 
@@ -173,7 +170,7 @@ impl WebDriver {
         async {
             let result = rx
                 .await
-                .map_err(|_| crate::error::ErrorInner::CommandTaskExited)?;
+                .map_err(|_| crate::error::Error::CommandTaskExited)?;
             Ok(result)
         }
     }
@@ -193,7 +190,7 @@ impl WebDriver {
         async {
             let result = rx
                 .await
-                .map_err(|_| crate::error::ErrorInner::CommandTaskExited)?;
+                .map_err(|_| crate::error::Error::CommandTaskExited)?;
             Ok(result)
         }
     }

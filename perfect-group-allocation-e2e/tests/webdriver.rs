@@ -190,14 +190,57 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         )
         .await?;
 
+    let node = find_element(
+        &driver,
+        &browsing_context,
+        r#"form[action="/openidconnect-login"] button[type="submit"]"#,
+    )
+    .await?;
+
+    while let Ok(load) = subscription.try_recv() {
+        info!("before: {load:?}");
+    }
+
+    click(&driver, &browsing_context, &node).await?;
+
+    if let Ok(load) = subscription.recv().await {
+        info!("page loaded: {load:?}");
+
+        let username = find_element(&driver, &browsing_context, "#username").await?;
+        info!("{:?}", username);
+
+        let password = find_element(&driver, &browsing_context, "#password").await?;
+        info!("{:?}", password);
+
+        click(&driver, &browsing_context, &username).await?;
+        send_keys(&driver, &browsing_context, &username, "admin").await?;
+        click(&driver, &browsing_context, &password).await?;
+        send_keys(&driver, &browsing_context, &password, "admin").await?;
+
+        let login_button = find_element(&driver, &browsing_context, "#kc-login").await?;
+        click(&driver, &browsing_context, &login_button).await?;
+
+        tokio::time::sleep(Duration::from_secs(10)).await;
+    }
+
+    Ok(())
+}
+
+pub async fn find_element(
+    driver: &WebDriver,
+    browsing_context: &BrowsingContext,
+    css_selector: &str,
+) -> Result<NodeRemoteValue, webdriver_bidi::Error> {
     let nodes = driver
         .send_command(
             SendCommand::ScriptEvaluate,
             script::evaluate::Command {
                 params: script::evaluate::Parameters {
-                    expression: r#"document.querySelector(`form[action="/openidconnect-login"] button[type="submit"]`)"#
-                        .to_owned(),
-                    target: script::Target::Context(ContextTarget { context: Some(browsing_context.clone()), sandbox: None }),
+                    expression: format!("document.querySelector(`{}`)", css_selector), // TODO FIXME XSS, maybe use pre
+                    target: script::Target::Context(ContextTarget {
+                        context: Some(browsing_context.clone()),
+                        sandbox: None,
+                    }),
                     await_promise: false,
                     result_ownership: None,
                     serialization_options: None,
@@ -207,19 +250,49 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         )
         .await?;
 
-    let EvaluateResult::Success(EvaluateResultSuccess {
+    if let EvaluateResult::Success(EvaluateResultSuccess {
         result: RemoteValue::Node(node),
         ..
     }) = nodes.0
-    else {
-        panic!();
-    };
-    info!("{:?}", node);
-
-    while let Ok(load) = subscription.try_recv() {
-        info!("before: {load:?}");
+    {
+        Ok(node)
+    } else {
+        Err(webdriver_bidi::Error::ElementNotFound(
+            css_selector.to_owned(),
+        ))
     }
+}
 
+pub async fn send_keys(
+    driver: &WebDriver,
+    browsing_context: &BrowsingContext,
+    node: &NodeRemoteValue,
+    text: &str,
+) -> Result<(), webdriver_bidi::Error> {
+    let _result = driver
+        .send_command(
+            SendCommand::InputPerformActions,
+            input::perform_actions::Command {
+                params: input::perform_actions::Parameters {
+                    context: browsing_context.clone(),
+                    actions: vec![SourceActions::Key(KeySourceActions {
+                        id: "test".to_owned(),
+                        actions: vec![KeySourceAction::KeyDown(KeyDownAction {
+                            value: text.to_owned(),
+                        })],
+                    })],
+                },
+            },
+        )
+        .await?;
+    Ok(())
+}
+
+pub async fn click(
+    driver: &WebDriver,
+    browsing_context: &BrowsingContext,
+    node: &NodeRemoteValue,
+) -> Result<(), webdriver_bidi::Error> {
     let _result = driver
         .send_command(
             SendCommand::InputPerformActions,
@@ -236,7 +309,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                                 duration: None,
                                 origin: Some(Origin::Element(ElementOrigin {
                                     element: SharedReference {
-                                        shared_id: node.shared_id.unwrap().clone(),
+                                        shared_id: node.shared_id.as_ref().unwrap().clone(),
                                         handle: node.handle.clone(),
                                         extensible: Extensible::default(),
                                     },
@@ -258,98 +331,5 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         )
         .await?;
 
-    if let Ok(load) = subscription.recv().await {
-        info!("page loaded: {load:?}");
-
-        // TODO FIXME use find element?
-
-        let nodes = driver
-            .send_command(
-                SendCommand::ScriptEvaluate,
-                script::evaluate::Command {
-                    params: script::evaluate::Parameters {
-                        expression: r"document.querySelector(`#username`)".to_owned(),
-                        target: script::Target::Context(ContextTarget {
-                            context: Some(browsing_context.clone()),
-                            sandbox: None,
-                        }),
-                        await_promise: false,
-                        result_ownership: None,
-                        serialization_options: None,
-                        user_activation: None,
-                    },
-                },
-            )
-            .await?;
-
-        let EvaluateResult::Success(EvaluateResultSuccess {
-            result: RemoteValue::Node(username),
-            ..
-        }) = nodes.0
-        else {
-            tokio::time::sleep(Duration::from_secs(10)).await;
-            panic!();
-        };
-        info!("{:?}", username);
-
-        let nodes = driver
-            .send_command(
-                SendCommand::ScriptEvaluate,
-                script::evaluate::Command {
-                    params: script::evaluate::Parameters {
-                        expression: r"document.querySelector(`#password`)".to_owned(),
-                        target: script::Target::Context(ContextTarget {
-                            context: Some(browsing_context.clone()),
-                            sandbox: None,
-                        }),
-                        await_promise: false,
-                        result_ownership: None,
-                        serialization_options: None,
-                        user_activation: None,
-                    },
-                },
-            )
-            .await?;
-
-        let EvaluateResult::Success(EvaluateResultSuccess {
-            result: RemoteValue::Node(password),
-            ..
-        }) = nodes.0
-        else {
-            tokio::time::sleep(Duration::from_secs(10)).await;
-            panic!();
-        };
-        info!("{:?}", password);
-
-        send_keys(&driver, &browsing_context, &username, "username").await?;
-
-        tokio::time::sleep(Duration::from_secs(10)).await;
-    }
-
-    Ok(())
-}
-
-pub async fn send_keys(
-    driver: &WebDriver,
-    browsing_context: &BrowsingContext,
-    node: &NodeRemoteValue,
-    text: &str,
-) -> Result<(), webdriver_bidi::Error> {
-    let _result = driver
-        .send_command(
-            SendCommand::InputPerformActions,
-            input::perform_actions::Command {
-                params: input::perform_actions::Parameters {
-                    context: browsing_context.clone(),
-                    actions: vec![SourceActions::Key(KeySourceActions {
-                        id: "test".to_owned(),
-                        actions: vec![KeySourceAction::KeyDown(KeyDownAction {
-                            value: "hi".to_owned(),
-                        })],
-                    })],
-                },
-            },
-        )
-        .await?;
     Ok(())
 }

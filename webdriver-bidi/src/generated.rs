@@ -150,8 +150,8 @@ macro_rules! magic {
                         RespondCommand::$variant(respond_command) => {
                             respond_command
                                 .send(serde_path_to_error::deserialize(result)
-                                    .map_err(crate::ErrorInner::ParseReceivedWithPath)?)
-                                .map_err(|_| crate::ErrorInner::CommandCallerExited)?
+                                    .map_err(crate::Error::ParseReceivedWithPath)?)
+                                .map_err(|_| crate::Error::CommandCallerExited)?
                         }
                     ),*
                     $(
@@ -161,7 +161,7 @@ macro_rules! magic {
 
                             // TODO FIXME we need to know whether this was a global or local subscription. maybe store that directly in the respond command?
                             channel.send(value)
-                                .map_err(|_| crate::ErrorInner::CommandCallerExited)?
+                                .map_err(|_| crate::Error::CommandCallerExited)?
                         }
                     ),*
                 }
