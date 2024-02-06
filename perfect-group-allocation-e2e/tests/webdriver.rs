@@ -220,7 +220,15 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         let login_button = find_element(&driver, &browsing_context, "#kc-login").await?;
         click(&driver, &browsing_context, &login_button).await?;
 
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        if let Ok(load) = subscription.recv().await {
+            info!("page loaded: {load:?}");
+
+            let logout_button = find_element(&driver, &browsing_context, "#logout-button").await?;
+
+            info!("{:?}", logout_button);
+
+            tokio::time::sleep(Duration::from_secs(90)).await;
+        }
     }
 
     Ok(())
