@@ -52,6 +52,8 @@
 //! Otherwise `Type / null` is represented with an `Option<Type>`.
 //!
 //! Types combined in the spec with `( A // B // ... )` are represented as enum though usually as a tagged enum for performance.
+//!
+//! Because of https://github.com/serde-rs/serde/issues/2666 we can't use the easy tag generation for structs.
 
 pub mod browser;
 pub mod browsing_context;

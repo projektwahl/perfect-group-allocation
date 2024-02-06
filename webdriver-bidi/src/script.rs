@@ -727,11 +727,20 @@ pub struct HTMLCollectionRemoteValue {
     pub value: Option<ListRemoteValue>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub enum ConstNode {
+    #[serde(rename = "node")]
+    Node,
+}
+
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NodeRemoteValue {
+    r#type: ConstNode,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub shared_id: Option<SharedId>,
