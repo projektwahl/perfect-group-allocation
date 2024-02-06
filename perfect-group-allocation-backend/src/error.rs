@@ -130,7 +130,7 @@ impl AppError {
             tx_orig,
             "Internal Server Error".into(),
             &my_session,
-            &config,
+            config,
             future,
         );
         let stream = pin!(TemplateToStream::new(future, rx));

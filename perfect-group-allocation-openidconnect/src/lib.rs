@@ -1,9 +1,9 @@
 pub mod error;
 
-use std::future::Future;
-use std::pin::{pin, Pin};
+
+use std::pin::{Pin};
 use std::str::FromStr;
-use std::sync::Arc;
+
 
 use crate::error::OpenIdConnectError;
 use error::HttpError;
@@ -29,7 +29,7 @@ use openidconnect::{
     AccessTokenHash, EmptyAdditionalClaims, IdTokenClaims, IdTokenFields, IssuerUrl, Nonce,
     TokenResponse,
 };
-use openssl::ssl::{Ssl, SslConnector, SslContext, SslMethod};
+use openssl::ssl::{SslConnector, SslMethod};
 use perfect_group_allocation_config::Config;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
@@ -101,10 +101,10 @@ static OPENID_CLIENT: OnceCell<OpenIdConnectClientType> = OnceCell::const_new();
 pub struct MyHttpClient(Config);
 
 pub async fn my_http_client(
-    config: &Config,
+    _config: &Config,
     request: HttpRequest,
 ) -> Result<HttpResponse, HttpError> {
-    println!("{:?}", request);
+    println!("{request:?}");
     let host = request.url.host().expect("uri has no host");
     let port = request.url.port_or_known_default().unwrap();
     let addr = format!("{host}:{port}");
@@ -152,7 +152,7 @@ pub async fn my_http_client(
 
     let response = sender.send_request(request).await?;
 
-    println!("{:?}", response);
+    println!("{response:?}");
 
     Ok(HttpResponse {
         // this is http 0.2

@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 use std::pin::pin;
-use std::sync::Arc;
+
 
 use async_zero_cost_templating::{html, TemplateToStream};
 use bytes::Bytes;
@@ -32,7 +32,7 @@ pub async fn index(
                 <p>"This is the starting page."</p>
             }
         };
-        let future = main(tx_orig, "Home Page".into(), &session, &config, future);
+        let future = main(tx_orig, "Home Page".into(), &session, config, future);
         let stream = pin!(TemplateToStream::new(future, rx));
         // I think we should sent it at once with a content length when it is not too large
         stream.collect::<String>().await

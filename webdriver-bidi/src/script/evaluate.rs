@@ -39,3 +39,15 @@ pub struct Parameters {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Result(pub EvaluateResult);
+
+#[cfg(test)]
+mod tests {
+    use crate::script::{EvaluateResult, RemoteValue};
+
+    #[test]
+    fn it_works() {
+        let string = r#"{"type":"node","sharedId":"5638c701-0013-4a51-9157-c648b99e48e0","value":{"nodeType":1,"localName":"button","namespaceURI":"http://www.w3.org/1999/xhtml","childNodeCount":1,"children":[{"type":"node","sharedId":"5f9fd48a-cc26-4313-a4ad-a440bab48d13","value":{"nodeType":3,"nodeValue":"Login","childNodeCount":0}}],"attributes":{"id":"login-button","class":"submit-link","type":"submit"},"shadowRoot":null}}"#;
+        let jd = &mut serde_json::Deserializer::from_str(string);
+        let result: RemoteValue = serde_path_to_error::deserialize(jd).unwrap();
+    }
+}

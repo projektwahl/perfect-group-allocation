@@ -1,8 +1,6 @@
 use core::fmt::{Debug, Display};
 use std::{
-    borrow::Cow,
     path::{Path, PathBuf},
-    result,
     sync::Arc,
     time::Duration,
 };
@@ -89,10 +87,10 @@ pub async fn get_config() -> Result<
     let (notify_tx, mut notify_rx) = tokio::sync::watch::channel(());
 
     let mut watcher = notify::recommended_watcher(move |res| match res {
-        Ok(event) => {
+        Ok(_event) => {
             notify_tx.send(()).unwrap();
         }
-        Err(e) => println!("watch error: {:?}", e),
+        Err(e) => println!("watch error: {e:?}"),
     })
     .map_err(|e| ConfigError::Notify(config_directory.clone(), e))?;
 
