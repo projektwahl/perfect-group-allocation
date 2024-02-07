@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{BrowsingContext, Locator};
 use crate::script::{
-    NodeRemoteValue, NodeRemoteValueWithTag, ResultOwnership, SerializationOptions, SharedReference,
+    NodeRemoteValueWithTag, ResultOwnership, SerializationOptions, SharedReference,
 };
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-locateNodes>

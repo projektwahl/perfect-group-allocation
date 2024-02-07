@@ -42,7 +42,7 @@ pub struct Result(pub EvaluateResult);
 
 #[cfg(test)]
 mod tests {
-    use crate::script::{EvaluateResult, NodeRemoteValue, RemoteValue};
+    use crate::script::{NodeRemoteValue};
 
     #[test]
     fn it_works() {
@@ -56,6 +56,6 @@ mod tests {
           }
         }"#;
         let jd = &mut serde_json::Deserializer::from_str(string);
-        let result: NodeRemoteValue = serde_path_to_error::deserialize(jd).unwrap();
+        let _result: NodeRemoteValue = serde_path_to_error::deserialize(jd).unwrap();
     }
 }

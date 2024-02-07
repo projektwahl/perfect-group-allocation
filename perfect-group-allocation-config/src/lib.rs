@@ -71,8 +71,8 @@ pub async fn reread_config(config_directory: &Path) -> Result<Config, ConfigErro
 
 // TODO FIXME the openid config should also be fetched here so it is consistent with the rest of the config. may be relevant for redirect url or so
 
-/// https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod
-/// https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume
+/// <https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod>
+/// <https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume>
 /// Secrets can be hot-reloaded so we can update configuration at runtime
 pub async fn get_config() -> Result<
     (
