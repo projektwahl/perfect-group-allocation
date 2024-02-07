@@ -739,9 +739,9 @@ pub enum ConstNode {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NodeRemoteValueWithTag {
-    r#type: ConstNode,
+    pub r#type: ConstNode,
     #[serde(flatten)]
-    inner: NodeRemoteValue,
+    pub inner: NodeRemoteValue,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>

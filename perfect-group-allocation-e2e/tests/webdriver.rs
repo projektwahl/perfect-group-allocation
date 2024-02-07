@@ -133,33 +133,47 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
     click(&driver, &browsing_context, &node).await?;
 
-    if let Ok(load) = subscription.recv().await {
-        info!("page loaded: {load:?}");
+    let Ok(load) = subscription.recv().await else {
+        panic!("failed")
+    };
 
-        let username = find_element(&driver, &browsing_context, "#username").await?;
-        info!("{:?}", username);
+    info!("page loaded: {load:?}");
 
-        let password = find_element(&driver, &browsing_context, "#password").await?;
-        info!("{:?}", password);
+    let username = find_element(&driver, &browsing_context, "#username").await?;
+    info!("{:?}", username);
 
-        click(&driver, &browsing_context, &username).await?;
-        send_keys(&driver, &browsing_context, "test").await?;
-        click(&driver, &browsing_context, &password).await?;
-        send_keys(&driver, &browsing_context, "test").await?;
+    let password = find_element(&driver, &browsing_context, "#password").await?;
+    info!("{:?}", password);
 
-        let login_button = find_element(&driver, &browsing_context, "#kc-login").await?;
-        click(&driver, &browsing_context, &login_button).await?;
+    click(&driver, &browsing_context, &username).await?;
+    send_keys(&driver, &browsing_context, "test").await?;
+    click(&driver, &browsing_context, &password).await?;
+    send_keys(&driver, &browsing_context, "test").await?;
 
-        if let Ok(load) = subscription.recv().await {
-            info!("page loaded: {load:?}");
+    let login_button = find_element(&driver, &browsing_context, "#kc-login").await?;
+    click(&driver, &browsing_context, &login_button).await?;
 
-            let logout_button = find_element(&driver, &browsing_context, "#logout-button").await?;
+    let Ok(load) = subscription.recv().await else {
+        panic!("failed")
+    };
 
-            info!("{:?}", logout_button);
+    info!("page loaded: {load:?}");
 
-            tokio::time::sleep(Duration::from_secs(90)).await;
-        }
-    }
+    let logout_button = find_element(&driver, &browsing_context, "#logout-button").await?;
+
+    info!("{:#?}", logout_button);
+
+    let children = logout_button.value.unwrap().children.unwrap();
+    let text = children[0]
+        .inner
+        .value
+        .as_ref()
+        .unwrap()
+        .node_value
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(text, "Logout test@example.com");
 
     Ok(())
 }
