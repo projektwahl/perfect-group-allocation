@@ -392,7 +392,7 @@ pub async fn setup_http2_http3_server(
     config: tokio::sync::watch::Receiver<Arc<Config>>,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     let current_config = config.borrow().clone();
-    let (certs, key) = load_certs_key_pair(current_config)?;
+    let (certs, key) = load_certs_key_pair(&current_config)?;
 
     // needs a service that accepts some non-controllable impl Buf
     // let http3_server = run_http3_server_s2n(config.clone())?;
@@ -517,7 +517,7 @@ pub async fn run_http2_server(
 }
 
 pub fn load_certs_key_pair(
-    config: Arc<Config>,
+    config: &Config,
 ) -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), AppError> {
     eprintln!("{:?}", std::env::current_dir());
     let certs: Vec<CertificateDer<'static>> =

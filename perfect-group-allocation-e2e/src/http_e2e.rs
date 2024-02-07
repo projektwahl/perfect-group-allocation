@@ -7,7 +7,7 @@ use http_body_util::{BodyExt, Empty};
 use hyper::Request;
 use hyper_util::rt::TokioIo;
 use perfect_group_allocation_backend::error::AppError;
-use perfect_group_allocation_config::{Config, OpenIdConnectConfig, TlsConfig};
+use perfect_group_allocation_config::{get_config, Config, OpenIdConnectConfig, TlsConfig};
 use tokio::net::TcpStream;
 use tokio_rustls::rustls::pki_types::CertificateDer;
 use tokio_rustls::rustls::{pki_types, RootCertStore};
@@ -68,7 +68,6 @@ pub async fn fetch_url(url: hyper::Uri) -> Result<()> {
 }
 
 use std::future::Future;
-use std::path::Path;
 use std::sync::Arc;
 
 use perfect_group_allocation_backend::setup_http2_http3_server;
@@ -86,22 +85,9 @@ pub async fn test_as_client(repeat: u64) {
 }
 
 pub async fn test_server() -> impl Future<Output = ()> {
-    let (tx, rx) = tokio::sync::watch::channel(Arc::new(Config {
-        url: "https://h3.selfmade4u.de".to_owned(),
-        database_url: "postgres://postgres@localhost/pga?sslmode=disable".to_owned(),
-        openidconnect: OpenIdConnectConfig {
-            issuer_url: "http://localhost:8080/realms/pga".to_owned(),
-            client_id: "pga".to_owned(),
-            client_secret: "test".to_owned(),
-        },
-        // TODO FIXME generate test certificates
-        tls: TlsConfig {
-            cert: todo!(),
-            key: todo!(),
-        },
-    }));
+    let (_watcher, config) = get_config().await.unwrap();
 
-    let fut = setup_http2_http3_server(rx).await.unwrap();
+    let fut = setup_http2_http3_server(config).await.unwrap();
     async move {
         fut.await.unwrap();
     }
