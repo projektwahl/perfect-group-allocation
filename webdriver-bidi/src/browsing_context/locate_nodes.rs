@@ -2,7 +2,9 @@
 use serde::{Deserialize, Serialize};
 
 use super::{BrowsingContext, Locator};
-use crate::script::{NodeRemoteValue, ResultOwnership, SerializationOptions, SharedReference};
+use crate::script::{
+    NodeRemoteValue, NodeRemoteValueWithTag, ResultOwnership, SerializationOptions, SharedReference,
+};
 
 /// <https://w3c.github.io/webdriver-bidi/#command-browsingContext-locateNodes>
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -45,5 +47,5 @@ pub struct Parameters {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Result {
-    nodes: Vec<NodeRemoteValue>,
+    nodes: Vec<NodeRemoteValueWithTag>,
 }

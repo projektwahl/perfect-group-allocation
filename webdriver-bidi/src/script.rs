@@ -735,12 +735,20 @@ pub enum ConstNode {
     Node,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct NodeRemoteValueWithTag {
+    r#type: ConstNode,
+    #[serde(flatten)]
+    inner: NodeRemoteValue,
+}
+
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct NodeRemoteValue {
-    r#type: ConstNode,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub shared_id: Option<SharedId>,
@@ -767,7 +775,7 @@ pub struct NodeProperties {
     pub attributes: Option<HashMap<String, String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub children: Option<Vec<NodeRemoteValue>>,
+    pub children: Option<Vec<NodeRemoteValueWithTag>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub local_name: Option<String>,
@@ -783,7 +791,7 @@ pub struct NodeProperties {
     pub node_value: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub shadow_root: Option<Box<NodeRemoteValue>>,
+    pub shadow_root: Option<Box<NodeRemoteValueWithTag>>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
