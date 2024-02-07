@@ -78,30 +78,18 @@ use perfect_group_allocation_backend::setup_http2_http3_server;
 
 pub async fn test_as_client(repeat: u64) {
     for _ in 0..repeat {
-        fetch_url("https://h3.selfmade4u.de".parse::<hyper::Uri>().unwrap())
-            .await
-            .unwrap();
-    }
-}
-
-pub async fn test_server() -> impl Future<Output = ()> {
-    let (_watcher, config) = get_config().await.unwrap();
-
-    let fut = setup_http2_http3_server(config).await.unwrap();
-    async move {
-        fut.await.unwrap();
+        fetch_url(
+            "https://perfect-group-allocation"
+                .parse::<hyper::Uri>()
+                .unwrap(),
+        )
+        .await
+        .unwrap();
     }
 }
 
 #[tokio::main(flavor = "current_thread")]
 #[allow(clippy::redundant_pub_crate)]
 pub async fn bench_client_server_function_http(repeat: u64) {
-    let server_fut = test_server().await; // server doesn't terminate
-    let client_fut = test_as_client(repeat);
-    tokio::select! {
-        _val = server_fut => {
-        }
-        _val = client_fut => {
-        }
-    };
+    test_as_client(repeat).await;
 }
