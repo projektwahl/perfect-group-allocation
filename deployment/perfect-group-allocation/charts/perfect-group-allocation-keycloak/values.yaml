@@ -1,4 +1,4 @@
-# Default values for perfect-group-allocation-keycloak.
+# Default values for pga-keycloak.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -108,7 +108,7 @@ readinessProbe:
 
 env:
   - name: KC_DB_URL
-    value: jdbc:postgresql://postgres/postgres
+    value: jdbc:postgresql://release-name-pga-postgres-pod-pga-postgres/postgres
   - name: KC_DB_USERNAME
     value: postgres
   - name: KC_DB_PASSWORD

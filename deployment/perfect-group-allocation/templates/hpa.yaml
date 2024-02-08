@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "perfect-group-allocation.fullname" . }}
+  name: {{ include "pga.fullname" . }}
   labels:
-    {{- include "perfect-group-allocation.labels" . | nindent 4 }}
+    {{- include "pga.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "perfect-group-allocation.fullname" . }}
+    name: {{ include "pga.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

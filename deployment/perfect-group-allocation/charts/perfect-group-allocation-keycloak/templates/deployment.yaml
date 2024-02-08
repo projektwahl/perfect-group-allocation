@@ -1,9 +1,10 @@
+# TODO https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "perfect-group-allocation-keycloak.fullname" . }}
+  name: {{ include "pga-keycloak.fullname" . }}
   labels:
-    {{- include "perfect-group-allocation-keycloak.labels" . | nindent 4 }}
+    {{- include "pga-keycloak.labels" . | nindent 4 }}
 spec:
   restartPolicy: OnFailure
   {{- if not .Values.autoscaling.enabled }}
@@ -11,7 +12,7 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "perfect-group-allocation-keycloak.selectorLabels" . | nindent 6 }}
+      {{- include "pga-keycloak.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -19,17 +20,19 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "perfect-group-allocation-keycloak.labels" . | nindent 8 }}
+        {{- include "pga-keycloak.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
       restartPolicy: OnFailure
+      strategy:
+        type: Recreate
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "perfect-group-allocation-keycloak.serviceAccountName" . }}
+      serviceAccountName: {{ include "pga-keycloak.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:

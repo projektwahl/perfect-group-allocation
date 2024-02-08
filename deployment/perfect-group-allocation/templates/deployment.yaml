@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "perfect-group-allocation.fullname" . }}
+  name: {{ include "pga.fullname" . }}
   labels:
-    {{- include "perfect-group-allocation.labels" . | nindent 4 }}
+    {{- include "pga.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "perfect-group-allocation.selectorLabels" . | nindent 6 }}
+      {{- include "pga.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "perfect-group-allocation.labels" . | nindent 8 }}
+        {{- include "pga.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -27,7 +27,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "perfect-group-allocation.serviceAccountName" . }}
+      serviceAccountName: {{ include "pga.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:

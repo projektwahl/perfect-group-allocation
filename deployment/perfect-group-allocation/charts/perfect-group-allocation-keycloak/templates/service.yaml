@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "perfect-group-allocation-keycloak.fullname" . }}
+  name: {{ include "pga-keycloak.fullname" . }}
   labels:
-    {{- include "perfect-group-allocation-keycloak.labels" . | nindent 4 }}
+    {{- include "pga-keycloak.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -12,4 +12,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "perfect-group-allocation-keycloak.selectorLabels" . | nindent 4 }}
+    {{- include "pga-keycloak.selectorLabels" . | nindent 4 }}
