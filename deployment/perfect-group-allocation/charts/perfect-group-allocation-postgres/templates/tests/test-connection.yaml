@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "perfect-group-allocation-postgres.fullname" . }}-test-connection"
+  labels:
+    {{- include "perfect-group-allocation-postgres.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "perfect-group-allocation-postgres.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never
