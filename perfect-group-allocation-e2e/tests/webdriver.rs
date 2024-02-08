@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde_json::json;
@@ -113,7 +106,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             browsing_context::navigate::Command {
                 params: browsing_context::navigate::Parameters {
                     context: browsing_context.clone(),
-                    url: "https://perfect-group-allocation".to_owned(),
+                    url: "https://tmp-perfect-group-allocation".to_owned(),
                     wait: Some(browsing_context::ReadinessState::Complete),
                 },
             },

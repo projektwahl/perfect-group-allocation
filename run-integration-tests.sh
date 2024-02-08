@@ -49,15 +49,15 @@ if [ "${1-}" == "keycloak" ]; then
     (cd keycloak && sudo podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
     (cd keycloak && sudo podman kube play kubernetes.yaml)
     echo waiting for keycloak
-    sudo podman wait --condition healthy tmp-keycloak-keycloak
+    sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
     echo keycloak started
-    sudo podman exec tmp-keycloak-keycloak keytool -noprompt -import -file /run/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
-    sudo podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
-    sudo podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://tmp-keycloak --realm master --user admin --password admin
-    sudo podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
-    sudo podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
-    sudo podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
-    sudo podman exec tmp-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
+    sudo podman exec tmp-keycloak-tmp-keycloak keytool -noprompt -import -file /run/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
+    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
+    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://tmp-keycloak --realm master --user admin --password admin
+    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
+    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
+    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
+    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
 fi
 
 (cd base && CAROOT=$CAROOT mkcert tmp-perfect-group-allocation)
@@ -68,5 +68,5 @@ fi
 (cd base && kustomize build --output kubernetes.yaml)
 (cd base && sudo podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
 (cd base && sudo podman kube play kubernetes.yaml)
-sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-perfect-group-allocation & # tmp-keycloak-keycloak tmp-postgres-postgres 
+sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation & # tmp-keycloak-tmp-keycloak tmp-postgres-postgres 
 exit $(sudo podman wait tmp-test-test)
