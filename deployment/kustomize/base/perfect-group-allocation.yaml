@@ -4,6 +4,7 @@ kind: Pod
 metadata:
   name: perfect-group-allocation
   annotations:
+    io.podman.annotations.infra.name: perfect-group-allocation-infra
     io.podman.annotations.userns: keep-id # this feature is not in a stable release yet, so you need an unreleased version
 spec:
   restartPolicy: OnFailure
