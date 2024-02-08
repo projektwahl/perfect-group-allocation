@@ -108,7 +108,7 @@ readinessProbe:
 
 env:
   - name: KC_DB_URL
-    value: jdbc:postgresql://release-name-pga-postgres-pod-pga-postgres/postgres
+    value: jdbc:postgresql://pga-postgres/postgres
   - name: KC_DB_USERNAME
     value: postgres
   - name: KC_DB_PASSWORD
