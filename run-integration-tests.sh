@@ -37,6 +37,7 @@ echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
 
+# maybe use some basic helm instead? I think all this patching is not nice
 if [ "${1-}" == "keycloak" ]; then
     sudo podman build -t keycloak --file keycloak/keycloak/Dockerfile .
     sudo podman build -t perfect-group-allocation --file base/perfect-group-allocation/Dockerfile .
@@ -51,6 +52,7 @@ if [ "${1-}" == "keycloak" ]; then
     echo waiting for keycloak
     sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
     echo keycloak started
+    # can we use import feature instead as this is super slow?
     sudo podman exec tmp-keycloak-tmp-keycloak keytool -noprompt -import -file /run/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://tmp-keycloak --realm master --user admin --password admin
