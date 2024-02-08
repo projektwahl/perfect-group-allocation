@@ -5,9 +5,7 @@ metadata:
   labels:
     {{- include "perfect-group-allocation-postgres.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  replicas: 1
   selector:
     matchLabels:
       {{- include "perfect-group-allocation-postgres.selectorLabels" . | nindent 6 }}
@@ -23,6 +21,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      restartPolicy: OnFailure
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -36,8 +35,13 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: "POSTGRES_INITDB_ARGS"
+              value: "--data-checksums"
+            - name: "POSTGRES_PASSWORD" # TODO FIXME _FILE
+              value: "bestpassword"
           ports:
-            - name: http
+            - name: postgres
               containerPort: {{ .Values.service.port }}
               protocol: TCP
           livenessProbe:
