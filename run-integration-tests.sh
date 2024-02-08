@@ -9,6 +9,7 @@ function cleanup {
 
 #trap cleanup EXIT INT
 
+# helm template . | sudo podman kube play --replace -
 # helm template ./perfect-group-allocation | sudo podman kube play --replace -
 # https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 
