@@ -9,6 +9,9 @@ function cleanup {
 
 #trap cleanup EXIT INT
 
+# helm template ./perfect-group-allocation | sudo podman kube play --replace -
+# https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
+
 rm -R tmp/kustomize
 mkdir -p tmp/certs
 mkdir -p tmp/kustomize
