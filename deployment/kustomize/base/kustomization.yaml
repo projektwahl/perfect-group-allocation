@@ -4,14 +4,14 @@ secretGenerator:
   - name: application-config
     type: Opaque
     files:
-      - tls.cert=perfect-group-allocation.pem
-      - tls.key=perfect-group-allocation-key.pem
+      - tls.cert=tmp-perfect-group-allocation.pem
+      - tls.key=tmp-perfect-group-allocation-key.pem
       - openidconnect.client_secret=client-secret
     literals:
       - openidconnect.client_id=pga
-      - openidconnect.issuer_url=https://keycloak/realms/pga
+      - openidconnect.issuer_url=https://tmp-keycloak/realms/pga
       - database_url=postgres://postgres@postgres/pga?sslmode=disable
-      - url=https://perfect-group-allocation
+      - url=https://tmp-perfect-group-allocation
 resources:
   - ./test.yaml
   - ./perfect-group-allocation.yaml
