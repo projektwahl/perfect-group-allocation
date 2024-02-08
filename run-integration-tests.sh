@@ -33,6 +33,8 @@ echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 
 # we need to use rootful podman to get routable ip addresses.
 
+# https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
+
 # sudo podman inspect perfect-group-allocation-infra | jq ".[].NetworkSettings.Networks.[].IPAddress"
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
