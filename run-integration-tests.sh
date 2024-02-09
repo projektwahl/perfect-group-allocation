@@ -9,6 +9,8 @@ function cleanup {
 
 #trap cleanup EXIT INT
 
+# use a tls secret if possible?
+# helm template --set-file cert=test.cert .
 # helm template . | sudo podman kube play --replace -
 # helm template ./perfect-group-allocation | sudo podman kube play --replace -
 # https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
