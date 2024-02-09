@@ -43,7 +43,12 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "pga-keycloak.serviceAccountName" . }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- with .Values.podSecurityContext }}
+        {{- toYaml .| nindent 8 }}
+        {{- end }}
+        sysctls: # this is just plain stupid that it is so hard to merge this here correctly if podSecurityContext also contains sysctls
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
       containers:
         - name: {{ .Chart.Name }}
           securityContext:

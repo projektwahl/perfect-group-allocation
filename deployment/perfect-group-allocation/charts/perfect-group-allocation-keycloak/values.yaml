@@ -93,7 +93,7 @@ env:
   - name: KC_HOSTNAME
     value: tmp-keycloak
   - name: KC_HTTPS_PORT
-    value: "443"
+    value: "443" # TODO based on port variable
   # https://www.keycloak.org/server/enabletls
   # TODO https://www.keycloak.org/server/vault
   - name: KEYCLOAK_ADMIN

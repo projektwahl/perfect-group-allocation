@@ -24,6 +24,7 @@ helm template ../deployment/perfect-group-allocation/charts/perfect-group-alloca
 
 # https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 
+# ping release-name-pga-keycloak-pod
 # sudo podman inspect perfect-group-allocation-infra | jq ".[].NetworkSettings.Networks.[].IPAddress"
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
