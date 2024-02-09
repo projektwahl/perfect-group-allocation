@@ -2,6 +2,9 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+cert: ""
+key: ""
+
 replicaCount: 1
 
 image:
@@ -80,32 +83,6 @@ resources:
   #   cpu: 100m
   #   memory: 128Mi
 
-startupProbe:
-  exec:
-    command:
-      - "curl"
-      - "--fail-with-body"
-      - "--insecure"
-      - "https://tmp-keycloak/health/started"
-  periodSeconds: 1
-  failureThreshold: 30
-livenessProbe:
-  exec:
-    command:
-      - "curl"
-      - "--fail-with-body"
-      - "--insecure"
-      - "https://tmp-keycloak/health/live"
-  periodSeconds: 1
-readinessProbe:
-  exec:
-    command:
-      - "curl"
-      - "--fail-with-body"
-      - "--insecure"
-      - "https://tmp-keycloak/health/ready"
-  periodSeconds: 1
-
 env:
   - name: KC_DB_URL
     value: jdbc:postgresql://pga-postgres/postgres
@@ -119,10 +96,6 @@ env:
     value: "443"
   # https://www.keycloak.org/server/enabletls
   # TODO https://www.keycloak.org/server/vault
-  - name: KC_HTTPS_CERTIFICATE_FILE
-    value: /run/secrets/tls-cert/tls.crt
-  - name: KC_HTTPS_CERTIFICATE_KEY_FILE
-    value: /run/secrets/tls-cert/tls.key
   - name: KEYCLOAK_ADMIN
     value: admin
   - name: KEYCLOAK_ADMIN_PASSWORD

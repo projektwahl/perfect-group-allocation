@@ -1,4 +1,13 @@
 # TODO https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "pga-keycloak.fullname" . }}-cert
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ .Values.cert | b64enc | quote }}
+  tls.key: {{ .Values.key | b64enc | quote}}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,7 +51,13 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            {{- toYaml .Values.env | nindent 12 }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            - name: KC_HTTPS_CERTIFICATE_FILE
+              value: "/run/secrets/{{ include "pga-keycloak.fullname" . }}-cert/tls.crt"
+            - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+              value: "/run/secrets/{{ include "pga-keycloak.fullname" . }}-cert/tls.key"
           ports:
             - name: https
               containerPort: {{ .Values.service.port }}
@@ -55,14 +70,20 @@ spec:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.volumeMounts }}
           volumeMounts:
+            {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
-          {{- end }}
-      {{- with .Values.volumes }}
+            {{- end }}
+            - name: {{ include "pga-keycloak.fullname" . }}-cert-volume
+              mountPath: "/run/secrets/{{ include "pga-keycloak.fullname" . }}-cert"
+              readOnly: true
       volumes:
+        {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
+        - name: {{ include "pga-keycloak.fullname" . }}-cert-volume
+          secret:
+            secretName: {{ include "pga-keycloak.fullname" . }}-cert
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
