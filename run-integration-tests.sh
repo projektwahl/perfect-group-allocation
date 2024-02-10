@@ -32,7 +32,7 @@ CAROOT=$CAROOT mkcert -install # to allow local testing
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
 
-echo myawesomeclientsecret > client-secret
+echo -n myawesomeclientsecret > client-secret
 
 rm -f kustomization.yaml kubernetes.yaml && kustomize create
 kustomize edit add configmap root-ca --from-file=./rootCA.pem

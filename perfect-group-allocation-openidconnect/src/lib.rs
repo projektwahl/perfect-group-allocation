@@ -1,9 +1,7 @@
 pub mod error;
 
-
-use std::pin::{Pin};
+use std::pin::Pin;
 use std::str::FromStr;
-
 
 use crate::error::OpenIdConnectError;
 use error::HttpError;
@@ -146,28 +144,33 @@ pub async fn my_http_client(
         })
         .collect();
     builder.headers_mut().unwrap().extend(request_headers);
+    let request_body = String::from_utf8(request.body).unwrap();
+    println!("{}", request_body);
     let request = builder
         .header(hyper::header::HOST, authority)
-        .body(String::from_utf8(request.body).unwrap())?;
+        .body(request_body)?;
 
     let response = sender.send_request(request).await?;
+    let status_code = oauth2::http::StatusCode::from_u16(response.status().as_u16()).unwrap();
+    let headers = response
+        .headers()
+        .iter()
+        .map(|(name, value)| {
+            (
+                oauth2::http::HeaderName::from_str(name.as_str()).unwrap(),
+                oauth2::http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+            )
+        })
+        .collect();
+    let body = response.collect().await?.to_bytes().to_vec();
 
-    println!("{response:?}");
+    println!("{}", std::str::from_utf8(&body).unwrap());
 
     Ok(HttpResponse {
         // this is http 0.2
-        status_code: oauth2::http::StatusCode::from_u16(response.status().as_u16()).unwrap(),
-        headers: response
-            .headers()
-            .iter()
-            .map(|(name, value)| {
-                (
-                    oauth2::http::HeaderName::from_str(name.as_str()).unwrap(),
-                    oauth2::http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
-                )
-            })
-            .collect(),
-        body: response.collect().await?.to_bytes().to_vec(),
+        status_code,
+        headers,
+        body,
     })
 }
 
