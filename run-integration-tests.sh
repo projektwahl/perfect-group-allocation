@@ -60,6 +60,13 @@ if [ "${1-}" == "keycloak" ]; then
     # https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/
     # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#environment-variables
     # all these *From look really interesting
+    # potentially best doc https://github.com/kubernetes-sigs/kustomize
+    # because website seems outdated?
+    # https://github.com/kubernetes-sigs/kustomize/blob/master/cmd/config/docs/commands/merge3.md
+    # https://github.com/kubernetes-sigs/kustomize/tree/master/site/content/en/docs/Reference/API/
+    # we have a fixed but changing domain name so probably not useful. we could use one keycloak for all instances though? I think that would make sense. and then use a separate postgres for keycloak
+    # sudo podman container checkpoint --tcp-established tmp-keycloak-tmp-keycloak
+    # sudo podman container restore --tcp-established --keep tmp-keycloak-tmp-keycloak && sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
 
     (cd keycloak && CAROOT=$CAROOT mkcert tmp-keycloak)
     (cd keycloak && kustomize edit set nameprefix tmp-)

@@ -19,7 +19,7 @@ spec:
         value: "443"
   containers:
     - name: tmp-keycloak
-      image: keycloak
+      image: f336431979b409adf3e84f0c7b08ebc81dcecd0a2e0fee06da6f5806f0b3fc55
       env:
         - name: KC_DB_URL
           value: jdbc:postgresql://postgres/postgres
