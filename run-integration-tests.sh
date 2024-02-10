@@ -72,7 +72,7 @@ if [ "${1-}" == "keycloak" ]; then
 
     (cd keycloak && CAROOT=$CAROOT mkcert tmp-keycloak)
     (cd keycloak && kustomize edit set nameprefix tmp-)
-    (cd keycloak && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
+    (cd keycloak && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}') # it would be nice if we would only need to specify this once
     (cd keycloak && kustomize build --output kubernetes.yaml)
     (cd keycloak && sudo podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
     (cd keycloak && sudo podman kube play kubernetes.yaml)

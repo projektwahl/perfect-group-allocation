@@ -17,7 +17,5 @@ FROM quay.io/keycloak/keycloak:23.0
 COPY --from=ubi-micro-build /mnt/rootfs /
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
-#ENV KC_LOG_LEVEL=debug
-
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
 CMD ["start", "--optimized"]
