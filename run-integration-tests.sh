@@ -73,17 +73,19 @@ if [ "${1-}" == "keycloak" ]; then
 else
     cargo build --bin server
     SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
+    SERVER_BINARY=$(realpath --relative-to=.. $SERVER_BINARY)
     echo "Compiled server binary: $SERVER_BINARY"
 
     cargo build --test webdriver
     INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
+    INTEGRATION_TEST_BINARY=$(realpath --relative-to=.. $INTEGRATION_TEST_BINARY)
     echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 
-    sudo podman build -t perfect-group-allocation --build-arg BINARY=$SERVER_BINARY --file ../deployment/kustomize/base/perfect-group-allocation/Dockerfile ..
-    sudo podman build -t test --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ../deployment/kustomize/base/test/Dockerfile ..
+    # git describe --always --long --dirty 
+    sudo podman build --build-arg BINARY=$SERVER_BINARY --file ../deployment/kustomize/base/perfect-group-allocation/Dockerfile ..
+    sudo podman build --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ../deployment/kustomize/base/test/Dockerfile ..
 
     rm -f kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/base
-
 
 
     CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
