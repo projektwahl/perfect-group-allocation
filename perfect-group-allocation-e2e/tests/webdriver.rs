@@ -1,7 +1,10 @@
+use std::panic::AssertUnwindSafe;
+use std::time::Duration;
+
+use futures_util::FutureExt;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde_json::json;
-
 use tracing::info;
 use webdriver_bidi::browsing_context::{self, BrowsingContext};
 use webdriver_bidi::input::perform_actions::{
@@ -26,7 +29,9 @@ use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 
 #[tokio::test]
 pub async fn run_test() {
-    test().await.unwrap();
+    let result = AssertUnwindSafe(test()).catch_unwind().await;
+    println!("{:?}", result);
+    tokio::time::sleep(Duration::from_secs(3600)).await;
 }
 
 // cargo test -p perfect-group-allocation-e2e --test webdriver

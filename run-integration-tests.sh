@@ -5,8 +5,8 @@ set -o pipefail  # don't hide errors within pipes
 set -x
 
 PREFIX=tmp-
-# we should be able to use one keycloak for multiple tests
-KEYCLOAK_PREFIX=tmp-
+# we should be able to use one keycloak for multiple tests. these prefixes should not be identical otherwise the rootca config map breaks when force removing volumes
+KEYCLOAK_PREFIX=keycloak-tmp-
 
 # TODO env variables for domain names etc and at some point try deploying at my server
 
@@ -39,30 +39,31 @@ kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
 if [ "${1-}" == "keycloak" ]; then
     KEYCLOAK_IMAGE=$(sudo podman build --quiet --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
+    kustomize edit set image keycloak=sha256:$KEYCLOAK_IMAGE
 
     kustomize edit set nameprefix $KEYCLOAK_PREFIX
     kustomize edit add resource ../deployment/kustomize/keycloak
+
+    CAROOT=$CAROOT mkcert "${KEYCLOAK_PREFIX}keycloak"
     kustomize edit add secret keycloak-tls-cert \
         --type=kubernetes.io/tls \
-        --from-file=tls.crt=./tmp-keycloak.pem \
-        --from-file=tls.key=./tmp-keycloak-key.pem
-
-    CAROOT=$CAROOT mkcert tmp-keycloak
+        --from-file=tls.crt=./${KEYCLOAK_PREFIX}keycloak.pem \
+        --from-file=tls.key=./${KEYCLOAK_PREFIX}keycloak-key.pem
 
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     sudo podman kube play --replace kubernetes.yaml
 
     echo waiting for keycloak
-    sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
+    sudo podman wait --condition healthy ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak
     echo keycloak started
-    sudo podman exec tmp-keycloak-tmp-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
-    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
-    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://tmp-keycloak --realm master --user admin --password admin
-    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
-    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
-    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
-    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
+    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
+    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
+    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://${KEYCLOAK_PREFIX}keycloak --realm master --user admin --password admin
+    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
+    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
+    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
+    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
 else
     cargo build --bin server
     SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
@@ -91,14 +92,14 @@ else
         --from-file=tls.key=./tmp-perfect-group-allocation-key.pem \
         --from-file=openidconnect.client_secret=./client-secret \
         --from-literal=openidconnect.client_id=pga \
-        --from-literal=openidconnect.issuer_url=https://tmp-keycloak/realms/pga \
+        --from-literal=openidconnect.issuer_url=https://${KEYCLOAK_PREFIX}keycloak/realms/pga \
         --from-literal="database_url=postgres://postgres@postgres/pga?sslmode=disable" \
         --from-literal=url=https://tmp-perfect-group-allocation \
 
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
-    sudo podman kube play kubernetes.yaml
-    sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation & # tmp-keycloak-tmp-keycloak tmp-postgres-postgres 
-    exit $(sudo podman wait tmp-test-test)
-
+    sudo podman kube play --replace kubernetes.yaml
+    sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak & #  tmp-postgres-postgres 
+    (exit $(sudo podman wait tmp-test-test))
+    sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
 fi

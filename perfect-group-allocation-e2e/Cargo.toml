@@ -16,6 +16,7 @@ workspace = true
 
 [dependencies]
 bytes = { default-features = false, version = "1" }
+futures-util = { default-features = false, version = "0.3" }
 http-body-util = { default-features = false, version = "0.1" }
 hyper = { default-features = false, version = "1" }
 hyper-util = { default-features = false, version = "0.1" }

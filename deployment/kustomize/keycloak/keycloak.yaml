@@ -12,7 +12,7 @@ spec:
         value: "0"
   containers:
     - name: tmp-keycloak
-      image: keycloak
+      image: keycloak:NOTFOUND
       env:
         - name: KC_DB_URL
           value: jdbc:postgresql://postgres/postgres
