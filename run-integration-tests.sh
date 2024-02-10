@@ -74,7 +74,7 @@ else
     kustomize edit add resource ./deployment/kustomize/base/
 
     CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
-    #kustomize edit add secret application-config --from-file=tls.cert=./tmp-perfect-group-allocation.pem --from-file=tls.key=./tmp-perfect-group-allocation-key.pem
+    kustomize edit add secret application-config --from-file=tls.cert=./tmp-perfect-group-allocation.pem --from-file=tls.key=./tmp-perfect-group-allocation-key.pem
 
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || exit 0 # WARNING: this also removes volumes
