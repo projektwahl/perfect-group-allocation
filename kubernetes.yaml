@@ -1,0 +1,216 @@
+apiVersion: v1
+data:
+  rootCA.pem: |
+    -----BEGIN CERTIFICATE-----
+    MIIEjjCCAvagAwIBAgIRAL4IDIwDbzxDus3xQ0qSn1swDQYJKoZIhvcNAQELBQAw
+    XzEeMBwGA1UEChMVbWtjZXJ0IGRldmVsb3BtZW50IENBMRowGAYDVQQLDBFtb3Jp
+    dHpAbW9yaXR6YXJjaDEhMB8GA1UEAwwYbWtjZXJ0IG1vcml0ekBtb3JpdHphcmNo
+    MB4XDTI0MDIxMDE1NTUyNVoXDTM0MDIxMDE1NTUyNVowXzEeMBwGA1UEChMVbWtj
+    ZXJ0IGRldmVsb3BtZW50IENBMRowGAYDVQQLDBFtb3JpdHpAbW9yaXR6YXJjaDEh
+    MB8GA1UEAwwYbWtjZXJ0IG1vcml0ekBtb3JpdHphcmNoMIIBojANBgkqhkiG9w0B
+    AQEFAAOCAY8AMIIBigKCAYEAuITtONgGnug95rAWIkg6zETsN1ZBRyxSS5+fciMz
+    QIXlliT2LJ63FO3l32LCcyykvrEO+E34LNZ0cQ/H3PDYEzoXhRJ4Zxu4y8jZTlvt
+    Fi65z+BXzakbuOyRSwL/md1aGhu6EOhnsq4wvUEJfzKtvaDdCUWKf8LE1qoQj/RG
+    3af1NXqFzjx++cvZ+SWW948YpGCfWAyKrextIdl41Y9LserOOZ1zgsIew3eTSdqv
+    vL9tFI4OMz8jSLSI92g0Uqe5mVdq/jS+OnRRVkEPrcv9fS8EjdToZHFgCFrWJ+5/
+    8cizRY6IQnt08lDOOdf0fgUvoXyAqerSDVZxMDVh3NAH2cEoR1VkWgqiZts3zUpt
+    YtZzM9pN+JIrTmO0XdYAVeUXuUqfNqvrpugCgmppHkDojhzoMvUQhVPuf0/Sdlxl
+    Tt+CaHlhOkqE0/SIcyqrg57t+Z8iE1NEPcC6suM9OKUh57YyvmEq9AZHZmYKhYao
+    e4XxSHqSIlakbztmRAmyBpf/AgMBAAGjRTBDMA4GA1UdDwEB/wQEAwICBDASBgNV
+    HRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBSC/AxNArb5g4Vz0r9AUFXbZ0a4WDAN
+    BgkqhkiG9w0BAQsFAAOCAYEAcAb8eJGfgJEyhZs+6mvETzFaWmbEbU3j+rKFuAi3
+    FANVhPyoEfxPylWbdxYn4bWVA3p+L10dsLwMKUoyBUazt1S4+g02NMT6n7iC8vrq
+    Wz9InrTvq6/ukmfjRVH8w/2wOb+6RHtaXJHSPr02PC2aNUaPjk4XqQA9Qor2rSeK
+    DO4GrYkitcIgQ8ixnN+NVSte3n/Fka5q6zr9wxFlRXgcrA862ZA/l8cRX0K8oQhw
+    JT1DFThnuKHL2XW/gRnpxHtsOnkfUFwPGGqKd3fH+mpXKSELEWO3/zeymGgn8A/g
+    Tw7BKD8GSY2Lt47CbBOZAjOJDvHQMtiK4UfhibbTc0E0G2mqMXOJwCPvYM8TVA6P
+    jag7P/5Fldn+NKCCIBsUTKNxzt/1CsSF1MO1LnqZLgGnBvryzDcDGX5raPlM2Gza
+    UF0CwShey/rDRic12GaFw8HacPAyn0QNWPEbk7cZ+LYHuYyVVarq+zu5uAZEyIJt
+    Du96HCVmB9x7F1TO6N0IkN8V
+    -----END CERTIFICATE-----
+kind: ConfigMap
+metadata:
+  name: tmproot-ca-42mdmd5bbt
+---
+apiVersion: v1
+data:
+  database_url: cG9zdGdyZXM6Ly9wb3N0Z3Jlc0Bwb3N0Z3Jlcy9wZ2E/c3NsbW9kZT1kaXNhYmxl
+  openidconnect.client_id: cGdh
+  openidconnect.client_secret: dGhlY2xpZW50c2VjcmV0
+  openidconnect.issuer_url: aHR0cHM6Ly90bXAta2V5Y2xvYWsvcmVhbG1zL3BnYQ==
+  url: aHR0cHM6Ly90bXAtcGVyZmVjdC1ncm91cC1hbGxvY2F0aW9u
+kind: Secret
+metadata:
+  name: tmpapplication-config-f6btgf9ck6
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tmppostgres-secret
+stringData:
+  password: bestpassword
+type: Opaque
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tmppostgres-claim
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+  storageClassName: local-storage
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    io.podman.annotations.userns: keep-id
+  name: tmpperfect-group-allocation
+spec:
+  containers:
+  - env:
+    - name: PGA_CONFIG_DIR
+      value: /run/secrets
+    - name: RUST_LOG
+      value: info
+    - name: SSL_CERT_FILE
+      value: /run/rootCA.pem
+    image: perfect-group-allocation
+    name: tmp-perfect-group-allocation
+    resources:
+      limits:
+        cpu: "4"
+        memory: 1Gi
+      requests:
+        cpu: "1"
+        memory: 512Mi
+    securityContext:
+      runAsGroup: 1000
+      runAsUser: 1000
+    volumeMounts:
+    - mountPath: /run/secrets
+      name: secret-volume
+      readOnly: true
+    - mountPath: /bin/server
+      name: server-binary
+      readOnly: true
+    - mountPath: /run/rootCA.pem
+      name: root-ca
+      readOnly: true
+  restartPolicy: OnFailure
+  securityContext:
+    sysctls:
+    - name: net.ipv4.ip_unprivileged_port_start
+      value: "443"
+  volumes:
+  - name: secret-volume
+    secret:
+      secretName: tmpapplication-config-f6btgf9ck6
+  - hostPath:
+      path: TODO/target/debug/server
+      type: File
+    name: server-binary
+  - hostPath:
+      path: TODO
+      type: File
+    name: root-ca
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tmppostgres
+spec:
+  containers:
+  - env:
+    - name: POSTGRES_INITDB_ARGS
+      value: --data-checksums
+    - name: POSTGRES_PASSWORD_FILE
+      value: /etc/postgres-secret-volume/password
+    image: docker.io/library/postgres:16.1
+    livenessProbe:
+      exec:
+        command:
+        - pg_isready
+      periodSeconds: 1
+    name: postgres
+    ports:
+    - containerPort: 5432
+    resources:
+      limits:
+        cpu: "4"
+        memory: 1Gi
+    securityContext:
+      runAsGroup: 999
+      runAsUser: 999
+    startupProbe:
+      exec:
+        command:
+        - pg_isready
+      failureThreshold: 30
+      periodSeconds: 1
+    volumeMounts:
+    - mountPath: /var/lib/postgresql/data
+      name: postgres-volume
+    - mountPath: /etc/postgres-secret-volume
+      name: postgres-secret-volume
+      readOnly: true
+  restartPolicy: OnFailure
+  volumes:
+  - name: postgres-secret-volume
+    secret:
+      secretName: tmppostgres-secret
+  - name: postgres-volume
+    persistentVolumeClaim:
+      claimName: tmppostgres-claim
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    io.podman.annotations.userns: keep-id
+  name: tmptest
+spec:
+  containers:
+  - env:
+    - name: RUST_LOG
+      value: trace,tokio_tungstenite=debug,tungstenite=debug,firefox=debug
+    image: test
+    name: test
+    resources:
+      limits:
+        cpu: "4"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 512Mi
+    securityContext:
+      runAsGroup: 1000
+      runAsUser: 1000
+    volumeMounts:
+    - mountPath: /bin/test
+      name: test-binary
+      readOnly: true
+    - mountPath: /run/user/1000/wayland-0
+      name: run-user-1000-wayland-0-host-0
+      readOnly: true
+    - mountPath: /dev/dri
+      name: dev-dri-host-1
+      readOnly: true
+  restartPolicy: Never
+  volumes:
+  - hostPath:
+      path: ../target/debug/TODO
+      type: File
+    name: test-binary
+  - hostPath:
+      path: /run/user/1000/wayland-0
+      type: File
+    name: run-user-1000-wayland-0-host-0
+  - hostPath:
+      path: /dev/dri
+      type: Directory
+    name: dev-dri-host-1

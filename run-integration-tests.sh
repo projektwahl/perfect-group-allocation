@@ -2,6 +2,7 @@
 set -o errexit   # abort on nonzero exitstatus
 set -o nounset   # abort on unbound variable
 set -o pipefail  # don't hide errors within pipes
+set -x
 
 PREFIX=tmp
 # we should be able to use one keycloak for multiple tests
@@ -33,10 +34,10 @@ rm -f kustomization.yaml kubernetes.yaml && kustomize create
 kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
 if [ "${1-}" == "keycloak" ]; then
-    sudo podman build -t keycloak --file ../deployment/kustomize/keycloak/Dockerfile ..
+    sudo podman build -t keycloak --file ./deployment/kustomize/keycloak/Dockerfile ..
 
     kustomize edit set nameprefix $KEYCLOAK_PREFIX
-    kustomize edit add resource ../deployment/kustomize/keycloak
+    kustomize edit add resource ./deployment/kustomize/keycloak
 
     CAROOT=$CAROOT mkcert tmp-keycloak
 
@@ -66,14 +67,14 @@ else
     echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 
     # git describe --always --long --dirty 
-    sudo podman build --build-arg BINARY=$SERVER_BINARY --file ../deployment/kustomize/base/perfect-group-allocation/Dockerfile ..
-    sudo podman build --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ../deployment/kustomize/base/test/Dockerfile ..
+    sudo podman build --build-arg BINARY=$SERVER_BINARY --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile ..
+    sudo podman build --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..
 
     kustomize edit set nameprefix $PREFIX
-    kustomize edit add resource ../deployment/kustomize/base
+    kustomize edit add resource ./deployment/kustomize/base/
 
     CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
-    kustomize edit add secret application-config --from-file=tls.cert=tmp-perfect-group-allocation.pem --from-file=tls.key=tmp-perfect-group-allocation-key.pem
+    #kustomize edit add secret application-config --from-file=tls.cert=./tmp-perfect-group-allocation.pem --from-file=tls.key=./tmp-perfect-group-allocation-key.pem
 
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || exit 0 # WARNING: this also removes volumes
