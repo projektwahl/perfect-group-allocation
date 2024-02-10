@@ -44,7 +44,7 @@ if [ "${1-}" == "keycloak" ]; then
     CAROOT=$CAROOT mkcert tmp-keycloak
 
     kustomize build --output kubernetes.yaml
-    sudo podman kube down --force kubernetes.yaml || exit 0 # WARNING: this also removes volumes
+    sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     sudo podman kube play kuberetes.yaml
 
     echo waiting for keycloak
@@ -72,6 +72,8 @@ else
     sudo podman build --build-arg BINARY=$SERVER_BINARY --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile ..
     sudo podman build --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..
 
+    # TODO FIXME update image hashes
+
     kustomize edit set nameprefix $PREFIX
     kustomize edit add resource ../deployment/kustomize/base/
 
@@ -86,7 +88,7 @@ else
         --from-literal=url=https://tmp-perfect-group-allocation \
 
     kustomize build --output kubernetes.yaml
-    sudo podman kube down --force kubernetes.yaml || exit 0 # WARNING: this also removes volumes
+    sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     sudo podman kube play kubernetes.yaml
     sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation & # tmp-keycloak-tmp-keycloak tmp-postgres-postgres 
     exit $(sudo podman wait tmp-test-test)

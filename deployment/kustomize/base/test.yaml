@@ -24,9 +24,6 @@ spec:
         runAsGroup: 1000
         runAsUser: 1000
       volumeMounts:
-        - name: test-binary
-          mountPath: /bin/test
-          readOnly: true
         - mountPath: /run/user/1000/wayland-0
           name: run-user-1000-wayland-0-host-0
           readOnly: true
@@ -35,10 +32,6 @@ spec:
           readOnly: true
 
   volumes:
-    - name: test-binary
-      hostPath:
-        type: File
-        path: ../target/debug/TODO
     - hostPath:
         path: /run/user/1000/wayland-0
         type: File

@@ -77,6 +77,5 @@ spec:
       secret:
         secretName: keycloak-tls-cert
     - name: root-ca
-      hostPath:
-        type: File
-        path: TODO
+      configMap:
+        name: root-ca

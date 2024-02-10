@@ -29,9 +29,6 @@ spec:
         - name: secret-volume
           mountPath: "/run/secrets"
           readOnly: true
-        - name: server-binary
-          mountPath: "/bin/server"
-          readOnly: true
         - name: root-ca
           mountPath: "/run/rootCA.pem"
           readOnly: true
@@ -57,11 +54,6 @@ spec:
     - name: secret-volume
       secret:
         secretName: application-config
-    - name: server-binary
-      hostPath:
-        type: File
-        path: TODO/target/debug/server
     - name: root-ca
-      hostPath:
-        type: File
-        path: TODO
+      configMap:
+        name: root-ca
