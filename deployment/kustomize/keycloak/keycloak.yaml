@@ -1,10 +1,3 @@
-# podman kube --help
-# man podman-kube-play
-# cd deployment/play # this is important so the image build works
-# podman kube play --replace keycloak.yaml
-# podman logs keycloak-keycloak
-# https://github.com/containers/podman/blob/main/docs/kubernetes_support.md?plain=1
-# podman stats
 apiVersion: v1
 kind: Pod
 metadata:
@@ -16,10 +9,10 @@ spec:
   securityContext:
     sysctls:
       - name: net.ipv4.ip_unprivileged_port_start
-        value: "443"
+        value: "0"
   containers:
     - name: tmp-keycloak
-      image: f336431979b409adf3e84f0c7b08ebc81dcecd0a2e0fee06da6f5806f0b3fc55
+      image: keycloak
       env:
         - name: KC_DB_URL
           value: jdbc:postgresql://postgres/postgres
@@ -51,7 +44,6 @@ spec:
       ports:
         - containerPort: 443
       startupProbe:
-        # for kubernetes use an http check and don't bundle curl with the container.
         exec:
           command:
             - "curl"
@@ -60,7 +52,6 @@ spec:
             - "https://tmp-keycloak/health/started"
         periodSeconds: 1
         failureThreshold: 30
-      # https://www.keycloak.org/server/health
       livenessProbe:
         exec:
           command:
@@ -78,13 +69,9 @@ spec:
             - "https://tmp-keycloak/health/ready"
         periodSeconds: 1
       resources:
-        requests:
-          memory: "512Mi"
-          cpu: "1"
         limits:
           memory: "1Gi"
           cpu: "4"
-
   volumes:
     - name: keycloak-tls-cert-volume
       secret:
@@ -93,5 +80,3 @@ spec:
       hostPath:
         type: File
         path: TODO
----
-# mkcert keycloak.localhost

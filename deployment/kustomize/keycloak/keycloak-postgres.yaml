@@ -1,24 +1,17 @@
-# podman kube --help
-# man podman-kube-play
-# podman kube play --replace deployment/play/postgres.yaml
-# https://github.com/containers/podman/blob/main/docs/kubernetes_support.md?plain=1
-# podman stats
-
-# podman secret ls
 apiVersion: v1
 kind: Secret
 metadata:
-  name: postgres-secret
+  name: keycloak-postgres-secret
 type: Opaque
 stringData:
-  password: bestpassword # TODO FIXME don't put this here
+  password: keycloak-bestpassword # TODO FIXME don't put this here, maybe use tls authentication with the postgres cert?
 ---
 apiVersion: v1
 kind: Pod
 metadata:
   name: postgres
   annotations:
-    io.podman.annotations.infra.name: postgres-infra
+    io.podman.annotations.infra.name: keycloak-postgres-infra
 spec:
   restartPolicy: OnFailure
   containers:
@@ -30,15 +23,13 @@ spec:
       env:
         - name: "POSTGRES_INITDB_ARGS"
           value: "--data-checksums"
-          # maybe switch to mtls at some point?
-          # https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume
         - name: "POSTGRES_PASSWORD_FILE"
-          value: "/etc/postgres-secret-volume/password"
+          value: "/etc/keycloak-postgres-secret-volume/password"
       volumeMounts:
         - mountPath: "/var/lib/postgresql/data"
-          name: postgres-volume
-        - name: postgres-secret-volume
-          mountPath: "/etc/postgres-secret-volume"
+          name: keycloak-postgres-volume
+        - name: keycloak-postgres-secret-volume
+          mountPath: "/etc/keycloak-postgres-secret-volume"
           readOnly: true
       ports:
         - containerPort: 5432
@@ -54,24 +45,21 @@ spec:
             - pg_isready
         periodSeconds: 1
       resources:
-        requests:
-          memory: "512Mi"
-          cpu: "1"
         limits:
           memory: "1Gi"
           cpu: "4"
   volumes:
-    - name: postgres-secret-volume
+    - name: keycloak-postgres-secret-volume
       secret:
-        secretName: postgres-secret
-    - name: postgres-volume
+        secretName: keycloak-postgres-secret
+    - name: keycloak-postgres-volume
       persistentVolumeClaim:
-        claimName: postgres-claim
+        claimName: keycloak-postgres-claim
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: postgres-claim
+  name: keycloak-postgres-claim
 spec:
   storageClassName: local-storage
   accessModes:
