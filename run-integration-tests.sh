@@ -20,14 +20,6 @@ CAROOT=$PWD
 CAROOT=$CAROOT mkcert -CAROOT
 CAROOT=$CAROOT mkcert -install # to allow local testing
 
-cargo build --bin server
-SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
-echo "Compiled server binary: $SERVER_BINARY"
-
-cargo build --test webdriver
-INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
-echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
-
 # we need to use rootful podman to get routable ip addresses.
 
 # https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
@@ -37,9 +29,9 @@ echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 # ping tmp-perfect-group-allocation
 
 if [ "${1-}" == "keycloak" ]; then
-    rm -f kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/keycloak
+    sudo podman build -t keycloak --file ../deployment/kustomize/keycloak/Dockerfile ..
 
-    sudo podman build -t keycloak --file deployment/kustomize/keycloak/Dockerfile deployment/kustomize
+    rm -f kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/keycloak
 
     # https://kubectl.docs.kubernetes.io/references/kustomize/
     # https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
@@ -79,11 +71,20 @@ if [ "${1-}" == "keycloak" ]; then
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
 else
+    cargo build --bin server
+    SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
+    echo "Compiled server binary: $SERVER_BINARY"
+
+    cargo build --test webdriver
+    INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
+    echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
+
+    sudo podman build -t perfect-group-allocation --build-arg BINARY=$SERVER_BINARY --file ../deployment/kustomize/base/perfect-group-allocation/Dockerfile ..
+    sudo podman build -t test --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ../deployment/kustomize/base/test/Dockerfile ..
 
     rm -f kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/base
 
-    sudo podman build -t perfect-group-allocation --file deployment/kustomize/base/perfect-group-allocation/Dockerfile deployment/kustomize
-    sudo podman build -t test --file deployment/kustomize/base/test/Dockerfile deployment/kustomize
+
 
     CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
     kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}' # maybe we should build container instead

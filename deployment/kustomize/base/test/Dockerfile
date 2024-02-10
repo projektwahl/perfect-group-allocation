@@ -1,6 +1,8 @@
 # to get latest firefox and chromium
 FROM docker.io/library/debian:sid-slim
 
+ARG BINARY
+
 RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver
 
 # use your user id and group id
@@ -17,6 +19,7 @@ USER test
 ENV WAYLAND_DISPLAY=wayland-0
 ENV XDG_RUNTIME_DIR=/run/user/1000
 
+COPY ${BINARY} /bin/test
 ENTRYPOINT ["/bin/test"]
 CMD ["--nocapture"]
 
