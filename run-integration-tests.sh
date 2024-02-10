@@ -7,10 +7,6 @@ set -x
 # we should be able to use one keycloak for multiple tests.
 KEYCLOAK_PREFIX=keycloak-tmp-
 
-# exit the backgrounded jobs
-trap "exit" INT TERM ERR
-trap "kill 0" EXIT
-
 mkdir -p tmp
 cd tmp
 

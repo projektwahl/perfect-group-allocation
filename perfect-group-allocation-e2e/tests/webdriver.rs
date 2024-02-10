@@ -53,6 +53,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
     let prefix = "test-";
 
+    // we need to convince the browser dns that this is correct
     let url = format!("https://{prefix}perfect-group-allocation.dns.podman");
 
     // PREFIX=e ./run-integration-tests.sh
