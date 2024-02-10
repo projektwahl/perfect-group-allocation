@@ -3,31 +3,22 @@ set -o errexit   # abort on nonzero exitstatus
 set -o nounset   # abort on unbound variable
 set -o pipefail  # don't hide errors within pipes
 
+PREFIX=tmp
+# we should be able to use one keycloak for multiple tests
+KEYCLOAK_PREFIX=tmp
+
 function cleanup {
     echo cleanup up pods
 }
 
 #trap cleanup EXIT INT
 
-# use a tls secret if possible?
-# helm template --set-file cert=test.cert .
-# helm template . | sudo podman kube play --replace -
-# helm template ./perfect-group-allocation | sudo podman kube play --replace -
-# https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
+mkdir -p tmp
+cd tmp
 
-rm -R tmp/kustomize
-mkdir -p tmp/certs
-mkdir -p tmp/kustomize
-cp -r deployment/kustomize/* tmp/kustomize
-
-# don't rotate ca cert so we can keep keycloak running
-cd tmp/certs
-export CAROOT=$PWD
+CAROOT=$PWD
 CAROOT=$CAROOT mkcert -CAROOT
 CAROOT=$CAROOT mkcert -install # to allow local testing
-cd ../..
-
-cd tmp/kustomize
 
 cargo build --bin server
 SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
@@ -45,11 +36,10 @@ echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
 
-# maybe use some basic helm instead? I think all this patching is not nice
 if [ "${1-}" == "keycloak" ]; then
-    sudo podman build -t keycloak --file keycloak/keycloak/Dockerfile .
-    sudo podman build -t perfect-group-allocation --file base/perfect-group-allocation/Dockerfile .
-    sudo podman build -t test --file base/test/Dockerfile .
+    rm kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/keycloak
+
+    sudo podman build -t keycloak --file deployment/kustomize/keycloak/Dockerfile deployment/kustomize
 
     # https://kubectl.docs.kubernetes.io/references/kustomize/
     # https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
@@ -70,16 +60,17 @@ if [ "${1-}" == "keycloak" ]; then
     # sudo podman stop tmp-keycloak-tmp-keycloak
     # sudo podman start tmp-keycloak-tmp-keycloak && sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
 
-    (cd keycloak && CAROOT=$CAROOT mkcert tmp-keycloak)
-    (cd keycloak && kustomize edit set nameprefix tmp-)
-    (cd keycloak && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}') # it would be nice if we would only need to specify this once
-    (cd keycloak && kustomize build --output kubernetes.yaml)
-    (cd keycloak && sudo podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
-    (cd keycloak && sudo podman kube play kubernetes.yaml)
+    CAROOT=$CAROOT mkcert tmp-keycloak
+
+    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}' # it would be nice if we would only need to specify this once
+    
+    kustomize build --output kubernetes.yaml
+    sudo podman kube down --force kubernetes.yaml || exit 0 # WARNING: this also removes volumes
+    sudo podman kube play kuberetes.yaml
+
     echo waiting for keycloak
     sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
     echo keycloak started
-    # can we use import feature instead as this is super slow?
     sudo podman exec tmp-keycloak-tmp-keycloak keytool -noprompt -import -file /run/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://tmp-keycloak --realm master --user admin --password admin
@@ -87,15 +78,21 @@ if [ "${1-}" == "keycloak" ]; then
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
-fi
+else
 
-(cd base && CAROOT=$CAROOT mkcert tmp-perfect-group-allocation)
-(cd base && kustomize edit set nameprefix tmp-)
-(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}')
-(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
-(cd base && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"server-binary","hostPath":{"path":"'"$SERVER_BINARY"'"}}]}}')
-(cd base && kustomize build --output kubernetes.yaml)
-(cd base && sudo podman kube down --force kubernetes.yaml || exit 0) # WARNING: this also removes volumes
-(cd base && sudo podman kube play kubernetes.yaml)
-sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation & # tmp-keycloak-tmp-keycloak tmp-postgres-postgres 
-exit $(sudo podman wait tmp-test-test)
+    rm kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/base
+
+    sudo podman build -t perfect-group-allocation --file deployment/kustomize/base/perfect-group-allocation/Dockerfile deployment/kustomize
+    sudo podman build -t test --file deployment/kustomize/base/test/Dockerfile deployment/kustomize
+
+    CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
+    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}'
+    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}'
+    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"server-binary","hostPath":{"path":"'"$SERVER_BINARY"'"}}]}}'
+    kustomize build --output kubernetes.yaml
+    sudo podman kube down --force kubernetes.yaml || exit 0 # WARNING: this also removes volumes
+    sudo podman kube play kubernetes.yaml
+    sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation & # tmp-keycloak-tmp-keycloak tmp-postgres-postgres 
+    exit $(sudo podman wait tmp-test-test)
+
+fi
