@@ -36,16 +36,20 @@ rm -f kustomization.yaml kubernetes.yaml && kustomize create
 kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
 if [ "${1-}" == "keycloak" ]; then
-    sudo podman build -t keycloak --file ./deployment/kustomize/keycloak/Dockerfile ..
+    KEYCLOAK_IMAGE=$(sudo podman build --quiet --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
 
     kustomize edit set nameprefix $KEYCLOAK_PREFIX
-    kustomize edit add resource ./deployment/kustomize/keycloak
+    kustomize edit add resource ../deployment/kustomize/keycloak
+    kustomize edit add secret keycloak-tls-cert \
+        --type=kubernetes.io/tls \
+        --from-file=tls.cert=./tmp-keycloak.pem \
+        --from-file=tls.key=./tmp-keycloak-key.pem
 
     CAROOT=$CAROOT mkcert tmp-keycloak
 
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
-    sudo podman kube play kuberetes.yaml
+    sudo podman kube play kubernetes.yaml
 
     echo waiting for keycloak
     sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
