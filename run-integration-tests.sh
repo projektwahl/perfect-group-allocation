@@ -51,6 +51,16 @@ if [ "${1-}" == "keycloak" ]; then
     sudo podman build -t perfect-group-allocation --file base/perfect-group-allocation/Dockerfile .
     sudo podman build -t test --file base/test/Dockerfile .
 
+    # https://kubectl.docs.kubernetes.io/references/kustomize/
+    # https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+    # we should definitely use a tool that understands about the semantics of merging different config parts or is at least not as bad as helm
+    # https://kubectl.docs.kubernetes.io/guides/config_management/components/ looks really interesting because we also want to enable and disable some components (like keycloak)
+    # valueFrom probably also really interesting
+    # https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
+    # https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/
+    # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#environment-variables
+    # all these *From look really interesting
+
     (cd keycloak && CAROOT=$CAROOT mkcert tmp-keycloak)
     (cd keycloak && kustomize edit set nameprefix tmp-)
     (cd keycloak && kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}')
