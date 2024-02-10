@@ -54,16 +54,17 @@ if [ "${1-}" == "keycloak" ]; then
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     sudo podman kube play --replace kubernetes.yaml
 
+    sudo podman logs --color --names --follow ${KEYCLOAK_PREFIX}keycloak-keycloak &
     echo waiting for keycloak
-    sudo podman wait --condition healthy ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak
+    sudo podman wait --condition healthy ${KEYCLOAK_PREFIX}keycloak-keycloak
     echo keycloak started
-    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
-    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
-    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://${KEYCLOAK_PREFIX}keycloak --realm master --user admin --password admin
-    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
-    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
-    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
-    sudo podman exec ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
+    sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
+    sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
+    sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://${KEYCLOAK_PREFIX}keycloak --realm master --user admin --password admin
+    sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
+    sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
+    sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
+    sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
 else
     cargo build --bin server
     SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
@@ -99,7 +100,7 @@ else
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     sudo podman kube play --replace kubernetes.yaml
-    sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation ${KEYCLOAK_PREFIX}${KEYCLOAK_PREFIX}keycloak & #  tmp-postgres-postgres 
+    sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & #  tmp-postgres-postgres 
     (exit $(sudo podman wait tmp-test-test))
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
 fi
