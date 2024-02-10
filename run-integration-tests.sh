@@ -37,7 +37,7 @@ echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 # ping tmp-perfect-group-allocation
 
 if [ "${1-}" == "keycloak" ]; then
-    rm kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/keycloak
+    rm -f kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/keycloak
 
     sudo podman build -t keycloak --file deployment/kustomize/keycloak/Dockerfile deployment/kustomize
 
@@ -80,13 +80,13 @@ if [ "${1-}" == "keycloak" ]; then
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
 else
 
-    rm kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/base
+    rm -f kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/base
 
     sudo podman build -t perfect-group-allocation --file deployment/kustomize/base/perfect-group-allocation/Dockerfile deployment/kustomize
     sudo podman build -t test --file deployment/kustomize/base/test/Dockerfile deployment/kustomize
 
     CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
-    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}'
+    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}' # maybe we should build container instead
     kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}'
     kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"server-binary","hostPath":{"path":"'"$SERVER_BINARY"'"}}]}}'
     kustomize build --output kubernetes.yaml
