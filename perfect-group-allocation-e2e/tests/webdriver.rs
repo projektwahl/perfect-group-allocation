@@ -39,10 +39,15 @@ pub async fn run_test() {
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     tracing_subscriber::fmt::init();
 
-    // before all tests you need to run ./run-integration-tests.sh keycloak
+    // at some point you need to run ./run-integration-tests.sh keycloak
     // to start the global keycloak instance
 
-    let url = "TODO".to_owned();
+    // then once before all tests you need to run ./run-integration-tests.sh prepare
+    // to update the code that is going to be deployed
+
+    let PREFIX = "test-";
+
+    let url = format!("https://{PREFIX}perfect-group-allocation.dns.podman");
 
     // TODO FIXME add network slowdown for testing
     // TODO FIXME use user contexts for cookie isolation

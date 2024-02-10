@@ -83,14 +83,13 @@ elif [ "${1-}" == "prepare" ]; then
     kustomize edit set image perfect-group-allocation=sha256:$SERVER_IMAGE
     TEST_IMAGE=$(sudo podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
     kustomize edit set image test=sha256:$TEST_IMAGE
-    kustomize edit add resource ../deployment/kustomize/base/
 else
     # TODO FIXME copy to tmp folder
     KTMP=$(mktemp -d)
-    cp kustomize.yaml $KTMP/
-    cp client-secret $KTMP/
+    cp ./{kustomization.yaml,client-secret,rootCA.pem} $KTMP/
     cd $KTMP
 
+    kustomize edit add resource ../../$CAROOT/../deployment/kustomize/base/
     kustomize edit set nameprefix $PREFIX
 
     CAROOT=$CAROOT mkcert "${PREFIX}perfect-group-allocation" # maybe use a wildcard certificate instead? to speed this up
@@ -106,7 +105,8 @@ else
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     sudo podman kube play --replace kubernetes.yaml
-    sudo podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres 
-    (exit $(sudo podman wait ${PREFIX}test-test))
-    sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
+    #echo https://${PREFIX}perfect-group-allocation.dns.podman
+    #sudo podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
+    #(exit $(sudo podman wait ${PREFIX}test-test))
+    #sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
 fi
