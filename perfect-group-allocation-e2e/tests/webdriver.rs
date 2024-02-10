@@ -2,6 +2,7 @@ use std::panic::AssertUnwindSafe;
 use std::time::Duration;
 
 use futures_util::FutureExt;
+use perfect_group_allocation_config::get_config;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde_json::json;
@@ -31,7 +32,6 @@ use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 pub async fn run_test() {
     let result = AssertUnwindSafe(test()).catch_unwind().await;
     println!("{:?}", result);
-    tokio::time::sleep(Duration::from_secs(3600)).await;
 }
 
 // cargo test -p perfect-group-allocation-e2e --test webdriver
@@ -39,10 +39,12 @@ pub async fn run_test() {
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     tracing_subscriber::fmt::init();
 
+    let (_watcher, config) = get_config().await.unwrap();
+
     // TODO FIXME add network slowdown for testing
     // TODO FIXME use user contexts for cookie isolation
 
-    let driver = WebDriver::new(Browser::Firefox).await?;
+    let driver = WebDriver::new(Browser::Chromium).await?;
     let _session = driver
         .send_command(
             SendCommand::SessionNew,
@@ -52,8 +54,8 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                         // https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities/firefoxOptions
                         // https://chromedriver.chromium.org/capabilities
                         always_match: Some(CapabilityRequest {
-                            browser_name: Some("firefox".to_owned()), // Some("chrome".to_owned()),
-                            /*extensible: Extensible(
+                            browser_name: Some("chrome".to_owned()), // Some("firefox".to_owned()),
+                            extensible: Extensible(
                                 json!({
                                     "goog:chromeOptions": {
                                         "args": ["--ozone-platform=wayland"]
@@ -62,17 +64,17 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                                 .as_object()
                                 .unwrap()
                                 .to_owned(),
-                            ),*/
-                            extensible: Extensible(
+                            ),
+                            /*extensible: Extensible(
                                 json!({
                                     "moz:firefoxOptions": {
-                                        //"log": {"level": "trace"}
+                                    //"log": {"level": "trace"}
                                     }
                                 })
                                 .as_object()
                                 .unwrap()
                                 .to_owned(),
-                            ),
+                            ),*/
                             accept_insecure_certs: Some(true),
                             browser_version: None,
                             platform_name: None,
@@ -111,7 +113,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             browsing_context::navigate::Command {
                 params: browsing_context::navigate::Parameters {
                     context: browsing_context.clone(),
-                    url: "https://tmp-perfect-group-allocation".to_owned(),
+                    url: config.borrow().url.clone(),
                     wait: Some(browsing_context::ReadinessState::Complete),
                 },
             },
@@ -236,9 +238,14 @@ pub async fn send_keys(
                     context: browsing_context.clone(),
                     actions: vec![SourceActions::Key(KeySourceActions {
                         id: rand_string,
-                        actions: vec![KeySourceAction::KeyDown(KeyDownAction {
-                            value: text.to_owned(),
-                        })],
+                        actions: text
+                            .chars()
+                            .flat_map(|c| {
+                                vec![KeySourceAction::KeyDown(KeyDownAction {
+                                    value: c.to_string(),
+                                })]
+                            })
+                            .collect(),
                     })],
                 },
             },

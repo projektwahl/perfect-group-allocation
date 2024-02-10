@@ -101,6 +101,7 @@ impl ResponseSessionExt for hyper::http::response::Builder {
                 .same_site(cookie::SameSite::Strict)
                 .secure(true)
                 .http_only(true)
+                .path("/")
                 .build();
             this = this.header(
                 SET_COOKIE,
@@ -120,6 +121,7 @@ impl ResponseSessionExt for hyper::http::response::Builder {
                         .same_site(cookie::SameSite::Lax)
                         .secure(true)
                         .http_only(true)
+                        .path("/")
                         .build()
                 },
             );
@@ -141,6 +143,7 @@ impl ResponseSessionExt for hyper::http::response::Builder {
                         .same_site(cookie::SameSite::Lax)
                         .secure(true)
                         .http_only(true)
+                        .path("/")
                         .build()
                 },
             );

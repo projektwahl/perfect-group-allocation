@@ -9,6 +9,8 @@ spec:
   restartPolicy: Never
   containers:
     - env:
+        - name: PGA_CONFIG_DIR
+          value: /run/secrets
         - name: RUST_LOG
           value: trace,tokio_tungstenite=debug,tungstenite=debug,firefox=debug
       image: test:NOTFOUND
@@ -24,6 +26,9 @@ spec:
         runAsGroup: 1000
         runAsUser: 1000
       volumeMounts:
+        - name: secret-volume
+          mountPath: "/run/secrets"
+          readOnly: true
         - mountPath: /run/user/1000/wayland-0
           name: run-user-1000-wayland-0-host-0
           readOnly: true
@@ -32,6 +37,9 @@ spec:
           readOnly: true
 
   volumes:
+    - name: secret-volume
+      secret:
+        secretName: application-config
     - hostPath:
         path: /run/user/1000/wayland-0
         type: File
