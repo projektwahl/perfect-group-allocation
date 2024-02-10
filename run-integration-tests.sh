@@ -15,6 +15,8 @@ function cleanup {
 }
 
 #trap cleanup EXIT INT
+trap "exit" INT TERM ERR
+trap "kill 0" EXIT
 
 mkdir -p tmp
 cd tmp
@@ -54,7 +56,8 @@ if [ "${1-}" == "keycloak" ]; then
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     sudo podman kube play --replace kubernetes.yaml
 
-    sudo podman logs --color --names --follow ${KEYCLOAK_PREFIX}keycloak-keycloak &
+    reset
+    sudo podman logs --follow ${KEYCLOAK_PREFIX}keycloak-keycloak &
     echo waiting for keycloak
     sudo podman wait --condition healthy ${KEYCLOAK_PREFIX}keycloak-keycloak
     echo keycloak started
@@ -64,7 +67,10 @@ if [ "${1-}" == "keycloak" ]; then
     sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
     sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
     sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
-    sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
+    # TODO FIXME the redirect url is different
+    # https://github.com/keycloak/keycloak/discussions/9278
+    echo DO NOT RUN THIS IN PRODUCTION!!!
+    sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["*"]'
 else
     cargo build --bin server
     SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
@@ -87,20 +93,20 @@ else
     kustomize edit set nameprefix $PREFIX
     kustomize edit add resource ../deployment/kustomize/base/
 
-    CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
+    CAROOT=$CAROOT mkcert "${PREFIX}perfect-group-allocation"
     kustomize edit add secret application-config \
-        --from-file=tls.crt=./tmp-perfect-group-allocation.pem \
-        --from-file=tls.key=./tmp-perfect-group-allocation-key.pem \
+        --from-file=tls.crt=./${PREFIX}perfect-group-allocation.pem \
+        --from-file=tls.key=./${PREFIX}perfect-group-allocation-key.pem \
         --from-file=openidconnect.client_secret=./client-secret \
         --from-literal=openidconnect.client_id=pga \
         --from-literal=openidconnect.issuer_url=https://${KEYCLOAK_PREFIX}keycloak/realms/pga \
         --from-literal="database_url=postgres://postgres@postgres/pga?sslmode=disable" \
-        --from-literal=url=https://tmp-perfect-group-allocation \
+        --from-literal=url=https://${PREFIX}perfect-group-allocation.dns.podman \
 
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     sudo podman kube play --replace kubernetes.yaml
-    sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & #  tmp-postgres-postgres 
-    (exit $(sudo podman wait tmp-test-test))
+    sudo podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres 
+    (exit $(sudo podman wait ${PREFIX}test-test))
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
 fi

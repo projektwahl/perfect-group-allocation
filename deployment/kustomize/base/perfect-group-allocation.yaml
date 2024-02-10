@@ -13,7 +13,7 @@ spec:
       - name: net.ipv4.ip_unprivileged_port_start
         value: "443"
   containers:
-    - name: tmp-perfect-group-allocation
+    - name: perfect-group-allocation
       image: perfect-group-allocation:NOTFOUND
       securityContext:
         runAsGroup: 1000
