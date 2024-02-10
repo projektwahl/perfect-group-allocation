@@ -4,17 +4,10 @@ set -o nounset   # abort on unbound variable
 set -o pipefail  # don't hide errors within pipes
 set -x
 
-PREFIX=tmp-
-# we should be able to use one keycloak for multiple tests. these prefixes should not be identical otherwise the rootca config map breaks when force removing volumes
+# we should be able to use one keycloak for multiple tests.
 KEYCLOAK_PREFIX=keycloak-tmp-
 
-# TODO env variables for domain names etc and at some point try deploying at my server
-
-function cleanup {
-    echo cleanup up pods
-}
-
-#trap cleanup EXIT INT
+# exit the backgrounded jobs
 trap "exit" INT TERM ERR
 trap "kill 0" EXIT
 
@@ -36,10 +29,10 @@ CAROOT=$CAROOT mkcert -install # to allow local testing
 
 echo -n myawesomeclientsecret > client-secret
 
-rm -f kustomization.yaml kubernetes.yaml && kustomize create
-kustomize edit add configmap root-ca --from-file=./rootCA.pem
-
 if [ "${1-}" == "keycloak" ]; then
+    rm -f kustomization.yaml kubernetes.yaml && kustomize create
+    kustomize edit add configmap root-ca --from-file=./rootCA.pem
+
     KEYCLOAK_IMAGE=$(sudo podman build --quiet --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
     kustomize edit set image keycloak=sha256:$KEYCLOAK_IMAGE
 
@@ -71,7 +64,10 @@ if [ "${1-}" == "keycloak" ]; then
     # https://github.com/keycloak/keycloak/discussions/9278
     echo DO NOT RUN THIS IN PRODUCTION!!!
     sudo podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["*"]'
-else
+elif [ "${1-}" == "prepare" ]; then
+    rm -f kustomization.yaml kubernetes.yaml && kustomize create
+    kustomize edit add configmap root-ca --from-file=./rootCA.pem
+
     cargo build --bin server
     SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
     SERVER_BINARY=$(realpath --relative-to=.. $SERVER_BINARY)
@@ -87,13 +83,17 @@ else
     kustomize edit set image perfect-group-allocation=sha256:$SERVER_IMAGE
     TEST_IMAGE=$(sudo podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
     kustomize edit set image test=sha256:$TEST_IMAGE
-
-    # TODO FIXME update image hashes
+    kustomize edit add resource ../deployment/kustomize/base/
+else
+    # TODO FIXME copy to tmp folder
+    KTMP=$(mktemp -d)
+    cp kustomize.yaml $KTMP/
+    cp client-secret $KTMP/
+    cd $KTMP
 
     kustomize edit set nameprefix $PREFIX
-    kustomize edit add resource ../deployment/kustomize/base/
 
-    CAROOT=$CAROOT mkcert "${PREFIX}perfect-group-allocation"
+    CAROOT=$CAROOT mkcert "${PREFIX}perfect-group-allocation" # maybe use a wildcard certificate instead? to speed this up
     kustomize edit add secret application-config \
         --from-file=tls.crt=./${PREFIX}perfect-group-allocation.pem \
         --from-file=tls.key=./${PREFIX}perfect-group-allocation-key.pem \

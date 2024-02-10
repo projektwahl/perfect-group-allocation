@@ -39,7 +39,10 @@ pub async fn run_test() {
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     tracing_subscriber::fmt::init();
 
-    let (_watcher, config) = get_config().await.unwrap();
+    // before all tests you need to run ./run-integration-tests.sh keycloak
+    // to start the global keycloak instance
+
+    let url = "TODO".to_owned();
 
     // TODO FIXME add network slowdown for testing
     // TODO FIXME use user contexts for cookie isolation
@@ -113,7 +116,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
             browsing_context::navigate::Command {
                 params: browsing_context::navigate::Parameters {
                     context: browsing_context.clone(),
-                    url: config.borrow().url.clone(),
+                    url,
                     wait: Some(browsing_context::ReadinessState::Complete),
                 },
             },
