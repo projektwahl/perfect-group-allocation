@@ -2,6 +2,8 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# https://stackoverflow.com/questions/71938542/how-to-merge-named-templates-in-helm
+
 replicaCount: 1
 
 image:

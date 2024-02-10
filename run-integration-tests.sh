@@ -13,8 +13,8 @@ function cleanup {
 
 #trap cleanup EXIT INT
 
-mkdir -p tmp
-cd tmp
+#mkdir -p tmp
+#cd tmp
 
 CAROOT=$PWD
 CAROOT=$CAROOT mkcert -CAROOT
@@ -24,38 +24,22 @@ CAROOT=$CAROOT mkcert -install # to allow local testing
 
 # https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 
-# sudo podman inspect perfect-group-allocation-infra | jq ".[].NetworkSettings.Networks.[].IPAddress"
+# in comparison to helm, kustomize has proper semantic merging
+
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
+
+rm -f kustomization.yaml kubernetes.yaml && kustomize create
+kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
 if [ "${1-}" == "keycloak" ]; then
     sudo podman build -t keycloak --file ../deployment/kustomize/keycloak/Dockerfile ..
 
-    rm -f kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/keycloak
-
-    # https://kubectl.docs.kubernetes.io/references/kustomize/
-    # https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
-    # we should definitely use a tool that understands about the semantics of merging different config parts or is at least not as bad as helm
-    # https://kubectl.docs.kubernetes.io/guides/config_management/components/ looks really interesting because we also want to enable and disable some components (like keycloak)
-    # valueFrom probably also really interesting
-    # https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
-    # https://kubernetes.io/docs/tasks/inject-data-application/define-interdependent-environment-variables/
-    # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#environment-variables
-    # all these *From look really interesting
-    # potentially best doc https://github.com/kubernetes-sigs/kustomize
-    # because website seems outdated?
-    # https://github.com/kubernetes-sigs/kustomize/blob/master/cmd/config/docs/commands/merge3.md
-    # https://github.com/kubernetes-sigs/kustomize/tree/master/site/content/en/docs/Reference/API/
-    # we have a fixed but changing domain name so probably not useful. we could use one keycloak for all instances though? I think that would make sense. and then use a separate postgres for keycloak
-    # sudo podman container checkpoint --tcp-established tmp-keycloak-tmp-keycloak
-    # sudo podman container restore --tcp-established --keep tmp-keycloak-tmp-keycloak && sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
-    # sudo podman stop tmp-keycloak-tmp-keycloak
-    # sudo podman start tmp-keycloak-tmp-keycloak && sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
+    kustomize edit set nameprefix $KEYCLOAK_PREFIX
+    kustomize edit add resource ../deployment/kustomize/keycloak
 
     CAROOT=$CAROOT mkcert tmp-keycloak
 
-    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"keycloak"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}' # it would be nice if we would only need to specify this once
-    
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || exit 0 # WARNING: this also removes volumes
     sudo podman kube play kuberetes.yaml
@@ -85,13 +69,12 @@ else
     sudo podman build --build-arg BINARY=$SERVER_BINARY --file ../deployment/kustomize/base/perfect-group-allocation/Dockerfile ..
     sudo podman build --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ../deployment/kustomize/base/test/Dockerfile ..
 
-    rm -f kustomization.yaml kubernetes.yaml && kustomize create --nameprefix $PREFIX --resources ../deployment/kustomize/base
-
+    kustomize edit set nameprefix $PREFIX
+    kustomize edit add resource ../deployment/kustomize/base
 
     CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
-    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"test"},"spec":{"volumes":[{"name":"test-binary","hostPath":{"path":"'"$INTEGRATION_TEST_BINARY"'"}}]}}' # maybe we should build container instead
-    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"root-ca","hostPath":{"path":"'"$CAROOT"'/rootCA.pem"}}]}}'
-    kustomize edit add patch --patch '{"apiVersion": "v1","kind": "Pod","metadata":{"name":"perfect-group-allocation"},"spec":{"volumes":[{"name":"server-binary","hostPath":{"path":"'"$SERVER_BINARY"'"}}]}}'
+    kustomize edit add secret application-config --from-file=tls.cert=tmp-perfect-group-allocation.pem --from-file=tls.key=tmp-perfect-group-allocation-key.pem
+
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || exit 0 # WARNING: this also removes volumes
     sudo podman kube play kubernetes.yaml
