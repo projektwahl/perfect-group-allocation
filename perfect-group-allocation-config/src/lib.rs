@@ -54,7 +54,7 @@ pub async fn reread_config(config_directory: &Path) -> Result<Config, ConfigErro
     let issuer_url = read_file(config_directory.join("openidconnect.issuer_url")).await?;
     let client_id = read_file(config_directory.join("openidconnect.client_id")).await?;
     let client_secret = read_file(config_directory.join("openidconnect.client_secret")).await?;
-    let cert = read_file(config_directory.join("tls.cert")).await?;
+    let cert = read_file(config_directory.join("tls.crt")).await?;
     let key = read_file(config_directory.join("tls.key")).await?;
 
     Ok(Config {

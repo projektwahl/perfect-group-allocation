@@ -39,7 +39,7 @@ spec:
           mountPath: "/run/secrets/tls-cert"
           readOnly: true
         - name: root-ca
-          mountPath: "/run/rootCA.pem"
+          mountPath: "/run/rootCA"
           readOnly: true
       ports:
         - containerPort: 443

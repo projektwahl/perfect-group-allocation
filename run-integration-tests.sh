@@ -44,7 +44,7 @@ if [ "${1-}" == "keycloak" ]; then
     kustomize edit add resource ../deployment/kustomize/keycloak
     kustomize edit add secret keycloak-tls-cert \
         --type=kubernetes.io/tls \
-        --from-file=tls.cert=./tmp-keycloak.pem \
+        --from-file=tls.crt=./tmp-keycloak.pem \
         --from-file=tls.key=./tmp-keycloak-key.pem
 
     CAROOT=$CAROOT mkcert tmp-keycloak
@@ -56,7 +56,7 @@ if [ "${1-}" == "keycloak" ]; then
     echo waiting for keycloak
     sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
     echo keycloak started
-    sudo podman exec tmp-keycloak-tmp-keycloak keytool -noprompt -import -file /run/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
+    sudo podman exec tmp-keycloak-tmp-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://tmp-keycloak --realm master --user admin --password admin
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
@@ -87,7 +87,7 @@ else
 
     CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
     kustomize edit add secret application-config \
-        --from-file=tls.cert=./tmp-perfect-group-allocation.pem \
+        --from-file=tls.crt=./tmp-perfect-group-allocation.pem \
         --from-file=tls.key=./tmp-perfect-group-allocation-key.pem \
         --from-file=openidconnect.client_secret=./client-secret \
         --from-literal=openidconnect.client_id=pga \

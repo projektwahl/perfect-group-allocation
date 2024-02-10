@@ -24,13 +24,13 @@ spec:
         - name: RUST_LOG
           value: info
         - name: SSL_CERT_FILE
-          value: /run/rootCA.pem
+          value: /run/rootCA/rootCA.pem
       volumeMounts:
         - name: secret-volume
           mountPath: "/run/secrets"
           readOnly: true
         - name: root-ca
-          mountPath: "/run/rootCA.pem"
+          mountPath: "/run/rootCA"
           readOnly: true
       #ports:
       #  - containerPort: 443
