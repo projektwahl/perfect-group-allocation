@@ -109,7 +109,7 @@ pub async fn my_http_client(
 
     // rustls has bad error messages
 
-    let stream = TcpStream::connect(addr).await.unwrap();
+    let stream = TcpStream::connect(addr).await.unwrap(); // TODO FIXME don't panic here
     let stream = TokioIo::new(stream);
 
     let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
