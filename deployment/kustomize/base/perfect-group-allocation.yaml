@@ -14,7 +14,7 @@ spec:
         value: "443"
   containers:
     - name: tmp-perfect-group-allocation
-      image: perfect-group-allocation # I think we should pin here so container restarts don't update the image?
+      image: perfect-group-allocation:NOTFOUND
       securityContext:
         runAsGroup: 1000
         runAsUser: 1000
