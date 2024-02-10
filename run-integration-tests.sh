@@ -14,8 +14,8 @@ function cleanup {
 
 #trap cleanup EXIT INT
 
-#mkdir -p tmp
-#cd tmp
+mkdir -p tmp
+cd tmp
 
 CAROOT=$PWD
 CAROOT=$CAROOT mkcert -CAROOT
@@ -29,6 +29,8 @@ CAROOT=$CAROOT mkcert -install # to allow local testing
 
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
+
+echo myawesomeclientsecret > client-secret
 
 rm -f kustomization.yaml kubernetes.yaml && kustomize create
 kustomize edit add configmap root-ca --from-file=./rootCA.pem
@@ -54,7 +56,7 @@ if [ "${1-}" == "keycloak" ]; then
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
     sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
-    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat base/client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
+    sudo podman exec tmp-keycloak-tmp-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://tmp-perfect-group-allocation/openidconnect-redirect"]'
 else
     cargo build --bin server
     SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
@@ -71,10 +73,17 @@ else
     sudo podman build --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..
 
     kustomize edit set nameprefix $PREFIX
-    kustomize edit add resource ./deployment/kustomize/base/
+    kustomize edit add resource ../deployment/kustomize/base/
 
     CAROOT=$CAROOT mkcert tmp-perfect-group-allocation
-    kustomize edit add secret application-config --from-file=tls.cert=./tmp-perfect-group-allocation.pem --from-file=tls.key=./tmp-perfect-group-allocation-key.pem
+    kustomize edit add secret application-config \
+        --from-file=tls.cert=./tmp-perfect-group-allocation.pem \
+        --from-file=tls.key=./tmp-perfect-group-allocation-key.pem \
+        --from-file=openidconnect.client_secret=./client-secret \
+        --from-literal=openidconnect.client_id=pga \
+        --from-literal=openidconnect.issuer_url=https://tmp-keycloak/realms/pga \
+        --from-literal="database_url=postgres://postgres@postgres/pga?sslmode=disable" \
+        --from-literal=url=https://tmp-perfect-group-allocation \
 
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || exit 0 # WARNING: this also removes volumes
