@@ -4,9 +4,11 @@ set -o nounset   # abort on unbound variable
 set -o pipefail  # don't hide errors within pipes
 set -x
 
-PREFIX=tmp
+PREFIX=tmp-
 # we should be able to use one keycloak for multiple tests
-KEYCLOAK_PREFIX=tmp
+KEYCLOAK_PREFIX=tmp-
+
+# TODO env variables for domain names etc and at some point try deploying at my server
 
 function cleanup {
     echo cleanup up pods
@@ -49,7 +51,7 @@ if [ "${1-}" == "keycloak" ]; then
 
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
-    sudo podman kube play kubernetes.yaml
+    sudo podman kube play --replace kubernetes.yaml
 
     echo waiting for keycloak
     sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
