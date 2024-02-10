@@ -19,7 +19,7 @@ spec:
         - name: KC_DB_USERNAME
           value: postgres
         - name: KC_DB_PASSWORD
-          value: bestpassword # FIXME don't put password here
+          value: keycloak-bestpassword # FIXME don't put password here, also configure from secret
         - name: KC_HOSTNAME
           value: tmp-keycloak
         - name: KC_HTTPS_PORT

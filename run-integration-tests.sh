@@ -67,6 +67,8 @@ if [ "${1-}" == "keycloak" ]; then
     # we have a fixed but changing domain name so probably not useful. we could use one keycloak for all instances though? I think that would make sense. and then use a separate postgres for keycloak
     # sudo podman container checkpoint --tcp-established tmp-keycloak-tmp-keycloak
     # sudo podman container restore --tcp-established --keep tmp-keycloak-tmp-keycloak && sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
+    # sudo podman stop tmp-keycloak-tmp-keycloak
+    # sudo podman start tmp-keycloak-tmp-keycloak && sudo podman wait --condition healthy tmp-keycloak-tmp-keycloak
 
     (cd keycloak && CAROOT=$CAROOT mkcert tmp-keycloak)
     (cd keycloak && kustomize edit set nameprefix tmp-)
