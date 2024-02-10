@@ -15,8 +15,6 @@ mkdir -p tmp
 cd tmp
 
 CAROOT=$PWD
-CAROOT=$CAROOT mkcert -CAROOT
-CAROOT=$CAROOT mkcert -install # to allow local testing
 
 # we need to use rootful podman to get routable ip addresses.
 
@@ -27,9 +25,12 @@ CAROOT=$CAROOT mkcert -install # to allow local testing
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
 
-echo -n myawesomeclientsecret > client-secret
-
 if [ "${1-}" == "keycloak" ]; then
+    echo -n myawesomeclientsecret > client-secret
+
+    CAROOT=$CAROOT mkcert -CAROOT
+    CAROOT=$CAROOT mkcert -install # to allow local testing
+
     rm -f kustomization.yaml kubernetes.yaml && kustomize create
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
@@ -73,18 +74,17 @@ elif [ "${1-}" == "prepare" ]; then
     SERVER_BINARY=$(realpath --relative-to=.. $SERVER_BINARY)
     echo "Compiled server binary: $SERVER_BINARY"
 
-    cargo build --test webdriver
-    INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
-    INTEGRATION_TEST_BINARY=$(realpath --relative-to=.. $INTEGRATION_TEST_BINARY)
-    echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
+    #cargo build --test webdriver
+    #INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
+    #INTEGRATION_TEST_BINARY=$(realpath --relative-to=.. $INTEGRATION_TEST_BINARY)
+    #echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 
     # git describe --always --long --dirty 
     SERVER_IMAGE=$(sudo podman build --quiet --build-arg BINARY=$SERVER_BINARY --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile ..)
     kustomize edit set image perfect-group-allocation=sha256:$SERVER_IMAGE
-    TEST_IMAGE=$(sudo podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
-    kustomize edit set image test=sha256:$TEST_IMAGE
+    #TEST_IMAGE=$(sudo podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
+    #kustomize edit set image test=sha256:$TEST_IMAGE
 else
-    # TODO FIXME copy to tmp folder
     KTMP=$(mktemp -d)
     cp ./{kustomization.yaml,client-secret,rootCA.pem} $KTMP/
     cd $KTMP
@@ -104,7 +104,7 @@ else
 
     kustomize build --output kubernetes.yaml
     sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
-    sudo podman kube play --replace kubernetes.yaml
+    sudo podman kube play kubernetes.yaml
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
     #sudo podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
     #(exit $(sudo podman wait ${PREFIX}test-test))

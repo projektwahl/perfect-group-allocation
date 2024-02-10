@@ -1,4 +1,5 @@
 use std::panic::AssertUnwindSafe;
+use std::path::Path;
 use std::time::Duration;
 
 use futures_util::FutureExt;
@@ -32,6 +33,7 @@ use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 pub async fn run_test() {
     let result = AssertUnwindSafe(test()).catch_unwind().await;
     println!("{:?}", result);
+    result.unwrap().unwrap();
 }
 
 // cargo test -p perfect-group-allocation-e2e --test webdriver
@@ -39,15 +41,28 @@ pub async fn run_test() {
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     tracing_subscriber::fmt::init();
 
-    // at some point you need to run ./run-integration-tests.sh keycloak
+    println!("test");
+
+    // at some point you need to run
+    // ./run-integration-tests.sh keycloak
     // to start the global keycloak instance
 
-    // then once before all tests you need to run ./run-integration-tests.sh prepare
+    // then once before all tests you need to run
+    // ./run-integration-tests.sh prepare
     // to update the code that is going to be deployed
 
-    let PREFIX = "test-";
+    let prefix = "test-";
 
-    let url = format!("https://{PREFIX}perfect-group-allocation.dns.podman");
+    let url = format!("https://{prefix}perfect-group-allocation.dns.podman");
+
+    // PREFIX=e ./run-integration-tests.sh
+    // needs sudo password
+    let mut child = tokio::process::Command::new("./run-integration-tests.sh")
+        .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join(".."))
+        .env("PREFIX", prefix)
+        .spawn()
+        .expect("failed to spawn");
+    let status = child.wait().await.unwrap();
 
     // TODO FIXME add network slowdown for testing
     // TODO FIXME use user contexts for cookie isolation
