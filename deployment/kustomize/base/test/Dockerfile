@@ -12,6 +12,10 @@ RUN groupadd -g $GROUP_ID test \
 
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown test:test /run/user/1000
 
+ARG CARGO_MANIFEST_DIR
+RUN mkdir -p ${CARGO_MANIFEST_DIR}
+COPY ./run-integration-tests.sh /${CARGO_MANIFEST_DIR}/../
+
 USER test
 
 ENV WAYLAND_DISPLAY=wayland-0
@@ -19,6 +23,7 @@ ENV XDG_RUNTIME_DIR=/run/user/1000
 
 ARG BINARY
 COPY ${BINARY} /bin/test
+WORKDIR ${CARGO_MANIFEST_DIR}
 ENTRYPOINT ["/bin/test"]
 CMD ["--nocapture"]
 
