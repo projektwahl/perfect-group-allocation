@@ -7,15 +7,15 @@ RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-drive
 ARG GROUP_ID=1000
 ARG USER_ID=1000
 
-RUN groupadd -g $GROUP_ID test \
-    && useradd -u $USER_ID -g $GROUP_ID -G audio,video,sudo -m test
+RUN groupadd -g $GROUP_ID moritz \
+    && useradd -u $USER_ID -g $GROUP_ID -G audio,video,sudo -m moritz
 
-RUN echo test:10000:5000 > /etc/subuid
-RUN echo test:10000:5000 > /etc/subgid
+RUN echo moritz:10000:5000 > /etc/subuid
+RUN echo moritz:10000:5000 > /etc/subgid
 
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown test:test /run/user/1000
+RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown moritz:moritz /run/user/1000
 
 ARG CARGO_MANIFEST_DIR
 RUN mkdir -p ${CARGO_MANIFEST_DIR}
@@ -23,15 +23,15 @@ COPY ./deployment /${CARGO_MANIFEST_DIR}/../deployment
 COPY ./run-integration-tests.sh /${CARGO_MANIFEST_DIR}/../
 # FIXME do this as late as possible
 COPY ./tmp /${CARGO_MANIFEST_DIR}/../tmp
-RUN chown -R test:test ${CARGO_MANIFEST_DIR}/../
+RUN chown -R moritz:moritz ${CARGO_MANIFEST_DIR}/../
 
 WORKDIR /bin
 RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
 RUN tar xzf kustomize_v5.3.0_linux_amd64.tar.gz
 
-USER test
+USER moritz
 RUN groups
- 
+
 ENV WAYLAND_DISPLAY=wayland-0
 ENV XDG_RUNTIME_DIR=/run/user/1000
 

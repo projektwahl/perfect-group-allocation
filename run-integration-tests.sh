@@ -64,6 +64,7 @@ if [ "${1-}" == "keycloak" ]; then
     echo DO NOT RUN THIS IN PRODUCTION!!!
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["*"]'
 elif [ "${1-}" == "prepare" ]; then
+    # TODO FIXME we need to get these into the container
     rm -f kustomization.yaml kubernetes.yaml && kustomize create
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
