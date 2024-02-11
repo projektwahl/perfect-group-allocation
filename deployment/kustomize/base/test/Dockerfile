@@ -10,6 +10,9 @@ ARG USER_ID=1000
 RUN groupadd -g $GROUP_ID test \
     && useradd -u $USER_ID -g $GROUP_ID -G audio,video,sudo -m test
 
+RUN echo test:10000:5000 > /etc/subuid
+RUN echo test:10000:5000 > /etc/subgid
+
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown test:test /run/user/1000
