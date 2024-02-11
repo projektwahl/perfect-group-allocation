@@ -7,6 +7,8 @@ set -x
 # we should be able to use one keycloak for multiple tests.
 KEYCLOAK_PREFIX=keycloak-tmp-
 
+echo "in $PWD"
+ls -la
 mkdir -p tmp
 cd tmp
 

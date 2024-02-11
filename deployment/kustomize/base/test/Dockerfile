@@ -1,7 +1,7 @@
 # to get latest firefox and chromium
-FROM docker.io/library/debian:sid-slim
+FROM docker.io/library/debian:sid
 
-RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver
+RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver curl mkcert
 
 # use your user id and group id
 ARG GROUP_ID=1000
@@ -14,7 +14,14 @@ RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown test:test /run/use
 
 ARG CARGO_MANIFEST_DIR
 RUN mkdir -p ${CARGO_MANIFEST_DIR}
+COPY ./deployment /${CARGO_MANIFEST_DIR}/../deployment
 COPY ./run-integration-tests.sh /${CARGO_MANIFEST_DIR}/../
+COPY ./tmp /${CARGO_MANIFEST_DIR}/../tmp
+RUN chown -R test:test ${CARGO_MANIFEST_DIR}/../
+
+WORKDIR /bin
+RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
+RUN tar xzf kustomize_v5.3.0_linux_amd64.tar.gz
 
 USER test
 
