@@ -1,9 +1,7 @@
 use std::process::Stdio;
 
-
-
 use futures::Future;
-use tempfile::{tempdir};
+use tempfile::tempdir;
 use tokio::io::{AsyncBufReadExt as _, BufReader};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tracing::{error, trace};
@@ -34,6 +32,8 @@ impl WebDriver {
             Browser::Firefox => {
                 // oh this path is the culprit?
 
+                // This here should use podman, so we don't need nested docker?
+                // the issue is that our other test needs the dns so we could probably either override dns?
                 let mut child = tokio::process::Command::new("firefox")
                     .kill_on_drop(true)
                     .args([

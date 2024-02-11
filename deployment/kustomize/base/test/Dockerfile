@@ -35,8 +35,8 @@ ENV XDG_RUNTIME_DIR=/run/user/1000
 ARG BINARY
 COPY ${BINARY} /bin/test
 WORKDIR ${CARGO_MANIFEST_DIR}
-ENTRYPOINT ["/bin/test"]
-CMD ["--nocapture"]
+#ENTRYPOINT ["/bin/test"]
+#CMD ["--nocapture"]
 
 # podman build -t test --file deployment/kustomize/base/test/Dockerfile . && podman run --device /dev/dri --userns=keep-id --user=$(id -u):$(id -g) -v /run/user/1000/wayland-0:/run/user/1000/wayland-0 test firefox
 

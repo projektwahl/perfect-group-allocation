@@ -201,3 +201,14 @@ use zed attack proxy to create some requests
 
 export DEBUGINFOD_URLS="https://debuginfod.archlinux.org"
 kcachegrind callgrind.out.110536
+
+# basic example of podman in podman
+
+this works:
+sudo podman system reset
+sudo podman run --privileged -it --rm debian:sid
+apt update && apt install -y podman curl
+podman run -it --rm debian:sid
+apt update
+
+so I can reproduce with our test image and sudo which is interesting
