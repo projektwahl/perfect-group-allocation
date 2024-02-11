@@ -48,4 +48,4 @@ spec:
       hostPath:
         path: /dev/dri
         type: Directory
-# podman --log-level=debug kube play --replace ../webdriver.yaml  &&  podman logs webdriver-pod-webdriver
+# podman --log-level=debug kube play --replace ../webdriver.yaml && podman logs webdriver-pod-webdriver
