@@ -26,15 +26,7 @@ WORKDIR /bin
 RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
 RUN tar xzf kustomize_v5.3.0_linux_amd64.tar.gz
 
-USER test
-RUN groups
 
-ENV WAYLAND_DISPLAY=wayland-0
-ENV XDG_RUNTIME_DIR=/run/user/1000
-
-ARG BINARY
-COPY ${BINARY} /bin/test
-WORKDIR ${CARGO_MANIFEST_DIR}
 #ENTRYPOINT ["/bin/test"]
 #CMD ["--nocapture"]
 
