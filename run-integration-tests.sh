@@ -101,8 +101,10 @@ else
         --from-literal=url=https://${PREFIX}perfect-group-allocation.dns.podman \
 
     kustomize build --output kubernetes.yaml
-    sudo podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
-    sudo podman kube play kubernetes.yaml
+    id
+    groups
+    sudo podman --systemd=always kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
+    sudo podman --systemd=always kube play kubernetes.yaml
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
     #sudo podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
     #(exit $(sudo podman wait ${PREFIX}test-test))

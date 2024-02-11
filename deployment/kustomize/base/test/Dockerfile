@@ -1,14 +1,16 @@
 # to get latest firefox and chromium
 FROM docker.io/library/debian:sid
 
-RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver curl mkcert sudo
+RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver curl mkcert sudo podman
 
 # use your user id and group id
 ARG GROUP_ID=1000
 ARG USER_ID=1000
 
 RUN groupadd -g $GROUP_ID test \
-    && useradd -u $USER_ID -g $GROUP_ID -G audio,video,wheel -m test
+    && useradd -u $USER_ID -g $GROUP_ID -G audio,video,sudo -m test
+
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown test:test /run/user/1000
 
@@ -25,6 +27,7 @@ RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kus
 RUN tar xzf kustomize_v5.3.0_linux_amd64.tar.gz
 
 USER test
+RUN groups
 
 ENV WAYLAND_DISPLAY=wayland-0
 ENV XDG_RUNTIME_DIR=/run/user/1000
