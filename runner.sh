@@ -9,4 +9,4 @@ echo $PWD
 podman build --build-arg CARGO_MANIFEST_DIR=$PWD --build-arg BINARY=$BINARY --file ../deployment/kustomize/base/test/Dockerfile ..
 IMAGE=$(podman build --quiet --build-arg CARGO_MANIFEST_DIR=$PWD --build-arg BINARY=$BINARY --file ../deployment/kustomize/base/test/Dockerfile ..)
 echo aaa running $IMAGE
-podman run --privileged --userns=keep-id --user=$(id -u):$(id -g) -v /home/moritz/.local/share/containers:/home/moritz/.local/share/containers --rm $IMAGE
+podman run --device /dev/dri -v /run/user/1000/wayland-0:/run/user/1000/wayland-0 --privileged --userns=keep-id --user=$(id -u):$(id -g) --rm $IMAGE
