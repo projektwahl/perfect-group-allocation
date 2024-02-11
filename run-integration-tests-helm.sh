@@ -18,17 +18,17 @@ echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 
 # we need to use rootful podman to get routable ip addresses.
 
-helm template ../deployment/perfect-group-allocation/charts/perfect-group-allocation-postgres | sudo podman kube play --replace -
+helm template ../deployment/perfect-group-allocation/charts/perfect-group-allocation-postgres | podman kube play --replace -
 CAROOT=$CAROOT mkcert tmp-keycloak
-helm template ../deployment/perfect-group-allocation/charts/perfect-group-allocation-keycloak --set-file cert=tmp-keycloak.pem --set-file key=tmp-keycloak-key.pem | sudo podman kube play --replace -
+helm template ../deployment/perfect-group-allocation/charts/perfect-group-allocation-keycloak --set-file cert=tmp-keycloak.pem --set-file key=tmp-keycloak-key.pem | podman kube play --replace -
 
 # https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 
 # ping release-name-pga-keycloak-pod
-# sudo podman inspect perfect-group-allocation-infra | jq ".[].NetworkSettings.Networks.[].IPAddress"
+# podman inspect perfect-group-allocation-infra | jq ".[].NetworkSettings.Networks.[].IPAddress"
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
 
 
-#sudo podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation & # tmp-keycloak-tmp-keycloak tmp-postgres-postgres 
-#exit $(sudo podman wait tmp-test-test)
+#podman logs --color --names --follow tmp-test-test tmp-perfect-group-allocation-tmp-perfect-group-allocation & # tmp-keycloak-tmp-keycloak tmp-postgres-postgres 
+#exit $(podman wait tmp-test-test)

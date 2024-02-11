@@ -205,8 +205,8 @@ kcachegrind callgrind.out.110536
 # basic example of podman in podman
 
 this works:
-sudo podman system reset
-sudo podman run --privileged -it --rm debian:sid
+podman system reset
+podman run -it --rm debian:sid
 apt update && apt install -y podman curl
 podman run -it --rm debian:sid
 apt update
