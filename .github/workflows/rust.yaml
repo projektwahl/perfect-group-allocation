@@ -39,5 +39,6 @@ jobs:
       - run: mkcert -install
       - run: cp $(mkcert -CAROOT)/rootCA.pem .
       - run: mkcert h3.selfmade4u.de
-      - run: RUST_BACKTRACE=1 cargo hack test --workspace --feature-powerset --optional-deps --all-targets
       - run: ./run-integration-tests.sh keycloak
+      - run: ./run-integration-tests.sh prepare
+      - run: RUST_BACKTRACE=1 cargo hack test --workspace --feature-powerset --optional-deps --all-targets

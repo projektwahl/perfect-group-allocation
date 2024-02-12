@@ -42,7 +42,7 @@ pub struct Result(pub EvaluateResult);
 
 #[cfg(test)]
 mod tests {
-    use crate::script::{NodeRemoteValue};
+    use crate::script::NodeRemoteValue;
 
     #[test]
     fn it_works() {

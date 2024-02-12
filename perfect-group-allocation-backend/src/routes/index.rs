@@ -1,7 +1,6 @@
 use std::convert::Infallible;
 use std::pin::pin;
 
-
 use async_zero_cost_templating::{html, TemplateToStream};
 use bytes::Bytes;
 use futures_util::StreamExt as _;
