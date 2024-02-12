@@ -17,9 +17,6 @@ spec:
   containers:
     - name: postgres
       image: docker.io/library/postgres:16.1
-      securityContext:
-        runAsUser: 999
-        runAsGroup: 999
       env:
         - name: "POSTGRES_INITDB_ARGS"
           value: "--data-checksums"

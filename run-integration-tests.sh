@@ -84,7 +84,8 @@ elif [ "${1-}" == "prepare" ]; then
     #TEST_IMAGE=$(podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
     #kustomize edit set image test=sha256:$TEST_IMAGE
 
-    podman image save -o pga.tar sha256:$SERVER_IMAGE
+    rm -f pga.tar
+    #podman image save -o pga.tar sha256:$SERVER_IMAGE
 else
     KTMP=$(mktemp -d)
     cp ./{kustomization.yaml,client-secret,rootCA.pem} $KTMP/
@@ -108,7 +109,7 @@ else
     groups
     cat /sys/fs/cgroup/cgroup.controllers
     podman --remote run --rm debian ls
-    podman --remote load -i $CAROOT/pga.tar
+    #podman --remote load -i $CAROOT/pga.tar
     podman --remote kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman --remote kube play kubernetes.yaml # ahh kube uses another network
     #echo https://${PREFIX}perfect-group-allocation.dns.podman

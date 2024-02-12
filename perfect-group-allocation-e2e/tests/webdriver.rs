@@ -36,7 +36,8 @@ pub async fn run_test() {
     result.unwrap().unwrap();
 }
 
-// ./run-integration-tests.sh prepare
+// ./run-integration-tests.sh keycloak # once at some point
+// ./run-integration-tests.sh prepare # after every recompile
 // cargo test -p perfect-group-allocation-e2e --test webdriver
 #[allow(clippy::too_many_lines)]
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
