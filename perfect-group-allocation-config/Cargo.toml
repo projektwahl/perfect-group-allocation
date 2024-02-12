@@ -14,7 +14,11 @@ version.workspace = true
 [dependencies]
 notify = { default-features = false, version = "6" }
 thiserror = { default-features = false, version = "1" }
-tokio = { default-features = false, version = "1", features = ["fs", "sync"] }
+tokio = { default-features = false, version = "1", features = [
+    "fs",
+    "rt",
+    "sync",
+] }
 
 [lints]
 workspace = true
