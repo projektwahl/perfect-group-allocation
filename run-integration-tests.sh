@@ -107,10 +107,10 @@ else
     id
     groups
     cat /sys/fs/cgroup/cgroup.controllers
-    podman run --rm debian ls
-    podman load -i $CAROOT/pga.tar
-    podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
-    podman kube play kubernetes.yaml
+    podman --remote run --rm debian ls
+    podman --remote load -i $CAROOT/pga.tar
+    podman --remote kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
+    podman --remote kube play kubernetes.yaml # ahh kube uses another network
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
     #podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
     #(exit $(podman wait ${PREFIX}test-test))

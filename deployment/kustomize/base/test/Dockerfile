@@ -1,7 +1,7 @@
 # to get latest firefox and chromium
 FROM docker.io/library/debian:sid
 
-RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver curl mkcert podman
+RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver curl mkcert podman inetutils-ping ldnsutils
 
 # use your user id and group id
 ARG GROUP_ID=1000
