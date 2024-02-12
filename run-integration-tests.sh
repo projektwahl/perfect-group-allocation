@@ -83,6 +83,8 @@ elif [ "${1-}" == "prepare" ]; then
     kustomize edit set image perfect-group-allocation=sha256:$SERVER_IMAGE
     #TEST_IMAGE=$(podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
     #kustomize edit set image test=sha256:$TEST_IMAGE
+
+    podman image save -o pga.tar sha256:$SERVER_IMAGE
 else
     KTMP=$(mktemp -d)
     cp ./{kustomization.yaml,client-secret,rootCA.pem} $KTMP/
@@ -105,7 +107,8 @@ else
     id
     groups
     cat /sys/fs/cgroup/cgroup.controllers
-    podman run -it --rm debian ls
+    podman run --rm debian ls
+    podman load -i $CAROOT/pga.tar
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play kubernetes.yaml
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
