@@ -15,11 +15,7 @@ concurrency:
 
 jobs:
   rust:
-    #runs-on: docker
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/projektwahl/perfect-group-allocation:1
-      options: --privileged # for podman and valgrind
     steps:
       - uses: actions/cache@v3
         with:
@@ -31,12 +27,4 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/checkout@v4
-      - run: lightningcss --bundle --minify --sourcemap --output-file frontend/bundle.css frontend/index.css
-      - run: cargo fmt --check
-      - run: cargo deny check
-      - run: cargo hack clippy --workspace --feature-powerset --optional-deps --all-targets -- -D warnings
-      - run: cargo hack build --workspace --feature-powerset --optional-deps --all-targets
-      - run: podman system service --time 0 &
-      - run: ./run-integration-tests.sh keycloak
-      - run: ./run-integration-tests.sh prepare
-      - run: RUST_BACKTRACE=1 cargo hack test --workspace --feature-powerset --optional-deps --all-targets
+      - run: podman run -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh

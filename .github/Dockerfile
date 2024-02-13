@@ -17,3 +17,6 @@ RUN cargo install --locked --features=cli lightningcss@1.0.0-alpha.52
 RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
 RUN tar -zxf kustomize_v5.3.0_linux_amd64.tar.gz --directory /usr/local/bin
+RUN apt-get install -y jq
+
+# maybe switch to non-root user here?
