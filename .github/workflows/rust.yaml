@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/projektwahl/perfect-group-allocation:1
+      options: --privileged # for podman and valgrind
     steps:
       - uses: actions/cache@v3
         with:
