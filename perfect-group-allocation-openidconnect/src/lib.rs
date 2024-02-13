@@ -145,7 +145,7 @@ pub async fn my_http_client(
         .collect();
     builder.headers_mut().unwrap().extend(request_headers);
     let request_body = String::from_utf8(request.body).unwrap();
-    println!("{}", request_body);
+    println!("{request_body}");
     let request = builder
         .header(hyper::header::HOST, authority)
         .body(request_body)?;
