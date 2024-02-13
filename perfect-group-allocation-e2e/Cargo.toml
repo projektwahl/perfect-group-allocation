@@ -42,11 +42,10 @@ tracing-subscriber = { default-features = false, version = "0.3", features = [
 ] }
 webdriver-bidi = { default-features = false, path = "../webdriver-bidi" }
 
+#[[bench]]
+#harness = false
+#name = "http_e2e"
 
-[[bench]]
-harness = false
-name = "http_e2e"
-
-[[bench]]
-harness = false
-name = "service_e2e"
+#[[bench]]
+#harness = false
+#name = "service_e2e"

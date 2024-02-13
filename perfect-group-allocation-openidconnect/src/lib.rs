@@ -98,10 +98,7 @@ static OPENID_CLIENT: OnceCell<OpenIdConnectClientType> = OnceCell::const_new();
 
 pub struct MyHttpClient(Config);
 
-pub async fn my_http_client(
-    _config: &Config,
-    request: HttpRequest,
-) -> Result<HttpResponse, HttpError> {
+pub async fn my_http_client(request: HttpRequest) -> Result<HttpResponse, HttpError> {
     println!("{request:?}");
     let host = request.url.host().expect("uri has no host");
     let port = request.url.port_or_known_default().unwrap();
@@ -182,7 +179,7 @@ pub async fn get_openid_client(
         .get_or_try_init(|| async {
             let provider_metadata = CoreProviderMetadata::discover_async(
                 IssuerUrl::new(config.openidconnect.issuer_url.clone())?,
-                |request| my_http_client(config, request),
+                my_http_client,
             )
             .await?;
 
@@ -254,7 +251,7 @@ pub async fn finish_authentication(
         .exchange_code(AuthorizationCode::new(input.inner.code))
         // Set the PKCE code verifier.
         .set_pkce_verifier(session.verifier)
-        .request_async(|request| my_http_client(config, request))
+        .request_async(my_http_client)
         .await?;
 
     // the token_response may be signed and then we could store it in the cookie

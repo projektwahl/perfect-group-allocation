@@ -7,7 +7,6 @@ use http_body_util::{BodyExt, Empty};
 use hyper::Request;
 use hyper_util::rt::TokioIo;
 use perfect_group_allocation_backend::error::AppError;
-use perfect_group_allocation_config::{get_config, Config, OpenIdConnectConfig, TlsConfig};
 use tokio::net::TcpStream;
 use tokio_rustls::rustls::pki_types::CertificateDer;
 use tokio_rustls::rustls::{pki_types, RootCertStore};

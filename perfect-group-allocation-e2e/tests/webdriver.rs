@@ -1,7 +1,6 @@
 use std::panic::AssertUnwindSafe;
 use std::path::Path;
 
-
 use futures_util::FutureExt;
 
 use rand::distributions::Alphanumeric;
@@ -39,7 +38,7 @@ pub async fn run_test() {
 // ./run-integration-tests.sh keycloak # once at some point
 // ./run-integration-tests.sh prepare # after every recompile
 // cargo test -p perfect-group-allocation-e2e --test webdriver
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     tracing_subscriber::fmt::init();
 
