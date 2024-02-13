@@ -15,3 +15,4 @@ RUN cargo install --locked cargo-hack
 RUN cargo install --locked cargo-deny
 RUN cargo install --locked --features=cli lightningcss@1.0.0-alpha.52
 RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
+RUN apt-get install -y libssl-dev pkg-config
