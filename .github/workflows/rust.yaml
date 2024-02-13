@@ -27,4 +27,4 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/checkout@v4
-      - run: sudo podman run -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh
+      - run: podman run -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh
