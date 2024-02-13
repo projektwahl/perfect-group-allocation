@@ -18,17 +18,3 @@ RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
 RUN tar -zxf kustomize_v5.3.0_linux_amd64.tar.gz --directory /usr/local/bin
 RUN apt-get install -y jq
-
-# use your user id and group id
-ARG GROUP_ID=1000
-ARG USER_ID=1000
-
-RUN groupadd -g $GROUP_ID moritz \
-    && useradd -u $USER_ID -g $GROUP_ID -G audio,video,sudo -m moritz
-
-RUN echo moritz:10000:5000 > /etc/subuid
-RUN echo moritz:10000:5000 > /etc/subgid
-
-USER moritz
-
-# maybe switch to non-root user here?

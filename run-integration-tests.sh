@@ -24,6 +24,7 @@ CAROOT=$PWD
 # ping tmp-perfect-group-allocation
 
 if [ "${1-}" == "keycloak" ]; then
+    id
     echo -n myawesomeclientsecret > client-secret
 
     CAROOT=$CAROOT mkcert -CAROOT
@@ -32,6 +33,9 @@ if [ "${1-}" == "keycloak" ]; then
     rm -f kustomization.yaml kubernetes.yaml && kustomize create
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
+    id
+    cat /etc/subuid
+    cat /etc/subgid
     podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..
     KEYCLOAK_IMAGE=$(podman build --quiet --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
     kustomize edit set image keycloak=sha256:$KEYCLOAK_IMAGE
