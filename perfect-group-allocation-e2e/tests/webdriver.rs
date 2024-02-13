@@ -1,9 +1,9 @@
 use std::panic::AssertUnwindSafe;
 use std::path::Path;
-use std::time::Duration;
+
 
 use futures_util::FutureExt;
-use perfect_group_allocation_config::get_config;
+
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde_json::json;
@@ -32,7 +32,7 @@ use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 #[tokio::test]
 pub async fn run_test() {
     let result = AssertUnwindSafe(test()).catch_unwind().await;
-    println!("{:?}", result);
+    println!("{result:?}");
     result.unwrap().unwrap();
 }
 
@@ -65,7 +65,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
         .env("PREFIX", prefix)
         .spawn()
         .expect("failed to spawn");
-    let status = child.wait().await.unwrap();
+    let _status = child.wait().await.unwrap();
 
     // TODO FIXME add network slowdown for testing
     // TODO FIXME use user contexts for cookie isolation
