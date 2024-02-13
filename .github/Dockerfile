@@ -1,11 +1,11 @@
 # https://github.com/settings/tokens/new?scopes=write:packages
 # echo $CR_PAT | podman login ghcr.io -u mohe2015 --password-stdin
-# podman build -t ghcr.io/projektwahl/perfect-group-allocation:latest .
-# podman push ghcr.io/projektwahl/perfect-group-allocation:latest
+# podman build -t ghcr.io/projektwahl/perfect-group-allocation:1 .
+# podman push ghcr.io/projektwahl/perfect-group-allocation:1
 # make package public
 FROM debian
 
-RUN apt-get update && apt-get upgrade && apt-get install -y valgrind git cmake gcc zstd curl mold coinor-libcbc-dev mkcert
+RUN apt-get update && apt-get -y upgrade && apt-get install -y valgrind git cmake gcc zstd curl mold coinor-libcbc-dev mkcert podman
 RUN curl -fsSL https://deb.nodesource.com/setup_21.x | bash -
 RUN apt-get install -y nodejs
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y

@@ -17,27 +17,25 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown moritz:moritz /run/user/1000
 
-ARG CARGO_MANIFEST_DIR
-RUN mkdir -p ${CARGO_MANIFEST_DIR}
-COPY ./deployment /${CARGO_MANIFEST_DIR}/../deployment
-COPY ./run-integration-tests.sh /${CARGO_MANIFEST_DIR}/../
-# FIXME do this as late as possible
-COPY ./tmp /${CARGO_MANIFEST_DIR}/../tmp
-RUN chown -R moritz:moritz ${CARGO_MANIFEST_DIR}/../
-
 WORKDIR /bin
 RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
 RUN tar xzf kustomize_v5.3.0_linux_amd64.tar.gz
 
+ARG CARGO_MANIFEST_DIR
+RUN mkdir -p ${CARGO_MANIFEST_DIR}
+COPY ./deployment /${CARGO_MANIFEST_DIR}/../deployment
+COPY ./run-integration-tests.sh /${CARGO_MANIFEST_DIR}/../
+COPY ./tmp /${CARGO_MANIFEST_DIR}/../tmp
+RUN chown -R moritz:moritz ${CARGO_MANIFEST_DIR}/../
+
 USER moritz
-RUN groups
 
 ENV WAYLAND_DISPLAY=wayland-0
 ENV XDG_RUNTIME_DIR=/run/user/1000
 
+WORKDIR ${CARGO_MANIFEST_DIR}
 ARG BINARY
 COPY ${BINARY} /bin/test
-WORKDIR ${CARGO_MANIFEST_DIR}
 
 ENTRYPOINT ["/bin/test"]
 CMD ["--nocapture"]
