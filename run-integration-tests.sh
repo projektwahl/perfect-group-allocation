@@ -27,11 +27,12 @@ if [ "${1-}" == "keycloak" ]; then
     echo -n myawesomeclientsecret > client-secret
 
     CAROOT=$CAROOT mkcert -CAROOT
-    CAROOT=$CAROOT mkcert -install # to allow local testing
+    #CAROOT=$CAROOT mkcert -install # to allow local testing
 
     rm -f kustomization.yaml kubernetes.yaml && kustomize create
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
+    podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..
     KEYCLOAK_IMAGE=$(podman build --quiet --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
     kustomize edit set image keycloak=sha256:$KEYCLOAK_IMAGE
 

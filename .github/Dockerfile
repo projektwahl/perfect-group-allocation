@@ -1,6 +1,6 @@
 # https://github.com/settings/tokens/new?scopes=write:packages
 # echo $CR_PAT | podman login ghcr.io -u mohe2015 --password-stdin
-# podman build -t ghcr.io/projektwahl/perfect-group-allocation:1 .
+# podman build -t ghcr.io/projektwahl/perfect-group-allocation:1 -f .github/Dockerfile .github
 # podman push ghcr.io/projektwahl/perfect-group-allocation:1
 # make package public
 FROM docker.io/library/debian:sid
@@ -18,5 +18,17 @@ RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
 RUN tar -zxf kustomize_v5.3.0_linux_amd64.tar.gz --directory /usr/local/bin
 RUN apt-get install -y jq
+
+# use your user id and group id
+ARG GROUP_ID=1000
+ARG USER_ID=1000
+
+RUN groupadd -g $GROUP_ID moritz \
+    && useradd -u $USER_ID -g $GROUP_ID -G audio,video,sudo -m moritz
+
+RUN echo moritz:10000:5000 > /etc/subuid
+RUN echo moritz:10000:5000 > /etc/subgid
+
+USER moritz
 
 # maybe switch to non-root user here?
