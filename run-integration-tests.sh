@@ -36,6 +36,7 @@ if [ "${1-}" == "keycloak" ]; then
     id
     cat /etc/subuid
     cat /etc/subgid
+    cat /proc/self/uid_map
     podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..
     KEYCLOAK_IMAGE=$(podman build --quiet --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
     kustomize edit set image keycloak=sha256:$KEYCLOAK_IMAGE
@@ -53,10 +54,9 @@ if [ "${1-}" == "keycloak" ]; then
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play --replace kubernetes.yaml
 
-    reset
-    podman logs --follow ${KEYCLOAK_PREFIX}keycloak-keycloak &
+    podman logs --follow ${KEYCLOAK_PREFIX}keycloak-keycloak
     echo waiting for keycloak
-    podman wait --condition healthy ${KEYCLOAK_PREFIX}keycloak-keycloak
+    #podman wait --condition healthy ${KEYCLOAK_PREFIX}keycloak-keycloak
     echo keycloak started
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
