@@ -56,7 +56,9 @@ if [ "${1-}" == "keycloak" ]; then
 
     podman logs --follow ${KEYCLOAK_PREFIX}keycloak-keycloak &
     echo waiting for keycloak
-    watch podman healthcheck run ${KEYCLOAK_PREFIX}keycloak-keycloak &>/dev/null &
+    sleep 30
+    podman healthcheck run ${KEYCLOAK_PREFIX}keycloak-keycloak 
+    #watch podman healthcheck run ${KEYCLOAK_PREFIX}keycloak-keycloak &>/dev/null & # potentially still fails because no terminal?
     podman wait --condition healthy ${KEYCLOAK_PREFIX}keycloak-keycloak
     echo keycloak started
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
