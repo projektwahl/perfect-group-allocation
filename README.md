@@ -204,12 +204,9 @@ kcachegrind callgrind.out.110536
 
 # basic example of podman in podman
 
-this works:
-podman system reset
-podman run -it --rm debian:sid
-apt update && apt install -y podman curl
-podman run -it --rm debian:sid
-apt update
+podman inspect quay.io/podman/stable
+podman run -it --rm --privileged quay.io/podman/stable
+podman run -it --rm quay.io/podman/stable # this creates a warning
 
 so I can reproduce with our test image and sudo which is interesting
 
