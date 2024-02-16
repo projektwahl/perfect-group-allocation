@@ -23,6 +23,6 @@ RUN cargo install --locked --features=cli lightningcss@1.0.0-alpha.52
 RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 
 USER root
-RUN echo podman:1001:5000 > /etc/subuid
-RUN echo podman:1001:5000 > /etc/subgid
+RUN echo podman:1001:65534 > /etc/subuid
+RUN echo podman:1001:65534 > /etc/subgid
 USER podman

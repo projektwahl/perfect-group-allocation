@@ -224,7 +224,8 @@ podman run --security-opt label=disable --user podman --device /dev/fuse quay.io
 sudo usermod --add-subuids 1000000-1655350 --add-subgids 1000000-1655350 moritz
 
 # follow this exactly and think about how subgids work
-
+podman run -it --privileged --userns=keep-id -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 bash
+./github/run.sh
 
 # https://github.com/containers/podman/issues/4056
 # maybe the subuid file is empty is fine as long as the inner command can create mappings?
