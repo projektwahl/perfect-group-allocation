@@ -10,17 +10,19 @@ RUN curl -fsSL https://deb.nodesource.com/setup_21.x | bash -
 RUN apt-get install -y nodejs
 RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
 RUN tar -zxf kustomize_v5.3.0_linux_amd64.tar.gz --directory /usr/local/bin
+
+RUN useradd -m podman
+USER podman
+
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+ENV PATH="/home/podman/.cargo/bin:${PATH}"
 RUN rustup toolchain install stable --allow-downgrade --profile minimal --component rustfmt,clippy
 RUN cargo install --locked cargo-hack
 RUN cargo install --locked cargo-deny
 RUN cargo install --locked --features=cli lightningcss@1.0.0-alpha.52
 RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 
-# it is important do do this here to get subuids
-RUN useradd -m podman; \
-echo podman:1001:5000 > /etc/subuid; \
-echo podman:1001:5000 > /etc/subgid;
-
+USER root
+RUN echo podman:1001:5000 > /etc/subuid
+RUN echo podman:1001:5000 > /etc/subgid
 USER podman
