@@ -17,10 +17,8 @@ concurrency:
 jobs:
   rust:
     runs-on: ubuntu-latest # doesn't have a recent enough podman version
-    container:
-      image: quay.io/podman/stable
-      options: --privileged
     steps:
+      - run: brew install podman
       - uses: actions/cache@v4
         with:
           path: ~/.local/share/containers/
