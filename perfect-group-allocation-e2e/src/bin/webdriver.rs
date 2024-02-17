@@ -44,10 +44,7 @@ pub async fn main() {
             println!("error {err:?}");
             panic!("{err:?}");
         }
-        Ok(Ok(())) => {
-            let netlog = tokio::fs::read_to_string("/tmp/netlog.json").await.unwrap();
-            println!("{netlog}");
-        }
+        Ok(Ok(())) => {}
     }
 }
 
