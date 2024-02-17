@@ -20,9 +20,10 @@ jobs:
     container:
       image: quay.io/podman/stable
     steps:
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: ~/.local/share/containers/
+          key: containers-cache
       - uses: actions/checkout@v4
       # what does privileged here affect and can we remove it?
       # -v /run/user/1000/wayland-0:/run/user/1000/wayland-0 # not in CI
