@@ -92,9 +92,11 @@ impl WebDriver {
                 port
             }
             Browser::Chromium => {
+                // https://netlog-viewer.appspot.com/#import
+                // chrome://net-export/
                 let mut child = tokio::process::Command::new("chromedriver")
                     .arg("--enable-chrome-logs")
-                    .arg("--log-level=ALL")
+                    //.arg("--log-level=ALL")
                     .kill_on_drop(true)
                     .stdout(Stdio::piped())
                     .spawn()

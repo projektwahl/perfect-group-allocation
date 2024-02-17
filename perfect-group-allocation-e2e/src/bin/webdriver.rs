@@ -35,16 +35,23 @@ pub async fn main() {
     println!("{result:?}");
     match result {
         Err(err) => {
+            let netlog = tokio::fs::read_to_string("/tmp/netlog.json").await.unwrap();
+            println!("{}", netlog);
             println!("error {:?}", err);
             tokio::time::sleep(Duration::from_secs(300)).await;
             panic!("{:?}", err);
         }
         Ok(Err(err)) => {
+            let netlog = tokio::fs::read_to_string("/tmp/netlog.json").await.unwrap();
+            println!("{}", netlog);
             println!("error {:?}", err);
             tokio::time::sleep(Duration::from_secs(300)).await;
             panic!("{:?}", err);
         }
-        Ok(Ok(())) => {}
+        Ok(Ok(())) => {
+            let netlog = tokio::fs::read_to_string("/tmp/netlog.json").await.unwrap();
+            println!("{}", netlog);
+        }
     }
 }
 
@@ -74,7 +81,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                             extensible: Extensible(
                                 json!({
                                     "goog:chromeOptions": {
-                                        "args": ["--ozone-platform=wayland"]
+                                        "args": ["--log-net-log=/tmp/netlog.json", "--ozone-platform=wayland"]
                                     }
                                 })
                                 .as_object()
