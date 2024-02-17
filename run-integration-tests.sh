@@ -89,8 +89,8 @@ elif [ "${1-}" == "prepare" ]; then
 
     # git describe --always --long --dirty 
     # TODO URGENT FIXME: Reduce build context size
-    echo -e '!server\n*' > $SERVER_BINARY_DIR/.containerignore
-    SERVER_IMAGE=$(podman --remote build --build-arg BINARY=$SERVER_BINARY_FILE --file $PWD/deployment/kustomize/base/perfect-group-allocation/Dockerfile $SERVER_BINARY_DIR)
+    echo -e '*\n!server' > $SERVER_BINARY_DIR/.containerignore
+    SERVER_IMAGE=$(podman --remote build --build-arg BINARY=./server --file $PWD/deployment/kustomize/base/perfect-group-allocation/Dockerfile $SERVER_BINARY_DIR)
     kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
     #TEST_IMAGE=$(podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
     #kustomize edit set image test=sha256:$TEST_IMAGE
