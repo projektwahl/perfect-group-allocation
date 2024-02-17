@@ -42,29 +42,7 @@ pub async fn main() {
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     tracing_subscriber::fmt::init();
 
-    println!("test");
-
-    // at some point you need to run
-    // ./run-integration-tests.sh keycloak
-    // to start the global keycloak instance
-
-    // then once before all tests you need to run
-    // ./run-integration-tests.sh prepare
-    // to update the code that is going to be deployed
-
-    let prefix = "test-";
-
-    // we need to convince the browser dns that this is correct
-    let url = format!("https://{prefix}perfect-group-allocation.dns.podman");
-
-    // PREFIX=e ./run-integration-tests.sh
-    // needs sudo password
-    let mut child = tokio::process::Command::new("./run-integration-tests.sh")
-        .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join(".."))
-        .env("PREFIX", prefix)
-        .spawn()
-        .expect("failed to spawn");
-    let _status = child.wait().await.unwrap();
+    let url = format!("https://eperfect-group-allocation.dns.podman");
 
     // TODO FIXME add network slowdown for testing
     // TODO FIXME use user contexts for cookie isolation

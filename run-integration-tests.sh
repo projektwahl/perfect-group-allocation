@@ -7,12 +7,14 @@ set -x
 # we should be able to use one keycloak for multiple tests.
 KEYCLOAK_PREFIX=keycloak-tmp-
 
-echo "in $PWD"
-ls -la
-mkdir -p tmp
-cd tmp
+# generate root certs as these are the only thing that is nice to persist (so keycloak gets the same root cert and your browser doesn't need to add a new root ca all the time)
+mkdir -p rootca
+CAROOT=$PWD/rootca
+GARBAGE=$(mktemp -d)
 
-CAROOT=$PWD
+cd $GARBAGE
+mkcert force-root-ca-gen && rm ./force-root-ca-gen.pem ./force-root-ca-gen-key.pem
+cp $CAROOT/rootCA.pem .
 
 # we need to use rootful podman to get routable ip addresses.
 
@@ -23,28 +25,22 @@ CAROOT=$PWD
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
 
+echo -n myawesomeclientsecret > client-secret
+
 if [ "${1-}" == "keycloak" ]; then
-    id
-    echo -n myawesomeclientsecret > client-secret
-
-    CAROOT=$CAROOT mkcert -CAROOT
-    #CAROOT=$CAROOT mkcert -install # to allow local testing
-
-    rm -f kustomization.yaml kubernetes.yaml && kustomize create
+    kustomize create
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
-    id
-    cat /etc/subuid
-    cat /etc/subgid
-    cat /proc/self/uid_map
-    podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..
+    KEYCLOAK_CONTAINERIGNORE=$(mktemp)
+    echo -e '*' > $KEYCLOAK_CONTAINERIGNORE
     KEYCLOAK_IMAGE=$(podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
-    kustomize edit set image keycloak=sha256:$(echo "$KEYCLOAK_IMAGE" | tail -n 1)
+    KEYCLOAK_IMAGE=$(echo "$KEYCLOAK_IMAGE" | tail -n 1)
+    kustomize edit set image keycloak=sha256:$KEYCLOAK_IMAGE
 
     kustomize edit set nameprefix $KEYCLOAK_PREFIX
     kustomize edit add resource ../deployment/kustomize/keycloak
 
-    CAROOT=$CAROOT mkcert "${KEYCLOAK_PREFIX}keycloak"
+    mkcert "${KEYCLOAK_PREFIX}keycloak"
     kustomize edit add secret keycloak-tls-cert \
         --type=kubernetes.io/tls \
         --from-file=tls.crt=./${KEYCLOAK_PREFIX}keycloak.pem \
@@ -56,9 +52,8 @@ if [ "${1-}" == "keycloak" ]; then
 
     podman logs --follow ${KEYCLOAK_PREFIX}keycloak-keycloak &
     echo waiting for keycloak
-    sleep 30
-    podman healthcheck run ${KEYCLOAK_PREFIX}keycloak-keycloak 
-    #watch podman healthcheck run ${KEYCLOAK_PREFIX}keycloak-keycloak &>/dev/null & # potentially still fails because no terminal?
+    # TODO refactor to directly loop on healthcheck?
+    watch podman healthcheck run ${KEYCLOAK_PREFIX}keycloak-keycloak &
     podman wait --condition healthy ${KEYCLOAK_PREFIX}keycloak-keycloak
     echo keycloak started
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
@@ -71,41 +66,21 @@ if [ "${1-}" == "keycloak" ]; then
     # https://github.com/keycloak/keycloak/discussions/9278
     echo DO NOT RUN THIS IN PRODUCTION!!!
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["*"]'
-elif [ "${1-}" == "prepare" ]; then
-    # TODO FIXME we need to get these into the container
-    rm -f kustomization.yaml kubernetes.yaml && kustomize create
+else
+    kustomize create
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
     cargo build --bin server
-    SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
-    SERVER_BINARY=$(realpath --relative-to=. $SERVER_BINARY)
-    SERVER_BINARY_DIR="$(dirname "${SERVER_BINARY}")" ; SERVER_BINARY_FILE="$(basename "${SERVER_BINARY}")"
-    echo "Compiled server binary: $SERVER_BINARY_DIR and file $SERVER_BINARY_FILE"
-
-    #cargo build --test webdriver
-    #INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
-    #INTEGRATION_TEST_BINARY=$(realpath --relative-to=.. $INTEGRATION_TEST_BINARY)
-    #echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
-
-    # git describe --always --long --dirty 
-    # TODO URGENT FIXME: Reduce build context size
-    echo -e '*\n!target/debug/server\n!deployment/kustomize/base/perfect-group-allocation/Dockerfile' > $PWD/.containerignore
-    SERVER_IMAGE=$(podman --log-level=debug --remote build --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile $PWD)
+    SERVER_CONTAINERIGNORE=$(mktemp)
+    echo -e '*\n!target/debug/server\n!deployment/kustomize/base/perfect-group-allocation/Dockerfile' > $SERVER_CONTAINERIGNORE
+    # tag with: git describe --always --long --dirty 
+    SERVER_IMAGE=$(podman build --ignorefile $SERVER_CONTAINERIGNORE --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile .)
     kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
-    #TEST_IMAGE=$(podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
-    #kustomize edit set image test=sha256:$TEST_IMAGE
-
-    rm -f pga.tar
-    #podman image save -o pga.tar sha256:$SERVER_IMAGE
-else
-    KTMP=$(mktemp -d)
-    cp ./{kustomization.yaml,client-secret,rootCA.pem} $KTMP/
-    cd $KTMP
 
     kustomize edit add resource ../../$CAROOT/../deployment/kustomize/base/
     kustomize edit set nameprefix $PREFIX
 
-    CAROOT=$CAROOT mkcert "${PREFIX}perfect-group-allocation" # maybe use a wildcard certificate instead? to speed this up
+    mkcert "${PREFIX}perfect-group-allocation" # maybe use a wildcard certificate instead? to speed this up
     kustomize edit add secret application-config \
         --from-file=tls.crt=./${PREFIX}perfect-group-allocation.pem \
         --from-file=tls.key=./${PREFIX}perfect-group-allocation-key.pem \
@@ -113,14 +88,18 @@ else
         --from-literal=openidconnect.client_id=pga \
         --from-literal=openidconnect.issuer_url=https://${KEYCLOAK_PREFIX}keycloak/realms/pga \
         --from-literal="database_url=postgres://postgres@postgres/pga?sslmode=disable" \
-        --from-literal=url=https://${PREFIX}perfect-group-allocation.dns.podman \
+        --from-literal=url=https://${PREFIX}perfect-group-allocation.dns.podman
+
+    INTEGRATION_TEST_BINARY=$(realpath --relative-to=. $1)
+    INTEGRATION_TEST_CONTAINERIGNORE=$(mktemp)
+    echo -e '*\n!'"$BINARY" > $INTEGRATION_TEST_CONTAINERIGNORE
+    INTEGRATION_TEST_IMAGE=$(podman build --ignorefile $INTEGRATION_TEST_CONTAINERIGNORE --build-arg BINARY=$BINARY --file ./deployment/kustomize/base/test/Dockerfile .)
+    INTEGRATION_TEST_IMAGE=$(echo "$INTEGRATION_TEST_IMAGE" | tail -n 1)
+    kustomize edit set image test=sha256:$INTEGRATION_TEST_IMAGE
 
     kustomize build --output kubernetes.yaml
-    id
-    groups
-    cat /sys/fs/cgroup/cgroup.controllers
-    podman --remote kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
-    podman --remote kube play kubernetes.yaml # ahh kube uses another network
+    podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
+    podman kube play kubernetes.yaml # ahh kube uses another network
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
     #podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
     #(exit $(podman wait ${PREFIX}test-test))

@@ -3,4 +3,5 @@
 #[test]
 fn it_adds_two() {
     panic!("gonna run {}", env!("CARGO_BIN_EXE_webdriver"))
+    // TODO run runner.sh with that exe file
 }
