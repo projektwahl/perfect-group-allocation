@@ -9,8 +9,13 @@ PROJECT=$PWD
 # we should be able to use one keycloak for multiple tests.
 KEYCLOAK_PREFIX=keycloak-tmp-
 
+ls -la
+
 # generate root certs as these are the only thing that is nice to persist (so keycloak gets the same root cert and your browser doesn't need to add a new root ca all the time)
 mkdir -p rootca
+
+ls -la
+
 export CAROOT=$PWD/rootca
 GARBAGE=$(mktemp -d)
 

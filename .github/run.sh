@@ -9,7 +9,5 @@ set -x
 #cargo deny check
 #cargo hack clippy --workspace --feature-powerset --optional-deps --all-targets -- -D warnings
 #cargo hack build --workspace --feature-powerset --optional-deps --all-targets
-podman system service --time 0 &
 ./run-integration-tests.sh keycloak
-./run-integration-tests.sh prepare
 RUST_BACKTRACE=1 cargo hack test --workspace --feature-powerset --optional-deps --all-targets
