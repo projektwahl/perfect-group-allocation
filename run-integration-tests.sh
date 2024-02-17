@@ -116,8 +116,6 @@ else
     id
     groups
     cat /sys/fs/cgroup/cgroup.controllers
-    podman --remote run --rm debian ls
-    #podman --remote load -i $CAROOT/pga.tar
     podman --remote kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman --remote kube play kubernetes.yaml # ahh kube uses another network
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
