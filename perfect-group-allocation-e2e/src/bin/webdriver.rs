@@ -33,7 +33,19 @@ use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 pub async fn main() {
     let result = AssertUnwindSafe(test()).catch_unwind().await;
     println!("{result:?}");
-    result.unwrap().unwrap();
+    match result {
+        Err(err) => {
+            println!("error {:?}", err);
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            panic!("{:?}", err);
+        }
+        Ok(Err(err)) => {
+            println!("error {:?}", err);
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            panic!("{:?}", err);
+        }
+        Ok(Ok(())) => {}
+    }
 }
 
 // ./run-integration-tests.sh keycloak # once at some point
@@ -143,8 +155,6 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
     };
 
     info!("page loaded: {load:?}");
-
-    tokio::time::sleep(Duration::from_secs(1)).await;
 
     let username = find_element(&driver, &browsing_context, "#username").await?;
     info!("{:?}", username);
