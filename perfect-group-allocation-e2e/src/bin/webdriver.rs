@@ -1,5 +1,6 @@
 use std::panic::AssertUnwindSafe;
 use std::path::Path;
+use std::time::Duration;
 
 use futures_util::FutureExt;
 
@@ -136,11 +137,14 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
 
     click(&driver, &browsing_context, &node).await?;
 
+    // seems like this is not sufficient
     let Ok(load) = subscription.recv().await else {
         panic!("failed")
     };
 
     info!("page loaded: {load:?}");
+
+    tokio::time::sleep(Duration::from_secs(1)).await;
 
     let username = find_element(&driver, &browsing_context, "#username").await?;
     info!("{:?}", username);

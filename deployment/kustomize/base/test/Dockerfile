@@ -4,6 +4,9 @@ FROM docker.io/library/debian:sid
 RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver
 
 RUN useradd -m podman
+
+RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000
+
 USER podman
 
 ENV WAYLAND_DISPLAY=wayland-0
