@@ -234,3 +234,9 @@ podman run -it --rm debian:sid
 
 # this works
 podman run --rm --privileged -u podman:podman quay.io/podman/stable podman run --rm -it quay.io/podman/stable bash
+
+
+winpr-makecert -rdp -n rdp-security -path rdp-security
+weston --backend=rdp-backend.so --rdp4-key rdp-security/rdp-security.key
+/run/user/1000/wayland-1
+xfreerdp localhost:3389

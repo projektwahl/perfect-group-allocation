@@ -29,9 +29,9 @@ spec:
         - name: secret-volume
           mountPath: "/run/secrets"
           readOnly: true
-        - mountPath: /run/user/1000/wayland-0
-          name: run-user-1000-wayland-0-host-0
-          readOnly: true
+        #- mountPath: /run/user/1000/wayland-0
+        #  name: run-user-1000-wayland-0-host-0
+        #  readOnly: true
         - name: dev-dri-host-1
           mountPath: /dev/dri
           readOnly: true
@@ -40,10 +40,10 @@ spec:
     - name: secret-volume
       secret:
         secretName: application-config
-    - hostPath:
-        path: /run/user/1000/wayland-0
-        type: File
-      name: run-user-1000-wayland-0-host-0
+    #- hostPath:
+    #    path: /run/user/1000/wayland-0
+    #    type: File
+    #  name: run-user-1000-wayland-0-host-0
     - name: dev-dri-host-1
       hostPath:
         path: /dev/dri
