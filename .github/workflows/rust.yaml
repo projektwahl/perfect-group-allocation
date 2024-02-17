@@ -16,15 +16,14 @@ concurrency:
 
 jobs:
   rust:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # doesn't have a recent enough podman version
     container:
-      image: ghcr.io/projektwahl/perfect-group-allocation:1
+      image: quay.io/podman/stable
     steps:
       - uses: actions/cache@v3
         with:
           path: ~/.local/share/containers/
       - uses: actions/checkout@v4
-      - run: ./.github/run.sh
       # what does privileged here affect and can we remove it?
       # -v /run/user/1000/wayland-0:/run/user/1000/wayland-0 # not in CI
-      #- run: podman run -it --device /dev/dri --privileged --userns=keep-id:uid=1000,gid=1000 -v pga-podman-cache:/home/podman/.local/share/containers -v pga-cargo:/home/podman/.cargo -v pga-target:$PWD/target -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh
+      - run: podman run -it --device /dev/dri --privileged --userns=keep-id:uid=1000,gid=1000 -v pga-podman-cache:/home/podman/.local/share/containers -v pga-cargo:/home/podman/.cargo -v pga-target:$PWD/target -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh
