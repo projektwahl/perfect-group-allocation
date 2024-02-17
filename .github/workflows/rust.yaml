@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest # doesn't have a recent enough podman version
     steps:
       - run: NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      - run: (echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /home/runner/.bashrc
+      #- run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
       - run: brew install podman
       - uses: actions/cache@v4
         with:
