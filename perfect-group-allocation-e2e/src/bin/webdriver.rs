@@ -38,14 +38,12 @@ pub async fn main() {
             let netlog = tokio::fs::read_to_string("/tmp/netlog.json").await.unwrap();
             println!("{}", netlog);
             println!("error {:?}", err);
-            tokio::time::sleep(Duration::from_secs(300)).await;
             panic!("{:?}", err);
         }
         Ok(Err(err)) => {
             let netlog = tokio::fs::read_to_string("/tmp/netlog.json").await.unwrap();
             println!("{}", netlog);
             println!("error {:?}", err);
-            tokio::time::sleep(Duration::from_secs(300)).await;
             panic!("{:?}", err);
         }
         Ok(Ok(())) => {
