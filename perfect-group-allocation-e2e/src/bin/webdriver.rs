@@ -28,8 +28,8 @@ use webdriver_bidi::{input, script, session, Browser, SendCommand, WebDriver};
 // so I think we should have n categories of setup (fully working, broken keycloak, crashed keycloak) that you can keep running between test setups? maybe some option to fully reset the database between runs (by restarting and deleting volume)?
 // for non-CI I think we should restart our server in between runs to get code updates
 
-#[tokio::test]
-pub async fn run_test() {
+#[tokio::main]
+pub async fn main() {
     let result = AssertUnwindSafe(test()).catch_unwind().await;
     println!("{result:?}");
     result.unwrap().unwrap();

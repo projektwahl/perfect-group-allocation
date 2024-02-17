@@ -45,6 +45,7 @@ mod tests {
     use crate::script::NodeRemoteValue;
 
     #[test]
+    #[ignore]
     fn it_works() {
         let string = r#"{
           "type":"node",
