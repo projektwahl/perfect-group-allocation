@@ -1,0 +1,3 @@
+*
+!target/debug/server
+!deployment/kustomize/base/perfect-group-allocation/Dockerfile
