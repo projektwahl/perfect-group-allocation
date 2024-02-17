@@ -78,8 +78,9 @@ elif [ "${1-}" == "prepare" ]; then
 
     cargo build --bin server
     SERVER_BINARY=$(cargo build --bin server --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "server") | .executable')
-    SERVER_BINARY=$(realpath --relative-to=.. $SERVER_BINARY)
-    echo "Compiled server binary: $SERVER_BINARY"
+    SERVER_BINARY=$(realpath --relative-to=. $SERVER_BINARY)
+    SERVER_BINARY_DIR="$(dirname "${SERVER_BINARY}")" ; SERVER_BINARY_FILE="$(basename "${SERVER_BINARY}")"
+    echo "Compiled server binary: $SERVER_BINARY_DIR and file $SERVER_BINARY_FILE"
 
     #cargo build --test webdriver
     #INTEGRATION_TEST_BINARY=$(cargo build --test webdriver --message-format json | jq --raw-output 'select(.reason == "compiler-artifact" and .target.name == "webdriver") | .executable')
@@ -88,7 +89,8 @@ elif [ "${1-}" == "prepare" ]; then
 
     # git describe --always --long --dirty 
     # TODO URGENT FIXME: Reduce build context size
-    SERVER_IMAGE=$(podman --remote build --build-arg BINARY=$SERVER_BINARY --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile ..)
+    echo -e '!server\n*' > $SERVER_BINARY_DIR/.containerignore
+    SERVER_IMAGE=$(podman --remote build --build-arg BINARY=$SERVER_BINARY_FILE --file $PWD/deployment/kustomize/base/perfect-group-allocation/Dockerfile $SERVER_BINARY_DIR)
     kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
     #TEST_IMAGE=$(podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
     #kustomize edit set image test=sha256:$TEST_IMAGE
