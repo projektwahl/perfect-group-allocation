@@ -92,6 +92,7 @@ impl WebDriver {
                 port
             }
             Browser::Chromium => {
+                // I think my wifi is just broken (surprise).
                 // https://netlog-viewer.appspot.com/#import
                 // chrome://net-export/
                 let mut child = tokio::process::Command::new("chromedriver")
