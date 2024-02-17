@@ -36,12 +36,12 @@ pub async fn main() {
     match result {
         Err(err) => {
             println!("error {:?}", err);
-            tokio::time::sleep(Duration::from_secs(30)).await;
+            tokio::time::sleep(Duration::from_secs(300)).await;
             panic!("{:?}", err);
         }
         Ok(Err(err)) => {
             println!("error {:?}", err);
-            tokio::time::sleep(Duration::from_secs(30)).await;
+            tokio::time::sleep(Duration::from_secs(300)).await;
             panic!("{:?}", err);
         }
         Ok(Ok(())) => {}

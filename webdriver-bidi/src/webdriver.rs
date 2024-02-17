@@ -26,14 +26,13 @@ impl WebDriver {
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
     pub async fn new(browser: Browser) -> Result<Self, crate::error::Error> {
+        // It's important to not drop this while the browser is running so the directory is not deleted
         let tmp_dir = tempdir().map_err(crate::error::Error::TmpDirCreate)?;
 
         let port = match browser {
             Browser::Firefox => {
                 // oh this path is the culprit?
 
-                // This here should use podman, so we don't need nested docker?
-                // the issue is that our other test needs the dns so we could probably either override dns?
                 let mut child = tokio::process::Command::new("firefox")
                     .kill_on_drop(true)
                     .args([
@@ -94,8 +93,8 @@ impl WebDriver {
             }
             Browser::Chromium => {
                 let mut child = tokio::process::Command::new("chromedriver")
-                    //.arg("--enable-chrome-logs")
-                    //.arg("--log-level=ALL")
+                    .arg("--enable-chrome-logs")
+                    .arg("--log-level=ALL")
                     .kill_on_drop(true)
                     .stdout(Stdio::piped())
                     .spawn()
