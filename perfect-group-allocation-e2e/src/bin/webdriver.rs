@@ -1,6 +1,4 @@
 use std::panic::AssertUnwindSafe;
-use std::path::Path;
-use std::time::Duration;
 
 use futures_util::FutureExt;
 
@@ -36,19 +34,19 @@ pub async fn main() {
     match result {
         Err(err) => {
             let netlog = tokio::fs::read_to_string("/tmp/netlog.json").await.unwrap();
-            println!("{}", netlog);
-            println!("error {:?}", err);
-            panic!("{:?}", err);
+            println!("{netlog}");
+            println!("error {err:?}");
+            panic!("{err:?}");
         }
         Ok(Err(err)) => {
             let netlog = tokio::fs::read_to_string("/tmp/netlog.json").await.unwrap();
-            println!("{}", netlog);
-            println!("error {:?}", err);
-            panic!("{:?}", err);
+            println!("{netlog}");
+            println!("error {err:?}");
+            panic!("{err:?}");
         }
         Ok(Ok(())) => {
             let netlog = tokio::fs::read_to_string("/tmp/netlog.json").await.unwrap();
-            println!("{}", netlog);
+            println!("{netlog}");
         }
     }
 }
@@ -60,7 +58,7 @@ pub async fn main() {
 pub async fn test() -> Result<(), webdriver_bidi::Error> {
     tracing_subscriber::fmt::init();
 
-    let url = format!("https://eperfect-group-allocation.dns.podman");
+    let url = "https://eperfect-group-allocation.dns.podman".to_string();
 
     // TODO FIXME add network slowdown for testing
     // TODO FIXME use user contexts for cookie isolation

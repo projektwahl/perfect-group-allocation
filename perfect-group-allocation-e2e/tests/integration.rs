@@ -1,5 +1,3 @@
-use std::process::ExitStatus;
-
 // cargo test -p perfect-group-allocation-e2e --test integration
 // https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
 #[tokio::test]

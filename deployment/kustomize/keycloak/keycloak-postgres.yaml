@@ -34,13 +34,13 @@ spec:
         exec:
           command:
             - pg_isready
-        periodSeconds: 1
+        periodSeconds: 3
         failureThreshold: 30
       livenessProbe:
         exec:
           command:
             - pg_isready
-        periodSeconds: 1
+        periodSeconds: 3
       resources:
         limits:
           memory: "1Gi"
