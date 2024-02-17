@@ -77,7 +77,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                             extensible: Extensible(
                                 json!({
                                     "goog:chromeOptions": {
-                                        "args": ["--log-net-log=/tmp/netlog.json", "--ozone-platform=wayland"]
+                                        "args": ["--headless", "--log-net-log=/tmp/netlog.json", "--ozone-platform=wayland"]
                                     }
                                 })
                                 .as_object()

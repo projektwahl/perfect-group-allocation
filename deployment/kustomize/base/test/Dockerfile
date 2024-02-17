@@ -9,7 +9,7 @@ RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run
 
 USER podman
 
-ENV WAYLAND_DISPLAY=wayland-0
+#ENV WAYLAND_DISPLAY=wayland-0
 ENV XDG_RUNTIME_DIR=/run/user/1000
 
 ARG BINARY

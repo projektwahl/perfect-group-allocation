@@ -240,3 +240,6 @@ winpr-makecert -rdp -n rdp-security -path rdp-security
 weston --backend=rdp-backend.so --rdp4-key rdp-security/rdp-security.key
 /run/user/1000/wayland-1
 xfreerdp localhost:3389
+
+# if it doesnt have external connectivity it doesn't break down on network changes? (because my wifi is buggy and it's not needed)
+podman network create --internal pga
