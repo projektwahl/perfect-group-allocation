@@ -87,7 +87,8 @@ elif [ "${1-}" == "prepare" ]; then
     #echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 
     # git describe --always --long --dirty 
-    SERVER_IMAGE=$(podman build --build-arg BINARY=$SERVER_BINARY --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile ..)
+    # TODO URGENT FIXME: Reduce build context size
+    SERVER_IMAGE=$(podman --remote build --build-arg BINARY=$SERVER_BINARY --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile ..)
     kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
     #TEST_IMAGE=$(podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
     #kustomize edit set image test=sha256:$TEST_IMAGE
