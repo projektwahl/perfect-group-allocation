@@ -4,12 +4,14 @@ set -o nounset   # abort on unbound variable
 set -o pipefail  # don't hide errors within pipes
 set -x
 
+PROJECT=$PWD
+
 # we should be able to use one keycloak for multiple tests.
 KEYCLOAK_PREFIX=keycloak-tmp-
 
 # generate root certs as these are the only thing that is nice to persist (so keycloak gets the same root cert and your browser doesn't need to add a new root ca all the time)
 mkdir -p rootca
-CAROOT=$PWD/rootca
+export CAROOT=$PWD/rootca
 GARBAGE=$(mktemp -d)
 
 cd $GARBAGE
@@ -33,12 +35,12 @@ if [ "${1-}" == "keycloak" ]; then
 
     KEYCLOAK_CONTAINERIGNORE=$(mktemp)
     echo -e '*' > $KEYCLOAK_CONTAINERIGNORE
-    KEYCLOAK_IMAGE=$(podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
+    KEYCLOAK_IMAGE=$(podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile $PROJECT)
     KEYCLOAK_IMAGE=$(echo "$KEYCLOAK_IMAGE" | tail -n 1)
     kustomize edit set image keycloak=sha256:$KEYCLOAK_IMAGE
 
     kustomize edit set nameprefix $KEYCLOAK_PREFIX
-    kustomize edit add resource ../deployment/kustomize/keycloak
+    kustomize edit add resource ../../$PROJECT/deployment/kustomize/keycloak
 
     mkcert "${KEYCLOAK_PREFIX}keycloak"
     kustomize edit add secret keycloak-tls-cert \
@@ -50,10 +52,10 @@ if [ "${1-}" == "keycloak" ]; then
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play --replace kubernetes.yaml
 
-    podman logs --follow ${KEYCLOAK_PREFIX}keycloak-keycloak &
+    podman logs --color --names --follow ${KEYCLOAK_PREFIX}keycloak-keycloak & #  | sed 's/[\x01-\x1F\x7F]//g'
     echo waiting for keycloak
     # TODO refactor to directly loop on healthcheck?
-    watch podman healthcheck run ${KEYCLOAK_PREFIX}keycloak-keycloak &
+    watch podman healthcheck run ${KEYCLOAK_PREFIX}keycloak-keycloak > /dev/null 2>&1 &
     podman wait --condition healthy ${KEYCLOAK_PREFIX}keycloak-keycloak
     echo keycloak started
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
@@ -70,14 +72,13 @@ else
     kustomize create
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
-    cargo build --bin server
     SERVER_CONTAINERIGNORE=$(mktemp)
     echo -e '*\n!target/debug/server\n!deployment/kustomize/base/perfect-group-allocation/Dockerfile' > $SERVER_CONTAINERIGNORE
     # tag with: git describe --always --long --dirty 
-    SERVER_IMAGE=$(podman build --ignorefile $SERVER_CONTAINERIGNORE --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile .)
+    SERVER_IMAGE=$(podman build --ignorefile $SERVER_CONTAINERIGNORE --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile $PROJECT)
     kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
 
-    kustomize edit add resource ../../$CAROOT/../deployment/kustomize/base/
+    kustomize edit add resource ../../$PROJECT/deployment/kustomize/base/
     kustomize edit set nameprefix $PREFIX
 
     mkcert "${PREFIX}perfect-group-allocation" # maybe use a wildcard certificate instead? to speed this up
@@ -90,10 +91,10 @@ else
         --from-literal="database_url=postgres://postgres@postgres/pga?sslmode=disable" \
         --from-literal=url=https://${PREFIX}perfect-group-allocation.dns.podman
 
-    INTEGRATION_TEST_BINARY=$(realpath --relative-to=. $1)
+    INTEGRATION_TEST_BINARY=$(realpath --relative-to=$PROJECT $1)
     INTEGRATION_TEST_CONTAINERIGNORE=$(mktemp)
-    echo -e '*\n!'"$BINARY" > $INTEGRATION_TEST_CONTAINERIGNORE
-    INTEGRATION_TEST_IMAGE=$(podman build --ignorefile $INTEGRATION_TEST_CONTAINERIGNORE --build-arg BINARY=$BINARY --file ./deployment/kustomize/base/test/Dockerfile .)
+    echo -e '*\n!'"$INTEGRATION_TEST_BINARY" > $INTEGRATION_TEST_CONTAINERIGNORE
+    INTEGRATION_TEST_IMAGE=$(podman build --ignorefile $INTEGRATION_TEST_CONTAINERIGNORE --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile $PROJECT)
     INTEGRATION_TEST_IMAGE=$(echo "$INTEGRATION_TEST_IMAGE" | tail -n 1)
     kustomize edit set image test=sha256:$INTEGRATION_TEST_IMAGE
 
