@@ -1,39 +1,18 @@
 # to get latest firefox and chromium
 FROM docker.io/library/debian:sid
 
-RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver curl mkcert podman inetutils-ping ldnsutils
-
-RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver
 
 RUN useradd -m podman
-RUN echo podman:1001:65534 > /etc/subuid
-RUN echo podman:1001:65534 > /etc/subgid
-
-RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000
-
-WORKDIR /bin
-RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
-RUN tar xzf kustomize_v5.3.0_linux_amd64.tar.gz
-
-ARG CARGO_MANIFEST_DIR
-RUN mkdir -p ${CARGO_MANIFEST_DIR}
-COPY ./deployment /${CARGO_MANIFEST_DIR}/../deployment
-COPY ./run-integration-tests.sh /${CARGO_MANIFEST_DIR}/../
-COPY ./tmp /${CARGO_MANIFEST_DIR}/../tmp
-RUN chown -R podman:podman ${CARGO_MANIFEST_DIR}/../
+USER podman
 
 ENV WAYLAND_DISPLAY=wayland-0
 ENV XDG_RUNTIME_DIR=/run/user/1000
 
-WORKDIR ${CARGO_MANIFEST_DIR}
 ARG BINARY
 COPY ${BINARY} /bin/test
 
-USER podman
 ENTRYPOINT ["/bin/test"]
-CMD ["--nocapture"]
 
 # podman build -t test --file deployment/kustomize/base/test/Dockerfile . && podman run --device /dev/dri --userns=keep-id --user=$(id -u):$(id -g) -v /run/user/1000/wayland-0:/run/user/1000/wayland-0 test firefox
-
 # podman build -t test --file deployment/kustomize/base/test/Dockerfile . && podman run --device /dev/dri --userns=keep-id --user=$(id -u):$(id -g) -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY test chromium --ozone-platform=wayland
-# podman kube generate youthful_volhard
