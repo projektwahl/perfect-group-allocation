@@ -38,8 +38,8 @@ if [ "${1-}" == "keycloak" ]; then
     cat /etc/subgid
     cat /proc/self/uid_map
     podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..
-    KEYCLOAK_IMAGE=$(podman build --quiet --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
-    kustomize edit set image keycloak=sha256:$KEYCLOAK_IMAGE
+    KEYCLOAK_IMAGE=$(podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile ..)
+    kustomize edit set image keycloak=sha256:$(echo "$KEYCLOAK_IMAGE" | tail -n 1)
 
     kustomize edit set nameprefix $KEYCLOAK_PREFIX
     kustomize edit add resource ../deployment/kustomize/keycloak
@@ -87,8 +87,8 @@ elif [ "${1-}" == "prepare" ]; then
     #echo "Compiled integration test binary: $INTEGRATION_TEST_BINARY"
 
     # git describe --always --long --dirty 
-    SERVER_IMAGE=$(podman build --quiet --build-arg BINARY=$SERVER_BINARY --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile ..)
-    kustomize edit set image perfect-group-allocation=sha256:$SERVER_IMAGE
+    SERVER_IMAGE=$(podman build --build-arg BINARY=$SERVER_BINARY --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile ..)
+    kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
     #TEST_IMAGE=$(podman build --quiet --build-arg BINARY=$INTEGRATION_TEST_BINARY --file ./deployment/kustomize/base/test/Dockerfile ..)
     #kustomize edit set image test=sha256:$TEST_IMAGE
 
