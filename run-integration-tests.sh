@@ -102,7 +102,7 @@ else
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play kubernetes.yaml # ahh kube uses another network
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
-    #podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation ${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
-    #(exit $(podman wait ${PREFIX}test-test))
-    #podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
+    podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation & #${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
+    (exit $(podman wait ${PREFIX}test-test))
+    podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
 fi
