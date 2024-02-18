@@ -217,8 +217,8 @@ podman run -it --rm debian:sid
 # maybe the podman image works better? YEAH IT DOES
 podman run --security-opt label=disable --user podman --device /dev/fuse quay.io/podman/stable podman run alpine echo hello
 
-# IMPORTANT: podman in podman needs more than 65k uids because the build needs 65k and the container itself needs a few more
-sudo usermod --add-subuids 300000-400000 --add-subgids 300000-400000 $USER
+# IMPORTANT: podman in podman needs more than 2*65k uids because the build needs 65k and the container itself 65k
+sudo usermod --add-subuids 100000-1000000 --add-subgids 100000-1000000 $USER
 
 # follow this exactly and think about how subgids work
 podman run -it --privileged --userns=keep-id -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 bash
