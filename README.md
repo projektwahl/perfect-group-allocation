@@ -217,11 +217,8 @@ podman run -it --rm debian:sid
 # maybe the podman image works better? YEAH IT DOES
 podman run --security-opt label=disable --user podman --device /dev/fuse quay.io/podman/stable podman run alpine echo hello
 
-
-
-
-
-sudo usermod --add-subuids 1000000-1655350 --add-subgids 1000000-1655350 moritz
+# stolen from github ci to have the same range for simplicity
+sudo usermod --add-subuids 165536-231071 --add-subgids 165536-231071 moritz
 
 # follow this exactly and think about how subgids work
 podman run -it --privileged --userns=keep-id -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 bash

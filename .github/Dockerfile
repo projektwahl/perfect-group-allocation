@@ -23,8 +23,8 @@ RUN cargo install --locked --features=cli lightningcss@1.0.0-alpha.52
 RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 
 USER root
-RUN echo podman:1001:65534 > /etc/subuid
-RUN echo podman:1001:65534 > /etc/subgid
+RUN echo podman:165536:65536 > /etc/subuid
+RUN echo podman:165536:65536 > /etc/subgid
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000
 USER podman
 ENV XDG_RUNTIME_DIR=/run/user/1000
