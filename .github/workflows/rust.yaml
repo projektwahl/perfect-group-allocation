@@ -18,7 +18,7 @@ jobs:
   rust:
     runs-on: ubuntu-latest # doesn't have a recent enough podman version. we want to avoid docker at all costs because it adds another layer of complexity
     steps:
-      - run: sudo usermod --add-subuids 100000-1000000 --add-subgids 100000-1000000 $USER
+      - run: sudo usermod --add-subuids 1000000-2000000 --add-subgids 1000000-2000000 $USER
       - run: cat /etc/subuid
       - run: NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       - run: (echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /home/runner/.bashrc
