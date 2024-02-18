@@ -10,6 +10,8 @@ pub fn main() -> Result<(), AppError> {
         .block_on(async {
             tracing_subscriber::fmt::init();
 
-            setup_http2_http3_server(get_config()?).await?.await
+            let (_watcher, config) = get_config().await?;
+
+            setup_http2_http3_server(config).await?.await
         })
 }

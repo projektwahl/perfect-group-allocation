@@ -13,7 +13,7 @@ pub mod session;
 use core::convert::Infallible;
 use std::marker::PhantomData;
 use std::net::{Ipv4Addr, SocketAddrV4};
-use std::path::Path;
+
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -230,7 +230,7 @@ impl<T> ResponseTypedHeaderExt for Response<T> {
 
 // https://github.com/hyperium/hyper/blob/master/examples/service_struct_impl.rs
 pub struct Svc<RequestBodyBuf: Buf + Send + 'static> {
-    config: Config,
+    config: tokio::sync::watch::Receiver<Arc<Config>>,
     pool: Pool,
     phantom_data: PhantomData<RequestBodyBuf>,
 }
@@ -273,9 +273,11 @@ impl<
         let result: EitherFutureRouter<Result<Response<EitherBodyRouter>, AppError>> =
             match (req.method(), req.uri().path()) {
                 (&Method::GET, "/") => {
-                    let config = self.config.clone();
+                    let config = self.config.borrow().clone();
                     EitherFutureRouter::Option1(async move {
-                        Ok(index(session, config).await?.map(EitherBodyRouter::Option1))
+                        Ok(index(session, &config)
+                            .await?
+                            .map(EitherBodyRouter::Option1))
                     })
                 }
                 (&Method::GET, "/bundle.css") => EitherFutureRouter::Option2(async move {
@@ -283,7 +285,7 @@ impl<
                 }),
                 (&Method::GET, "/list") => {
                     let pool = self.pool.clone();
-                    let config = self.config.clone();
+                    let config = self.config.borrow().clone();
                     EitherFutureRouter::Option3(async move {
                         Ok(list(session, &config, pool)
                             .await?
@@ -295,15 +297,15 @@ impl<
                 }),
                 (&Method::POST, "/") => {
                     let pool = self.pool.clone();
-                    let config = self.config.clone();
+                    let config = self.config.borrow().clone();
                     EitherFutureRouter::Option5(async move {
-                        Ok(create(req, session, config, pool)
+                        Ok(create(req, session, &config, pool)
                             .await?
                             .map(EitherBodyRouter::Option5))
                     })
                 }
                 (&Method::POST, "/openidconnect-login") => {
-                    let config = self.config.clone();
+                    let config = self.config.borrow().clone();
                     EitherFutureRouter::Option6(async move {
                         Ok(openid_login(session, &config)
                             .await?
@@ -311,7 +313,7 @@ impl<
                     })
                 }
                 (&Method::GET, "/openidconnect-redirect") => {
-                    let config = self.config.clone();
+                    let config = self.config.borrow().clone();
                     EitherFutureRouter::Option7(async move {
                         Ok(openid_redirect(req, session, &config)
                             .await?
@@ -330,8 +332,9 @@ impl<
             match result.await {
                 Ok(ok) => Ok(ok),
                 Err(err) => {
+                    let config = error_config.borrow().clone();
                     let response = err
-                        .build_error_template(error_session, error_config)
+                        .build_error_template(error_session, &config)
                         .await
                         .map(EitherBodyRouter::Option500);
                     Ok(response)
@@ -345,9 +348,11 @@ impl<
 }
 
 pub fn setup_server<B: Buf + Send + 'static>(
-    config: Config,
+    config: tokio::sync::watch::Receiver<Arc<Config>>,
 ) -> std::result::Result<Svc<B>, AppError> {
     info!("starting up server...");
+
+    let current_config = config.borrow().clone();
 
     // this one uses parallelism for generating the index css which is highly nondeterministic
     //#[cfg(not(feature = "profiling"))]
@@ -355,7 +360,7 @@ pub fn setup_server<B: Buf + Send + 'static>(
 
     // https://github.com/hyperium/hyper/blob/master/examples/state.rs
 
-    let pool = get_database_connection(&config.database_url)?;
+    let pool = get_database_connection(&current_config.database_url)?;
 
     //let service = ServeDir::new("frontend");
 
@@ -384,9 +389,10 @@ pub fn setup_server<B: Buf + Send + 'static>(
 //#[cfg_attr(feature = "perfect-group-allocation-telemetry", tracing::instrument)]
 
 pub async fn setup_http2_http3_server(
-    config: Config,
+    config: tokio::sync::watch::Receiver<Arc<Config>>,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
-    let (certs, key) = load_certs_key_pair()?;
+    let current_config = config.borrow().clone();
+    let (certs, key) = load_certs_key_pair(&current_config)?;
 
     // needs a service that accepts some non-controllable impl Buf
     // let http3_server = run_http3_server_s2n(config.clone())?;
@@ -413,7 +419,7 @@ pub async fn setup_http2_http3_server(
 /// Outer future returns when server started listening. Inner future returns when server stopped.
 #[allow(clippy::cognitive_complexity)]
 pub async fn run_http2_server(
-    config: Config,
+    config: tokio::sync::watch::Receiver<Arc<Config>>,
     certs: Vec<CertificateDer<'static>>, // TODO FIXME put these into the config file
     key: PrivateKeyDer<'static>,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
@@ -510,39 +516,23 @@ pub async fn run_http2_server(
     })
 }
 
-pub fn load_certs(filename: &Path) -> Result<Vec<CertificateDer<'static>>, AppError> {
-    // TODO FIXME async
-    let certfile = std::fs::File::open(filename).map_err(AppError::TlsCertificate)?;
-    let mut reader = std::io::BufReader::new(certfile);
-
-    rustls_pemfile::certs(&mut reader)
-        .map(|value| match value {
-            Ok(ok) => Ok(ok),
-            Err(err) => Err(AppError::TlsCertificate(err)),
-        })
-        .collect()
-}
-
-// Load private key from file.
-pub fn load_private_key(filename: &Path) -> Result<PrivateKeyDer<'static>, AppError> {
-    let keyfile = std::fs::File::open(filename).map_err(AppError::TlsKey)?;
-    let mut reader = std::io::BufReader::new(keyfile);
-
-    // TODO FIXME remove unwrap
-    Ok(rustls_pemfile::private_key(&mut reader)?.unwrap())
-}
-
 pub fn load_certs_key_pair(
+    config: &Config,
 ) -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), AppError> {
     eprintln!("{:?}", std::env::current_dir());
-    let certs = load_certs(Path::new(CERT_PATH))?;
-    let key = load_private_key(Path::new(KEY_PATH))?;
+    let certs: Vec<CertificateDer<'static>> =
+        rustls_pemfile::certs(&mut config.tls.cert.clone().as_bytes())
+            .map(|value| match value {
+                Ok(ok) => Ok(ok),
+                Err(err) => Err(AppError::TlsCertificate(err)),
+            })
+            .collect::<Result<Vec<CertificateDer<'static>>, AppError>>()?;
+    let key = rustls_pemfile::private_key(&mut config.tls.key.as_bytes())?.unwrap();
 
     Ok((certs, key))
 }
 
-pub const CERT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../h3.selfmade4u.de.pem");
-pub const KEY_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../h3.selfmade4u.de-key.pem");
+// TODO FIXME make configurable
 pub const PORT: u16 = 443;
 pub const ALT_SVC_HEADER: &str = r#"h3=":443"; ma=2592000; persist=1"#;
 

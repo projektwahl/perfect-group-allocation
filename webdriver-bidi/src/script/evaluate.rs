@@ -39,3 +39,24 @@ pub struct Parameters {
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
 pub struct Result(pub EvaluateResult);
+
+#[cfg(test)]
+mod tests {
+    use crate::script::NodeRemoteValue;
+
+    #[test]
+    #[ignore]
+    fn it_works() {
+        let string = r#"{
+          "type":"node",
+          "sharedId":"5f9fd48a-cc26-4313-a4ad-a440bab48d13",
+          "value":{
+            "nodeType":3,
+            "nodeValue":"Login",
+            "childNodeCount":0
+          }
+        }"#;
+        let jd = &mut serde_json::Deserializer::from_str(string);
+        let _result: NodeRemoteValue = serde_path_to_error::deserialize(jd).unwrap();
+    }
+}

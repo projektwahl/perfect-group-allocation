@@ -1,27 +1,39 @@
 use core::fmt::{Debug, Display};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
-use figment::providers::{Env, Format as _, Toml};
-use figment::Figment;
-use serde::Deserialize;
+use notify::{RecommendedWatcher, RecursiveMode, Watcher as _};
 
-#[derive(Deserialize, Clone)]
+#[derive(Debug, Default)]
 pub struct OpenIdConnectConfig {
     pub issuer_url: String,
     pub client_id: String,
     pub client_secret: String,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Debug, Default)]
+pub struct TlsConfig {
+    pub cert: String,
+    pub key: String,
+}
+
+#[derive(Debug, Default)]
 pub struct Config {
     pub url: String,
     pub database_url: String,
     pub openidconnect: OpenIdConnectConfig,
+    pub tls: TlsConfig,
 }
 
 #[derive(thiserror::Error)]
 pub enum ConfigError {
-    #[error("config error: {0}")]
-    Header(#[from] figment::Error),
+    #[error("notify error for path `{0}`: {1}")]
+    Notify(PathBuf, notify::Error),
+    #[error("io error for path `{0}`: {1}")]
+    Io(PathBuf, std::io::Error),
 }
 
 impl Debug for ConfigError {
@@ -30,9 +42,82 @@ impl Debug for ConfigError {
     }
 }
 
-pub fn get_config() -> Result<Config, ConfigError> {
-    Ok(Figment::new()
-        .merge(Toml::file("pga.toml"))
-        .merge(Env::prefixed("PGA_"))
-        .extract()?)
+async fn read_file(path: PathBuf) -> Result<String, ConfigError> {
+    tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|e| ConfigError::Io(path, e))
+}
+
+pub async fn reread_config(config_directory: &Path) -> Result<Config, ConfigError> {
+    let url = read_file(config_directory.join("url")).await?;
+    let database_url = read_file(config_directory.join("database_url")).await?;
+    let issuer_url = read_file(config_directory.join("openidconnect.issuer_url")).await?;
+    let client_id = read_file(config_directory.join("openidconnect.client_id")).await?;
+    let client_secret = read_file(config_directory.join("openidconnect.client_secret")).await?;
+    let cert = read_file(config_directory.join("tls.crt")).await?;
+    let key = read_file(config_directory.join("tls.key")).await?;
+
+    Ok(Config {
+        url,
+        database_url,
+        openidconnect: OpenIdConnectConfig {
+            issuer_url,
+            client_id,
+            client_secret,
+        },
+        tls: TlsConfig { cert, key },
+    })
+}
+
+// TODO FIXME the openid config should also be fetched here so it is consistent with the rest of the config. may be relevant for redirect url or so
+
+/// <https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod>
+/// <https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume>
+/// Secrets can be hot-reloaded so we can update configuration at runtime
+pub async fn get_config() -> Result<
+    (
+        RecommendedWatcher,
+        tokio::sync::watch::Receiver<Arc<Config>>,
+    ),
+    ConfigError,
+> {
+    let config_directory =
+        std::env::var_os("PGA_CONFIG_DIR").expect("PGA_CONFIG_DIR env variable set");
+    let config_directory = PathBuf::from(config_directory);
+    let (notify_tx, mut notify_rx) = tokio::sync::watch::channel(());
+
+    let mut watcher = notify::recommended_watcher(move |res| match res {
+        Ok(_event) => {
+            notify_tx.send(()).unwrap();
+        }
+        Err(e) => println!("watch error: {e:?}"),
+    })
+    .map_err(|e| ConfigError::Notify(config_directory.clone(), e))?;
+
+    watcher
+        .watch(&config_directory, RecursiveMode::Recursive)
+        .map_err(|e| ConfigError::Notify(config_directory.clone(), e))?;
+
+    let (tx, rx) = tokio::sync::watch::channel(Arc::new(Config::default()));
+    let config_directory2 = config_directory.clone();
+
+    // we watched before so it should be safe to first read the initial config and then watch for changes.
+    let new_config = reread_config(&config_directory).await?;
+    tx.send(Arc::new(new_config)).unwrap();
+
+    tokio::spawn(async move {
+        loop {
+            if notify_rx.changed().await.is_err() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await; // basic debouncing
+            notify_rx.borrow_and_update();
+            // TODO FIXME don't unwrap but log
+            let new_config = reread_config(&config_directory2).await.unwrap();
+            tx.send(Arc::new(new_config)).unwrap();
+            println!("updated config");
+        }
+    });
+
+    Ok((watcher, rx))
 }

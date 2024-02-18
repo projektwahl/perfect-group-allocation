@@ -26,24 +26,25 @@ impl WebDriver {
     /// ## Errors
     /// Returns an error if the `WebSocket` connection fails.
     pub async fn new(browser: Browser) -> Result<Self, crate::error::Error> {
+        // It's important to not drop this while the browser is running so the directory is not deleted
+        let tmp_dir = tempdir().map_err(crate::error::Error::TmpDirCreate)?;
+
         let port = match browser {
             Browser::Firefox => {
-                let tmp_dir = tempdir().map_err(crate::error::ErrorInner::TmpDirCreate)?;
+                // oh this path is the culprit?
 
                 let mut child = tokio::process::Command::new("firefox")
                     .kill_on_drop(true)
                     .args([
                         "--profile",
                         &tmp_dir.path().to_string_lossy(),
-                        "--no-remote",
-                        "--new-instance",
                         //"--headless",
                         "--remote-debugging-port",
                         "0",
                     ])
                     .stderr(Stdio::piped())
                     .spawn()
-                    .map_err(crate::error::ErrorInner::SpawnBrowser)?;
+                    .map_err(crate::error::Error::SpawnBrowser)?;
 
                 let stderr = child.stderr.take().unwrap();
 
@@ -55,7 +56,7 @@ impl WebDriver {
                     let status = child
                         .wait()
                         .await
-                        .map_err(crate::error::ErrorInner::FailedToRunBrowser)?;
+                        .map_err(crate::error::Error::FailedToRunBrowser)?;
 
                     error!("child status was: {status}");
 
@@ -66,27 +67,24 @@ impl WebDriver {
                 while let Some(line) = reader
                     .next_line()
                     .await
-                    .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
+                    .map_err(crate::error::Error::ReadBrowserStderr)?
                 {
-                    trace!("{line}");
+                    trace!(target: "firefox", "{line}");
                     if let Some(p) =
                         line.strip_prefix("WebDriver BiDi listening on ws://127.0.0.1:")
                     {
-                        port = Some(
-                            p.parse::<u16>()
-                                .map_err(crate::error::ErrorInner::PortDetect)?,
-                        );
+                        port = Some(p.parse::<u16>().map_err(crate::error::Error::PortDetect)?);
                         break;
                     }
                 }
 
                 let Some(port) = port else {
-                    return Err(crate::error::ErrorInner::PortNotFound)?;
+                    return Err(crate::error::Error::PortNotFound)?;
                 };
 
                 tokio::spawn(async move {
                     while let Some(line) = reader.next_line().await? {
-                        trace!("{line}");
+                        trace!(target: "firefox", "{line}");
                     }
                     Ok::<(), std::io::Error>(())
                 });
@@ -94,11 +92,16 @@ impl WebDriver {
                 port
             }
             Browser::Chromium => {
+                // I think my wifi is just broken (surprise).
+                // https://netlog-viewer.appspot.com/#import
+                // chrome://net-export/
                 let mut child = tokio::process::Command::new("chromedriver")
+                    .arg("--enable-chrome-logs")
+                    //.arg("--log-level=ALL")
                     .kill_on_drop(true)
                     .stdout(Stdio::piped())
                     .spawn()
-                    .map_err(crate::error::ErrorInner::SpawnBrowser)?;
+                    .map_err(crate::error::Error::SpawnBrowser)?;
 
                 let stderr = child.stdout.take().unwrap();
 
@@ -110,7 +113,7 @@ impl WebDriver {
                     let status = child
                         .wait()
                         .await
-                        .map_err(crate::error::ErrorInner::FailedToRunBrowser)?;
+                        .map_err(crate::error::Error::FailedToRunBrowser)?;
 
                     error!("child status was: {status}");
 
@@ -120,7 +123,7 @@ impl WebDriver {
                 while let Some(line) = reader
                     .next_line()
                     .await
-                    .map_err(crate::error::ErrorInner::ReadBrowserStderr)?
+                    .map_err(crate::error::Error::ReadBrowserStderr)?
                 {
                     trace!("{line}");
                     if line == "ChromeDriver was started successfully." {
@@ -138,14 +141,17 @@ impl WebDriver {
             }
         };
 
+        println!("GOT A PORT");
+
         let (stream, _response) =
             tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{port}/session"))
                 .await
-                .map_err(crate::error::ErrorInner::WebSocket)?;
+                .map_err(crate::error::Error::WebSocket)?;
 
         let (command_sender, command_receiver) = mpsc::unbounded_channel();
 
-        tokio::spawn(WebDriverHandler::handle(stream, command_receiver));
+        // TODO also pass browser process there? or somehow ensure it gets discarded on exit including the profile directroy
+        tokio::spawn(WebDriverHandler::handle(tmp_dir, stream, command_receiver));
 
         Ok(Self {
             send_command: command_sender,
@@ -166,7 +172,7 @@ impl WebDriver {
         async {
             let result = rx
                 .await
-                .map_err(|_| crate::error::ErrorInner::CommandTaskExited)?;
+                .map_err(|_| crate::error::Error::CommandTaskExited)?;
             Ok(result)
         }
     }
@@ -186,7 +192,7 @@ impl WebDriver {
         async {
             let result = rx
                 .await
-                .map_err(|_| crate::error::ErrorInner::CommandTaskExited)?;
+                .map_err(|_| crate::error::Error::CommandTaskExited)?;
             Ok(result)
         }
     }

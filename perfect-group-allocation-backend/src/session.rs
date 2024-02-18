@@ -94,9 +94,15 @@ impl ResponseSessionExt for hyper::http::response::Builder {
         self,
         session: Session<OpenIdConnectSession, TemporaryOpenIdConnectState>,
     ) -> Self {
+        // TODO FIXME verify settings here
         let mut this = self;
         if let (value, true) = session.csrf_token {
-            let cookie = Cookie::build((COOKIE_NAME_CSRF_TOKEN, value)).build();
+            let cookie = Cookie::build((COOKIE_NAME_CSRF_TOKEN, value))
+                .same_site(cookie::SameSite::Strict)
+                .secure(true)
+                .http_only(true)
+                .path("/")
+                .build();
             this = this.header(
                 SET_COOKIE,
                 HeaderValue::try_from(cookie.to_string()).unwrap(),
@@ -110,7 +116,14 @@ impl ResponseSessionExt for hyper::http::response::Builder {
                         .expires(OffsetDateTime::now_utc() - cookie::time::Duration::days(365))
                         .build()
                 },
-                |value| Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value)).build(),
+                |value| {
+                    Cookie::build((COOKIE_NAME_OPENIDCONNECT_SESSION, value))
+                        .same_site(cookie::SameSite::Lax)
+                        .secure(true)
+                        .http_only(true)
+                        .path("/")
+                        .build()
+                },
             );
             this = this.header(
                 SET_COOKIE,
@@ -125,7 +138,14 @@ impl ResponseSessionExt for hyper::http::response::Builder {
                         .expires(OffsetDateTime::now_utc() - cookie::time::Duration::days(365))
                         .build()
                 },
-                |value| Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value)).build(),
+                |value| {
+                    Cookie::build((COOKIE_NAME_TEMPORARY_OPENIDCONNECT_STATE, value))
+                        .same_site(cookie::SameSite::Lax)
+                        .secure(true)
+                        .http_only(true)
+                        .path("/")
+                        .build()
+                },
             );
             this = this.header(
                 SET_COOKIE,

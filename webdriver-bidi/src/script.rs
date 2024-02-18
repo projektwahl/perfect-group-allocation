@@ -383,6 +383,7 @@ pub struct RemoteObjectReference {
     pub extensible: Extensible,
 }
 
+// TODO FIXME this breaks the serde-error path which is a known issue. this is also probably recursive
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
@@ -726,6 +727,23 @@ pub struct HTMLCollectionRemoteValue {
     pub value: Option<ListRemoteValue>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub enum ConstNode {
+    #[serde(rename = "node")]
+    Node,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct NodeRemoteValueWithTag {
+    pub r#type: ConstNode,
+    #[serde(flatten)]
+    pub inner: NodeRemoteValue,
+}
+
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -757,7 +775,7 @@ pub struct NodeProperties {
     pub attributes: Option<HashMap<String, String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub children: Option<Vec<NodeRemoteValue>>,
+    pub children: Option<Vec<NodeRemoteValueWithTag>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub local_name: Option<String>,
@@ -773,7 +791,7 @@ pub struct NodeProperties {
     pub node_value: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub shadow_root: Option<Box<NodeRemoteValue>>,
+    pub shadow_root: Option<Box<NodeRemoteValueWithTag>>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-RemoteValue>
@@ -815,15 +833,15 @@ pub struct SerializationOptions {
     // TODO FIXME default
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    max_dom_depth: Option<u64>,
+    pub max_dom_depth: Option<u64>,
     // TODO FIXME default
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    max_object_depth: Option<u64>,
+    pub max_object_depth: Option<u64>,
     // TODO FIXME default
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    include_shadow_tree: Option<ShadowTreeType>,
+    pub include_shadow_tree: Option<ShadowTreeType>,
 }
 
 /// <https://w3c.github.io/webdriver-bidi/#type-script-SerializationOptions>

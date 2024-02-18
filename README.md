@@ -151,7 +151,8 @@ sudo nano /etc/sysctl.conf
 vm.max_map_count=262144
 sudo sysctl -p
 
-pipx install https://github.com/containers/podman-compose/archive/devel.tar.gz # profile support not yet in 1.0.6
+#pipx install https://github.com/containers/podman-compose/archive/devel.tar.gz # profile support not yet in 1.0.6
+# install docker-compose as that is a much better implementation. podman compose will then automatically use it.
 clear && podman compose down && podman compose up
 # clear && podman compose --profile opensearch up
 
@@ -200,3 +201,42 @@ use zed attack proxy to create some requests
 
 export DEBUGINFOD_URLS="https://debuginfod.archlinux.org"
 kcachegrind callgrind.out.110536
+
+# basic example of podman in podman
+
+podman inspect quay.io/podman/stable
+podman run -it --rm --privileged quay.io/podman/stable
+podman run -it --rm quay.io/podman/stable # this creates a warning
+
+so I can reproduce with our test image and sudo which is interesting
+
+# https://www.redhat.com/sysadmin/podman-inside-container
+podman run --security-opt label=disable --user podman --device /dev/fuse -it ghcr.io/projektwahl/perfect-group-allocation:1
+podman run -it --rm debian:sid
+
+# maybe the podman image works better? YEAH IT DOES
+podman run --security-opt label=disable --user podman --device /dev/fuse quay.io/podman/stable podman run alpine echo hello
+
+# IMPORTANT: podman in podman needs more than 2*65k uids because the build needs 65k and the container itself 65k
+sudo usermod --add-subuids 1000000-2000000 --add-subgids 1000000-2000000 $USER
+
+# follow this exactly and think about how subgids work
+podman run -it --privileged --userns=keep-id -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 bash
+./github/run.sh
+
+# https://github.com/containers/podman/issues/4056
+# maybe the subuid file is empty is fine as long as the inner command can create mappings?
+sudo podman run -v $PWD:$PWD --workdir=$PWD --userns=keep-id -it ghcr.io/projektwahl/perfect-group-allocation:1
+podman run -it --rm debian:sid
+
+# this works
+podman run --rm --privileged -u podman:podman quay.io/podman/stable podman run --rm -it quay.io/podman/stable bash
+
+
+winpr-makecert -rdp -n rdp-security -path rdp-security
+weston --backend=rdp-backend.so --rdp4-key rdp-security/rdp-security.key
+/run/user/1000/wayland-1
+xfreerdp localhost:3389
+
+# if it doesnt have external connectivity it doesn't break down on network changes? (because my wifi is buggy and it's not needed)
+podman network create --internal pga

@@ -16,32 +16,34 @@ workspace = true
 
 [dependencies]
 bytes = { default-features = false, version = "1" }
+futures-util = { default-features = false, version = "0.3" }
 http-body-util = { default-features = false, version = "0.1" }
 hyper = { default-features = false, version = "1" }
 hyper-util = { default-features = false, version = "0.1" }
+iai-callgrind = { default-features = false, version = "0.10", features = [
+    "default",
+] }
 libc = { default-features = false, version = "0.2" }
 perfect-group-allocation-backend = { default-features = false, path = "../perfect-group-allocation-backend" }
 perfect-group-allocation-config = { default-features = false, path = "../perfect-group-allocation-config" }
 rand = { default-features = false, version = "0.8" }
+rustls-pemfile = { default-features = false, version = "2", features = ["std"] }
+serde_json = { default-features = false, version = "1", features = ["alloc"] }
+tempfile = { default-features = false, version = "3" }
 tokio = { default-features = false, version = "1" }
 tokio-rustls = { default-features = false, version = "0.25", features = [
     "default",
 ] }
 tracing = { default-features = false, version = "0.1" }
-
-[dev-dependencies]
-iai-callgrind = { default-features = false, version = "0.10", features = [
-    "default",
-] }
 tracing-subscriber = { default-features = false, version = "0.3", features = [
     "env-filter",
 ] }
 webdriver-bidi = { default-features = false, path = "../webdriver-bidi" }
 
-[[bench]]
-harness = false
-name = "http_e2e"
+#[[bench]]
+#harness = false
+#name = "http_e2e"
 
-[[bench]]
-harness = false
-name = "service_e2e"
+#[[bench]]
+#harness = false
+#name = "service_e2e"

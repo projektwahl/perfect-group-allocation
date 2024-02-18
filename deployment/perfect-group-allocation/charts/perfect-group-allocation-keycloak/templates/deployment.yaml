@@ -1,0 +1,103 @@
+# TODO https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "pga-keycloak.fullname" . }}-cert
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ .Values.cert | b64enc | quote }}
+  tls.key: {{ .Values.key | b64enc | quote}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pga-keycloak.fullname" . }}
+  labels:
+    {{- include "pga-keycloak.labels" . | nindent 4 }}
+spec:
+  restartPolicy: OnFailure
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pga-keycloak.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "pga-keycloak.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      restartPolicy: OnFailure
+      strategy:
+        type: Recreate
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "pga-keycloak.serviceAccountName" . }}
+      securityContext:
+        {{- with .Values.podSecurityContext }}
+        {{- toYaml .| nindent 8 }}
+        {{- end }}
+        sysctls: # this is just plain stupid that it is so hard to merge this here correctly if podSecurityContext also contains sysctls
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            - name: KC_HTTPS_CERTIFICATE_FILE
+              value: "/run/secrets/{{ include "pga-keycloak.fullname" . }}-cert/tls.crt"
+            - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+              value: "/run/secrets/{{ include "pga-keycloak.fullname" . }}-cert/tls.key"
+          ports:
+            - name: https
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            - name: {{ include "pga-keycloak.fullname" . }}-cert-volume
+              mountPath: "/run/secrets/{{ include "pga-keycloak.fullname" . }}-cert"
+              readOnly: true
+      volumes:
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        - name: {{ include "pga-keycloak.fullname" . }}-cert-volume
+          secret:
+            secretName: {{ include "pga-keycloak.fullname" . }}-cert
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

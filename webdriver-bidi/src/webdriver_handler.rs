@@ -4,6 +4,7 @@ use std::fmt::Debug;
 use futures::{SinkExt as _, StreamExt as _};
 use serde::Serialize;
 use serde_json::Value;
+use tempfile::TempDir;
 use tokio::net::TcpStream;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
@@ -25,10 +26,13 @@ pub struct WebDriverHandler {
     pending_commands: HashMap<u64, RespondCommand>,
     pub(crate) subscriptions: EventSubscription,
     pub(crate) global_subscriptions: GlobalEventSubscription,
+    // ensure the profile folder is not deleted
+    _tmp_dir: TempDir,
 }
 
 impl WebDriverHandler {
     pub async fn handle(
+        tmp_dir: TempDir,
         stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
         receive_command: mpsc::UnboundedReceiver<SendCommand>,
     ) {
@@ -39,6 +43,7 @@ impl WebDriverHandler {
             pending_commands: HashMap::default(),
             subscriptions: EventSubscription::default(),
             global_subscriptions: GlobalEventSubscription::default(),
+            _tmp_dir: tmp_dir,
         };
         this.handle_internal().await;
     }
@@ -94,7 +99,7 @@ impl WebDriverHandler {
             Some(subscription) => {
                 sender
                     .send(subscription.0.subscribe())
-                    .map_err(|_| crate::error::ErrorInner::CommandCallerExited)?;
+                    .map_err(|_| crate::error::Error::CommandCallerExited)?;
             }
             None => {
                 self.id += 1;
@@ -127,7 +132,11 @@ impl WebDriverHandler {
                 self.stream
                     .send(Message::Text(string))
                     .await
-                    .map_err(crate::error::ErrorInner::WebSocket)?;
+                    .map_err(crate::error::Error::WebSocket)?;
+                self.stream
+                    .flush()
+                    .await
+                    .map_err(crate::error::Error::WebSocket)?;
             }
         };
         Ok(())
@@ -152,7 +161,7 @@ impl WebDriverHandler {
         if let Some(subscription) = event_subscription(&mut self.subscriptions).get(&command_data) {
             sender
                 .send(subscription.0.subscribe())
-                .map_err(|_| crate::error::ErrorInner::CommandCallerExited)?; // TODO FIXME this would return before the request command is actually done
+                .map_err(|_| crate::error::Error::CommandCallerExited)?; // TODO FIXME this would return before the request command is actually done
         } else {
             self.id += 1;
 
@@ -184,7 +193,11 @@ impl WebDriverHandler {
             self.stream
                 .send(Message::Text(string))
                 .await
-                .map_err(crate::error::ErrorInner::WebSocket)?;
+                .map_err(crate::error::Error::WebSocket)?;
+            self.stream
+                .flush()
+                .await
+                .map_err(crate::error::Error::WebSocket)?;
         };
         Ok(())
     }
@@ -212,7 +225,11 @@ impl WebDriverHandler {
         self.stream
             .send(Message::Text(string))
             .await
-            .map_err(crate::error::ErrorInner::WebSocket)?;
+            .map_err(crate::error::Error::WebSocket)?;
+        self.stream
+            .flush()
+            .await
+            .map_err(crate::error::Error::WebSocket)?;
 
         Ok(())
     }
@@ -220,13 +237,13 @@ impl WebDriverHandler {
     fn handle_message(&mut self, message: &str) -> crate::error::Result<()> {
         let jd = &mut serde_json::Deserializer::from_str(message);
         let parsed_message: protocol::Message<Value> = serde_path_to_error::deserialize(jd)
-            .map_err(crate::error::ErrorInner::ParseReceivedWithPath)?;
+            .map_err(crate::error::Error::ParseReceivedWithPath)?;
         match parsed_message {
             protocol::Message::CommandResponse(CommandResponse { id, result }) => {
                 let respond_command = self
                     .pending_commands
                     .remove(&id)
-                    .ok_or(crate::error::ErrorInner::ResponseWithoutRequest(id))?;
+                    .ok_or(crate::error::Error::ResponseWithoutRequest(id))?;
 
                 send_response(self, result, respond_command)
             }

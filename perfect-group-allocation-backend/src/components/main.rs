@@ -80,13 +80,13 @@ pub async fn main<
                         <form method="post" action="/openidconnect-logout" enctype="application/x-www-form-urlencoded">
                             <input type="hidden" name="csrf_token" value=[(Cow::Owned(csrf_token.clone()))]>
 
-                            <button class="submit-link" type="submit">"Logout "(email.unwrap().into())</button>
+                            <button id="logout-button" class="submit-link" type="submit">"Logout "(email.unwrap().into())</button>
                         </form>
                     } else {
                         <form method="post" action="/openidconnect-login" enctype="application/x-www-form-urlencoded">
                             <input type="hidden" name="csrf_token" value=[(Cow::Owned(csrf_token.clone()))]>
 
-                            <button class="submit-link" type="submit">"Login"</button>
+                            <button id="login-button" class="submit-link" type="submit">"Login"</button>
                         </form>
                     }
                 </li>

@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+  annotations:
+    #io.podman.annotations.infra.name: test-infra
+    io.podman.annotations.userns: keep-id # this feature is not in a stable release yet, so you need an unreleased version
+spec:
+  restartPolicy: Never
+  containers:
+    - env:
+        - name: PGA_CONFIG_DIR
+          value: /run/secrets
+        - name: RUST_LOG
+          value: trace,tokio_tungstenite=debug,tungstenite=debug,firefox=debug
+      image: test:NOTFOUND
+      name: test
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "1"
+        limits:
+          memory: "4Gi"
+          cpu: "4"
+      securityContext:
+        runAsGroup: 1000
+        runAsUser: 1000
+      volumeMounts:
+        - name: secret-volume
+          mountPath: "/run/secrets"
+          readOnly: true
+        #- mountPath: /run/user/1000/wayland-0
+        #  name: run-user-1000-wayland-0-host-0
+        #  readOnly: true
+        - name: dev-dri-host-1
+          mountPath: /dev/dri
+          readOnly: true
+
+  volumes:
+    - name: secret-volume
+      secret:
+        secretName: application-config
+    #- hostPath:
+    #    path: /run/user/1000/wayland-0
+    #    type: File
+    #  name: run-user-1000-wayland-0-host-0
+    - name: dev-dri-host-1
+      hostPath:
+        path: /dev/dri
+        type: Directory
+# podman --log-level=debug kube play --replace ../webdriver.yaml && podman logs webdriver-pod-webdriver

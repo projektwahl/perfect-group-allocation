@@ -1,0 +1,59 @@
+# mkcert application.localhost
+apiVersion: v1
+kind: Pod
+metadata:
+  name: perfect-group-allocation
+  #annotations:
+  #io.podman.annotations.infra.name: perfect-group-allocation-infra
+  #io.podman.annotations.userns: keep-id # this feature is not in a stable release yet, so you need an unreleased version
+spec:
+  restartPolicy: OnFailure
+  securityContext:
+    sysctls:
+      - name: net.ipv4.ip_unprivileged_port_start
+        value: "443"
+  containers:
+    - name: perfect-group-allocation
+      image: perfect-group-allocation:NOTFOUND
+      securityContext:
+        runAsGroup: 1000
+        runAsUser: 1000
+      env:
+        - name: PGA_CONFIG_DIR
+          value: /run/secrets
+        - name: RUST_LOG
+          value: info
+        - name: SSL_CERT_FILE
+          value: /run/rootCA/rootCA.pem
+      volumeMounts:
+        - name: secret-volume
+          mountPath: "/run/secrets"
+          readOnly: true
+        - name: root-ca
+          mountPath: "/run/rootCA"
+          readOnly: true
+      #ports:
+      #  - containerPort: 443
+      #livenessProbe:
+      #  # for kubernetes use an http check and don't bundle curl with the container.
+      #  exec:
+      #    command:
+      #      - "curl"
+      #      - "--fail-with-body"
+      #      - "--insecure"
+      #      - "https://localhost:8443/health/live"
+      #  periodSeconds: 1
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "1"
+        limits:
+          memory: "1Gi"
+          cpu: "4"
+  volumes:
+    - name: secret-volume
+      secret:
+        secretName: application-config
+    - name: root-ca
+      configMap:
+        name: root-ca

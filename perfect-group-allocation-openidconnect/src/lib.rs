@@ -1,10 +1,13 @@
 pub mod error;
 
+use std::pin::Pin;
 use std::str::FromStr;
-use std::sync::Arc;
 
+use crate::error::OpenIdConnectError;
 use error::HttpError;
 use http_body_util::BodyExt;
+use hyper::{HeaderMap, Method};
+use hyper_openssl::SslStream;
 use hyper_util::rt::TokioIo;
 use oauth2::basic::{BasicErrorResponseType, BasicTokenType};
 pub use oauth2::RefreshToken;
@@ -24,15 +27,11 @@ use openidconnect::{
     AccessTokenHash, EmptyAdditionalClaims, IdTokenClaims, IdTokenFields, IssuerUrl, Nonce,
     TokenResponse,
 };
+use openssl::ssl::{SslConnector, SslMethod};
 use perfect_group_allocation_config::Config;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpStream;
 use tokio::sync::OnceCell;
-use tokio_rustls::rustls::pki_types::ServerName;
-use tokio_rustls::rustls::{ClientConfig, RootCertStore};
-use tokio_rustls::TlsConnector;
-
-use crate::error::OpenIdConnectError;
 
 type OpenIdConnectClientType = openidconnect::Client<
     EmptyAdditionalClaims,
@@ -97,51 +96,78 @@ pub struct OpenIdSession {
 
 static OPENID_CLIENT: OnceCell<OpenIdConnectClientType> = OnceCell::const_new();
 
+pub struct MyHttpClient(Config);
+
 pub async fn my_http_client(request: HttpRequest) -> Result<HttpResponse, HttpError> {
-    let url = request.url;
-    let host = url.host().expect("uri has no host");
-    let port = url.port_or_known_default().unwrap();
+    println!("{request:?}");
+    let host = request.url.host().expect("uri has no host");
+    let port = request.url.port_or_known_default().unwrap();
     let addr = format!("{host}:{port}");
 
-    let mut root_cert_store = RootCertStore::empty();
-    root_cert_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-    let config = ClientConfig::builder()
-        .with_root_certificates(root_cert_store)
-        .with_no_client_auth();
-    let connector = TlsConnector::from(Arc::new(config));
-    let dnsname = ServerName::try_from(host.to_string()).unwrap();
+    // rustls has bad error messages
 
-    let stream = TcpStream::connect(addr).await?;
-    let stream = connector.connect(dnsname, stream).await?;
+    let stream = TcpStream::connect(addr).await.unwrap(); // TODO FIXME don't panic here
+    let stream = TokioIo::new(stream);
 
-    let io = TokioIo::new(stream);
+    let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
+    if let Some(value) = std::env::var_os("SSL_CERT_FILE") {
+        builder.set_ca_file(value).unwrap();
+    }
+    let ssl = builder
+        .build()
+        .configure()
+        .unwrap()
+        .into_ssl(&host.to_string())
+        .unwrap();
+    let mut stream = SslStream::new(ssl, stream).unwrap();
+    Pin::new(&mut stream).connect().await.unwrap();
 
-    let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await?;
+    let (mut sender, conn) = hyper::client::conn::http1::handshake(stream).await?;
     tokio::task::spawn(async move { if let Err(_err) = conn.await {} });
 
-    let authority = url.authority();
+    let authority = request.url.authority();
 
-    let request = hyper::Request::builder()
-        .uri(url.to_string())
+    let mut builder = hyper::Request::builder()
+        .method(Method::from_str(request.method.as_str()).unwrap())
+        .uri(request.url.to_string());
+    let request_headers: HeaderMap = request
+        .headers
+        .iter()
+        .map(|(name, value)| {
+            (
+                hyper::header::HeaderName::from_str(name.as_str()).unwrap(),
+                hyper::header::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+            )
+        })
+        .collect();
+    builder.headers_mut().unwrap().extend(request_headers);
+    let request_body = String::from_utf8(request.body).unwrap();
+    println!("{request_body}");
+    let request = builder
         .header(hyper::header::HOST, authority)
-        .body(String::new())?;
+        .body(request_body)?;
 
     let response = sender.send_request(request).await?;
+    let status_code = oauth2::http::StatusCode::from_u16(response.status().as_u16()).unwrap();
+    let headers = response
+        .headers()
+        .iter()
+        .map(|(name, value)| {
+            (
+                oauth2::http::HeaderName::from_str(name.as_str()).unwrap(),
+                oauth2::http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+            )
+        })
+        .collect();
+    let body = response.collect().await?.to_bytes().to_vec();
+
+    println!("{}", std::str::from_utf8(&body).unwrap());
 
     Ok(HttpResponse {
         // this is http 0.2
-        status_code: oauth2::http::StatusCode::from_u16(response.status().as_u16()).unwrap(),
-        headers: response
-            .headers()
-            .iter()
-            .map(|(name, value)| {
-                (
-                    oauth2::http::HeaderName::from_str(name.as_str()).unwrap(),
-                    oauth2::http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
-                )
-            })
-            .collect(),
-        body: response.collect().await?.to_bytes().to_vec(),
+        status_code,
+        headers,
+        body,
     })
 }
 

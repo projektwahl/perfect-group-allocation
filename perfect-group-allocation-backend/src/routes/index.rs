@@ -16,7 +16,7 @@ use crate::session::{ResponseSessionExt as _, Session};
 
 pub async fn index(
     session: Session,
-    config: Config,
+    config: &Config,
 ) -> Result<hyper::Response<impl Body<Data = Bytes, Error = Infallible> + Send + 'static>, AppError>
 {
     let result = {
@@ -31,7 +31,7 @@ pub async fn index(
                 <p>"This is the starting page."</p>
             }
         };
-        let future = main(tx_orig, "Home Page".into(), &session, &config, future);
+        let future = main(tx_orig, "Home Page".into(), &session, config, future);
         let stream = pin!(TemplateToStream::new(future, rx));
         // I think we should sent it at once with a content length when it is not too large
         stream.collect::<String>().await

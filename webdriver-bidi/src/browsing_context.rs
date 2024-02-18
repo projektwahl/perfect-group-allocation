@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::ExtractBrowsingContext;
+
 pub mod activate;
 pub mod capture_screenshot;
 pub mod close;
@@ -15,6 +17,21 @@ pub mod print;
 pub mod reload;
 pub mod set_viewport;
 pub mod traverse_history;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "method")]
+#[serde(rename = "browsingContext.load")]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+pub struct Load {
+    pub params: NavigationInfo,
+}
+
+impl ExtractBrowsingContext for Load {
+    fn browsing_context(&self) -> Option<&crate::browsing_context::BrowsingContext> {
+        Some(&self.params.context)
+    }
+}
 
 /// <https://w3c.github.io/webdriver-bidi/#type-browsingContext-Browsingcontext>
 #[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]

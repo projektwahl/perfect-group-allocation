@@ -1,15 +1,8 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-#[error("{inner}")]
-pub struct Error {
-    #[from]
-    inner: ErrorInner,
-}
-
-#[derive(Error, Debug)]
 #[allow(clippy::module_name_repetitions)]
-pub enum ErrorInner {
+pub enum Error {
     #[error("WebSocket connection failure {0}")]
     WebSocket(tokio_tungstenite::tungstenite::Error),
     #[error("Failed to create temporary directory {0}")]
@@ -36,6 +29,8 @@ pub enum ErrorInner {
     CommandCallerExited,
     #[error("got response without corresponding request for id {0}")]
     ResponseWithoutRequest(u64),
+    #[error("failed to find element with css selector {0}")]
+    ElementNotFound(String),
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
