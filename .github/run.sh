@@ -4,10 +4,10 @@ set -o nounset   # abort on unbound variable
 set -o pipefail  # don't hide errors within pipes
 set -x
 
-#lightningcss --bundle --minify --sourcemap --output-file frontend/bundle.css frontend/index.css
-#cargo fmt --check
-#cargo deny check
-#cargo hack clippy --workspace --feature-powerset --optional-deps --all-targets -- -D warnings
-#cargo hack build --workspace --feature-powerset --optional-deps --all-targets
+lightningcss --bundle --minify --sourcemap --output-file frontend/bundle.css frontend/index.css
+cargo fmt --check
+cargo deny check
+cargo hack clippy --workspace --feature-powerset --optional-deps --all-targets -- -D warnings
+cargo hack build --workspace --feature-powerset --optional-deps --all-targets
 ./run-integration-tests.sh keycloak
 RUST_BACKTRACE=1 cargo hack test --workspace --feature-powerset --optional-deps --all-targets

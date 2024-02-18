@@ -37,4 +37,4 @@ jobs:
       # I think we need to create a custom mapping here to make this work for arbitrary host subuids as the subuids inside of the container are fixed
       # https://docs.podman.io/en/latest/markdown/podman-run.1.html#uidmap-flags-container-uid-from-uid-amount
       # Error: container ID 0 cannot be mapped to a host ID probably means we forgot to map that id to some host id
-      - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman run -it --device /dev/dri --privileged --uidmap 1000:0 --uidmap 0:1:999 --uidmap 100000:1000:65536 -v pga-podman-cache:/home/podman/.local/share/containers -v pga-cargo:/home/podman/.cargo -v pga-target:$PWD/target -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh
+      - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman run -it --device /dev/dri --privileged --uidmap 1000:0:1 --uidmap 0:1:1000 --uidmap 100000:1001:65536 -v pga-podman-cache:/home/podman/.local/share/containers -v pga-cargo:/home/podman/.cargo -v pga-target:$PWD/target -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh

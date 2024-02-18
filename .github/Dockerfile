@@ -11,6 +11,10 @@ RUN apt-get install -y nodejs
 RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
 RUN tar -zxf kustomize_v5.3.0_linux_amd64.tar.gz --directory /usr/local/bin
 
+# useradd creates a default subuid/gid range
+# inner podman build commands will try to use the full subuid/gid range and if we don't pass this range from outside it breaks.
+# also we need at least 65536 to make apt work inside of a podman build inside of this container
+# the defaults should be large enough
 RUN useradd -m podman
 USER podman
 
@@ -23,12 +27,6 @@ RUN cargo install --locked --features=cli lightningcss@1.0.0-alpha.52
 RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 
 USER root
-# inner podman build commands will try to use the full range here and if we don't pass this range from outside it breaks
-# also we need at least 65536 to make apt work inside of a podman build inside of this container
-# the defaults should be large enough
-# maybe not and we should increase this more
-#RUN echo podman:10000:5000 > /etc/subuid
-#RUN echo podman:10000:5000 > /etc/subgid
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000
 USER podman
 ENV XDG_RUNTIME_DIR=/run/user/1000
