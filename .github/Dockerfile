@@ -26,6 +26,7 @@ USER root
 # inner podman build commands will try to use the full range here and if we don't pass this range from outside it breaks
 # also we need at least 65536 to make apt work inside of a podman build inside of this container
 # the defaults should be large enough
+# maybe not and we should increase this more
 #RUN echo podman:10000:5000 > /etc/subuid
 #RUN echo podman:10000:5000 > /etc/subgid
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000
