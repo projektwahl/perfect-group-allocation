@@ -18,6 +18,7 @@ jobs:
   rust:
     runs-on: ubuntu-latest # doesn't have a recent enough podman version. we want to avoid docker at all costs because it adds another layer of complexity
     steps:
+      - run: podman system reset --force # get the broken version removed, especially the pause container
       - run: sudo sed -i '/runner:/d' /etc/subuid
       - run: sudo sed -i '/runner:/d' /etc/subgid
       - run: sudo usermod --add-subuids 1000000-2000000 --add-subgids 1000000-2000000 $USER
@@ -26,11 +27,15 @@ jobs:
       - run: NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       - run: (echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /home/runner/.bashrc
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && brew install podman
-      - uses: actions/checkout@v4
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman --version
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman unshare cat /proc/self/uid_map
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman system migrate
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman unshare cat /proc/self/uid_map
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/containers/
+          key: containers-cache
+      - uses: actions/checkout@v4
       # what does privileged here affect and can we remove it?
       # -v /run/user/1000/wayland-0:/run/user/1000/wayland-0 # not in CI
       # https://github.com/containers/podman/issues/16541
@@ -41,3 +46,4 @@ jobs:
       # Error: container ID 0 cannot be mapped to a host ID probably means we forgot to map that id to some host id
       # IMPORTANT: when you change the mapping here you need to delete the container volume
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman run --rm -it --device /dev/dri --privileged --uidmap 1000:0:1 --uidmap 0:1:1000 --uidmap 1001:1001:64535 --uidmap 100000:65537:65536 -v pga-podman-cache:/home/podman/.local/share/containers -v pga-cargo:/home/podman/.cargo -v pga-target:$PWD/target -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh
+      - run: ls -la ~/.local/share/containers/
