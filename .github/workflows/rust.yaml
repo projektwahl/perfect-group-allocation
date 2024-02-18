@@ -19,17 +19,15 @@ jobs:
     runs-on: ubuntu-latest # doesn't have a recent enough podman version. we want to avoid docker at all costs because it adds another layer of complexity
     steps:
       # https://github.com/containers/podman/issues/10422
-      - run: sudo usermod --del-subuids 165536-231071 --del-subgids 165536-231071 --add-subuids 300000-400000 --add-subgids 300000-400000 $USER # TODO probably remove old mapping
+      - run: sudo usermod --add-subuids 231072-400000 --add-subgids 231072-400000 $USER # TODO probably remove old mapping
       - run: cat /etc/subuid
       - run: NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       - run: (echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /home/runner/.bashrc
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && brew install podman
-      - uses: actions/cache@v4
-        with:
-          path: ~/.local/share/containers/
-          key: containers-cache
       - uses: actions/checkout@v4
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman --version
+      - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman unshare cat /proc/self/uid_map
+      - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman system migrate
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman unshare cat /proc/self/uid_map
       # what does privileged here affect and can we remove it?
       # -v /run/user/1000/wayland-0:/run/user/1000/wayland-0 # not in CI
