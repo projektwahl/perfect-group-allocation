@@ -37,6 +37,8 @@ if [ "${1-}" == "keycloak" ]; then
     KEYCLOAK_CONTAINERIGNORE=$(mktemp)
     echo -e '*' > $KEYCLOAK_CONTAINERIGNORE
     cat /proc/self/uid_map
+    cat /etc/subuid
+    cat /etc/passwd
     KEYCLOAK_IMAGE=$(podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile $PROJECT)
     KEYCLOAK_IMAGE=$(echo "$KEYCLOAK_IMAGE" | tail -n 1)
     kustomize edit set image keycloak=sha256:$KEYCLOAK_IMAGE
