@@ -63,6 +63,9 @@ if [ "${1-}" == "keycloak" ]; then
     podman wait --condition healthy ${KEYCLOAK_PREFIX}keycloak-keycloak
     echo keycloak started
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
+    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak ls -la /opt/keycloak/
+    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak id
+    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak cat /etc/passwd
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://${KEYCLOAK_PREFIX}keycloak --realm master --user admin --password admin
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true

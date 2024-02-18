@@ -29,6 +29,7 @@ jobs:
           key: containers-cache
       - uses: actions/checkout@v4
       - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman --version
+      - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman unshare cat /proc/self/uid_map
       # what does privileged here affect and can we remove it?
       # -v /run/user/1000/wayland-0:/run/user/1000/wayland-0 # not in CI
       # https://github.com/containers/podman/issues/16541
@@ -37,4 +38,5 @@ jobs:
       # I think we need to create a custom mapping here to make this work for arbitrary host subuids as the subuids inside of the container are fixed
       # https://docs.podman.io/en/latest/markdown/podman-run.1.html#uidmap-flags-container-uid-from-uid-amount
       # Error: container ID 0 cannot be mapped to a host ID probably means we forgot to map that id to some host id
-      - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman run -it --device /dev/dri --privileged --uidmap 1000:0:1 --uidmap 0:1:1000 --uidmap 100000:1001:65536 -v pga-podman-cache:/home/podman/.local/share/containers -v pga-cargo:/home/podman/.cargo -v pga-target:$PWD/target -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh
+      # IMPORTANT: when you change the mapping here you need to delete the container volume
+      - run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && podman run --rm -it --device /dev/dri --privileged --uidmap 1000:0:1 --uidmap 0:1:1000 --uidmap 100000:1001:65536 -v pga-podman-cache:/home/podman/.local/share/containers -v pga-cargo:/home/podman/.cargo -v pga-target:$PWD/target -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 sh -c ./.github/run.sh
