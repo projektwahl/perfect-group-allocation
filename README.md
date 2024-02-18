@@ -217,7 +217,7 @@ podman run -it --rm debian:sid
 # maybe the podman image works better? YEAH IT DOES
 podman run --security-opt label=disable --user podman --device /dev/fuse quay.io/podman/stable podman run alpine echo hello
 
-# stolen from github ci to have the same range for simplicity
+# IMPORTANT: podman in podman needs more than 65k uids because the build needs 65k and the container itself needs a few more
 sudo usermod --add-subuids 300000-400000 --add-subgids 300000-400000 $USER
 
 # follow this exactly and think about how subgids work
