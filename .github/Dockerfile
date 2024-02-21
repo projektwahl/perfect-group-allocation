@@ -25,7 +25,7 @@ RUN tar -zxf kustomize_v5.3.0_linux_amd64.tar.gz --directory /usr/local/bin
 # inner podman build commands will try to use the full subuid/gid range and if we don't pass this range from outside it breaks.
 # also we need at least 65536 to make apt work inside of a podman build inside of this container
 # the defaults should be large enough
-RUN useradd -m podman
+RUN useradd -s /bin/bash -m podman
 USER podman
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
