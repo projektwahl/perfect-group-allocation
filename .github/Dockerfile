@@ -40,3 +40,4 @@ USER root
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000
 USER podman
 ENV XDG_RUNTIME_DIR=/run/user/1000
+ENV WAYLAND_DISPLAY=wayland-0

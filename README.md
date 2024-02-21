@@ -1,5 +1,13 @@
 # perfect-group-allocation
 
+## Development
+
+The only supported way is to develop within a container. This reduces host differences.
+```bash
+podman run --rm -it --device /dev/dri --privileged -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/run/user/1000/wayland-0 --shm-size=1g --uidmap 1000:0:1 --uidmap 0:1:1000 --uidmap 1001:1001:64535 --uidmap 100000:65537:65536 -v pga-podman-cache:/home/podman/.local/share/containers -v pga-cargo:/home/podman/.cargo -v pga-target:$PWD/target -v $PWD:$PWD --workdir=$PWD ghcr.io/projektwahl/perfect-group-allocation:1 bash
+code --ozone-platform=wayland . # --verbose
+```
+
 ## Design goals
 
 1. Secure
