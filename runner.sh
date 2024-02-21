@@ -6,4 +6,4 @@ set -x
 
 cargo build --bin server
 #./run-integration-tests.sh keycloak
-PREFIX=e ./run-integration-tests.sh $1
+PREFIX=e ./run-integration-tests.sh $1 /bin/test
