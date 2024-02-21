@@ -38,6 +38,7 @@ RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 
 USER root
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000
+RUN apt-get install -y nano
 USER podman
 ENV XDG_RUNTIME_DIR=/run/user/1000
 ENV WAYLAND_DISPLAY=wayland-0
