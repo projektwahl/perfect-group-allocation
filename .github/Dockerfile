@@ -30,10 +30,14 @@ USER podman
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
 ENV PATH="/home/podman/.cargo/bin:${PATH}"
 RUN rustup toolchain install stable --allow-downgrade --profile minimal --component rustfmt,clippy
-RUN cargo install --locked cargo-hack
-RUN cargo install --locked cargo-deny
-RUN cargo install --locked --features=cli lightningcss@1.0.0-alpha.52
-RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
+RUN cargo install cargo-hack
+RUN cargo install cargo-deny
+RUN cargo install --features=cli lightningcss@1.0.0-alpha.52
+RUN cargo install --version 0.10.2 iai-callgrind-runner
+USER root
+RUN dnf -y install libpq-devel
+USER podman
+RUN cargo install diesel_cli --no-default-features --features postgres
 
 USER root
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000

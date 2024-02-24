@@ -16,6 +16,11 @@ diesel = { default-features = false, version = "2" }
 diesel-async = { default-features = false, version = "0.4", features = [
     "deadpool",
     "postgres",
+    "async-connection-wrapper"
+] }
+diesel_migrations = { default-features = false, version = "2" }
+tokio = { default-features = false, version = "1", features = [
+    "rt-multi-thread",
 ] }
 thiserror = { default-features = false, version = "1" }
 
