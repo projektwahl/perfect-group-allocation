@@ -95,7 +95,7 @@ else
         --from-file=openidconnect.client_secret=./client-secret \
         --from-literal=openidconnect.client_id=pga \
         --from-literal=openidconnect.issuer_url=https://${KEYCLOAK_PREFIX}keycloak/realms/pga \
-        --from-literal="database_url=postgres://postgres@postgres/pga?sslmode=disable" \
+        --from-literal="database_url=postgres://postgres:bestpassword@postgres/pga" \
         --from-literal=url=https://${PREFIX}perfect-group-allocation.dns.podman
 
     INTEGRATION_TEST_BINARY=$(realpath --relative-to=$PROJECT $1)

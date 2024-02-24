@@ -43,3 +43,4 @@ RUN mkdir -p /home/podman/.local/share/containers && chmod -R 755 /home/podman/.
 USER podman
 ENV XDG_RUNTIME_DIR=/run/user/1000
 ENV WAYLAND_DISPLAY=wayland-0
+ENV EDITOR=nano
