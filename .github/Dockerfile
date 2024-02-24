@@ -40,6 +40,7 @@ USER root
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000
 RUN apt-get install -y nano
 RUN mkdir -p /home/podman/.local/share/containers && chmod -R 755 /home/podman/.local && chown -R podman:podman /home/podman/.local
+RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver
 USER podman
 ENV XDG_RUNTIME_DIR=/run/user/1000
 ENV WAYLAND_DISPLAY=wayland-0
