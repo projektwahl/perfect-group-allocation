@@ -1,7 +1,7 @@
 # podman build -t perfect-group-allocation --file deployment/kustomize/base/perfect-group-allocation/Dockerfile .
-FROM docker.io/library/debian:stable-slim
+FROM docker.io/library/fedora:40
 
-RUN apt-get update && apt install -y curl
+RUN dnf -y update && dnf -y install curl && dnf clean all
 
 # use your user id and group id
 ARG GROUP_ID=1000

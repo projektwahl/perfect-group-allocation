@@ -228,7 +228,7 @@ so I can reproduce with our test image and sudo which is interesting
 
 # https://www.redhat.com/sysadmin/podman-inside-container
 podman run --security-opt label=disable --user podman --device /dev/fuse -it ghcr.io/projektwahl/perfect-group-allocation:1
-podman run -it --rm debian:sid
+podman run -it --rm docker.io/library/fedora:40
 
 # maybe the podman image works better? YEAH IT DOES
 podman run --security-opt label=disable --user podman --device /dev/fuse quay.io/podman/stable podman run alpine echo hello
@@ -243,7 +243,7 @@ podman run -it --privileged --userns=keep-id -v $PWD:$PWD --workdir=$PWD ghcr.io
 # https://github.com/containers/podman/issues/4056
 # maybe the subuid file is empty is fine as long as the inner command can create mappings?
 sudo podman run -v $PWD:$PWD --workdir=$PWD --userns=keep-id -it ghcr.io/projektwahl/perfect-group-allocation:1
-podman run -it --rm debian:sid
+podman run -it --rm docker.io/library/fedora:40
 
 # this works
 podman run --rm --privileged -u podman:podman quay.io/podman/stable podman run --rm -it quay.io/podman/stable bash

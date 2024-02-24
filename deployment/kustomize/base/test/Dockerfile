@@ -1,7 +1,7 @@
 # to get latest firefox and chromium
-FROM docker.io/library/debian:sid
+FROM docker.io/library/fedora:40
 
-RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver
+RUN dnf -y update && dnf -y install firefox libpci3 chromium chromium-driver && dnf clean all
 
 RUN useradd -m podman
 
