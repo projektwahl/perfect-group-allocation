@@ -11,8 +11,8 @@ code --ozone-platform=wayland . # --verbose
 
 # inside vscode terminal
 ./run-integration-tests.sh keycloak
-cargo build --bin server
 PREFIX=dev ./run-integration-tests.sh backend-db-and-test $PWD/LICENSE /usr/bin/firefox
+PREFIX=dev ./run-integration-tests.sh backend
 https://devperfect-group-allocation.dns.podman
 ```
 

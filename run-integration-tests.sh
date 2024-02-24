@@ -77,8 +77,10 @@ elif [ "${1-}" == "backend-db-and-test" ]; then
     cd "$GARBAGE"
 
     kustomize create
-    kustomize edit add resource ../../"$PROJECT"/deployment/kustomize/base/postgres.yaml
-    kustomize edit add resource ../../"$PROJECT"/deployment/kustomize/base/test.yaml
+    cp "$PROJECT"/deployment/kustomize/base/postgres.yaml .
+    kustomize edit add resource ./postgres.yaml
+    cp "$PROJECT"/deployment/kustomize/base/test.yaml .
+    kustomize edit add resource ./test.yaml
     kustomize edit set nameprefix "$PREFIX"
 
     INTEGRATION_TEST_BINARY=$(realpath --relative-to="$PROJECT" "$2")
@@ -87,6 +89,9 @@ elif [ "${1-}" == "backend-db-and-test" ]; then
     INTEGRATION_TEST_IMAGE=$(podman build --ignorefile "$INTEGRATION_TEST_CONTAINERIGNORE" --build-arg BINARY="$INTEGRATION_TEST_BINARY" --build-arg EXECUTABLE="$3" --file ./deployment/kustomize/base/test/Dockerfile "$PROJECT")
     INTEGRATION_TEST_IMAGE=$(echo "$INTEGRATION_TEST_IMAGE" | tail -n 1)
     kustomize edit set image test=sha256:"$INTEGRATION_TEST_IMAGE"
+
+    kustomize edit add secret application-config \
+        --from-literal=url=https://"${PREFIX}"perfect-group-allocation.dns.podman
 
     kustomize build --output kubernetes.yaml
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
@@ -107,7 +112,8 @@ elif [ "${1-}" == "backend" ]; then
     SERVER_IMAGE=$(podman build --ignorefile "$SERVER_CONTAINERIGNORE" --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile "$PROJECT")
     kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
 
-    kustomize edit add resource ../../"$PROJECT"/deployment/kustomize/base/perfect-group-allocation.yaml
+    cp "$PROJECT"/deployment/kustomize/base/perfect-group-allocation.yaml .
+    kustomize edit add resource ./perfect-group-allocation.yaml
     kustomize edit set nameprefix "$PREFIX"
 
     mkcert "${PREFIX}perfect-group-allocation" # maybe use a wildcard certificate instead? to speed this up
@@ -127,9 +133,7 @@ elif [ "${1-}" == "backend" ]; then
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play kubernetes.yaml # ahh kube uses another network
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
-    podman logs --color --names --follow "${PREFIX}"test-test "${PREFIX}"perfect-group-allocation-perfect-group-allocation & #${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
-    (exit $(podman wait "${PREFIX}"test-test))
-    podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
+    podman logs --color --names --follow "${PREFIX}"perfect-group-allocation-perfect-group-allocation & #${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
 else
     echo "unknown command"
 fi
