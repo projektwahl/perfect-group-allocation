@@ -106,18 +106,24 @@ elif [ "${1-}" == "backend" ]; then
 
     kustomize create
 
-    SERVER_CONTAINERIGNORE=$(mktemp)
-    echo -e '*\n!target/debug/server\n!deployment/kustomize/base/perfect-group-allocation/Dockerfile' > "$SERVER_CONTAINERIGNORE"
+    #SERVER_CONTAINERIGNORE=$(mktemp)
+    #echo -e '*\n!target/debug/server\n!deployment/kustomize/base/perfect-group-allocation/Dockerfile' > "$SERVER_CONTAINERIGNORE"
     # tag with: git describe --always --long --dirty 
-    SERVER_IMAGE=$(podman build --ignorefile "$SERVER_CONTAINERIGNORE" --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile "$PROJECT")
-    kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
+    #SERVER_IMAGE=$(podman build --ignorefile "$SERVER_CONTAINERIGNORE" --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile "$PROJECT")
+    #kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
+
+    # TODO use volume for executable
 
     cp "$PROJECT"/deployment/kustomize/base/perfect-group-allocation.yaml .
     kustomize edit add resource ./perfect-group-allocation.yaml
     kustomize edit set nameprefix "$PREFIX"
 
-    mkcert "${PREFIX}perfect-group-allocation" # maybe use a wildcard certificate instead? to speed this up
+    # TODO only do once
+    #(cd $CAROOT && mkcert "${PREFIX}perfect-group-allocation") # maybe use a wildcard certificate instead? to speed this up
+
     cp "$CAROOT"/rootCA.pem .
+    cp "$CAROOT"/"${PREFIX}"perfect-group-allocation.pem .
+    cp "$CAROOT"/"${PREFIX}"perfect-group-allocation-key.pem .
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
     kustomize edit add secret application-config \
@@ -130,8 +136,7 @@ elif [ "${1-}" == "backend" ]; then
         --from-literal=url=https://"${PREFIX}"perfect-group-allocation.dns.podman
 
     kustomize build --output kubernetes.yaml
-    podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
-    podman kube play kubernetes.yaml # ahh kube uses another network
+    podman kube play --replace kubernetes.yaml # ahh kube uses another network
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
     podman logs --color --names --follow "${PREFIX}"perfect-group-allocation-perfect-group-allocation & #${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
 else
