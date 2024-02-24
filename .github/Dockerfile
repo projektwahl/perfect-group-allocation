@@ -5,18 +5,17 @@
 # make package public
 
 # todo switch to fedora because its more up-to-date (even the stable version)?
-FROM docker.io/library/debian:sid
+FROM registry.fedoraproject.org/fedora:rawhide
 
-RUN apt-get update && apt-get -y upgrade && apt-get install -y wget gpg curl
+RUN rpm --import https://packages.microsoft.com/keys/microsoft.asc
+RUN sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo'
 
-RUN wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
-RUN install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
-RUN echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
-RUN rm -f packages.microsoft.gpg
+RUN dnf -y update
+RUN dnf -y install firefox chromium wget code jq valgrind git cmake gcc zstd curl mold coin-or-Cbc-devel nss-tools podman openssl-devel pkg-config zlib-devel && dnf clean all
 
-RUN curl -fsSL https://deb.nodesource.com/setup_21.x | bash -
-
-RUN apt-get update && apt-get -y upgrade && apt-get install -y nodejs code apt-transport-https wget gpg jq valgrind git cmake gcc zstd curl mold coinor-libcbc-dev mkcert podman libssl-dev pkg-config zlib1g-dev
+RUN curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
+RUN chmod +x mkcert-v*-linux-amd64
+RUN cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert
 
 RUN curl -OL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.3.0/kustomize_v5.3.0_linux_amd64.tar.gz"
 RUN tar -zxf kustomize_v5.3.0_linux_amd64.tar.gz --directory /usr/local/bin
@@ -38,9 +37,9 @@ RUN cargo install --locked --version 0.10.2 iai-callgrind-runner
 
 USER root
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000
-RUN apt-get install -y nano
+RUN dnf -y install nano
+RUN dnf -y reinstall shadow-utils
 RUN mkdir -p /home/podman/.local/share/containers && chmod -R 755 /home/podman/.local && chown -R podman:podman /home/podman/.local
-RUN apt-get update && apt-get install -y firefox libpci3 chromium chromium-driver
 USER podman
 ENV XDG_RUNTIME_DIR=/run/user/1000
 ENV WAYLAND_DISPLAY=wayland-0
