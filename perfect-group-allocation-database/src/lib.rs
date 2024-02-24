@@ -4,7 +4,7 @@ pub mod schema;
 
 use diesel::prelude::*;
 use diesel_async::async_connection_wrapper::AsyncConnectionWrapper;
-use diesel_async::pooled_connection::deadpool::{Object, Pool as DeadPool};
+use diesel_async::pooled_connection::deadpool::{Hook, Object, Pool as DeadPool};
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
 pub use error::DatabaseError;
@@ -21,16 +21,23 @@ pub async fn get_database_connection(database_url: String) -> Result<Pool, Datab
     let config =
         AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(&database_url);
 
-    let pool = DeadPool::builder(config).build()?;
-
-    // TODO do this in a once cell in case the database is not available on startup
-    tokio::task::spawn_blocking(move || {
-        let mut connection =
-            AsyncConnectionWrapper::<AsyncPgConnection>::establish(&database_url).unwrap();
-        connection.run_pending_migrations(MIGRATIONS).unwrap();
-    })
-    .await
-    .unwrap();
+    let pool = DeadPool::builder(config)
+        .post_create(Hook::async_fn(move |_, _| {
+            let database_url = database_url.clone();
+            Box::pin(async move {
+                // TODO only do once
+                tokio::task::spawn_blocking(move || {
+                    let mut connection =
+                        AsyncConnectionWrapper::<AsyncPgConnection>::establish(&database_url)
+                            .unwrap();
+                    connection.run_pending_migrations(MIGRATIONS).unwrap();
+                })
+                .await
+                .unwrap();
+                Ok(())
+            })
+        }))
+        .build()?;
 
     Ok(pool)
 }
