@@ -10,7 +10,7 @@ FROM docker.io/library/fedora:40
 RUN rpm --import https://packages.microsoft.com/keys/microsoft.asc
 RUN sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo'
 
-RUN dnf -y update && dnf -y install firefox chromium wget code jq valgrind git cmake gcc zstd curl mold coin-or-Cbc-devel nss-tools podman openssl-devel pkg-config zlib-devel libpq-devel nano && dnf -y reinstall shadow-utils && dnf clean all
+RUN dnf -y update && dnf -y install rust cargo clippy rust-analyzer rust-debugger-common rust-doc rust-gdb rust-src rustfmt firefox chromium wget code jq valgrind git cmake gcc zstd curl mold coin-or-Cbc-devel nss-tools podman openssl-devel pkg-config zlib-devel libpq-devel nano && dnf -y reinstall shadow-utils && dnf clean all
 
 RUN curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"
 RUN chmod +x mkcert-v*-linux-amd64
@@ -26,9 +26,6 @@ RUN tar -zxf kustomize_v5.3.0_linux_amd64.tar.gz --directory /usr/local/bin
 RUN useradd -s /bin/bash -m podman
 USER podman
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
-ENV PATH="/home/podman/.cargo/bin:${PATH}"
-RUN rustup toolchain install stable --allow-downgrade --profile minimal --component rustfmt,clippy
 RUN cargo install cargo-hack
 RUN cargo install cargo-deny
 RUN cargo install --features=cli lightningcss@1.0.0-alpha.52
