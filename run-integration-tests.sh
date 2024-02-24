@@ -76,32 +76,12 @@ if [ "${1-}" == "keycloak" ]; then
     echo DO NOT RUN THIS IN PRODUCTION!!!
     podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["*"]'
 else if [ "${1-}" == "backend-db-and-test" ]; then
-    cargo build --bin server
     cd $GARBAGE
 
     kustomize create
-
-    SERVER_CONTAINERIGNORE=$(mktemp)
-    echo -e '*\n!target/debug/server\n!deployment/kustomize/base/perfect-group-allocation/Dockerfile' > $SERVER_CONTAINERIGNORE
-    # tag with: git describe --always --long --dirty 
-    SERVER_IMAGE=$(podman build --ignorefile $SERVER_CONTAINERIGNORE --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile $PROJECT)
-    kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
-
-    kustomize edit add resource ../../$PROJECT/deployment/kustomize/base/
+    kustomize edit add resource ../../$PROJECT/deployment/kustomize/base/postgres.yaml
+    kustomize edit add resource ../../$PROJECT/deployment/kustomize/base/test.yaml
     kustomize edit set nameprefix $PREFIX
-
-    mkcert "${PREFIX}perfect-group-allocation" # maybe use a wildcard certificate instead? to speed this up
-    cp $CAROOT/rootCA.pem .
-    kustomize edit add configmap root-ca --from-file=./rootCA.pem
-
-    kustomize edit add secret application-config \
-        --from-file=tls.crt=./${PREFIX}perfect-group-allocation.pem \
-        --from-file=tls.key=./${PREFIX}perfect-group-allocation-key.pem \
-        --from-file=openidconnect.client_secret=./client-secret \
-        --from-literal=openidconnect.client_id=pga \
-        --from-literal=openidconnect.issuer_url=https://${KEYCLOAK_PREFIX}keycloak/realms/pga \
-        --from-literal="database_url=postgres://postgres:bestpassword@postgres/pga" \
-        --from-literal=url=https://${PREFIX}perfect-group-allocation.dns.podman
 
     INTEGRATION_TEST_BINARY=$(realpath --relative-to=$PROJECT $1)
     INTEGRATION_TEST_CONTAINERIGNORE=$(mktemp)
@@ -114,7 +94,7 @@ else if [ "${1-}" == "backend-db-and-test" ]; then
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play kubernetes.yaml # ahh kube uses another network
     #echo https://${PREFIX}perfect-group-allocation.dns.podman
-    podman logs --color --names --follow ${PREFIX}test-test ${PREFIX}perfect-group-allocation-perfect-group-allocation & #${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
+    podman logs --color --names --follow ${PREFIX}test-test & #${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
     (exit $(podman wait ${PREFIX}test-test))
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
 else if [ "${1-}" == "backend" ]; then
@@ -129,7 +109,7 @@ else if [ "${1-}" == "backend" ]; then
     SERVER_IMAGE=$(podman build --ignorefile $SERVER_CONTAINERIGNORE --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile $PROJECT)
     kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
 
-    kustomize edit add resource ../../$PROJECT/deployment/kustomize/base/
+    kustomize edit add resource ../../$PROJECT/deployment/kustomize/base/perfect-group-allocation.yaml
     kustomize edit set nameprefix $PREFIX
 
     mkcert "${PREFIX}perfect-group-allocation" # maybe use a wildcard certificate instead? to speed this up
@@ -144,13 +124,6 @@ else if [ "${1-}" == "backend" ]; then
         --from-literal=openidconnect.issuer_url=https://${KEYCLOAK_PREFIX}keycloak/realms/pga \
         --from-literal="database_url=postgres://postgres:bestpassword@postgres/pga" \
         --from-literal=url=https://${PREFIX}perfect-group-allocation.dns.podman
-
-    INTEGRATION_TEST_BINARY=$(realpath --relative-to=$PROJECT $1)
-    INTEGRATION_TEST_CONTAINERIGNORE=$(mktemp)
-    echo -e '*\n!'"$INTEGRATION_TEST_BINARY" > $INTEGRATION_TEST_CONTAINERIGNORE
-    INTEGRATION_TEST_IMAGE=$(podman build --ignorefile $INTEGRATION_TEST_CONTAINERIGNORE --build-arg BINARY=$INTEGRATION_TEST_BINARY --build-arg EXECUTABLE=$2 --file ./deployment/kustomize/base/test/Dockerfile $PROJECT)
-    INTEGRATION_TEST_IMAGE=$(echo "$INTEGRATION_TEST_IMAGE" | tail -n 1)
-    kustomize edit set image test=sha256:$INTEGRATION_TEST_IMAGE
 
     kustomize build --output kubernetes.yaml
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
