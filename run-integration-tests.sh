@@ -29,9 +29,9 @@ if [ "${1-}" == "keycloak" ]; then
 
     mkcert "${PREFIX}keycloak"
     cp "$CAROOT"/rootCA.pem .
-    kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
-    helm template $PREFIX . \
+    helm template $PREFIX $PROJECT/deployment/perfect-group-allocation \
+        --set-file rootca=./rootCA.pem \
         --set-file keycloak-cert=./${PREFIX}keycloak.pem \
         --set-file keycloak-key=./${PREFIX}keycloak-key.pem \
         --set keycloak=sha256:"$KEYCLOAK_IMAGE" \
