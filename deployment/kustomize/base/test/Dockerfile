@@ -1,7 +1,7 @@
 # to get latest firefox and chromium
 FROM docker.io/library/fedora:40
 
-RUN dnf -y update && dnf -y install firefox chromium && dnf clean all
+RUN dnf -y update && dnf -y install firefox chromium iputils ldns-utils && dnf clean all
 
 COPY ./rootca/rootCA.pem /etc/pki/ca-trust/source/anchors/
 

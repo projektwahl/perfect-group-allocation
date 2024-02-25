@@ -38,6 +38,7 @@ RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run
 RUN mkdir -p /home/podman/.local/share/containers && chmod -R 755 /home/podman/.local && chown -R podman:podman /home/podman/.local
 RUN echo '%wheel ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 RUN usermod -aG wheel podman
+RUN dnf -y update && dnf -y install ldns-utils iputils && dnf clean all
 USER podman
 ENV XDG_RUNTIME_DIR=/run/user/1000
 ENV WAYLAND_DISPLAY=wayland-0

@@ -14,6 +14,9 @@ PREFIX=dev ./run-integration-tests.sh keycloak
 PREFIX=dev ./run-integration-tests.sh backend-db-and-test $PWD/LICENSE /usr/bin/firefox
 PREFIX=dev ./run-integration-tests.sh backend
 https://devperfect-group-allocation/
+
+# https://github.com/containers/aardvark-dns/blob/526260a1bc99d823814afb134980c749c56dea47/src/dns/coredns.rs#L28
+podman exec --user root -it devtest-test /bin/bash
 ```
 
 ## Design goals

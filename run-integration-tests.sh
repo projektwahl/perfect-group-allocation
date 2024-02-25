@@ -128,7 +128,8 @@ elif [ "${1-}" == "backend" ]; then
         --from-literal=url=https://"${PREFIX}"perfect-group-allocation
 
     kustomize build --output kubernetes.yaml
-    podman kube play --replace kubernetes.yaml # ahh kube uses another network
+    # podman inspect devperfect-group-allocation-perfect-group-allocation
+    podman kube play --ip=10.89.0.8 --replace kubernetes.yaml # ahh kube uses another network
     echo https://${PREFIX}perfect-group-allocation
     podman logs --color --names --follow "${PREFIX}"perfect-group-allocation-perfect-group-allocation & #${PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
 else
