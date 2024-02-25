@@ -12,7 +12,7 @@ spec:
         - name: PGA_CONFIG_DIR
           value: /run/secrets
         - name: RUST_LOG
-          value: trace,tokio_tungstenite=debug,tungstenite=debug,firefox=debug,neqo_transport=warn,neqo_http3=warn,neqo_crypto=warn,webrender=warn,glean_core=warn
+          value: trace,tokio_tungstenite=debug,tungstenite=debug,firefox=debug,neqo_transport=warn,neqo_http3=warn,neqo_crypto=warn,webrender=warn,glean_core=warn,neqo_qpack=warn
       image: test:NOTFOUND
       name: test
       resources:

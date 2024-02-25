@@ -26,7 +26,6 @@ GARBAGE=$(mktemp -d)
 # dig tmp-perfect-group-allocation @10.89.1.1
 # ping tmp-perfect-group-allocation
 
-
 if [ "${1-}" == "keycloak" ]; then
     cd "$GARBAGE"
 
@@ -106,20 +105,19 @@ elif [ "${1-}" == "backend" ]; then
 
     kustomize create
 
-    #SERVER_CONTAINERIGNORE=$(mktemp)
-    #echo -e '*\n!target/debug/server\n!deployment/kustomize/base/perfect-group-allocation/Dockerfile' > "$SERVER_CONTAINERIGNORE"
+    SERVER_CONTAINERIGNORE=$(mktemp)
+    echo -e '*\n!target/debug/server\n!deployment/kustomize/base/perfect-group-allocation/Dockerfile' > "$SERVER_CONTAINERIGNORE"
     # tag with: git describe --always --long --dirty 
-    #SERVER_IMAGE=$(podman build --ignorefile "$SERVER_CONTAINERIGNORE" --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile "$PROJECT")
-    #kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
-
-    # TODO use volume for executable
+    SERVER_IMAGE=$(podman build --ignorefile "$SERVER_CONTAINERIGNORE" --build-arg BINARY=./target/debug/server --file ./deployment/kustomize/base/perfect-group-allocation/Dockerfile "$PROJECT")
+    kustomize edit set image perfect-group-allocation=sha256:$(echo "$SERVER_IMAGE" | tail -n 1)
 
     cp "$PROJECT"/deployment/kustomize/base/perfect-group-allocation.yaml .
     kustomize edit add resource ./perfect-group-allocation.yaml
     kustomize edit set nameprefix "$PREFIX"
 
-    # TODO only do once
-    #(cd $CAROOT && mkcert "${PREFIX}perfect-group-allocation") # maybe use a wildcard certificate instead? to speed this up
+    if [ ! -f "$CAROOT"/"${PREFIX}"perfect-group-allocation-key.pem ]; then
+        (cd $CAROOT && mkcert "${PREFIX}perfect-group-allocation")
+    fi
 
     cp "$CAROOT"/rootCA.pem .
     cp "$CAROOT"/"${PREFIX}"perfect-group-allocation.pem .
