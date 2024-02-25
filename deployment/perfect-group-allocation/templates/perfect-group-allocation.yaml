@@ -1,10 +1,8 @@
+{{- if .Values.pga.enable -}}
 apiVersion: v1
 kind: Pod
 metadata:
-  name: perfect-group-allocation
-  #annotations:
-  #io.podman.annotations.infra.name: perfect-group-allocation-infra
-  #io.podman.annotations.userns: keep-id # this feature is not in a stable release yet, so you need an unreleased version
+  name: "{{ include "perfect-group-allocation.fullname" . }}-perfect-group-allocation"
 spec:
   restartPolicy: OnFailure
   securityContext:
@@ -56,3 +54,4 @@ spec:
     - name: root-ca
       configMap:
         name: root-ca
+{{- end }}
