@@ -82,12 +82,13 @@ spec:
     - name: root-ca
       configMap:
         name: "{{ include "perfect-group-allocation.name" . }}-root-ca"
+---
 apiVersion: v1
 kind: Secret
 metadata:
   name: "{{ include "perfect-group-allocation.name" . }}-keycloak-tls-cert"
 type: kubernetes.io/tls
 data:
-  tls.crt: "{{ index .Values "keycloak-cert" | b64enc }}"
-  tls.key: "{{ index .Values "keycloak-key" | b64enc}}"
+  tls.crt: "{{ .Values.keycloak.cert | b64enc }}"
+  tls.key: "{{ .Values.keycloak.key | b64enc}}"
 {{- end }}

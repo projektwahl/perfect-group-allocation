@@ -32,10 +32,11 @@ if [ "${1-}" == "keycloak" ]; then
 
     helm template $PREFIX $PROJECT/deployment/perfect-group-allocation \
         --set-file rootca=./rootCA.pem \
-        --set-file keycloak-cert=./${PREFIX}keycloak.pem \
-        --set-file keycloak-key=./${PREFIX}keycloak-key.pem \
-        --set keycloak=sha256:"$KEYCLOAK_IMAGE" \
+        --set-file keycloak.cert=./${PREFIX}keycloak.pem \
+        --set-file keycloak.key=./${PREFIX}keycloak-key.pem \
+        --set keycloak.image=sha256:"$KEYCLOAK_IMAGE" \
         > kubernetes.yaml
+    cat kubernetes.yaml
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play --replace kubernetes.yaml
 
