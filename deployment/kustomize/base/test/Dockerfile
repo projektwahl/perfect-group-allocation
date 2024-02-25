@@ -3,6 +3,8 @@ FROM docker.io/library/fedora:40
 
 RUN dnf -y update && dnf -y install firefox chromium && dnf clean all
 
+COPY ./rootca/rootCA.pem /etc/pki/ca-trust/source/anchors/
+
 RUN useradd -m podman
 
 RUN mkdir /run/user/1000 && chmod 755 /run/user/1000 && chown podman:podman /run/user/1000

@@ -27,6 +27,7 @@ GARBAGE=$(mktemp -d)
 # ping tmp-perfect-group-allocation
 
 if [ "${1-}" == "keycloak" ]; then
+    # https://keycloak-tmp-keycloak/
     cd "$GARBAGE"
 
     kustomize create
@@ -84,7 +85,7 @@ elif [ "${1-}" == "backend-db-and-test" ]; then
 
     INTEGRATION_TEST_BINARY=$(realpath --relative-to="$PROJECT" "$2")
     INTEGRATION_TEST_CONTAINERIGNORE=$(mktemp)
-    echo -e '*\n!'"$INTEGRATION_TEST_BINARY" > "$INTEGRATION_TEST_CONTAINERIGNORE"
+    echo -e '*\n!rootca/rootCA.pem\n!'"$INTEGRATION_TEST_BINARY" > "$INTEGRATION_TEST_CONTAINERIGNORE"
     INTEGRATION_TEST_IMAGE=$(podman build --ignorefile "$INTEGRATION_TEST_CONTAINERIGNORE" --build-arg BINARY="$INTEGRATION_TEST_BINARY" --build-arg EXECUTABLE="$3" --file ./deployment/kustomize/base/test/Dockerfile "$PROJECT")
     INTEGRATION_TEST_IMAGE=$(echo "$INTEGRATION_TEST_IMAGE" | tail -n 1)
     kustomize edit set image test=sha256:"$INTEGRATION_TEST_IMAGE"

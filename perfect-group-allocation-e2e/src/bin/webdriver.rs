@@ -92,7 +92,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
                                 .unwrap()
                                 .to_owned(),
                             ),*/
-                            accept_insecure_certs: Some(true),
+                            accept_insecure_certs: Some(false),
                             browser_version: None,
                             platform_name: None,
                             proxy: None,
