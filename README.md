@@ -10,10 +10,10 @@ podman run --rm -it --device /dev/dri --privileged -v ~/.gitconfig:/home/podman/
 code --ozone-platform=wayland . # --verbose
 
 # inside vscode terminal
-ENVIRONMENT=development ./run-integration-tests.sh keycloak
-ENVIRONMENT=development PREFIX=dev ./run-integration-tests.sh backend-db-and-test $PWD/LICENSE /usr/bin/firefox
-ENVIRONMENT=development PREFIX=dev ./run-integration-tests.sh backend
-https://devperfect-group-allocation.dns.podman
+PREFIX=dev ./run-integration-tests.sh keycloak
+PREFIX=dev ./run-integration-tests.sh backend-db-and-test $PWD/LICENSE /usr/bin/firefox
+PREFIX=dev ./run-integration-tests.sh backend
+https://devperfect-group-allocation/
 ```
 
 ## Design goals

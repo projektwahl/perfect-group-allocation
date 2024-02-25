@@ -9,7 +9,7 @@ stringData:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: postgres
+  name: keycloak-postgres
   #annotations:
   #io.podman.annotations.infra.name: keycloak-postgres-infra
 spec:

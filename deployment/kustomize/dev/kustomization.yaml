@@ -1,8 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-resources:
-  - ../base
-namespace: pga-dev
-# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
-# kustomize build deployment/kustomize/dev | kubectl apply -f -

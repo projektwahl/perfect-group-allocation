@@ -347,7 +347,7 @@ impl<
     }
 }
 
-pub async fn setup_server<B: Buf + Send + 'static>(
+pub fn setup_server<B: Buf + Send + 'static>(
     config: tokio::sync::watch::Receiver<Arc<Config>>,
 ) -> std::result::Result<Svc<B>, AppError> {
     info!("starting up server...");
@@ -360,7 +360,7 @@ pub async fn setup_server<B: Buf + Send + 'static>(
 
     // https://github.com/hyperium/hyper/blob/master/examples/state.rs
 
-    let pool = get_database_connection(current_config.database_url.clone()).await?;
+    let pool = get_database_connection(current_config.database_url.clone())?;
 
     //let service = ServeDir::new("frontend");
 
@@ -424,7 +424,7 @@ pub async fn run_http2_server(
     key: PrivateKeyDer<'static>,
 ) -> Result<impl Future<Output = Result<(), AppError>>, AppError> {
     // https://github.com/hyperium/hyper/blob/master/examples/graceful_shutdown.rs
-    let service = setup_server(config).await?;
+    let service = setup_server(config)?;
 
     let incoming = TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), PORT))
         .await

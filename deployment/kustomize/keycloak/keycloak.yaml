@@ -15,7 +15,7 @@ spec:
       image: keycloak:NOTFOUND
       env:
         - name: KC_DB_URL
-          value: jdbc:postgresql://keycloak-tmp-postgres/postgres # TODO FIXME
+          value: jdbc:postgresql://${KC_HOSTNAME}-postgres/postgres
         - name: KC_DB_USERNAME
           value: postgres
         - name: KC_DB_PASSWORD

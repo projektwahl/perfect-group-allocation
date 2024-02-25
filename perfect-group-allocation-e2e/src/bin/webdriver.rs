@@ -56,7 +56,7 @@ pub async fn test() -> Result<(), webdriver_bidi::Error> {
     tracing_subscriber::fmt::init();
 
     // TODO FIXME get url
-    let url = "https://eperfect-group-allocation.dns.podman".to_string();
+    let url = "https://eperfect-group-allocation".to_string();
 
     // TODO FIXME add network slowdown for testing
     // TODO FIXME use user contexts for cookie isolation

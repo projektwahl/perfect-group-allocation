@@ -6,9 +6,6 @@ set -x
 
 PROJECT=$PWD
 
-# we should be able to use one keycloak for multiple tests.
-KEYCLOAK_PREFIX=keycloak-tmp-
-
 # generate root certs as these are the only thing that is nice to persist (so keycloak gets the same root cert and your browser doesn't need to add a new root ca all the time)
 mkdir -p rootca
 
@@ -38,41 +35,38 @@ if [ "${1-}" == "keycloak" ]; then
     KEYCLOAK_IMAGE=$(echo "$KEYCLOAK_IMAGE" | tail -n 1)
     kustomize edit set image keycloak=sha256:"$KEYCLOAK_IMAGE"
 
-    kustomize edit set nameprefix $KEYCLOAK_PREFIX
+    kustomize edit set nameprefix $PREFIX
     kustomize edit add resource ../../"$PROJECT"/deployment/kustomize/keycloak
 
-    mkcert "${KEYCLOAK_PREFIX}keycloak"
+    mkcert "${PREFIX}keycloak"
     cp "$CAROOT"/rootCA.pem .
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
     kustomize edit add secret keycloak-tls-cert \
         --type=kubernetes.io/tls \
-        --from-file=tls.crt=./${KEYCLOAK_PREFIX}keycloak.pem \
-        --from-file=tls.key=./${KEYCLOAK_PREFIX}keycloak-key.pem
+        --from-file=tls.crt=./${PREFIX}keycloak.pem \
+        --from-file=tls.key=./${PREFIX}keycloak-key.pem
 
     kustomize build --output kubernetes.yaml
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play --replace kubernetes.yaml
 
-    podman logs --color --names --follow ${KEYCLOAK_PREFIX}keycloak-keycloak & #  | sed 's/[\x01-\x1F\x7F]//g'
+    podman logs --color --names --follow ${PREFIX}keycloak-keycloak & #  | sed 's/[\x01-\x1F\x7F]//g'
     echo waiting for keycloak
     # TODO refactor to directly loop on healthcheck?
-    watch podman healthcheck run ${KEYCLOAK_PREFIX}keycloak-keycloak > /dev/null 2>&1 &
-    podman wait --condition healthy ${KEYCLOAK_PREFIX}keycloak-keycloak
+    watch podman healthcheck run ${PREFIX}keycloak-keycloak > /dev/null 2>&1 &
+    podman wait --condition healthy ${PREFIX}keycloak-keycloak
     echo keycloak started
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak ls -la /opt/keycloak/
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak id
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak cat /etc/passwd
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://${KEYCLOAK_PREFIX}keycloak --realm master --user admin --password admin
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
-    # TODO FIXME the redirect url is different
-    # https://github.com/keycloak/keycloak/discussions/9278
-    echo DO NOT RUN THIS IN PRODUCTION!!!
-    podman exec ${KEYCLOAK_PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["*"]'
+    podman exec ${PREFIX}keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
+    podman exec ${PREFIX}keycloak-keycloak ls -la /opt/keycloak/
+    podman exec ${PREFIX}keycloak-keycloak id
+    podman exec ${PREFIX}keycloak-keycloak cat /etc/passwd
+    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
+    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://${PREFIX}keycloak --realm master --user admin --password admin
+    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
+    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
+    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
+    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://'${PREFIX}'perfect-group-allocation"]'
 elif [ "${1-}" == "backend-db-and-test" ]; then
     cd "$GARBAGE"
 
@@ -91,13 +85,12 @@ elif [ "${1-}" == "backend-db-and-test" ]; then
     kustomize edit set image test=sha256:"$INTEGRATION_TEST_IMAGE"
 
     kustomize edit add secret application-config \
-        --from-literal=url=https://"${PREFIX}"perfect-group-allocation.dns.podman
+        --from-literal=url=https://"${PREFIX}"perfect-group-allocation
 
     kustomize build --output kubernetes.yaml
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play kubernetes.yaml # ahh kube uses another network
-    #echo https://${PREFIX}perfect-group-allocation.dns.podman
-    podman logs --color --names --follow "${PREFIX}"test-test & #${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
+    podman logs --color --names --follow "${PREFIX}"test-test & #${PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
     (exit $(podman wait "${PREFIX}"test-test))
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
 elif [ "${1-}" == "backend" ]; then
@@ -130,14 +123,14 @@ elif [ "${1-}" == "backend" ]; then
         --from-file=tls.key=./"${PREFIX}"perfect-group-allocation-key.pem \
         --from-file=openidconnect.client_secret=./client-secret \
         --from-literal=openidconnect.client_id=pga \
-        --from-literal=openidconnect.issuer_url=https://${KEYCLOAK_PREFIX}keycloak/realms/pga \
+        --from-literal=openidconnect.issuer_url=https://${PREFIX}keycloak/realms/pga \
         --from-literal="database_url=postgres://postgres:bestpassword@postgres/pga" \
-        --from-literal=url=https://"${PREFIX}"perfect-group-allocation.dns.podman
+        --from-literal=url=https://"${PREFIX}"perfect-group-allocation
 
     kustomize build --output kubernetes.yaml
     podman kube play --replace kubernetes.yaml # ahh kube uses another network
-    #echo https://${PREFIX}perfect-group-allocation.dns.podman
-    podman logs --color --names --follow "${PREFIX}"perfect-group-allocation-perfect-group-allocation & #${KEYCLOAK_PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
+    echo https://${PREFIX}perfect-group-allocation
+    podman logs --color --names --follow "${PREFIX}"perfect-group-allocation-perfect-group-allocation & #${PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
 else
     echo "unknown command"
 fi
