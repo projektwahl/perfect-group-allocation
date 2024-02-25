@@ -1,7 +1,8 @@
+{{- if .Values.pga.database.enable -}}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: postgres-secret
+  name: "{{ include "perfect-group-allocation.name" . }}-postgres-secret"
 type: Opaque
 stringData:
   password: bestpassword # TODO FIXME don't put this here, maybe use tls authentication
@@ -9,9 +10,9 @@ stringData:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: postgres
-  #annotations:
-  #io.podman.annotations.infra.name: postgres-infra
+  name: "{{ include "perfect-group-allocation.name" . }}-postgres"
+  annotations:
+    io.podman.annotations.infra.name: "{{ include "perfect-group-allocation.name" . }}-postgres-infra"
 spec:
   restartPolicy: OnFailure
   containers:
@@ -48,15 +49,15 @@ spec:
   volumes:
     - name: postgres-secret-volume
       secret:
-        secretName: postgres-secret
+        secretName: "{{ include "perfect-group-allocation.name" . }}-postgres-secret"
     - name: postgres-volume
       persistentVolumeClaim:
-        claimName: postgres-claim
+        claimName: "{{ include "perfect-group-allocation.name" . }}-postgres-claim"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: postgres-claim
+  name: "{{ include "perfect-group-allocation.name" . }}-postgres-claim"
 spec:
   storageClassName: local-storage
   accessModes:
@@ -64,3 +65,4 @@ spec:
   resources:
     requests:
       storage: 3Gi
+{{- end }}

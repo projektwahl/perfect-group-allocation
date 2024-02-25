@@ -360,7 +360,7 @@ pub fn setup_server<B: Buf + Send + 'static>(
 
     // https://github.com/hyperium/hyper/blob/master/examples/state.rs
 
-    let pool = get_database_connection(&current_config.database_url)?;
+    let pool = get_database_connection(current_config.database_url.clone())?;
 
     //let service = ServeDir::new("frontend");
 

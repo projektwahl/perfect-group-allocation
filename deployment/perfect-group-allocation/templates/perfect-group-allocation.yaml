@@ -1,11 +1,10 @@
-# mkcert application.localhost
+{{- if .Values.pga.enable -}}
 apiVersion: v1
 kind: Pod
 metadata:
-  name: perfect-group-allocation
-  #annotations:
-  #io.podman.annotations.infra.name: perfect-group-allocation-infra
-  #io.podman.annotations.userns: keep-id # this feature is not in a stable release yet, so you need an unreleased version
+  name: "{{ include "perfect-group-allocation.name" . }}-perfect-group-allocation"
+  annotations:
+    io.podman.annotations.infra.name: "{{ include "perfect-group-allocation.name" . }}-perfect-group-allocation-infra"
 spec:
   restartPolicy: OnFailure
   securityContext:
@@ -32,6 +31,10 @@ spec:
         - name: root-ca
           mountPath: "/run/rootCA"
           readOnly: true
+        {{- if eq .Values.mode "development" }}
+        - name: code
+          mountPath: /home/podman/app
+        {{- end }}
       #ports:
       #  - containerPort: 443
       #livenessProbe:
@@ -57,3 +60,10 @@ spec:
     - name: root-ca
       configMap:
         name: root-ca
+    {{- if eq .Values.mode "development" }}
+    - name: code
+      hostPath:
+        path: {{ .Values.projectdir | required "projectdir is required in development mode" | quote }}
+        type: Directory
+    {{- end }}
+{{- end }}

@@ -1,7 +1,8 @@
+{{- if .Values.keycloak.enable -}}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: keycloak-postgres-secret
+  name: "{{ include "perfect-group-allocation.name" . }}-keycloak-postgres-secret"
 type: Opaque
 stringData:
   password: keycloak-bestpassword # TODO FIXME don't put this here, maybe use tls authentication with the postgres cert?
@@ -9,9 +10,9 @@ stringData:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: postgres
-  #annotations:
-  #io.podman.annotations.infra.name: keycloak-postgres-infra
+  name: "{{ include "perfect-group-allocation.name" . }}-keycloak-postgres"
+  annotations:
+    io.podman.annotations.infra.name: "{{ include "perfect-group-allocation.name" . }}-keycloak-postgres-infra"
 spec:
   restartPolicy: OnFailure
   containers:
@@ -48,15 +49,15 @@ spec:
   volumes:
     - name: keycloak-postgres-secret-volume
       secret:
-        secretName: keycloak-postgres-secret
+        secretName: "{{ include "perfect-group-allocation.name" . }}-keycloak-postgres-secret"
     - name: keycloak-postgres-volume
       persistentVolumeClaim:
-        claimName: keycloak-postgres-claim
+        claimName: "{{ include "perfect-group-allocation.name" . }}-keycloak-postgres-claim"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: keycloak-postgres-claim
+  name: "{{ include "perfect-group-allocation.name" . }}-keycloak-postgres-claim"
 spec:
   storageClassName: local-storage
   accessModes:
@@ -64,3 +65,4 @@ spec:
   resources:
     requests:
       storage: 3Gi
+{{- end }}

@@ -3,26 +3,55 @@ pub mod models;
 pub mod schema;
 
 use diesel::prelude::*;
-use diesel_async::pooled_connection::deadpool::{Object, Pool as DeadPool};
+use diesel_async::async_connection_wrapper::AsyncConnectionWrapper;
+use diesel_async::pooled_connection::deadpool::{Hook, Object, Pool as DeadPool};
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 pub use error::DatabaseError;
 use schema::project_history;
+use tokio::sync::OnceCell;
 
 use crate::models::ProjectHistoryEntry;
 
 pub type Pool = DeadPool<AsyncPgConnection>;
 
-pub fn get_database_connection(database_url: &str) -> Result<Pool, DatabaseError> {
-    let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);
-    Ok(DeadPool::builder(config).build()?)
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+
+static ONCE: OnceCell<()> = OnceCell::const_new();
+
+pub fn get_database_connection(database_url: String) -> Result<Pool, DatabaseError> {
+    let config =
+        AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(&database_url);
+
+    let pool = DeadPool::builder(config)
+        .post_create(Hook::async_fn(move |_, _| {
+            let database_url = database_url.clone();
+            Box::pin(async move {
+                ONCE.get_or_init(|| async move {
+                    tokio::task::spawn_blocking(move || {
+                        let mut connection =
+                            AsyncConnectionWrapper::<AsyncPgConnection>::establish(&database_url)
+                                .unwrap();
+                        connection.run_pending_migrations(MIGRATIONS).unwrap();
+                    })
+                    .await
+                    .unwrap();
+                })
+                .await;
+                Ok(())
+            })
+        }))
+        .build()?;
+
+    Ok(pool)
 }
 
 pub struct DatabaseConnection(pub Object<AsyncPgConnection>);
 
 pub async fn example() -> Result<(), DatabaseError> {
     let database_url = std::env::var("DATABASE_URL")?;
-    let pool = get_database_connection(&database_url)?;
+    let pool = get_database_connection(database_url)?;
 
     // checkout a connection from the pool
     let mut connection = pool.get().await?;
