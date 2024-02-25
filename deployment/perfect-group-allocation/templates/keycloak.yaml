@@ -78,8 +78,16 @@ spec:
   volumes:
     - name: keycloak-tls-cert-volume
       secret:
-        secretName: keycloak-tls-cert
+        secretName: "{{ include "perfect-group-allocation.name" . }}-keycloak-tls-cert"
     - name: root-ca
       configMap:
-        name: root-ca
+        name: "{{ include "perfect-group-allocation.name" . }}-root-ca"
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "{{ include "perfect-group-allocation.name" . }}-keycloak-tls-cert"
+type: kubernetes.io/tls
+data:
+  tls.crt: "{{ index .Values "keycloak-cert" | b64enc }}"
+  tls.key: "{{ index .Values "keycloak-key" | b64enc}}"
 {{- end }}

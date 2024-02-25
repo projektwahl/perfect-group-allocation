@@ -18,36 +18,24 @@ GARBAGE=$(mktemp -d)
 
 # https://kubernetes.io/docs/tasks/run-application/run-single-instance-stateful-application/
 
-# in comparison to helm, kustomize has proper semantic merging
-
-# dig tmp-perfect-group-allocation @10.89.1.1
-# ping tmp-perfect-group-allocation
-
 if [ "${1-}" == "keycloak" ]; then
     # https://keycloak-tmp-keycloak/
     cd "$GARBAGE"
-
-    kustomize create
 
     KEYCLOAK_CONTAINERIGNORE=$(mktemp)
     echo -e '*' > "$KEYCLOAK_CONTAINERIGNORE"
     KEYCLOAK_IMAGE=$(podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile "$PROJECT")
     KEYCLOAK_IMAGE=$(echo "$KEYCLOAK_IMAGE" | tail -n 1)
-    kustomize edit set image keycloak=sha256:"$KEYCLOAK_IMAGE"
-
-    kustomize edit set nameprefix $PREFIX
-    kustomize edit add resource ../../"$PROJECT"/deployment/kustomize/keycloak
 
     mkcert "${PREFIX}keycloak"
     cp "$CAROOT"/rootCA.pem .
     kustomize edit add configmap root-ca --from-file=./rootCA.pem
 
-    kustomize edit add secret keycloak-tls-cert \
-        --type=kubernetes.io/tls \
-        --from-file=tls.crt=./${PREFIX}keycloak.pem \
-        --from-file=tls.key=./${PREFIX}keycloak-key.pem
-
-    kustomize build --output kubernetes.yaml
+    helm template $PREFIX . \
+        --set-file keycloak-cert=./${PREFIX}keycloak.pem \
+        --set-file keycloak-key=./${PREFIX}keycloak-key.pem \
+        --set keycloak=sha256:"$KEYCLOAK_IMAGE" \
+        > kubernetes.yaml
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play --replace kubernetes.yaml
 
