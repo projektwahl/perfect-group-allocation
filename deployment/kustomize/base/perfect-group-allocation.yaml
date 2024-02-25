@@ -1,4 +1,3 @@
-# mkcert application.localhost
 apiVersion: v1
 kind: Pod
 metadata:
@@ -57,3 +56,4 @@ spec:
     - name: root-ca
       configMap:
         name: root-ca
+    # mount pwd for dev only

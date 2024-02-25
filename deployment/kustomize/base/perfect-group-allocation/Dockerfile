@@ -12,4 +12,4 @@ USER pga
 
 ARG BINARY
 COPY ${BINARY} /bin/server
-ENTRYPOINT ["/bin/server"]
+ENTRYPOINT ["/bin/sleep" "infinity"]
