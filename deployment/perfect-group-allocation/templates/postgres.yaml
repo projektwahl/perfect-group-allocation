@@ -10,9 +10,9 @@ stringData:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ include "perfect-group-allocation.name" . }}-postgres
-  #annotations:
-  #io.podman.annotations.infra.name: postgres-infra
+  name: "{{ include "perfect-group-allocation.name" . }}-postgres"
+  annotations:
+    io.podman.annotations.infra.name: "{{ include "perfect-group-allocation.name" . }}-postgres-infra"
 spec:
   restartPolicy: OnFailure
   containers:

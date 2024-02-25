@@ -3,4 +3,4 @@ kind: ConfigMap
 metadata:
   name: "{{ include "perfect-group-allocation.name" . }}-root-ca"
 binaryData:
-  tls.crt: "{{ index .Values "rootca" | b64enc }}"
+  rootCA.pem: "{{ index .Values "rootca" | b64enc }}"

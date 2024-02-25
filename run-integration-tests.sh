@@ -27,35 +27,33 @@ if [ "${1-}" == "keycloak" ]; then
     KEYCLOAK_IMAGE=$(podman build --file ./deployment/kustomize/keycloak/keycloak/Dockerfile "$PROJECT")
     KEYCLOAK_IMAGE=$(echo "$KEYCLOAK_IMAGE" | tail -n 1)
 
-    mkcert "${PREFIX}keycloak"
+    mkcert "${PREFIX}-keycloak"
     cp "$CAROOT"/rootCA.pem .
 
     helm template $PREFIX $PROJECT/deployment/perfect-group-allocation \
+        --set pga.enable=false,pga.database.enable=false,test.enable=false \
         --set-file rootca=./rootCA.pem \
-        --set-file keycloak.cert=./${PREFIX}keycloak.pem \
-        --set-file keycloak.key=./${PREFIX}keycloak-key.pem \
+        --set-file keycloak.cert=./${PREFIX}-keycloak.pem \
+        --set-file keycloak.key=./${PREFIX}-keycloak-key.pem \
         --set keycloak.image=sha256:"$KEYCLOAK_IMAGE" \
         > kubernetes.yaml
     cat kubernetes.yaml
     podman kube down --force kubernetes.yaml || true # WARNING: this also removes volumes
     podman kube play --replace kubernetes.yaml
 
-    podman logs --color --names --follow ${PREFIX}keycloak-keycloak & #  | sed 's/[\x01-\x1F\x7F]//g'
+    podman logs --color --names --follow ${PREFIX}-keycloak-keycloak & #  | sed 's/[\x01-\x1F\x7F]//g'
     echo waiting for keycloak
     # TODO refactor to directly loop on healthcheck?
-    watch podman healthcheck run ${PREFIX}keycloak-keycloak > /dev/null 2>&1 &
-    podman wait --condition healthy ${PREFIX}keycloak-keycloak
+    watch podman healthcheck run ${PREFIX}-keycloak-keycloak > /dev/null 2>&1 &
+    podman wait --condition healthy ${PREFIX}-keycloak-keycloak
     echo keycloak started
-    podman exec ${PREFIX}keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
-    podman exec ${PREFIX}keycloak-keycloak ls -la /opt/keycloak/
-    podman exec ${PREFIX}keycloak-keycloak id
-    podman exec ${PREFIX}keycloak-keycloak cat /etc/passwd
-    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
-    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://${PREFIX}keycloak --realm master --user admin --password admin
-    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
-    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
-    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
-    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://'${PREFIX}'perfect-group-allocation/openidconnect-redirect"]'
+    podman exec ${PREFIX}-keycloak-keycloak keytool -noprompt -import -file /run/rootCA/rootCA.pem -alias rootCA -storepass password -keystore /tmp/.keycloak-truststore.jks
+    podman exec ${PREFIX}-keycloak-keycloak /opt/keycloak/bin/kcadm.sh config truststore --trustpass password /tmp/.keycloak-truststore.jks
+    podman exec ${PREFIX}-keycloak-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server https://${PREFIX}-keycloak --realm master --user admin --password admin
+    podman exec ${PREFIX}-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
+    podman exec ${PREFIX}-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
+    podman exec ${PREFIX}-keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
+    podman exec ${PREFIX}-keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://'${PREFIX}'-perfect-group-allocation/openidconnect-redirect"]'
 elif [ "${1-}" == "backend-db-and-test" ]; then
     cd "$GARBAGE"
 

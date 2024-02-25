@@ -13,7 +13,7 @@ spec:
         value: "0"
   containers:
     - name: keycloak
-      image: keycloak:NOTFOUND
+      image: {{ .Values.keycloak.image }}
       env:
         - name: KC_DB_URL
           value: jdbc:postgresql://${KC_HOSTNAME}-postgres/postgres

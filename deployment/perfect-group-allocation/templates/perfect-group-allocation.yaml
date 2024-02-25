@@ -3,6 +3,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: "{{ include "perfect-group-allocation.name" . }}-perfect-group-allocation"
+  annotations:
+    io.podman.annotations.infra.name: "{{ include "perfect-group-allocation.name" . }}-perfect-group-allocation-infra"
 spec:
   restartPolicy: OnFailure
   securityContext:

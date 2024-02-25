@@ -2,9 +2,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ include "perfect-group-allocation.name" . }}-test
+  name: "{{ include "perfect-group-allocation.name" . }}-test"
   annotations:
     io.podman.annotations.userns: keep-id # this feature is not in a stable release yet, so you need an unreleased version
+    io.podman.annotations.infra.name: "{{ include "perfect-group-allocation.name" . }}-infra"
 spec:
   restartPolicy: Never
   containers:
