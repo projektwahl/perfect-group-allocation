@@ -66,7 +66,7 @@ if [ "${1-}" == "keycloak" ]; then
     podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=pga -s enabled=true
     podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
     podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh set-password -r pga --username test --new-password test
-    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://'${PREFIX}'perfect-group-allocation"]'
+    podman exec ${PREFIX}keycloak-keycloak /opt/keycloak/bin/kcadm.sh create clients -r pga -s clientId=pga -s secret=$(cat client-secret) -s 'redirectUris=["https://'${PREFIX}'perfect-group-allocation/openidconnect-redirect"]'
 elif [ "${1-}" == "backend-db-and-test" ]; then
     cd "$GARBAGE"
 
@@ -129,6 +129,7 @@ elif [ "${1-}" == "backend" ]; then
 
     kustomize build --output kubernetes.yaml
     # podman inspect devperfect-group-allocation-perfect-group-allocation
+    # restarting the container changes ip, the podman dns has a ttl of 60 seconds so we need to have a persistent ip
     podman kube play --ip=10.89.0.8 --replace kubernetes.yaml # ahh kube uses another network
     echo https://${PREFIX}perfect-group-allocation
     podman logs --color --names --follow "${PREFIX}"perfect-group-allocation-perfect-group-allocation & #${PREFIX}keycloak-keycloak & # ${PREFIX}postgres-postgres
