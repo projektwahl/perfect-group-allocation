@@ -1,3 +1,4 @@
+{{- if .Values.test.enable -}}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -47,3 +48,4 @@ spec:
         path: /dev/dri
         type: Directory
 # podman --log-level=debug kube play --replace ../webdriver.yaml && podman logs webdriver-pod-webdriver
+{{- end }}

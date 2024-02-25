@@ -1,3 +1,4 @@
+{{- if .Values.pga.database.enable -}}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -64,3 +65,4 @@ spec:
   resources:
     requests:
       storage: 3Gi
+{{- end }}

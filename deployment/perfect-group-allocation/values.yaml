@@ -4,3 +4,9 @@ projectdir: /home/moritz/Documents/perfect-group-allocation
 
 pga:
   enable: true
+  database:
+    enable: true
+keycloak:
+  enable: true
+test:
+  enable: true
