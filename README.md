@@ -58,87 +58,6 @@ cargo install --locked cargo-edit
 cargo upgrade --verbose --incompatible allow --pinned allow
 ```
 
-## Keycloak
-
-https://www.keycloak.org/docs/latest/server_admin/index.html#admin-cli
-
-podman exec -it perfect-group-allocation_keycloak_1 bash
-cd /tmp
-export PATH=$PATH:/opt/keycloak/bin
-#kc.sh export --dir test
-kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin
-#kcadm.sh delete realms/pga
-kcadm.sh create realms -s realm=pga -s enabled=true
-kcadm.sh create users -r pga -s username=test -s email=test@example.com -s enabled=true
-kcadm.sh set-password -r pga --username test --new-password test
-CID=$(kcadm.sh create clients -r pga -s clientId=pga -s 'redirectUris=["https://h3.selfmade4u.de/*"]' -i)
-CID=$(kcadm.sh get clients -r pga --fields id -q clientId=pga --format csv --noquotes)
-CLIENT_SECRET=$(kcadm.sh get clients/$CID/client-secret -r pga --fields value --format csv --noquotes)
-echo $CLIENT_SECRET
-
-http://localhost:8080/admin/master/console/
-admin
-admin
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#configuring-realms
-
-Create Realm "pga"
-Import file from deployment/pga.json
-
-http://localhost:8080/admin/master/console/#/pga/realm-settings/localization
-
-Internationalization -> Deutsch
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#assembly-managing-users_server_administration_guide
-
-Create test user, add password
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#con-user-impersonation_server_administration_guide
-
-Impersonate user for testing
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#_identity_broker
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#_client_suggested_idp
-
-https://www.keycloak.org/docs/23.0.4/securing_apps/#_java_adapter_logout
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#sso-protocols
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#_oidc-logout
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#assembly-managing-clients_server_administration_guide
-
-Create an OpenID client
-
-Clients -> Create Client -> ...
-
-Client Authentication On
-
-Only enable Standard Flow
-
-Valid redirect urls:
-https://h3.selfmade4u.de
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#configuring-auditing-to-track-events
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#auditing-admin-events
-
-CRITIAL SECURITY NOTES:
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#host
-
-https://www.keycloak.org/docs/23.0.4/server_admin/#admin-cli
-
-http://localhost:8080/realms/pga/account/
-
-/realms/{realm-name}/.well-known/openid-configuration
-
-Add GitHub as identity provider for demo
-
-Identity Providers -> Manage display order
-
-
 ## Testing
 
 ```bash
@@ -170,11 +89,6 @@ sudo nano /etc/sysctl.conf
 vm.max_map_count=262144
 sudo sysctl -p
 
-#pipx install https://github.com/containers/podman-compose/archive/devel.tar.gz # profile support not yet in 1.0.6
-# install docker-compose as that is a much better implementation. podman compose will then automatically use it.
-clear && podman compose down && podman compose up
-# clear && podman compose --profile opensearch up
-
 # jaeger http://localhost:16686
 # opensearch http://localhost:5601
 # prometheus http://localhost:9090
@@ -202,15 +116,9 @@ DATABASE_URL="postgres://postgres:password@localhost/pga?sslmode=disable" cargo 
 https://valgrind.org/docs/manual/cl-manual.html
 Callgrind
 
-# DO NOT USE TRUST AUTHENTICATION IN PRODUCTION! For profiling we don't want to measure sha2 hashing overhead
-podman run --rm --detach --name postgres-profiling --env POSTGRES_HOST_AUTH_METHOD=trust --publish 5432:5432 docker.io/postgres
-
-
 https://nnethercote.github.io/perf-book/profiling.html
 
 cargo build --features profiling --target=x86_64-unknown-linux-gnu -Z build-std --profile=release-with-debug --bin server
-
-# I think macros don't work well with this especially the select! macro
 
 # WARNING: Only connect without ssl over localhost. This makes the profiling better as there is not countless ssl stuff in there.
 # I think you need to run this from the workspace root for debug symbols?
