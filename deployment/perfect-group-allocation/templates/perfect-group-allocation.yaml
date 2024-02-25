@@ -29,10 +29,10 @@ spec:
         - name: root-ca
           mountPath: "/run/rootCA"
           readOnly: true
-      {{- if eq .Values.mode "development" }}
+        {{- if eq .Values.mode "development" }}
         - name: code
           mountPath: /home/podman/app
-      {{- end }}
+        {{- end }}
       #ports:
       #  - containerPort: 443
       #livenessProbe:
@@ -58,4 +58,10 @@ spec:
     - name: root-ca
       configMap:
         name: root-ca
+    {{- if eq .Values.mode "development" }}
+    - name: code
+      hostPath:
+        path: {{ .Values.projectdir | required "projectdir is required in development mode" | quote }}
+        type: Directory
+    {{- end }}
 {{- end }}
