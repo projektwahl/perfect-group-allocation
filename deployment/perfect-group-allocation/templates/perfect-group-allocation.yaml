@@ -29,6 +29,10 @@ spec:
         - name: root-ca
           mountPath: "/run/rootCA"
           readOnly: true
+      {{- if eq .Values.mode "development" }}
+        - name: code
+          mountPath: /home/podman/app
+      {{- end }}
       #ports:
       #  - containerPort: 443
       #livenessProbe:
