@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: keycloak
-  #annotations:
-  #io.podman.annotations.infra.name: keycloak-infra
+  name: "{{ include "perfect-group-allocation.name" . }}-keycloak"
+  annotations:
+    io.podman.annotations.infra.name: "{{ include "perfect-group-allocation.name" . }}-keycloak-infra"
 spec:
   restartPolicy: OnFailure
   securityContext:
