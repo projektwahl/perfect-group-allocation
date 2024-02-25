@@ -167,3 +167,6 @@ xfreerdp localhost:3389
 
 # if it doesnt have external connectivity it doesn't break down on network changes? (because my wifi is buggy and it's not needed)
 podman network create --internal pga
+
+
+helm template test .

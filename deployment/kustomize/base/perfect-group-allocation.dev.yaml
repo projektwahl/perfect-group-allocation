@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: perfect-group-allocation
+spec:
+  containers:
+    - name: perfect-group-allocation
+      volumeMounts:
+        - name: code
+          mountPath: /home/podman/app
+  volumes:
+    - name: code
+      hostPath:
+        path: TODO
+        type: Directory

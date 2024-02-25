@@ -56,4 +56,3 @@ spec:
     - name: root-ca
       configMap:
         name: root-ca
-    # mount pwd for dev only
